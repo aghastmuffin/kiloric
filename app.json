@@ -34,11 +34,19 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "34027bcb-27eb-4a2d-99c2-5beb80814599"
+      }
+    },
+    "owner": "taesonco"
   }
 }
