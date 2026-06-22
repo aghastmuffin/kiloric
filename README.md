@@ -1,6 +1,10 @@
-# Welcome to your Expo app 👋
+# CalCount (taesonco-calcount)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo app for calorie tracking — barcode scan, food search, user profiles, and nutrition goals.
+
+## Documentation
+
+Custom architecture, Appwrite setup, components, and how-tos live in **[`docs/`](./docs/README.md)** (outside `src/app/` so Expo Router ignores them).
 
 ## Get started
 

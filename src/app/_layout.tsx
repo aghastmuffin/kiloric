@@ -1,9 +1,134 @@
+import { ApiErrorProvider } from '@/lib/ApiErrorContext';
+import { AuthProvider } from '@/lib/AuthContext';
+import { FontPreferencesProvider, useFontPreferences } from '@/lib/FontPreferencesContext';
+import { MealTypePreferencesProvider } from '@/lib/MealTypePreferencesContext';
+import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { fontAssets } from '@/lib/fonts';
+import { DarkTheme, DefaultTheme, ThemeProvider, type Theme } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useMemo } from 'react';
+import 'react-native-url-polyfill/auto';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+SplashScreen.preventAutoHideAsync();
+
+function buildNavigationTheme(
+  base: Theme,
+  colors: ThemeColors,
+  activeFontFamily?: string,
+): Theme {
+  const themed: Theme = {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: colors.accent,
+      background: colors.background,
+      card: colors.surfaceMuted,
+      text: colors.text,
+      border: colors.border,
+      notification: colors.danger,
+    },
+  };
+
+  if (!activeFontFamily) {
+    return themed;
+  }
+
+  const font = (fontWeight: '400' | '500' | '600' | '700') => ({
+    fontFamily: activeFontFamily,
+    fontWeight,
+  })
+
+  return {
+    ...themed,
+    fonts: {
+      regular: font('400'),
+      medium: font('500'),
+      bold: font('600'),
+      heavy: font('700'),
+    },
+  }
+}
+
+function RootNavigation() {
+  const { activeFontFamily } = useFontPreferences();
+  const { colors, scheme } = useTheme();
+  const navigationTheme = useMemo(
+    () =>
+      buildNavigationTheme(
+        scheme === 'light' ? DefaultTheme : DarkTheme,
+        colors,
+        activeFontFamily,
+      ),
+    [scheme, colors, activeFontFamily],
+  );
+  const navigationFontStyle = activeFontFamily
+    ? { fontFamily: activeFontFamily }
+    : undefined;
+
+  return (
+    <ThemeProvider value={navigationTheme}>
+      <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
+      <ApiErrorProvider>
+        <AuthProvider>
+          <MealTypePreferencesProvider>
+            <Stack
+            screenOptions={{
+              headerTitleStyle: navigationFontStyle,
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name='cameraview' options={{ headerShown: true, headerTitle: "Scan Barcode" }} />
+            <Stack.Screen
+              name="onboarding"
+              options={{
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen
+              name="onboard_success"
+              options={{
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen name='config' options={{ headerShown: true, headerTitle: "Profile" }} />
+            <Stack.Screen name='multiresponse' options={{ headerShown: true, headerTitle: "Results" }} />
+            <Stack.Screen name='fooddetail' options={{ headerShown: true, headerTitle: "Food Details" }} />
+            <Stack.Screen name='present_n_save' options={{ headerShown: true, headerTitle: "Confirm Selection" }} />
+          </Stack>
+          </MealTypePreferencesProvider>
+        </AuthProvider>
+      </ApiErrorProvider>
+    </ThemeProvider>
+  );
+}
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <SafeAreaProvider>
+      <AppThemeProvider>
+        <FontPreferencesProvider customFontLoaded={fontsLoaded && !fontError}>
+          <RootNavigation />
+        </FontPreferencesProvider>
+      </AppThemeProvider>
+    </SafeAreaProvider>
   );
 }

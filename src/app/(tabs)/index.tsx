@@ -1,33 +1,38 @@
-import { View, StyleSheet } from 'react-native';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 
-import ImageViewer from '@/components/ImageViewer';
-
-const PlaceholderImage = require('../../../assets/images/react-logo.png');
-
-
-export default function Index() {
+export default function AboutScreen() {
+  const router = useRouter();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <ImageViewer imgSource={PlaceholderImage} />
-      </View>
+      <Text style={styles.text} >Welcome to CalCount</Text>
+      <Text style={styles.text} onPress={() => router.push('/credits')}>
+        Credits
+      </Text>
+      <Text style={styles.text} onPress={() => router.push('/scan')}>
+        Scan
+      </Text>
+      <Text style={styles.text} onPress={() => router.push('/text_query')}>
+        Text Query
+      </Text>
+      
     </View>
   );
 }
 
-
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#25292e',
+    backgroundColor: c.background,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  imageContainer: {
-    flex: 1,
-  },
-  image: {
-    width: 320,
-    height: 440,
-    borderRadius: 18,
+  text: {
+    color: c.accent,
+    fontSize: 16,
+    paddingVertical: 6,
   },
 });

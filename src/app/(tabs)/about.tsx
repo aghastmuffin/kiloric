@@ -1,21 +1,35 @@
-import { Text, View, StyleSheet } from 'react-native';
+import { useAuth } from '@/lib/AuthContext';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { Link } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function AboutScreen() {
+  const { user } = useAuth();
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>About screen</Text>
+      {user ? (
+        <Text style={styles.text}>Logged in as {user.email}</Text>
+      ) : (
+        <View>
+          <Text style={styles.text}>Not logged in</Text>
+          <Link href="/account">Login</Link>
+        </View>
+      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#25292e',
+    backgroundColor: c.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   text: {
-    color: '#fff',
+    color: c.text,
   },
 });

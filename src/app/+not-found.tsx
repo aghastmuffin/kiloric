@@ -1,7 +1,10 @@
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { View, StyleSheet } from 'react-native';
 import { Link, Stack } from 'expo-router';
 
 export default function NotFoundScreen() {
+  const styles = useThemedStyles(makeStyles);
   return (
     <>
       <Stack.Screen options={{ title: 'You\'ve got us stumped!' }} />
@@ -14,10 +17,10 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#25292e',
+    backgroundColor: c.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -25,6 +28,6 @@ const styles = StyleSheet.create({
   button: {
     fontSize: 20,
     textDecorationLine: 'underline',
-    color: '#fff',
+    color: c.accent,
   },
 });

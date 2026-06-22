@@ -9,6 +9,9 @@
       ],
       "@/assets/*": [
         "./assets/*"
+      ],
+      "react-native-original": [
+        "./node_modules/react-native"
       ]
     }
   },
