@@ -12,8 +12,8 @@ const TAB_BAR_HEIGHT = Platform.select({ ios: 49, android: 56, default: 56 }) ??
 type SearchScreen = 'scan' | 'text_query'
 
 const SWAP_CONFIG: Record<
-  SearchScreen,
-  { target: SearchScreen; icon: keyof typeof Ionicons.glyphMap; label: string }
+    SearchScreen,
+    { target: SearchScreen; icon: keyof typeof Ionicons.glyphMap; label: string }
 > = {
   scan: {
     target: 'text_query',
@@ -37,21 +37,21 @@ export function SearchModeSwapButton({ current }: Props) {
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const { target, icon, label } = SWAP_CONFIG[current]
-  const bottomOffset = TAB_BAR_HEIGHT + insets.bottom + 14
+  const bottomOffset =  insets.bottom + 18 //match right offset
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={() => router.push(`/(tabs)/${target}`)}
-      style={({ pressed }) => [
-        styles.button,
-        { bottom: bottomOffset },
-        pressed && styles.buttonPressed,
-      ]}
-    >
-      <Ionicons name={icon} size={26} color={colors.accent} />
-    </Pressable>
+      <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          onPress={() => router.push(`/(tabs)/${target}`)}
+          style={({ pressed }) => [
+            styles.button,
+            { bottom: bottomOffset },
+            pressed && styles.buttonPressed,
+          ]}
+      >
+        <Ionicons name={icon} size={26} color={colors.accent} />
+      </Pressable>
   )
 }
 

@@ -343,7 +343,7 @@ export function OnboardingWizard() {
   }
   function goBack() {
     if (isFirstStep) {
-      if (!isRequired) router.back()
+      if (!isRequired) router.push("/account")
       else if (!user?.$id && step === 'email') router.replace('/(tabs)/account')
       return
     }

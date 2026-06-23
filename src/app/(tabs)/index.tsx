@@ -1,7 +1,7 @@
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -9,16 +9,22 @@ export default function AboutScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.text} >Welcome to CalCount</Text>
-      <Text style={styles.text} onPress={() => router.push('/credits')}>
-        Credits
-      </Text>
-      <Text style={styles.text} onPress={() => router.push('/scan')}>
+        <Pressable onPress={() => router.push('/scan')}>
+      <Text style={styles.text} >
         Scan
       </Text>
-      <Text style={styles.text} onPress={() => router.push('/text_query')}>
+        </Pressable>
+        <Pressable onPress={() => router.push('/text_query')}>
+      <Text style={styles.text}>
         Text Query
       </Text>
-      
+        </Pressable>
+        <Pressable
+            style={{ position: 'absolute', right: 20, bottom: 20 }}
+            onPress={() => router.push('/credits')}
+        >
+            <Text style={styles.text}>Credits</Text>
+        </Pressable>
     </View>
   );
 }

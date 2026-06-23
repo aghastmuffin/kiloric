@@ -18,7 +18,7 @@ export function MealTypePicker() {
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const [open, setOpen] = useState(false)
-  const bottomOffset = TAB_BAR_HEIGHT + insets.bottom + 14
+  const bottomOffset =  insets.bottom + 18
 
   return (
     <View style={[styles.anchor, { bottom: bottomOffset }]}>

@@ -7,6 +7,7 @@ import * as Device from 'expo-device';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { useIsFocused } from 'expo-router';
 
 const BARCODE_TYPES: BarcodeType[] = [
   'aztec',
@@ -31,6 +32,7 @@ export default function CameraScannerScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const isFocused = useIsFocused();
 
   useFocusEffect(
     useCallback(() => {
@@ -76,19 +78,24 @@ export default function CameraScannerScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        facing={facing}
-        barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
-        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-      />
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-          <Text style={styles.buttonText}>Flip Camera</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        {isFocused ? (
+            <CameraView
+                style={styles.camera}
+                facing={facing}
+                barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
+                onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+            />
+        ) : (
+            <View style={styles.camera} /> // Placeholder view to prevent layout shifts
+        )}
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+            <Text style={styles.buttonText}>Flip Camera</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
   );
 }
 
