@@ -125,10 +125,7 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <ImageViewer imgSource={PlaceholderImage} style={styles.image} />
-      </View>
-      
+
       <View style={styles.headerRow}>
         <Text style={styles.titleText}>Manually Search {searchType === 'Barcode' ? 'for a' : 'for'}</Text>
         <CrossPlatformDropDown selectedType={searchType} onSelectType={setSearchType} />

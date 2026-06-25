@@ -14,16 +14,15 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  UIManager,
   View
 } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import type { Models } from 'react-native-appwrite';
 
 type AppwriteUser = Models.User<Models.Preferences>;
@@ -32,72 +31,143 @@ export default function AccountScreen() {
   const { user, loading } = useAuth();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences();
+  const [savingPreference, setSavingPreference] = useState(false);
+
+  async function handleSearchModeChange(mode: DefaultSearchMode) {
+    if (mode === defaultSearchMode || savingPreference) return;
+    setSavingPreference(true);
+    try {
+      await setDefaultSearchMode(mode);
+    } finally {
+      setSavingPreference(false);
+    }
+  }
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.accent} />
-        <Text style={styles.mutedText}>Restoring session…</Text>
-      </View>
+        <View style={styles.centered}>
+          <ActivityIndicator color={colors.accent} />
+          <Text style={styles.mutedText}>Restoring session…</Text>
+        </View>
     );
   }
 
-  if (!user) {
-    return <AccountSignInFlow />;
-  }
-
-  return <LoggedInPanel user={user} />;
-}
-
-if (Platform.OS === 'android') {
-  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+  return (
+      <ScrollView contentContainerStyle={styles.container}>
+        {!user ? (
+            <AccountSignInFlow />
+        ) : (
+            <LoggedInPanel
+                user={user}
+                defaultSearchMode={defaultSearchMode}
+                savingPreference={savingPreference}
+                onSearchModeChange={handleSearchModeChange}
+            />
+        )}
+      </ScrollView>
+  );
 }
 
 export function UserCard({ user, tokenPreview }: { user: AppwriteUser; tokenPreview: string }) {
   const styles = useThemedStyles(makeStyles);
   const [expanded, setExpanded] = useState(false);
 
-  const toggle = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpanded((prev) => !prev);
-  };
+  const toggle = () => setExpanded((prev) => !prev);
 
   return (
-    <View style={styles.card}>
-      <Pressable onPress={toggle} style={styles.header}>
-        <Text style={styles.hint}>
-          {expanded ? '▲ Debug Details' : '▼ Debug Details'}
-        </Text>
-      </Pressable>
-
-      {expanded && (
-        <View style={styles.dropdown}>
-          <Text style={styles.cardLabel}>User ID</Text>
-          <Text style={styles.cardValue}>{user.$id}</Text>
-
-          <Text style={styles.cardLabel}>Email</Text>
-          <Text style={styles.cardValue}>{user.email ?? '—'}</Text>
-
-          <Text style={styles.cardLabel}>Access token (preview)</Text>
-          <Text style={styles.mono}>{tokenPreview}</Text>
-
+      <Animated.View style={styles.card} layout={LinearTransition.springify().damping(18)}>
+        <Pressable onPress={toggle} style={styles.header}>
           <Text style={styles.hint}>
-            Authorization: <Text style={styles.mono}>Bearer &lt;access_token&gt;</Text>
+            {expanded ? '▲ Debug Details' : '▼ Debug Details'}
           </Text>
-        </View>
-      )}
-    </View>
+        </Pressable>
+
+        {expanded && (
+            <Animated.View
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
+                style={styles.dropdown}
+            >
+              <Text style={styles.cardLabel}>User ID</Text>
+              <Text style={styles.cardValue}>{user.$id}</Text>
+
+              <Text style={styles.cardLabel}>Email</Text>
+              <Text style={styles.cardValue}>{user.email ?? '—'}</Text>
+
+              <Text style={styles.cardLabel}>Access token (preview)</Text>
+              <Text style={styles.mono}>{tokenPreview}</Text>
+
+              <Text style={styles.hint}>
+                Authorization: <Text style={styles.mono}>Bearer &lt;access_token&gt;</Text>
+              </Text>
+            </Animated.View>
+        )}
+      </Animated.View>
   );
 }
 
-function LoggedInPanel({ user }: { user: AppwriteUser }) {
+type SettingsDropProps = {
+  defaultSearchMode: DefaultSearchMode;
+  savingPreference: boolean;
+  onSearchModeChange: (mode: DefaultSearchMode) => void;
+};
+
+export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchModeChange }: SettingsDropProps) {
+  const styles = useThemedStyles(makeStyles);
+  const [expanded, setExpanded] = useState(false);
+
+  const toggle = () => setExpanded((prev) => !prev);
+
+  return (
+      <Animated.View style={styles.card} layout={LinearTransition.springify().damping(18)}>
+        <Pressable onPress={toggle} style={styles.header}>
+          <Text style={styles.hint}>
+            {expanded ? '▲ Compact Settings' : '▼ View Settings'}
+          </Text>
+        </Pressable>
+
+        {expanded && (
+            <Animated.View
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
+                style={styles.settingsCard}
+            >
+              <Text style={styles.sectionTitle}>Settings</Text>
+              <Text style={styles.label}>Default search tab</Text>
+              <Text style={styles.hint}>
+                Choose whether the bottom tab opens camera scan or manual text search.
+              </Text>
+              <ThemedSegmentedControl
+                  values={['Camera scan', 'Text search']}
+                  selectedIndex={defaultSearchMode === 'scan' ? 0 : 1}
+                  enabled={!savingPreference}
+                  onChange={(index) =>
+                      onSearchModeChange(index === 0 ? 'scan' : 'text_query')
+                  }
+              />
+
+              <ThemePreferencePicker />
+              <FontPreferencePicker />
+            </Animated.View>
+        )}
+      </Animated.View>
+  );
+}
+
+type LoggedInPanelProps = {
+  user: AppwriteUser;
+  defaultSearchMode: DefaultSearchMode;
+  savingPreference: boolean;
+  onSearchModeChange: (mode: DefaultSearchMode) => void;
+};
+
+function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchModeChange }: LoggedInPanelProps) {
   const { signOut } = useAuth();
   const router = useRouter();
   const styles = useThemedStyles(makeStyles);
-  const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences();
   const [signingOut, setSigningOut] = useState(false);
   const [tokenPreview, setTokenPreview] = useState('Loading…');
-  const [savingPreference, setSavingPreference] = useState(false);
 
   useEffect(() => {
     getAccessToken().then((token) => {
@@ -116,55 +186,32 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
     }
   }
 
-  async function handleSearchModeChange(mode: DefaultSearchMode) {
-    if (mode === defaultSearchMode || savingPreference) return;
-    setSavingPreference(true);
-    try {
-      await setDefaultSearchMode(mode);
-    } finally {
-      setSavingPreference(false);
-    }
-  }
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Welcome back, {user.email}!</Text>
-      <UserCard user={user} tokenPreview={tokenPreview} />
+      <View>
+        <Text style={styles.title}>Welcome back, {user.email}!</Text>
+        <UserCard user={user} tokenPreview={tokenPreview} />
 
-      <View style={styles.settingsCard}>
-        <Text style={styles.sectionTitle}>Settings</Text>
-        <Text style={styles.label}>Default search tab</Text>
-        <Text style={styles.hint}>
-          Choose whether the bottom tab opens camera scan or manual text search.
-        </Text>
-        <ThemedSegmentedControl
-          values={['Camera scan', 'Text search']}
-          selectedIndex={defaultSearchMode === 'scan' ? 0 : 1}
-          enabled={!savingPreference}
-          onChange={(index) =>
-            handleSearchModeChange(index === 0 ? 'scan' : 'text_query')
-          }
+        <SettingsDrop
+            defaultSearchMode={defaultSearchMode}
+            savingPreference={savingPreference}
+            onSearchModeChange={onSearchModeChange}
         />
 
-        <ThemePreferencePicker />
-        <FontPreferencePicker />
-      </View>
-      
-      <TouchableOpacity
-        style={[styles.button, signingOut && styles.buttonDisabled]}
-        onPress={() => router.push('/config')}
-      >
-        <Text style={styles.buttonText}>Edit Information</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+            style={[styles.button, signingOut && styles.buttonDisabled]}
+            onPress={() => router.push('/config')}
+        >
+          <Text style={styles.buttonText}>Edit Information</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.buttonDanger, signingOut && styles.buttonDisabled]}
-        onPress={handleSignOut}
-        disabled={signingOut}
-      >
-        <Text style={styles.buttonDangerText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity
+            style={[styles.buttonDanger, signingOut && styles.buttonDisabled]}
+            onPress={handleSignOut}
+            disabled={signingOut}
+        >
+          <Text style={styles.buttonDangerText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
+        </TouchableOpacity>
+      </View>
   );
 }
 
@@ -283,14 +330,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: c.border,
+    overflow: 'hidden' // Important for smooth clipping during animation
   },
   settingsCard: {
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: c.border,
+    marginTop: 10,
   },
   segmentRow: {
     flexDirection: 'row',
@@ -353,4 +396,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 12,
     marginTop: 16,
   },
+  header: {
+    paddingVertical: 4,
+  },
+  dropdown: {
+    marginTop: 10,
+  }
 });

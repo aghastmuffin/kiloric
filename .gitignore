@@ -39,3 +39,4 @@ example
 # generated native folders
 /ios
 /android
+tasks.json

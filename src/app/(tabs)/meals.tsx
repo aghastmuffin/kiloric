@@ -12,7 +12,7 @@ import {
   type MealBarcodesStore,
   type MealItemEntry,
 } from '@/lib/mealItemsStorage';
-import { createMeal, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals';
+import { createMeal, updateMeal, getTodayMeals, listHistoricMeals, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals';
 import { getProductTitle, getQuickProductFacts } from '@/lib/productDisplay';
 import { formatServings } from '@/lib/servings';
 import { useTheme } from '@/lib/theme/ThemeContext';
@@ -20,7 +20,7 @@ import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from "expo-router/react-navigation";
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,11 +31,39 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
+  Dimensions,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** Typical tab bar height above the home-indicator safe area. */
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+type UnifiedMealItem = {
+  id: string; // Appwrite $id or a local unique ID
+  type: MealType;
+  friendlyname: string | null;
+  kcal: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  timestamp: number; // For chronological sorting
+  isSynced: boolean;
+};
+
+type DailySummary = {
+  dateLabel: string;
+  totalKcal: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  meals: UnifiedMealItem[]; // Will be sorted chronologically
+};
 const TAB_BAR_HEIGHT = Platform.select({ ios: 49, android: 56, default: 56 }) ?? 56;
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 type MealItemPreview = {
   barcode: string;
@@ -56,20 +84,14 @@ type MealSection = {
 function FactRow({ label, value }: { label: string; value: string }) {
   const styles = useThemedStyles(makeStyles);
   return (
-    <View style={styles.factRow}>
-      <Text style={styles.factLabel}>{label}</Text>
-      <Text style={styles.factValue}>{value}</Text>
-    </View>
+      <View style={styles.factRow}>
+        <Text style={styles.factLabel} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+        <Text style={styles.factValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
+      </View>
   );
 }
 
-function MealItemCard({
-  item,
-  onViewMore,
-  onRemove,
-  onServingsChange,
-  servingsDisabled,
-}: {
+function MealItemCard({ item, onViewMore, onRemove, onServingsChange, servingsDisabled }: {
   item: MealItemPreview;
   onViewMore: (barcode: string) => void;
   onRemove: () => void;
@@ -77,36 +99,50 @@ function MealItemCard({
   servingsDisabled?: boolean;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const hasFacts = item.facts && item.facts.length > 0;
+
+  const translateX = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  const handleRemovePress = () => {
+    Animated.parallel([
+      Animated.timing(translateX, { toValue: SCREEN_WIDTH, duration: 300, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start(() => { onRemove(); });
+  };
 
   return (
-    <View style={styles.itemCard}>
-      <Text style={styles.itemTitle}>{item.title}</Text>
-      {item.servings !== 1 ? (
-        <Text style={styles.servingsNote}>
-          Totals for {formatServings(item.servings)} servings
-        </Text>
-      ) : null}
-      {item.facts.length > 0 ? (
-        item.facts.map((fact) => (
-          <FactRow key={`${item.barcode}-${fact.label}`} label={fact.label} value={fact.value} />
-        ))
-      ) : (
-        <Text style={styles.mutedText}>Barcode: {item.barcode}</Text>
-      )}
-      <ServingsPicker
-        servings={item.servings}
-        onChange={onServingsChange}
-        disabled={servingsDisabled}
-      />
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.viewMoreButton} onPress={() => onViewMore(item.barcode)}>
-          <Text style={styles.viewMoreButtonText}>View details</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.removeButton} onPress={onRemove}>
-          <Text style={styles.removeButtonText}>Remove</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <Animated.View style={[styles.itemCard, { transform: [{ translateX }], opacity }]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.itemTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
+          {item.servings !== 1 ? <Text style={styles.servingsNote}>Totals for {formatServings(item.servings)} servings</Text> : null}
+        </View>
+
+        <View style={styles.factsContainer}>
+          {hasFacts ? (
+              item.facts.map((fact) => <FactRow key={`${item.barcode}-${fact.label}`} label={fact.label} value={fact.value} />)
+          ) : (
+              <View style={styles.fallbackBarcodeContainer}>
+                <Ionicons name="barcode-outline" size={16} color={styles.mutedText.color} />
+                <Text style={styles.fallbackBarcodeText}>Barcode: {item.barcode}</Text>
+              </View>
+          )}
+        </View>
+
+        <View style={styles.pickerContainer}>
+          <Text style={styles.pickerLabel}>SERVINGS</Text>
+          <ServingsPicker servings={item.servings} onChange={onServingsChange} disabled={servingsDisabled} />
+        </View>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.viewMoreButton} onPress={() => onViewMore(item.barcode)}>
+            <Text style={styles.viewMoreButtonText}>View details</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.removeButton} onPress={handleRemovePress}>
+            <Text style={styles.removeButtonText}>Remove</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
   );
 }
 
@@ -115,60 +151,141 @@ async function buildItemPreview(entry: MealItemEntry): Promise<MealItemPreview> 
   const endpoint = `/api/barcode/${encodeURIComponent(barcode)}`;
   let data: Record<string, unknown> | null = null;
 
-  const cached = await getCachedResponse(endpoint);
-  if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
-    data = cached as Record<string, unknown>;
-  }
-
-  if (!data) {
-    try {
-      const fetched = await authenticatedRequest(endpoint);
-      if (fetched && typeof fetched === 'object' && !Array.isArray(fetched)) {
-        data = fetched as Record<string, unknown>;
-      }
-    } catch {
-      // Offline or auth failure — fall back to barcode label.
+  try {
+    const fetched = await authenticatedRequest(endpoint);
+    if (fetched && typeof fetched === 'object' && !Array.isArray(fetched)) {
+      data = fetched as Record<string, unknown>;
+    }
+  } catch (error) {
+    const cached = await getCachedResponse(endpoint);
+    if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
+      data = cached as Record<string, unknown>;
     }
   }
 
   if (data) {
-    const input = buildMealInputFromProduct('dummy_owner', data, 'Breakfast', barcode, servings);
+    let actualData = data;
+    if ('data' in data && data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+      actualData = data.data as Record<string, unknown>;
+    } else if ('product' in data && data.product && typeof data.product === 'object') {
+      actualData = data.product as Record<string, unknown>;
+    }
+
+    const input = buildMealInputFromProduct('dummy_owner', actualData, 'Breakfast', barcode, servings);
+    const displayFacts = [...(getQuickProductFacts(actualData, { servings }) || [])];
+
+    if (input.kcal !== undefined && input.kcal !== null) displayFacts.push({ label: 'Calories', value: `${Math.round(input.kcal)} kcal` });
+    if (input.protein !== undefined && input.protein !== null) displayFacts.push({ label: 'Protein', value: `${input.protein.toFixed(1)}g` });
+    if (input.carbs !== undefined && input.carbs !== null) displayFacts.push({ label: 'Carbs', value: `${input.carbs.toFixed(1)}g` });
+    if (input.fat !== undefined && input.fat !== null) displayFacts.push({ label: 'Fat', value: `${input.fat.toFixed(1)}g` });
+
     return {
-      barcode,
-      servings,
-      title: getProductTitle(data, barcode),
-      facts: getQuickProductFacts(data, { servings }),
-      kcal: input.kcal ?? null,
-      protein: input.protein ?? null,
-      carbs: input.carbs ?? null,
-      fat: input.fat ?? null,
+      barcode, servings,
+      title: getProductTitle(actualData, barcode),
+      facts: displayFacts,
+      kcal: input.kcal ?? null, protein: input.protein ?? null, carbs: input.carbs ?? null, fat: input.fat ?? null,
     };
   }
 
-  return {
-    barcode,
-    servings,
-    title: barcode,
-    facts: [],
-    kcal: null,
-    protein: null,
-    carbs: null,
-    fat: null,
-  };
+  return { barcode, servings, title: `Barcode: ${barcode}`, facts: [], kcal: null, protein: null, carbs: null, fat: null };
 }
 
-async function buildMealSections(store: MealBarcodesStore): Promise<MealSection[]> {
-  const sections: MealSection[] = [];
+function formatDateLabel(date: Date): string {
+  const today = new Date();
+  const isToday = date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear();
 
-  for (const type of MEAL_TYPE_OPTIONS) {
-    const items = store[type];
-    if (items.length === 0) continue;
+  return isToday ? 'Today' : date.toLocaleDateString(undefined, {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+}
 
-    const previews = await Promise.all(items.map((entry) => buildItemPreview(entry)));
-    sections.push({ type, items: previews });
+async function fetchAndGroupMeals(userId: string | undefined): Promise<DailySummary[]> {
+  const dailyMap = new Map<string, DailySummary>();
+
+  // 1. Fetch Synced Meals from Appwrite
+  if (userId) {
+    const [todayMeals, historicMeals] = await Promise.all([
+      getTodayMeals(userId).catch(() => []),
+      listHistoricMeals(userId, 50).catch(() => []) // Fetch last 50 historical meals
+    ]);
+
+    const allSynced = [...todayMeals, ...historicMeals];
+
+    allSynced.forEach(meal => {
+      const mealDate = new Date(meal.$createdAt);
+      const dateLabel = formatDateLabel(mealDate);
+
+      if (!dailyMap.has(dateLabel)) {
+        dailyMap.set(dateLabel, { dateLabel, totalKcal: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, meals: [] });
+      }
+
+      const summary = dailyMap.get(dateLabel)!;
+
+      // Add to daily cumulative totals
+      summary.totalKcal += meal.kcal || 0;
+      summary.totalProtein += meal.protein || 0;
+      summary.totalCarbs += meal.carbs || 0;
+      summary.totalFat += meal.fat || 0;
+
+      summary.meals.push({
+        id: meal.$id,
+        type: meal.type as MealType,
+        friendlyname: meal.friendlyname || meal.type,
+        kcal: meal.kcal,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fat: meal.fat,
+        timestamp: mealDate.getTime(),
+        isSynced: true
+      });
+    });
   }
 
-  return sections;
+  // 2. Fetch Local Pending Meals (Unsynced)
+  const localStore = await loadMealBarcodes();
+  const pendingDateLabel = formatDateLabel(new Date()); // Local items default to 'Today'
+
+  if (!dailyMap.has(pendingDateLabel)) {
+    dailyMap.set(pendingDateLabel, { dateLabel: pendingDateLabel, totalKcal: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, meals: [] });
+  }
+
+  const todaySummary = dailyMap.get(pendingDateLabel)!;
+
+  for (const type of MEAL_TYPE_OPTIONS) {
+    const items = localStore[type];
+    for (const entry of items) {
+      const preview = await buildItemPreview(entry); // Your existing function
+
+      todaySummary.totalKcal += preview.kcal || 0;
+      todaySummary.totalProtein += preview.protein || 0;
+      todaySummary.totalCarbs += preview.carbs || 0;
+      todaySummary.totalFat += preview.fat || 0;
+
+      todaySummary.meals.push({
+        id: `local-${entry.barcode}-${Date.now()}`,
+        type,
+        friendlyname: preview.title,
+        kcal: preview.kcal,
+        protein: preview.protein,
+        carbs: preview.carbs,
+        fat: preview.fat,
+        timestamp: Date.now(), // Treat pending items as "just now"
+        isSynced: false
+      });
+    }
+  }
+
+  // 3. Sort Chronologically
+  const sortedSummaries = Array.from(dailyMap.values());
+
+  sortedSummaries.forEach(summary => {
+    // Sort meals chronologically (Breakfast -> Snacks -> Lunch -> Snacks -> Dinner)
+    summary.meals.sort((a, b) => a.timestamp - b.timestamp);
+  });
+
+  return sortedSummaries;
 }
 
 function getSectionIcon(type: MealType): keyof typeof Ionicons.glyphMap {
@@ -195,24 +312,24 @@ export default function MealsScreen() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  const bottomOffset = TAB_BAR_HEIGHT + insets.bottom + 14;
+  const bottomOffset = insets.bottom + 18;
+
+  const [dailySummaries, setDailySummaries] = useState<DailySummary[]>([]);
 
   const refreshMeals = useCallback(async () => {
     setIsLoading(true);
     try {
-      const store = await loadMealBarcodes();
-      const nextSections = await buildMealSections(store);
-      setSections(nextSections);
+      const summaries = await fetchAndGroupMeals(user?.$id);
+      setDailySummaries(summaries);
+    } catch (err) {
+      console.error('[Component Action] Error loading meals:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.$id]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refreshMeals();
-    }, [refreshMeals]),
-  );
+  useEffect(() => { void refreshMeals(); }, [refreshMeals]);
+  useFocusEffect(useCallback(() => { void refreshMeals(); }, [refreshMeals]));
 
   const handleViewMore = useCallback(async (barcode: string) => {
     setSelectedBarcode(barcode);
@@ -237,26 +354,23 @@ export default function MealsScreen() {
         setDetailData({ result: data });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      setDetailError(`Request failed: ${message}`);
+      setDetailError(`Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setDetailLoading(false);
     }
   }, []);
 
-  const handleMealAdded = useCallback(() => {
-    void refreshMeals();
-  }, [refreshMeals]);
+  const handleMealAdded = useCallback(() => { void refreshMeals(); }, [refreshMeals]);
 
   const handleRemoveItem = useCallback(async (type: MealType, index: number) => {
-    setIsLoading(true);
     try {
       await removeMealBarcode(type, index);
       const store = await loadMealBarcodes();
       const nextSections = await buildMealSections(store);
+      if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setSections(nextSections);
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      console.error("Failed to remove card item:", err);
     }
   }, []);
 
@@ -268,353 +382,219 @@ export default function MealsScreen() {
   }, []);
 
   const handleSyncToAppwrite = useCallback(async () => {
-    if (!user?.$id) {
-      Alert.alert('Sign in required', 'Please sign in under the Account tab to sync your meals to Appwrite.');
-      return;
-    }
+    if (!user?.$id) return Alert.alert('Sign in required', 'Please sign in to sync your meals to Appwrite.');
+    if (sections.length === 0) return Alert.alert('No meals', 'There are no local meals to sync.');
 
-    if (sections.length === 0) {
-      Alert.alert('No meals', 'There are no local meals to sync.');
-      return;
-    }
+    // Extract the logic so it can be reliably fired on both Web and Mobile
+    const executeSync = async () => {
+      setIsSyncing(true);
+      let successCount = 0;
+      let failCount = 0;
 
-    Alert.alert(
-      'Push Meals to Appwrite',
-      'This will sync all your local logged meals to your Appwrite account. Once pushed, your local list will be cleared. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Push',
-          onPress: async () => {
-            setIsSyncing(true);
-            let successCount = 0;
-            let failCount = 0;
+      try {
+        // 1. Fetch today's meal collections from your database
+        const existingMeals = await getTodayMeals(user.$id).catch(() => []);
 
-            try {
-              for (const section of sections) {
-                for (const item of section.items) {
-                  const barcode = item.barcode;
-                  const endpoint = `/api/barcode/${encodeURIComponent(barcode)}`;
-                  let data: Record<string, unknown> | null = null;
-                  
-                  // Try to fetch or retrieve cached data
-                  try {
-                    const cached = await getCachedResponse(endpoint);
-                    if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
-                      data = cached as Record<string, unknown>;
-                    }
-                    if (!data) {
-                      const fetched = await authenticatedRequest(endpoint);
-                      if (fetched && typeof fetched === 'object' && !Array.isArray(fetched)) {
-                        data = fetched as Record<string, unknown>;
-                      }
-                    }
-                  } catch (err) {
-                    console.warn(`Could not resolve details for barcode ${barcode}:`, err);
-                  }
+        for (const section of sections) {
+          try {
+            const existingMeal = existingMeals.find((m: any) => m.type === section.type);
 
-                  try {
-                    if (data) {
-                      const input = buildMealInputFromProduct(
-                        user.$id,
-                        data,
-                        section.type,
-                        barcode,
-                        item.servings,
-                      );
-                      await createMeal(input);
-                    } else {
-                      // Fallback payload if API details couldn't be loaded
-                      await createMeal({
-                        owner: user.$id,
-                        friendlyname: `Barcode: ${barcode}`,
-                        type: section.type,
-                        kcal: null,
-                        protein: null,
-                        carbs: null,
-                        fat: null,
-                        nutrient_density_score: null,
-                        items: [barcode],
-                      });
-                    }
-                    successCount++;
-                  } catch (err) {
-                    console.error(`Failed to push meal ${barcode}:`, err);
-                    failCount++;
-                  }
-                }
-              }
+            let sectionKcal: number | null = null;
+            let sectionProtein: number | null = null;
+            let sectionCarbs: number | null = null;
+            let sectionFat: number | null = null;
+            const sectionBarcodes: string[] = [];
 
-              // Reset local storage
-              await clearMealBarcodes();
-              await refreshMeals();
-
-              if (failCount === 0) {
-                Alert.alert(
-                  'Success',
-                  `Successfully synced all ${successCount} items to Appwrite.`
-                );
-              } else {
-                Alert.alert(
-                  'Sync Complete',
-                  `Synced ${successCount} items. Failed to sync ${failCount} items. Local list cleared.`
-                );
-              }
-            } catch (err) {
-              const message = err instanceof Error ? err.message : 'Unknown sync error';
-              Alert.alert('Sync failed', message);
-            } finally {
-              setIsSyncing(false);
+            for (const item of section.items) {
+              if (item.kcal !== null) sectionKcal = (sectionKcal ?? 0) + item.kcal;
+              if (item.protein !== null) sectionProtein = (sectionProtein ?? 0) + item.protein;
+              if (item.carbs !== null) sectionCarbs = (sectionCarbs ?? 0) + item.carbs;
+              if (item.fat !== null) sectionFat = (sectionFat ?? 0) + item.fat;
+              sectionBarcodes.push(item.barcode);
             }
+
+            if (existingMeal) {
+              const updatedData = {
+                friendlyname: section.type,
+                kcal: sectionKcal !== null ? (existingMeal.kcal ?? 0) + sectionKcal : existingMeal.kcal,
+                protein: sectionProtein !== null ? (existingMeal.protein ?? 0) + sectionProtein : existingMeal.protein,
+                carbs: sectionCarbs !== null ? (existingMeal.carbs ?? 0) + sectionCarbs : existingMeal.carbs,
+                fat: sectionFat !== null ? (existingMeal.fat ?? 0) + sectionFat : existingMeal.fat,
+                items: [...(existingMeal.items ?? []), ...sectionBarcodes],
+              };
+              await updateMeal(existingMeal.$id, updatedData);
+            } else {
+              await createMeal({
+                owner: user.$id,
+                friendlyname: section.type,
+                type: section.type,
+                kcal: sectionKcal,
+                protein: sectionProtein,
+                carbs: sectionCarbs,
+                fat: sectionFat,
+                nutrient_density_score: null,
+                fluid: null,
+                items: sectionBarcodes,
+              });
+            }
+            successCount++;
+          } catch (err) {
+            console.error(`Failed processing section payload block ${section.type}:`, err);
+            failCount++;
           }
         }
-      ]
-    );
+
+        await clearMealBarcodes();
+        await refreshMeals();
+
+        if (failCount === 0) Alert.alert('Success', `Successfully synced your meals.`);
+        else Alert.alert('Sync complete with updates', `Synced updates successfully. Local cache cleared.`);
+      } catch (err) {
+        Alert.alert('Sync failed', err instanceof Error ? err.message : 'Sync failure');
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    // Environment-safe execution
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('This will sync your logged meals to your account. Local list will be cleared. Continue?');
+      if (confirmed) {
+        await executeSync();
+      }
+    } else {
+      Alert.alert(
+          'Push Meals to Appwrite',
+          'This will sync your logged meals to your account. Local list will be cleared. Continue?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Push', onPress: executeSync }
+          ]
+      );
+    }
   }, [user, sections, refreshMeals]);
+
 
   const hasItems = sections.length > 0;
   const curdate = new Date(Date.now()).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
   return (
-    <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {isLoading && !isSyncing ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.accent} />
-            <Text style={styles.mutedText}>Loading meals…</Text>
-          </View>
-        ) : !hasItems ? (
-          <Text style={styles.mutedText}>
-            No meals logged yet. Scan or search for food, then tap Add to meals.
-          </Text>
-        ) : (
-          sections.map((section) => (
-            <View key={section.type} style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name={getSectionIcon(section.type)} size={20} color={colors.accent} />
-                <Text style={styles.sectionTitle}>{section.type} of {curdate}</Text>
+      <>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          {isLoading && !isSyncing ? (
+              <View style={styles.centered}>
+                <ActivityIndicator size="large" color={colors.accent} />
+                <Text style={styles.mutedText}>Loading meals…</Text>
               </View>
-              {section.items.map((item, index) => (
-                <MealItemCard
-                  key={`${section.type}-${item.barcode}-${index}`}
-                  item={item}
-                  onViewMore={handleViewMore}
-                  onRemove={() => handleRemoveItem(section.type, index)}
-                  onServingsChange={(servings) => handleServingsChange(section.type, index, servings)}
-                  servingsDisabled={isLoading || isSyncing}
-                />
-              ))}
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      {hasItems && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Push meals to Appwrite"
-          onPress={handleSyncToAppwrite}
-          disabled={isSyncing}
-          style={({ pressed }) => [
-            styles.floatingSyncButton,
-            { bottom: bottomOffset },
-            pressed && styles.floatingSyncButtonPressed,
-            isSyncing && styles.floatingSyncButtonDisabled,
-          ]}
-        >
-          {isSyncing ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <ActivityIndicator size="small" color={colors.accent} />
-              <Text style={styles.floatingSyncButtonText}>Logging...</Text>
-            </View>
+          ) : !hasItems ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="fast-food-outline" size={48} color={colors.textMuted} style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyText}>No meals logged yet. Scan or search for food, then tap Add to meals.</Text>
+              </View>
           ) : (
-            <>
-              <Ionicons name="cloud-upload-outline" size={24} color={colors.accent} />
-              <Text style={styles.floatingSyncButtonText}>Log Meal</Text>
-            </>
+              sections.map((section) => (
+                  <View key={section.type} style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name={getSectionIcon(section.type)} size={20} color={colors.accent} />
+                      <Text style={styles.sectionTitle}>{section.type} • {curdate}</Text>
+                    </View>
+                    {section.items.map((item, index) => (
+                        <MealItemCard
+                            key={`${section.type}-${item.barcode}-${index}`}
+                            item={item}
+                            onViewMore={handleViewMore}
+                            onRemove={() => handleRemoveItem(section.type, index)}
+                            onServingsChange={(servings) => handleServingsChange(section.type, index, servings)}
+                            servingsDisabled={isLoading || isSyncing}
+                        />
+                    ))}
+                  </View>
+              ))
           )}
-        </Pressable>
-      )}
+        </ScrollView>
 
-      <BarcodeDetailModal
-        visible={modalVisible}
-        barcode={selectedBarcode}
-        data={detailData}
-        isLoading={detailLoading}
-        error={detailError}
-        onClose={() => setModalVisible(false)}
-        onMealAdded={handleMealAdded}
-      />
-    </>
+        {hasItems && (
+            <Pressable
+                accessibilityRole="button"
+                onPress={handleSyncToAppwrite}
+                disabled={isSyncing}
+                style={({ pressed }) => [
+                  styles.floatingSyncButton,
+                  { bottom: bottomOffset },
+                  pressed && styles.floatingSyncButtonPressed,
+                  isSyncing && styles.floatingSyncButtonDisabled,
+                ]}
+            >
+              {isSyncing ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator size="small" color={colors.accent} />
+                    <Text style={styles.floatingSyncButtonText}>Logging...</Text>
+                  </View>
+              ) : (
+                  <>
+                    <Ionicons name="cloud-upload-outline" size={24} color={colors.accent} />
+                    <Text style={styles.floatingSyncButtonText}>Log Meal</Text>
+                  </>
+              )}
+            </Pressable>
+        )}
+
+        <BarcodeDetailModal
+            visible={modalVisible}
+            barcode={selectedBarcode}
+            data={detailData}
+            isLoading={detailLoading}
+            error={detailError}
+            onClose={() => setModalVisible(false)}
+            onMealAdded={handleMealAdded}
+        />
+      </>
   );
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: c.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 100, // accommodate the floating button at bottom
-    gap: 20,
-  },
-  centered: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 48,
-  },
-  section: {
-    gap: 12,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
-    paddingBottom: 6,
-  },
-  sectionTitle: {
-    color: c.text,
-    fontSize: 20,
-    fontWeight: '700',
-  },
+  container: { flex: 1, backgroundColor: c.background },
+  content: { padding: 16, paddingBottom: 110, gap: 24 },
+  centered: { alignItems: 'center', gap: 12, paddingVertical: 64 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 32 },
+  emptyText: { color: c.textMuted, fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  section: { gap: 14 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: c.border, paddingBottom: 8, marginBottom: 4 },
+  sectionTitle: { color: c.text, fontSize: 18, fontWeight: '700' },
   itemCard: {
-    backgroundColor: c.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: c.border,
-    gap: 4,
+    backgroundColor: c.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: c.border, gap: 12,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 3,
-      },
-      web: {
-        boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.15)',
-      }
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
+      android: { elevation: 2 },
+      web: { boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)' }
     }),
   },
-  itemTitle: {
-    color: c.accent,
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  servingsNote: {
-    color: c.textMuted,
-    fontSize: 13,
-    marginTop: -4,
-    marginBottom: 8,
-  },
-  factRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: c.border,
-  },
-  factLabel: {
-    color: c.textMuted,
-    fontSize: 14,
-    flex: 1,
-  },
-  factValue: {
-    color: c.text,
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1.2,
-    textAlign: 'right',
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-  },
-  viewMoreButton: {
-    flex: 1,
-    backgroundColor: c.surfaceAlt,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: c.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewMoreButtonText: {
-    color: c.accent,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  removeButton: {
-    flex: 1,
-    backgroundColor: c.surfaceAlt,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: c.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeButtonText: {
-    color: c.danger,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  mutedText: {
-    color: c.textMuted,
-    fontSize: 15,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingVertical: 24,
-  },
+  cardHeader: { gap: 2 },
+  itemTitle: { color: c.text, fontSize: 17, fontWeight: '600', lineHeight: 22 },
+  servingsNote: { color: c.textMuted, fontSize: 13, fontWeight: '500', marginTop: 2 },
+  factsContainer: { backgroundColor: c.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4 },
+  factRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+  factLabel: { color: c.textMuted, fontSize: 14, flex: 1 },
+  factValue: { color: c.text, fontSize: 14, fontWeight: '600', textAlign: 'right', flex: 1 },
+  fallbackBarcodeContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
+  fallbackBarcodeText: { color: c.textMuted, fontSize: 14, fontWeight: '500' },
+  pickerContainer: { gap: 6, marginTop: 2 },
+  pickerLabel: { color: c.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.5 },
+  cardActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  viewMoreButton: { flex: 1, backgroundColor: c.surfaceAlt, paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: c.accent, alignItems: 'center', justifyContent: 'center' },
+  viewMoreButtonText: { color: c.accent, fontSize: 14, fontWeight: '600' },
+  removeButton: { flex: 1, backgroundColor: c.surfaceAlt, paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: c.danger, alignItems: 'center', justifyContent: 'center' },
+  removeButtonText: { color: c.danger, fontSize: 14, fontWeight: '600' },
+  mutedText: { color: c.textMuted, fontSize: 15 },
   floatingSyncButton: {
-    position: 'absolute',
-    right: 18,
-    height: 52,
-    borderRadius: 26,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: c.surface,
-    borderWidth: 1,
-    borderColor: c.border,
-    paddingHorizontal: 16,
-    gap: 8,
-    zIndex: 40,
+    position: 'absolute', right: 16, height: 54, borderRadius: 27, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, paddingHorizontal: 20, gap: 8, zIndex: 40,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.35,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-      web: {
-        boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.45)',
-      }
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+      web: { boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)' }
     }),
   },
-  floatingSyncButtonPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.96 }],
-  },
-  floatingSyncButtonDisabled: {
-    opacity: 0.6,
-  },
-  floatingSyncButtonText: {
-    color: c.accent,
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  floatingSyncButtonPressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
+  floatingSyncButtonDisabled: { opacity: 0.6 },
+  floatingSyncButtonText: { color: c.accent, fontSize: 16, fontWeight: '600' },
 });

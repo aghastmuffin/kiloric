@@ -10,7 +10,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const PlaceholderImage = require('../../../assets/images/dark.svg');
+
 
 async function fetchBarcodeData(barcode: string): Promise<string> {
   try {
@@ -91,9 +91,6 @@ export default function Index() {
 //      <Text style={styles.maintext}>Last Scanned Item: {barcodeResult}</Text>C
   return (
     <View style={styles.container}>
-      <View style={styles.imageContainer}>
-        <ImageViewer imgSource={PlaceholderImage} style={styles.image} />
-      </View>
       <Text style={styles.maintext}>Visually Scan</Text>
       <Text style={styles.subtitle}>Point your camera at a barcode</Text>
 

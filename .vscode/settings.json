@@ -1,7 +1,14 @@
 {
-  "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit",
-    "source.organizeImports": "explicit",
-    "source.sortMembers": "explicit"
-  }
+  "editor.codeActionsOnSave": { 
+    "source.fixAll": "explicit", 
+    "source.organizeImports": "explicit", 
+    "source.sortMembers": "explicit" 
+  }, 
+  "code-runner.executorMap": { 
+    "javascript": "npx expo start --dev-client", 
+    "typescript": "npx expo start --dev-client",
+    "typescriptreact": "npx expo start --dev-client --" 
+  },
+  "code-runner.runInTerminal": true, 
+  "code-runner.showRunIconInEditorTitleMenu": true
 }

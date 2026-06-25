@@ -97,6 +97,12 @@ function RootNavigation() {
                 gestureEnabled: false,
               }}
             />
+            <Stack.Screen
+                name="Additions"
+                options={{
+                  headerShown: false,
+                }}
+            />
             <Stack.Screen name='config' options={{ headerShown: true, headerTitle: "Profile" }} />
             <Stack.Screen name='multiresponse' options={{ headerShown: true, headerTitle: "Results" }} />
             <Stack.Screen name='fooddetail' options={{ headerShown: true, headerTitle: "Food Details" }} />

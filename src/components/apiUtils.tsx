@@ -80,7 +80,9 @@ export const authenticatedRequest = async (
     const promise = (async () => {
       try {
         const data = await performAuthenticatedRequest(endpoint, options)
-        await setCachedResponse(endpoint, data, cacheTtl)
+        if (data !== null && data !== undefined) {
+          await setCachedResponse(endpoint, data, cacheTtl)
+        }
         return data
       } catch (err) {
         if (isApiRequestError(err)) throw err
