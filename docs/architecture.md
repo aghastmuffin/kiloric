@@ -93,6 +93,29 @@ scan tab → Open Camera → /cameraview
   └─ scan tab useFocusEffect reads storage → authenticatedRequest /api/barcode/:code
 ```
 
+## Meal logging flow (Local staging)
+
+To improve speed and allow for multi-item logging, CalCount uses a **Local Staging** pattern before syncing to Appwrite.
+
+```text
+Search Result (Scan/Fuzzy)
+  └─ Tap "Add to meals"
+  └─ appendMealBarcode(type, barcode, servings) → AsyncStorage
+
+Meals Tab (Local List)
+  └─ Reads from mealItemsStorage
+  └─ User adjusts servings if needed
+  └─ Tap "Log Meal" (Sync)
+       └─ getTodayMeals() check for existing entries
+       └─ createMeal() or updateMeal() in Appwrite
+       └─ clearMealBarcodes() on success
+```
+
+### Why staging?
+- **Speed:** Zero-latency UI response when adding items.
+- **Batched writes:** Combines multiple items into single Appwrite documents per meal type.
+- **Offline safety:** Items are persisted locally until the user has a connection to sync.
+
 ## Build and deploy
 
 - **EAS**: `eas.json` defines `development` (dev client), `preview`, and `production` profiles.

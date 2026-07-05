@@ -12,17 +12,17 @@ Developer docs for custom code in this Expo app. These files live in **`docs/`**
 
 | Topic | File |
 |-------|------|
-| App structure, providers, navigation | [architecture.md](./architecture.md) |
+| App structure, staging flow, providers | [architecture.md](./architecture.md) |
 | Environment variables | [environment.md](./environment.md) |
 | FastAPI backend (`authenticatedRequest`) | [backend-api.md](./backend-api.md) |
 | Appwrite auth + database patterns | [appwrite/auth-and-db.md](./appwrite/auth-and-db.md) |
 | Appwrite `users` profile collection | [appwrite/profiles.md](./appwrite/profiles.md) |
 | Appwrite `meals` collection | [appwrite/meals.md](./appwrite/meals.md) |
-| `src/lib/*` modules | [lib-reference.md](./lib-reference.md) |
+| `src/lib/*` and API Caching | [lib-reference.md](./lib-reference.md) |
 | Reusable components | [components.md](./components.md) |
 | Screens and routes | [screens-and-routing.md](./screens-and-routing.md) |
 | Onboarding wizard + nutrition math | [onboarding-and-nutrition.md](./onboarding-and-nutrition.md) |
-| Fonts, search mode, local preferences | [preferences-and-fonts.md](./preferences-and-fonts.md) |
+| Themes, fonts, and local preferences | [preferences-and-fonts.md](./preferences-and-fonts.md) |
 
 ## Source layout
 
