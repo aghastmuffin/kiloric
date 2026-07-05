@@ -160,7 +160,7 @@ TTL-based `AsyncStorage` caching for backend requests. Reduces network usage and
 |----------|---------|
 | `getCachedResponse(endpoint)` | Reads from memory map, then AsyncStorage |
 | `setCachedResponse(endpoint, data, ttl)` | Persists JSON payload with expiration |
-| `normalizeCacheKey(endpoint)` | Strips query params except for fuzzy search |
+| `normalizeCacheKey(endpoint)` | Normalizes barcode/product/fuzzy endpoints (drops query params, trims/decodes), otherwise preserves the full query string |
 
 ---
 
