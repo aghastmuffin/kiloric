@@ -398,8 +398,8 @@ export default function MealsScreen() {
       const nextSections = await buildMealSections(store);
       if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setSections(nextSections);
-    } catch {
-      // console.error("Failed to remove card item:", err);
+    } catch (err) {
+      console.error('[MealsScreen] Failed to remove meal item:', err);
     }
   }, []);
 
