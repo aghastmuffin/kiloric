@@ -505,8 +505,10 @@ export default function MealsScreen() {
 
 
   const hasItems = sections.length > 0;
-  // BOLT: Memoize date string to avoid impure Date.now() in render
-  const curdate = useMemo(() => new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }), []);
+  // BOLT: Compute date string once to avoid impure Date.now() in render
+  const [curdate] = useState(() =>
+    new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+  );
 
   return (
       <>
