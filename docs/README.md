@@ -1,7 +1,5 @@
 # CalCount — project documentation
 
-Developer docs for custom code in this Expo app. These files live in **`docs/`** at the repo root (not under `src/app/`), so Expo Router will not treat them as routes.
-
 ## Quick start
 
 1. Copy `.env.example` → `.env` and fill in Appwrite values.
