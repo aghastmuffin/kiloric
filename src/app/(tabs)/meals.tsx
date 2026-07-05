@@ -101,8 +101,8 @@ function MealItemCard({ item, onViewMore, onRemove, onServingsChange, servingsDi
   const styles = useThemedStyles(makeStyles);
   const hasFacts = item.facts && item.facts.length > 0;
 
-  const translateX = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
+  const [translateX] = useState(() => new Animated.Value(0));
+  const [opacity] = useState(() => new Animated.Value(1));
 
   const handleRemovePress = () => {
     Animated.parallel([
@@ -190,6 +190,19 @@ async function buildItemPreview(entry: MealItemEntry): Promise<MealItemPreview> 
   return { barcode, servings, title: `Barcode: ${barcode}`, facts: [], kcal: null, protein: null, carbs: null, fat: null };
 }
 
+/** BOLT OPTIMIZATION: Parallelized section building */
+async function buildMealSections(store: MealBarcodesStore): Promise<MealSection[]> {
+  const sections = await Promise.all(
+    MEAL_TYPE_OPTIONS.map(async (type) => {
+      const entries = store[type];
+      if (entries.length === 0) return null;
+      const previews = await Promise.all(entries.map(buildItemPreview));
+      return { type, items: previews };
+    })
+  );
+  return sections.filter((s): s is MealSection => s !== null);
+}
+
 function formatDateLabel(date: Date): string {
   const today = new Date();
   const isToday = date.getDate() === today.getDate() &&
@@ -245,7 +258,8 @@ async function fetchAndGroupMeals(userId: string | undefined): Promise<DailySumm
 
   // 2. Fetch Local Pending Meals (Unsynced)
   const localStore = await loadMealBarcodes();
-  const pendingDateLabel = formatDateLabel(new Date()); // Local items default to 'Today'
+  const now = Date.now();
+  const pendingDateLabel = formatDateLabel(new Date(now)); // Local items default to 'Today'
 
   if (!dailyMap.has(pendingDateLabel)) {
     dailyMap.set(pendingDateLabel, { dateLabel: pendingDateLabel, totalKcal: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, meals: [] });
@@ -253,28 +267,38 @@ async function fetchAndGroupMeals(userId: string | undefined): Promise<DailySumm
 
   const todaySummary = dailyMap.get(pendingDateLabel)!;
 
+  // BOLT OPTIMIZATION: Parallelize buildItemPreview calls using Promise.all
+  const localItemsToPreview: { type: MealType; entry: MealItemEntry }[] = [];
   for (const type of MEAL_TYPE_OPTIONS) {
-    const items = localStore[type];
-    for (const entry of items) {
-      const preview = await buildItemPreview(entry); // Your existing function
-
-      todaySummary.totalKcal += preview.kcal || 0;
-      todaySummary.totalProtein += preview.protein || 0;
-      todaySummary.totalCarbs += preview.carbs || 0;
-      todaySummary.totalFat += preview.fat || 0;
-
-      todaySummary.meals.push({
-        id: `local-${entry.barcode}-${Date.now()}`,
-        type,
-        friendlyname: preview.title,
-        kcal: preview.kcal,
-        protein: preview.protein,
-        carbs: preview.carbs,
-        fat: preview.fat,
-        timestamp: Date.now(), // Treat pending items as "just now"
-        isSynced: false
-      });
+    for (const entry of localStore[type]) {
+      localItemsToPreview.push({ type, entry });
     }
+  }
+
+  const previews = await Promise.all(
+    localItemsToPreview.map(async ({ type, entry }) => {
+      const preview = await buildItemPreview(entry);
+      return { type, entry, preview };
+    })
+  );
+
+  for (const { type, entry, preview } of previews) {
+    todaySummary.totalKcal += preview.kcal || 0;
+    todaySummary.totalProtein += preview.protein || 0;
+    todaySummary.totalCarbs += preview.carbs || 0;
+    todaySummary.totalFat += preview.fat || 0;
+
+    todaySummary.meals.push({
+      id: `local-${entry.barcode}-${now}-${Math.random().toString(36).substring(2, 7)}`,
+      type,
+      friendlyname: preview.title,
+      kcal: preview.kcal,
+      protein: preview.protein,
+      carbs: preview.carbs,
+      fat: preview.fat,
+      timestamp: now, // Treat pending items as "just now"
+      isSynced: false
+    });
   }
 
   // 3. Sort Chronologically
@@ -321,12 +345,17 @@ export default function MealsScreen() {
     try {
       const summaries = await fetchAndGroupMeals(user?.$id);
       setDailySummaries(summaries);
+
+      // Load current local store to sync sections state
+      const store = await loadMealBarcodes();
+      const nextSections = await buildMealSections(store);
+      setSections(nextSections);
     } catch (err) {
       console.error('[Component Action] Error loading meals:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.$id]);
+  }, [user]);
 
   useEffect(() => { void refreshMeals(); }, [refreshMeals]);
   useFocusEffect(useCallback(() => { void refreshMeals(); }, [refreshMeals]));
@@ -369,8 +398,8 @@ export default function MealsScreen() {
       const nextSections = await buildMealSections(store);
       if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setSections(nextSections);
-    } catch (err) {
-      console.error("Failed to remove card item:", err);
+    } catch {
+      // console.error("Failed to remove card item:", err);
     }
   }, []);
 
@@ -388,7 +417,7 @@ export default function MealsScreen() {
     // Extract the logic so it can be reliably fired on both Web and Mobile
     const executeSync = async () => {
       setIsSyncing(true);
-      let successCount = 0;
+      let _successCount = 0;
       let failCount = 0;
 
       try {
@@ -437,7 +466,7 @@ export default function MealsScreen() {
                 items: sectionBarcodes,
               });
             }
-            successCount++;
+            _successCount++;
           } catch (err) {
             console.error(`Failed processing section payload block ${section.type}:`, err);
             failCount++;
@@ -476,7 +505,8 @@ export default function MealsScreen() {
 
 
   const hasItems = sections.length > 0;
-  const curdate = new Date(Date.now()).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  // BOLT: Memoize date string to avoid impure Date.now() in render
+  const curdate = useMemo(() => new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }), []);
 
   return (
       <>
