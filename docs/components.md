@@ -43,6 +43,13 @@ Full-screen modal for structured barcode API JSON. Used from `scan` tab and `mul
 
 Placeholder image display (uses `assets/images/dark.svg`).
 
+### `Gague.tsx` (RadialGauge)
+
+Animated semi-circular gauge used to display calorie or nutrient progress against a daily goal.
+
+- **Props:** `value`, `max`, `size`, `color`, `backgroundColor`.
+- **Implementation:** Uses `react-native-reanimated` for smooth arc transitions.
+
 ---
 
 ## Pickers and dialogs
@@ -67,6 +74,14 @@ Animated modal with confirm/cancel, optional destructive styling and loading sta
 ### `FontPreferencePicker.tsx`
 
 Toggle between system font and custom Redaction font. Used on Account tab (logged out and logged in).
+
+### `MealTypePicker.tsx`
+
+Floating selector for the active meal category (Breakfast, Lunch, etc.). Persists selection to `MealTypePreferencesContext`. Used primarily on the **Scan** tab.
+
+### `ServingsPicker.tsx`
+
+Multi-option selector for food portions. Includes presets (1, 1.5, 2) and a "Custom" modal for decimal input.
 
 ---
 

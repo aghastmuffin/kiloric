@@ -25,6 +25,41 @@ Account tab → **Default search mode** (when logged in). Calls `setDefaultSearc
 
 ---
 
+## Theme preference
+
+**Storage:** `@calcount/app_theme_choice`
+**Values:** `'ios'` (Adaptive) | `'barebones'` (Original Dark)
+**Module:** `src/lib/theme/themePreferences.ts`
+**Context:** `ThemeProvider` (root `_layout.tsx`)
+
+### Available themes
+
+| Theme | Description |
+|-------|-------------|
+| **iOS** | Follows system light/dark mode. Uses standard iOS-style colors (system blue accent). |
+| **barebones** | Permanently dark theme. Uses the app's original custom palette (#ffd33d amber accent). |
+
+Default: `ios`.
+
+### `useThemedStyles` hook
+
+To maintain consistency across themes, components should avoid hardcoded hex values. Use the `useThemedStyles` hook to access the active palette:
+
+```tsx
+const styles = useThemedStyles((c) => StyleSheet.create({
+  container: {
+    backgroundColor: c.background,
+  },
+  text: {
+    color: c.text,
+  }
+}));
+```
+
+`onboarding` components use a specialized `useOnboardingStyles` hook for their distinct step-by-step palette.
+
+---
+
 ## Font preference
 
 **Storage:** `@calcount/app_font_choice`  

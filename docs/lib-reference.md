@@ -111,10 +111,17 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 - Values: `'default' | 'custom'`
 - Default: `'default'`
 
+### `mealTypePreferences.ts`
+
+- Key: `@calcount/selected_meal_type`
+- Values: `'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Other'`
+- Default: Inferred from current time (e.g., 8 AM → Breakfast)
+
 ### Context wrappers
 
 - `SearchPreferencesContext.tsx` — `useSearchPreferences()`
 - `FontPreferencesContext.tsx` — `useFontPreferences()`
+- `MealTypePreferencesContext.tsx` — `useMealTypePreferences()`
 
 ---
 
@@ -137,6 +144,53 @@ Calls `setActiveFontFamily` when preference changes.
 ### `react-native-with-fonts.tsx`
 
 Babel alias replaces `react-native` imports to wrap `Text` and `TextInput` with the active font family. See [preferences-and-fonts.md](../preferences-and-fonts.md).
+
+---
+
+## API Caching
+
+### `apiCache.ts`
+
+TTL-based `AsyncStorage` caching for backend requests. Reduces network usage and enables offline detail views for recently scanned items.
+
+- **Barcode/Product:** 14-day TTL.
+- **Fuzzy Search:** 3-day TTL.
+
+| Function | Purpose |
+|----------|---------|
+| `getCachedResponse(endpoint)` | Reads from memory map, then AsyncStorage |
+| `setCachedResponse(endpoint, data, ttl)` | Persists JSON payload with expiration |
+| `normalizeCacheKey(endpoint)` | Strips query params except for fuzzy search |
+
+---
+
+## Meal Logic
+
+### `mealItemsStorage.ts`
+
+Handles **local staging** of meals. When a user taps "Add to meals" from a search result, the barcode and servings are saved here first, allowing them to build a full meal before syncing to Appwrite.
+
+| Function | Purpose |
+|----------|---------|
+| `appendMealBarcode(type, barcode, servings)` | Adds item to local list for that meal type |
+| `loadMealBarcodes()` | Returns `Record<MealType, MealItemEntry[]>` |
+| `clearMealBarcodes()` | Empties all local staged items |
+
+### `mealFromProduct.ts`
+
+Maps raw API JSON from the FastAPI backend (Oracle) to the `CreateMealInput` shape expected by Appwrite.
+
+- Handles field aliasing (`energy-kcal` vs `calories`).
+- Infers default `MealType` from system clock.
+- Estimates "Nutrient Density Score" from Nutri-Score grades (A-E).
+
+### `servings.ts`
+
+| Function | Purpose |
+|----------|---------|
+| `scaleNutrient(value, servings)` | Multiplies kcal/macros by serving count |
+| `formatServings(n)` | Returns pretty strings like `1½` |
+| `parseServingsInput(str)` | Validates custom decimal input (0–100) |
 
 ---
 
