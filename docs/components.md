@@ -47,7 +47,7 @@ Placeholder image display (uses `assets/images/dark.svg`).
 
 Animated semi-circular gauge used to display calorie or nutrient progress against a daily goal.
 
-- **Props:** `value`, `max`, `size`, `color`, `backgroundColor`.
+- **Props:** `value`, `max`, `size`, `strokeWidth`, `color`, `backgroundColor`.
 - **Implementation:** Uses `react-native-reanimated` for smooth arc transitions.
 
 ---
