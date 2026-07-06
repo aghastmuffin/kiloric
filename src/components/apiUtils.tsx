@@ -81,7 +81,11 @@ export const authenticatedRequest = async (
       try {
         const data = await performAuthenticatedRequest(endpoint, options)
         if (data !== null && data !== undefined) {
-          await setCachedResponse(endpoint, data, cacheTtl)
+          // Optimization: Persistence to AsyncStorage happens in the background
+          // to return data to the caller as soon as the network request completes.
+          void setCachedResponse(endpoint, data, cacheTtl).catch((err) => {
+            console.warn('[apiUtils] background cache persistence failed', err);
+          })
         }
         return data
       } catch (err) {
