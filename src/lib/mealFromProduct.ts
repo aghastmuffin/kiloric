@@ -1,8 +1,6 @@
 import type { CreateMealInput, MealType } from '@/lib/meals'
 import { scaleNutrient } from '@/lib/servings'
 
-const NAME_KEYS = ['product_name', 'name', 'title', 'food_name', 'brands']
-
 function getNestedValue(data: Record<string, unknown>, key: string): unknown {
   if (key in data) return data[key]
 
@@ -55,15 +53,6 @@ export function buildMealInputFromProduct(
   barcode?: string | null,
   servings = 1,
 ): CreateMealInput {
-  let friendlyname: string | null = null
-  for (const key of NAME_KEYS) {
-    const value = getNestedValue(data, key)
-    if (typeof value === 'string' && value.trim()) {
-      friendlyname = value.trim()
-      break
-    }
-  }
-
   const kcal =
     roundInt(parseNumber(getNestedValue(data, 'calories'))) ??
     roundInt(parseNumber(getNestedValue(data, 'energy-kcal'))) ??
@@ -86,7 +75,7 @@ export function buildMealInputFromProduct(
 
   return {
     owner: ownerId,
-    friendlyname,
+    friendlyname: mealType,
     type: mealType,
     kcal: scaleNutrient(kcal, servings),
     protein: scaleNutrient(protein, servings),

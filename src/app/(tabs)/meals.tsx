@@ -1,40 +1,32 @@
-import { authenticatedRequest } from '@/components/apiUtils';
-import BarcodeDetailModal from '@/components/BarcodeDetailModal';
-import { ServingsPicker } from '@/components/ServingsPicker';
-import { getCachedResponse } from '@/lib/apiCache';
 import { useAuth } from '@/lib/AuthContext';
-import { buildMealInputFromProduct } from '@/lib/mealFromProduct';
+import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview';
 import {
-  clearMealBarcodes,
-  loadMealBarcodes,
-  removeMealBarcode,
-  updateMealItemServings,
-  type MealBarcodesStore,
-  type MealItemEntry,
-} from '@/lib/mealItemsStorage';
-import { createMeal, updateMeal, getTodayMeals, listHistoricMeals, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals';
-import { getProductTitle, getQuickProductFacts } from '@/lib/productDisplay';
-import { formatServings } from '@/lib/servings';
+  getTodayMeals,
+  listHistoricMeals,
+  MEAL_TYPE_OPTIONS,
+  moveProductBetweenMeals,
+  type MealDocument,
+  type MealType
+} from '@/lib/meals';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from "expo-router/react-navigation";
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Animated,
+  LayoutAnimation,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Animated,
-  Dimensions,
-  LayoutAnimation,
   UIManager,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,559 +34,726 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type UnifiedMealItem = {
-  id: string; // Appwrite $id or a local unique ID
+const getStartOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+type DisplayMealItem = MealItemPreview & {
+  key: string;
+  mealId: string;
+  sourceType: MealType;
+};
+
+type DisplayMealSection = {
   type: MealType;
-  friendlyname: string | null;
-  kcal: number | null;
-  protein: number | null;
-  carbs: number | null;
-  fat: number | null;
-  timestamp: number; // For chronological sorting
-  isSynced: boolean;
-};
-
-type DailySummary = {
-  dateLabel: string;
-  totalKcal: number;
-  totalProtein: number;
-  totalCarbs: number;
-  totalFat: number;
-  meals: UnifiedMealItem[]; // Will be sorted chronologically
-};
-const TAB_BAR_HEIGHT = Platform.select({ ios: 49, android: 56, default: 56 }) ?? 56;
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
-type MealItemPreview = {
-  barcode: string;
-  servings: number;
-  title: string;
-  facts: { label: string; value: string }[];
-  kcal: number | null;
-  protein: number | null;
-  carbs: number | null;
-  fat: number | null;
-};
-
-type MealSection = {
-  type: MealType;
-  items: MealItemPreview[];
+  friendlyname: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  items: DisplayMealItem[];
 };
 
 function FactRow({ label, value }: { label: string; value: string }) {
   const styles = useThemedStyles(makeStyles);
   return (
-      <View style={styles.factRow}>
-        <Text style={styles.factLabel} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
-        <Text style={styles.factValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
-      </View>
+    <View style={styles.factRow}>
+      <Text style={styles.factLabel} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+      <Text style={styles.factValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
+    </View>
   );
 }
 
-function MealItemCard({ item, onViewMore, onRemove, onServingsChange, servingsDisabled }: {
-  item: MealItemPreview;
-  onViewMore: (barcode: string) => void;
-  onRemove: () => void;
-  onServingsChange: (servings: number) => void;
-  servingsDisabled?: boolean;
-}) {
+function formatSectionMacros(kcal: number, protein: number, carbs: number, fat: number) {
+  return `${Math.round(kcal)} kcal · ${Math.round(protein)}g P · ${Math.round(carbs)}g C · ${Math.round(fat)}g F`;
+}
+
+// ─── DraggableItemCard ────────────────────────────────────────────────────────
+
+type DraggableItemCardProps = {
+  item: DisplayMealItem;
+  isLoadingItems: boolean;
+  onDragStart: (item: DisplayMealItem) => void;
+  onDragMove: (targetType: MealType | null) => void;
+  onDragEnd: (item: DisplayMealItem, targetType: MealType | null) => void;
+  findDropTarget: (x: number, y: number) => MealType | null;
+};
+
+const DraggableItemCard = memo(function DraggableItemCard({
+  item,
+  isLoadingItems,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  findDropTarget,
+}: DraggableItemCardProps) {
   const styles = useThemedStyles(makeStyles);
-  const hasFacts = item.facts && item.facts.length > 0;
+  const { colors } = useTheme();
+  
+  const pan = useRef(new Animated.ValueXY()).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const [isDragging, setIsDragging] = useState(false);
 
-  const [translateX] = useState(() => new Animated.Value(0));
-  const [opacity] = useState(() => new Animated.Value(1));
+  // Always-current ref for closures
+  const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
+  cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
 
-  const handleRemovePress = () => {
-    Animated.parallel([
-      Animated.timing(translateX, { toValue: SCREEN_WIDTH, duration: 300, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
-    ]).start(() => { onRemove(); });
-  };
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+
+      onPanResponderGrant: () => {
+        pan.setValue({ x: 0, y: 0 });
+        setIsDragging(true);
+        
+        // Scale up on drag to make it feel tactile
+        Animated.spring(scale, {
+          toValue: 1.05,
+          friction: 5,
+          useNativeDriver: false
+        }).start();
+
+        cbRef.current.onDragStart(cbRef.current.item);
+      },
+
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { 
+          useNativeDriver: false,
+          listener: (e, gs) => {
+             const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
+             cbRef.current.onDragMove(target);
+          }
+        },
+      ),
+
+      onPanResponderRelease: (_e, gs) => {
+        const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
+        const currentItem = cbRef.current.item;
+        const isValidDrop = target !== null && target !== currentItem.sourceType;
+
+        // Snap back scale
+        Animated.spring(scale, {
+          toValue: 1,
+          friction: 5,
+          useNativeDriver: false,
+        }).start();
+
+        if (isValidDrop) {
+          pan.setValue({ x: 0, y: 0 });
+          setIsDragging(false);
+          cbRef.current.onDragEnd(currentItem, target);
+        } else {
+          Animated.spring(pan, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+            friction: 5,
+            tension: 40,
+          }).start(() => {
+            setIsDragging(false);
+            cbRef.current.onDragEnd(currentItem, null);
+          });
+        }
+      },
+
+      onPanResponderTerminate: () => {
+        Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: false }).start();
+        Animated.spring(pan, {
+          toValue: { x: 0, y: 0 },
+          useNativeDriver: false,
+        }).start(() => setIsDragging(false));
+      },
+
+      onPanResponderTerminationRequest: () => true,
+    })
+  ).current;
+
+  const hasFacts = item.facts.length > 0;
 
   return (
-      <Animated.View style={[styles.itemCard, { transform: [{ translateX }], opacity }]}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.itemTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
-          {item.servings !== 1 ? <Text style={styles.servingsNote}>Totals for {formatServings(item.servings)} servings</Text> : null}
-        </View>
+    <Animated.View
+      style={[
+        styles.itemCard,
+        isDragging && {
+          zIndex: 100,
+          elevation: 12,
+          opacity: 0.95,
+          borderColor: colors.accent,
+          shadowColor: colors.accent,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.35,
+          shadowRadius: 10,
+        },
+        { transform: [{ translateX: pan.x }, { translateY: pan.y }, { scale }] },
+      ]}
+    >
+      <View style={styles.cardHeader}>
+        <Text style={styles.itemTitle} numberOfLines={2} ellipsizeMode="tail">
+          {item.title}
+        </Text>
+      </View>
 
-        <View style={styles.factsContainer}>
-          {hasFacts ? (
-              item.facts.map((fact) => <FactRow key={`${item.barcode}-${fact.label}`} label={fact.label} value={fact.value} />)
-          ) : (
-              <View style={styles.fallbackBarcodeContainer}>
-                <Ionicons name="barcode-outline" size={16} color={styles.mutedText.color} />
-                <Text style={styles.fallbackBarcodeText}>Barcode: {item.barcode}</Text>
-              </View>
-          )}
-        </View>
+      <View style={styles.factsContainer}>
+        {hasFacts ? (
+          item.facts.map((fact) => (
+            <FactRow key={`${item.key}-${fact.label}`} label={fact.label} value={fact.value} />
+          ))
+        ) : isLoadingItems ? (
+          <View style={styles.fallbackBarcodeContainer}>
+            <ActivityIndicator size="small" color={colors.accent} />
+            <Text style={styles.fallbackBarcodeText}>Loading product…</Text>
+          </View>
+        ) : (
+          <View style={styles.fallbackBarcodeContainer}>
+            <Ionicons name="barcode-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.fallbackBarcodeText}>Barcode: {item.barcode}</Text>
+          </View>
+        )}
+      </View>
 
-        <View style={styles.pickerContainer}>
-          <Text style={styles.pickerLabel}>SERVINGS</Text>
-          <ServingsPicker servings={item.servings} onChange={onServingsChange} disabled={servingsDisabled} />
-        </View>
-
-        <View style={styles.cardActions}>
-          <TouchableOpacity style={styles.viewMoreButton} onPress={() => onViewMore(item.barcode)}>
-            <Text style={styles.viewMoreButtonText}>View details</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.removeButton} onPress={handleRemovePress}>
-            <Text style={styles.removeButtonText}>Remove</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      <View
+        {...panResponder.panHandlers}
+        style={styles.dragHandle}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
+        <Ionicons name="reorder-two-outline" size={24} color={colors.textMuted} />
+      </View>
+    </Animated.View>
   );
-}
+});
 
-async function buildItemPreview(entry: MealItemEntry): Promise<MealItemPreview> {
-  const { barcode, servings } = entry;
-  const endpoint = `/api/barcode/${encodeURIComponent(barcode)}`;
-  let data: Record<string, unknown> | null = null;
-
-  try {
-    const fetched = await authenticatedRequest(endpoint);
-    if (fetched && typeof fetched === 'object' && !Array.isArray(fetched)) {
-      data = fetched as Record<string, unknown>;
-    }
-  } catch (error) {
-    const cached = await getCachedResponse(endpoint);
-    if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
-      data = cached as Record<string, unknown>;
-    }
-  }
-
-  if (data) {
-    let actualData = data;
-    if ('data' in data && data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
-      actualData = data.data as Record<string, unknown>;
-    } else if ('product' in data && data.product && typeof data.product === 'object') {
-      actualData = data.product as Record<string, unknown>;
-    }
-
-    const input = buildMealInputFromProduct('dummy_owner', actualData, 'Breakfast', barcode, servings);
-    const displayFacts = [...(getQuickProductFacts(actualData, { servings }) || [])];
-
-    if (input.kcal !== undefined && input.kcal !== null) displayFacts.push({ label: 'Calories', value: `${Math.round(input.kcal)} kcal` });
-    if (input.protein !== undefined && input.protein !== null) displayFacts.push({ label: 'Protein', value: `${input.protein.toFixed(1)}g` });
-    if (input.carbs !== undefined && input.carbs !== null) displayFacts.push({ label: 'Carbs', value: `${input.carbs.toFixed(1)}g` });
-    if (input.fat !== undefined && input.fat !== null) displayFacts.push({ label: 'Fat', value: `${input.fat.toFixed(1)}g` });
-
-    return {
-      barcode, servings,
-      title: getProductTitle(actualData, barcode),
-      facts: displayFacts,
-      kcal: input.kcal ?? null, protein: input.protein ?? null, carbs: input.carbs ?? null, fat: input.fat ?? null,
-    };
-  }
-
-  return { barcode, servings, title: `Barcode: ${barcode}`, facts: [], kcal: null, protein: null, carbs: null, fat: null };
-}
-
-/** BOLT OPTIMIZATION: Parallelized section building */
-async function buildMealSections(store: MealBarcodesStore): Promise<MealSection[]> {
-  const sections = await Promise.all(
-    MEAL_TYPE_OPTIONS.map(async (type) => {
-      const entries = store[type];
-      if (entries.length === 0) return null;
-      const previews = await Promise.all(entries.map(buildItemPreview));
-      return { type, items: previews };
-    })
-  );
-  return sections.filter((s): s is MealSection => s !== null);
-}
-
-function formatDateLabel(date: Date): string {
-  const today = new Date();
-  const isToday = date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear();
-
-  return isToday ? 'Today' : date.toLocaleDateString(undefined, {
-    weekday: 'long', month: 'long', day: 'numeric'
-  });
-}
-
-async function fetchAndGroupMeals(userId: string | undefined): Promise<DailySummary[]> {
-  const dailyMap = new Map<string, DailySummary>();
-
-  // 1. Fetch Synced Meals from Appwrite
-  if (userId) {
-    const [todayMeals, historicMeals] = await Promise.all([
-      getTodayMeals(userId).catch(() => []),
-      listHistoricMeals(userId, 50).catch(() => []) // Fetch last 50 historical meals
-    ]);
-
-    const allSynced = [...todayMeals, ...historicMeals];
-
-    allSynced.forEach(meal => {
-      const mealDate = new Date(meal.$createdAt);
-      const dateLabel = formatDateLabel(mealDate);
-
-      if (!dailyMap.has(dateLabel)) {
-        dailyMap.set(dateLabel, { dateLabel, totalKcal: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, meals: [] });
-      }
-
-      const summary = dailyMap.get(dateLabel)!;
-
-      // Add to daily cumulative totals
-      summary.totalKcal += meal.kcal || 0;
-      summary.totalProtein += meal.protein || 0;
-      summary.totalCarbs += meal.carbs || 0;
-      summary.totalFat += meal.fat || 0;
-
-      summary.meals.push({
-        id: meal.$id,
-        type: meal.type as MealType,
-        friendlyname: meal.friendlyname || meal.type,
-        kcal: meal.kcal,
-        protein: meal.protein,
-        carbs: meal.carbs,
-        fat: meal.fat,
-        timestamp: mealDate.getTime(),
-        isSynced: true
-      });
-    });
-  }
-
-  // 2. Fetch Local Pending Meals (Unsynced)
-  const localStore = await loadMealBarcodes();
-  const now = Date.now();
-  const pendingDateLabel = formatDateLabel(new Date(now)); // Local items default to 'Today'
-
-  if (!dailyMap.has(pendingDateLabel)) {
-    dailyMap.set(pendingDateLabel, { dateLabel: pendingDateLabel, totalKcal: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0, meals: [] });
-  }
-
-  const todaySummary = dailyMap.get(pendingDateLabel)!;
-
-  // BOLT OPTIMIZATION: Parallelize buildItemPreview calls using Promise.all
-  const localItemsToPreview: { type: MealType; entry: MealItemEntry }[] = [];
-  for (const type of MEAL_TYPE_OPTIONS) {
-    for (const entry of localStore[type]) {
-      localItemsToPreview.push({ type, entry });
-    }
-  }
-
-  const previews = await Promise.all(
-    localItemsToPreview.map(async ({ type, entry }) => {
-      const preview = await buildItemPreview(entry);
-      return { type, entry, preview };
-    })
-  );
-
-  for (const { type, entry, preview } of previews) {
-    todaySummary.totalKcal += preview.kcal || 0;
-    todaySummary.totalProtein += preview.protein || 0;
-    todaySummary.totalCarbs += preview.carbs || 0;
-    todaySummary.totalFat += preview.fat || 0;
-
-    todaySummary.meals.push({
-      id: `local-${entry.barcode}-${now}-${Math.random().toString(36).substring(2, 7)}`,
-      type,
-      friendlyname: preview.title,
-      kcal: preview.kcal,
-      protein: preview.protein,
-      carbs: preview.carbs,
-      fat: preview.fat,
-      timestamp: now, // Treat pending items as "just now"
-      isSynced: false
-    });
-  }
-
-  // 3. Sort Chronologically
-  const sortedSummaries = Array.from(dailyMap.values());
-
-  sortedSummaries.forEach(summary => {
-    // Sort meals chronologically (Breakfast -> Snacks -> Lunch -> Snacks -> Dinner)
-    summary.meals.sort((a, b) => a.timestamp - b.timestamp);
-  });
-
-  return sortedSummaries;
-}
-
-function getSectionIcon(type: MealType): keyof typeof Ionicons.glyphMap {
-  switch (type) {
-    case 'Breakfast': return 'sunny-outline';
-    case 'Lunch': return 'restaurant-outline';
-    case 'Dinner': return 'moon-outline';
-    case 'Snack': return 'cafe-outline';
-    default: return 'help-circle-outline';
-  }
-}
+// ─── MealsScreen ─────────────────────────────────────────────────────────────
 
 export default function MealsScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useThemedStyles(makeStyles);
-  const [sections, setSections] = useState<MealSection[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null);
-  const [detailData, setDetailData] = useState<Record<string, unknown> | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
 
   const bottomOffset = insets.bottom + 18;
 
-  const [dailySummaries, setDailySummaries] = useState<DailySummary[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [allMeals, setAllMeals] = useState<MealDocument[]>([]);
+  const [itemPreviews, setItemPreviews] = useState<Record<string, MealItemPreview>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
-  const refreshMeals = useCallback(async () => {
+  // Drag State for Visual Previews
+  const [dragState, setDragState] = useState<{ activeItem: DisplayMealItem | null; targetZone: MealType | null }>({
+    activeItem: null,
+    targetZone: null,
+  });
+
+  const dropZones = useRef<Map<MealType, { x: number; y: number; width: number; height: number }>>(new Map()).current;
+  const zoneRefs = useRef<Record<string, View | null>>({});
+
+  const fetchMeals = useCallback(async () => {
+    if (!user?.$id) return;
     setIsLoading(true);
     try {
-      const summaries = await fetchAndGroupMeals(user?.$id);
-      setDailySummaries(summaries);
-
-      // Load current local store to sync sections state
-      const store = await loadMealBarcodes();
-      const nextSections = await buildMealSections(store);
-      setSections(nextSections);
-    } catch (err) {
-      console.error('[Component Action] Error loading meals:', err);
+      const [todayMeals, historicMeals] = await Promise.all([
+        getTodayMeals(user.$id),
+        listHistoricMeals(user.$id, 100),
+      ]);
+      setAllMeals([...todayMeals, ...historicMeals]);
+    } catch (error) {
+      console.warn("Failed to fetch meals", error);
     } finally {
       setIsLoading(false);
     }
   }, [user]);
 
-  useEffect(() => { void refreshMeals(); }, [refreshMeals]);
-  useFocusEffect(useCallback(() => { void refreshMeals(); }, [refreshMeals]));
+  useEffect(() => { void fetchMeals(); }, [fetchMeals]);
+  useFocusEffect(useCallback(() => { void fetchMeals(); }, [fetchMeals]));
 
-  const handleViewMore = useCallback(async (barcode: string) => {
-    setSelectedBarcode(barcode);
-    setModalVisible(true);
-    setDetailLoading(true);
-    setDetailError(null);
-    setDetailData(null);
+  const selectedStart = getStartOfDay(selectedDate).getTime();
+  const selectedEnd = selectedStart + 24 * 60 * 60 * 1000;
 
-    const endpoint = `/api/barcode/${encodeURIComponent(barcode)}`;
-    const cached = await getCachedResponse(endpoint);
-    if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
-      setDetailData(cached as Record<string, unknown>);
-      setDetailLoading(false);
-      return;
-    }
+  const displayedMeals = useMemo(() => allMeals.filter((meal) => {
+    const timestamp = new Date(meal.$createdAt).getTime();
+    return timestamp >= selectedStart && timestamp < selectedEnd;
+  }), [allMeals, selectedEnd, selectedStart]);
 
-    try {
-      const data = await authenticatedRequest(endpoint);
-      if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-        setDetailData(data as Record<string, unknown>);
-      } else {
-        setDetailData({ result: data });
-      }
-    } catch (error) {
-      setDetailError(`Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    let cancelled = false;
 
-  const handleMealAdded = useCallback(() => { void refreshMeals(); }, [refreshMeals]);
+    const loadItemPreviews = async () => {
+      const entries: { cacheKey: string; barcode: string; type: MealType }[] = [];
 
-  const handleRemoveItem = useCallback(async (type: MealType, index: number) => {
-    try {
-      await removeMealBarcode(type, index);
-      const store = await loadMealBarcodes();
-      const nextSections = await buildMealSections(store);
-      if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setSections(nextSections);
-    } catch (err) {
-      console.error('[MealsScreen] Failed to remove meal item:', err);
-    }
-  }, []);
-
-  const handleServingsChange = useCallback(async (type: MealType, index: number, servings: number) => {
-    await updateMealItemServings(type, index, servings);
-    const store = await loadMealBarcodes();
-    const nextSections = await buildMealSections(store);
-    setSections(nextSections);
-  }, []);
-
-  const handleSyncToAppwrite = useCallback(async () => {
-    if (!user?.$id) return Alert.alert('Sign in required', 'Please sign in to sync your meals to Appwrite.');
-    if (sections.length === 0) return Alert.alert('No meals', 'There are no local meals to sync.');
-
-    // Extract the logic so it can be reliably fired on both Web and Mobile
-    const executeSync = async () => {
-      setIsSyncing(true);
-      let _successCount = 0;
-      let failCount = 0;
-
-      try {
-        // 1. Fetch today's meal collections from your database
-        const existingMeals = await getTodayMeals(user.$id).catch(() => []);
-
-        for (const section of sections) {
-          try {
-            const existingMeal = existingMeals.find((m: any) => m.type === section.type);
-
-            let sectionKcal: number | null = null;
-            let sectionProtein: number | null = null;
-            let sectionCarbs: number | null = null;
-            let sectionFat: number | null = null;
-            const sectionBarcodes: string[] = [];
-
-            for (const item of section.items) {
-              if (item.kcal !== null) sectionKcal = (sectionKcal ?? 0) + item.kcal;
-              if (item.protein !== null) sectionProtein = (sectionProtein ?? 0) + item.protein;
-              if (item.carbs !== null) sectionCarbs = (sectionCarbs ?? 0) + item.carbs;
-              if (item.fat !== null) sectionFat = (sectionFat ?? 0) + item.fat;
-              sectionBarcodes.push(item.barcode);
-            }
-
-            if (existingMeal) {
-              const updatedData = {
-                friendlyname: section.type,
-                kcal: sectionKcal !== null ? (existingMeal.kcal ?? 0) + sectionKcal : existingMeal.kcal,
-                protein: sectionProtein !== null ? (existingMeal.protein ?? 0) + sectionProtein : existingMeal.protein,
-                carbs: sectionCarbs !== null ? (existingMeal.carbs ?? 0) + sectionCarbs : existingMeal.carbs,
-                fat: sectionFat !== null ? (existingMeal.fat ?? 0) + sectionFat : existingMeal.fat,
-                items: [...(existingMeal.items ?? []), ...sectionBarcodes],
-              };
-              await updateMeal(existingMeal.$id, updatedData);
-            } else {
-              await createMeal({
-                owner: user.$id,
-                friendlyname: section.type,
-                type: section.type,
-                kcal: sectionKcal,
-                protein: sectionProtein,
-                carbs: sectionCarbs,
-                fat: sectionFat,
-                nutrient_density_score: null,
-                fluid: null,
-                items: sectionBarcodes,
-              });
-            }
-            _successCount++;
-          } catch (err) {
-            console.error(`Failed processing section payload block ${section.type}:`, err);
-            failCount++;
-          }
+      for (const meal of displayedMeals) {
+        for (const [index, barcode] of (meal.items ?? []).entries()) {
+          entries.push({
+            cacheKey: `${meal.$id}-${index}-${barcode}`,
+            barcode,
+            type: (meal.type ?? 'Other') as MealType,
+          });
         }
+      }
 
-        await clearMealBarcodes();
-        await refreshMeals();
+      if (entries.length === 0) {
+        setItemPreviews({});
+        return;
+      }
 
-        if (failCount === 0) Alert.alert('Success', `Successfully synced your meals.`);
-        else Alert.alert('Sync complete with updates', `Synced updates successfully. Local cache cleared.`);
-      } catch (err) {
-        Alert.alert('Sync failed', err instanceof Error ? err.message : 'Sync failure');
+      setIsLoadingItems(true);
+      try {
+        const previews = await Promise.all(
+          entries.map(async ({ cacheKey, barcode, type }) => {
+            const preview = await fetchMealItemPreview(barcode, type);
+            return [cacheKey, preview] as const;
+          }),
+        );
+
+        if (!cancelled) {
+          setItemPreviews(Object.fromEntries(previews));
+        }
+      } catch (error) {
+        console.warn('Failed to load meal item previews', error);
       } finally {
-        setIsSyncing(false);
+        if (!cancelled) setIsLoadingItems(false);
       }
     };
 
-    // Environment-safe execution
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('This will sync your logged meals to your account. Local list will be cleared. Continue?');
-      if (confirmed) {
-        await executeSync();
+    void loadItemPreviews();
+    return () => { cancelled = true; };
+  }, [displayedMeals]);
+
+  const sections = useMemo<DisplayMealSection[]>(() => {
+    return MEAL_TYPE_OPTIONS.map((type) => {
+      const mealsForType = displayedMeals.filter((meal) => meal.type === type);
+      const friendlyname = mealsForType[0]?.friendlyname || type;
+
+      const totals = mealsForType.reduce((acc, meal) => ({
+        kcal: acc.kcal + (meal.kcal || 0),
+        protein: acc.protein + (meal.protein || 0),
+        carbs: acc.carbs + (meal.carbs || 0),
+        fat: acc.fat + (meal.fat || 0),
+      }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+      const items: DisplayMealItem[] = [];
+      for (const meal of mealsForType) {
+        for (const [index, barcode] of (meal.items ?? []).entries()) {
+          const cacheKey = `${meal.$id}-${index}-${barcode}`;
+          const preview = itemPreviews[cacheKey] ?? {
+            barcode,
+            title: `Barcode: ${barcode}`,
+            facts: [],
+            kcal: null,
+            protein: null,
+            carbs: null,
+            fat: null,
+          };
+
+          items.push({
+            ...preview,
+            key: cacheKey,
+            mealId: meal.$id,
+            sourceType: type,
+          });
+        }
       }
-    } else {
-      Alert.alert(
-          'Push Meals to Appwrite',
-          'This will sync your logged meals to your account. Local list will be cleared. Continue?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Push', onPress: executeSync }
-          ]
+
+      return { type, friendlyname, ...totals, items };
+    });
+  }, [displayedMeals, itemPreviews]);
+
+  const dailyTotals = sections.reduce((acc, section) => ({
+    kcal: acc.kcal + section.kcal,
+    protein: acc.protein + section.protein,
+    carbs: acc.carbs + section.carbs,
+    fat: acc.fat + section.fat,
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+  const hasItems = sections.some((section) => section.items.length > 0);
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    await fetchMeals();
+    setIsSyncing(false);
+  };
+
+  const shiftDate = (days: number) => {
+    setSelectedDate((prev) => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + days);
+      return next;
+    });
+  };
+
+  const handleItemDropped = useCallback(async (item: DisplayMealItem, targetType: MealType) => {
+    if (!user?.$id || item.sourceType === targetType) return;
+
+    // Smoother layout transitions with spring
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+
+    setAllMeals((prev) => {
+      const next = prev.map((meal) => ({ ...meal, items: [...(meal.items ?? [])] }));
+
+      const sourceMeal = next.find((meal) => meal.$id === item.mealId);
+      if (!sourceMeal?.items) return prev;
+
+      // Target meal must be on the same day as the source meal. Without this,
+      // `next.find` below matches the *first* meal of `targetType` anywhere in
+      // `allMeals` — which also holds up to 100 historic meals — so dropping an
+      // item into a section that has no meal today (e.g. "Lunch" before you've
+      // logged lunch) could silently attach it to some past day's Lunch instead
+      // of creating today's, making the item disappear from the current view.
+      const dayStart = getStartOfDay(new Date(sourceMeal.$createdAt)).getTime();
+      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+      const barcodeIndex = sourceMeal.items.indexOf(item.barcode);
+      if (barcodeIndex === -1) return prev;
+
+      sourceMeal.items.splice(barcodeIndex, 1);
+      sourceMeal.kcal = Math.max(0, (sourceMeal.kcal ?? 0) - (item.kcal ?? 0));
+      sourceMeal.protein = Math.max(0, (sourceMeal.protein ?? 0) - (item.protein ?? 0));
+      sourceMeal.carbs = Math.max(0, (sourceMeal.carbs ?? 0) - (item.carbs ?? 0));
+      sourceMeal.fat = Math.max(0, (sourceMeal.fat ?? 0) - (item.fat ?? 0));
+
+      if (sourceMeal.items.length === 0) {
+        const sourceIndex = next.findIndex((meal) => meal.$id === sourceMeal.$id);
+        if (sourceIndex !== -1) next.splice(sourceIndex, 1);
+      }
+
+      const targetMeal = next.find((meal) => {
+        if (meal.type !== targetType) return false;
+        const ts = new Date(meal.$createdAt).getTime();
+        return ts >= dayStart && ts < dayEnd;
+      });
+      if (targetMeal) {
+        targetMeal.items = [...(targetMeal.items ?? []), item.barcode];
+        targetMeal.kcal = (targetMeal.kcal ?? 0) + (item.kcal ?? 0);
+        targetMeal.protein = (targetMeal.protein ?? 0) + (item.protein ?? 0);
+        targetMeal.carbs = (targetMeal.carbs ?? 0) + (item.carbs ?? 0);
+        targetMeal.fat = (targetMeal.fat ?? 0) + (item.fat ?? 0);
+        targetMeal.type = targetType;
+        targetMeal.friendlyname = targetType;
+      } else {
+        next.push({
+          $id: `optimistic-${item.barcode}-${Date.now()}`,
+          $sequence: '0',
+          $createdAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
+          $permissions: [],
+          $databaseId: '',
+          $collectionId: '',
+          owner: user.$id,
+          friendlyname: targetType,
+          type: targetType,
+          kcal: item.kcal,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+          items: [item.barcode],
+        } as MealDocument);
+      }
+
+      return next;
+    });
+
+    showToast(`Moved to ${targetType}`);
+
+    try {
+      await moveProductBetweenMeals(
+        user.$id,
+        item.mealId,
+        item.barcode,
+        targetType,
+        {
+          kcal: item.kcal,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+        },
       );
+      await fetchMeals();
+    } catch (err) {
+      console.warn('Failed to move item between meals', err);
+      await fetchMeals();
     }
-  }, [user, sections, refreshMeals]);
+  }, [user?.$id, fetchMeals, showToast]);
 
+  const measureZone = useCallback((type: MealType) => {
+    const ref = zoneRefs.current[type];
+    if (!ref) return;
+    ref.measureInWindow((x, y, width, height) => {
+      if (width > 0 && height > 0) {
+        dropZones.set(type, { x, y, width, height });
+      }
+    });
+  }, []);
 
-  const hasItems = sections.length > 0;
-  // BOLT: Compute date string once to avoid impure Date.now() in render
-  const [curdate] = useState(() =>
-    new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-  );
+  const findDropTarget = useCallback((dropX: number, dropY: number): MealType | null => {
+    for (const [type, zone] of dropZones.entries()) {
+      if (
+        dropX >= zone.x && dropX <= zone.x + zone.width &&
+        dropY >= zone.y && dropY <= zone.y + zone.height
+      ) {
+        return type;
+      }
+    }
+    return null;
+  }, []);
+
+  const handleDragStart = useCallback((item: DisplayMealItem) => {
+    setScrollEnabled(false);
+    setDragState({ activeItem: item, targetZone: null });
+    MEAL_TYPE_OPTIONS.forEach((type) => measureZone(type));
+  }, [measureZone]);
+
+  const handleDragMove = useCallback((target: MealType | null) => {
+    setDragState(prev => {
+      // Only trigger a state update if the target crossed bounds to keep things performant
+      if (prev.targetZone !== target) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+        return { ...prev, targetZone: target };
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((item: DisplayMealItem, target: MealType | null) => {
+    setScrollEnabled(true);
+    
+    // Smooth disappearance of the preview placeholder
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+    setDragState({ activeItem: null, targetZone: null });
+
+    if (target !== null && target !== item.sourceType) {
+      void handleItemDropped(item, target);
+    }
+  }, [handleItemDropped]);
+
+  const formatDateLabel = (date: Date) => {
+    const today = getStartOfDay(new Date());
+    if (date.getTime() === today.getTime()) return "Today";
+    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  function getSectionIcon(type: MealType): keyof typeof Ionicons.glyphMap {
+    switch (type) {
+      case 'Breakfast': return 'sunny-outline';
+      case 'Lunch': return 'restaurant-outline';
+      case 'Dinner': return 'moon-outline';
+      case 'Snack': return 'cafe-outline';
+      default: return 'help-circle-outline';
+    }
+  }
 
   return (
-      <>
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          {isLoading && !isSyncing ? (
-              <View style={styles.centered}>
-                <ActivityIndicator size="large" color={colors.accent} />
-                <Text style={styles.mutedText}>Loading meals…</Text>
-              </View>
-          ) : !hasItems ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="fast-food-outline" size={48} color={colors.textMuted} style={{ marginBottom: 12 }} />
-                <Text style={styles.emptyText}>No meals logged yet. Scan or search for food, then tap Add to meals.</Text>
-              </View>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {toastMessage && (
+        <Animated.View style={[styles.toastContainer, { top: insets.top + 10 }]}>
+          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      )}
+
+      <View style={styles.header}>
+        <View style={styles.calendarStrip}>
+          <TouchableOpacity style={styles.navButton} onPress={() => shiftDate(-1)}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.dateLabel}>{formatDateLabel(selectedDate)}</Text>
+          {getStartOfDay(selectedDate) < getStartOfDay(new Date()) ? (
+            <TouchableOpacity style={styles.navButton} onPress={() => shiftDate(1)}>
+              <Ionicons name="chevron-forward" size={24} color={colors.text} />
+            </TouchableOpacity>
           ) : (
-              sections.map((section) => (
-                  <View key={section.type} style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                      <Ionicons name={getSectionIcon(section.type)} size={20} color={colors.accent} />
-                      <Text style={styles.sectionTitle}>{section.type} • {curdate}</Text>
-                    </View>
-                    {section.items.map((item, index) => (
-                        <MealItemCard
-                            key={`${section.type}-${item.barcode}-${index}`}
-                            item={item}
-                            onViewMore={handleViewMore}
-                            onRemove={() => handleRemoveItem(section.type, index)}
-                            onServingsChange={(servings) => handleServingsChange(section.type, index, servings)}
-                            servingsDisabled={isLoading || isSyncing}
-                        />
-                    ))}
-                  </View>
-              ))
+            <TouchableOpacity disabled style={styles.navButton} onPress={() => shiftDate(1)}>
+              <Ionicons name="chevron-forward" size={24} color={colors.textFaint} />
+            </TouchableOpacity>
           )}
-        </ScrollView>
+        </View>
+      </View>
 
-        {hasItems && (
-            <Pressable
-                accessibilityRole="button"
-                onPress={handleSyncToAppwrite}
-                disabled={isSyncing}
-                style={({ pressed }) => [
-                  styles.floatingSyncButton,
-                  { bottom: bottomOffset },
-                  pressed && styles.floatingSyncButtonPressed,
-                  isSyncing && styles.floatingSyncButtonDisabled,
-                ]}
-            >
-              {isSyncing ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ActivityIndicator size="small" color={colors.accent} />
-                    <Text style={styles.floatingSyncButtonText}>Logging...</Text>
+      <View style={styles.summaryContainer}>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryValue}>{Math.round(dailyTotals.kcal)}</Text>
+          <Text style={styles.summaryLabel}>kcal</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryValue}>{Math.round(dailyTotals.protein)}g</Text>
+          <Text style={styles.summaryLabel}>Protein</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryValue}>{Math.round(dailyTotals.carbs)}g</Text>
+          <Text style={styles.summaryLabel}>Carbs</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryValue}>{Math.round(dailyTotals.fat)}g</Text>
+          <Text style={styles.summaryLabel}>Fat</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        scrollEnabled={scrollEnabled}
+      >
+        {isLoading && !isSyncing ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.accent} />
+            <Text style={styles.mutedText}>Loading meals…</Text>
+          </View>
+        ) : !hasItems ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="fast-food-outline" size={48} color={colors.textMuted} style={{ marginBottom: 12 }} />
+            <Text style={styles.emptyText}>No meals logged yet. Drag items to organize them or log a new meal.</Text>
+          </View>
+        ) : (
+          sections.map((section) => {
+            const isTargetZone = dragState.targetZone === section.type && dragState.activeItem?.sourceType !== section.type;
+
+            return (
+              <View
+                key={section.type}
+                ref={(el) => { zoneRefs.current[section.type] = el; }}
+                onLayout={() => measureZone(section.type)}
+                style={styles.section}
+              >
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name={getSectionIcon(section.type)} size={20} color={colors.accent} />
+                    <Text style={styles.sectionTitle}>{section.friendlyname}</Text>
                   </View>
-              ) : (
-                  <>
-                    <Ionicons name="cloud-upload-outline" size={24} color={colors.accent} />
-                    <Text style={styles.floatingSyncButtonText}>Log Meal</Text>
-                  </>
-              )}
-            </Pressable>
-        )}
+                  <Text style={styles.sectionMacros}>
+                    {formatSectionMacros(section.kcal, section.protein, section.carbs, section.fat)}
+                  </Text>
+                </View>
 
-        <BarcodeDetailModal
-            visible={modalVisible}
-            barcode={selectedBarcode}
-            data={detailData}
-            isLoading={detailLoading}
-            error={detailError}
-            onClose={() => setModalVisible(false)}
-            onMealAdded={handleMealAdded}
-        />
-      </>
+                <View style={styles.itemsTray}>
+                  {section.items.length === 0 && !isTargetZone ? (
+                    <Text style={styles.emptyTrayText}>Drag items here</Text>
+                  ) : (
+                    section.items.map((item) => (
+                      <DraggableItemCard
+                        key={item.key}
+                        item={item}
+                        isLoadingItems={isLoadingItems}
+                        onDragStart={handleDragStart}
+                        onDragMove={handleDragMove}
+                        onDragEnd={handleDragEnd}
+                        findDropTarget={findDropTarget}
+                      />
+                    ))
+                  )}
+
+                  {/* Clean Drop Preview Placement Indicator */}
+                  {isTargetZone && (
+                    <View style={styles.dropPlaceholder}>
+                      <Ionicons name="arrow-down-circle-outline" size={24} color={colors.accent} />
+                      <Text style={styles.dropPlaceholderText}>Drop to move to {section.friendlyname}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={handleForceSync}
+        disabled={isSyncing}
+        style={({ pressed }) => [
+          styles.floatingSyncButton,
+          { bottom: bottomOffset },
+          pressed && styles.floatingSyncButtonPressed,
+          isSyncing && styles.floatingSyncButtonDisabled,
+        ]}
+      >
+        {isSyncing ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator size="small" color={colors.accent} />
+            <Text style={styles.floatingSyncButtonText}>Syncing...</Text>
+          </View>
+        ) : (
+          <>
+            <Ionicons name="sync-outline" size={24} color={colors.accent} />
+            <Text style={styles.floatingSyncButtonText}>Refresh Meals</Text>
+          </>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.background },
-  content: { padding: 16, paddingBottom: 110, gap: 24 },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+    backgroundColor: c.surface,
+  },
+  calendarStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  navButton: { padding: 8 },
+  dateLabel: { fontSize: 18, fontWeight: 'bold', color: c.text, minWidth: 120, textAlign: 'center' },
+
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 16,
+    backgroundColor: c.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  summaryItem: { alignItems: 'center' },
+  summaryValue: { fontSize: 18, fontWeight: '700', color: c.text },
+  summaryLabel: { fontSize: 12, color: c.textMuted, marginTop: 4 },
+
+  scrollArea: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 110, gap: 24 },
   centered: { alignItems: 'center', gap: 12, paddingVertical: 64 },
+  mutedText: { color: c.textMuted, fontSize: 15 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 32 },
   emptyText: { color: c.textMuted, fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  emptyTrayText: { textAlign: 'center', color: c.textMuted, fontStyle: 'italic', fontSize: 13, marginVertical: 12 },
+
   section: { gap: 14 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: c.border, paddingBottom: 8, marginBottom: 4 },
+  sectionHeader: {
+    gap: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+    paddingBottom: 8,
+    marginBottom: 4,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sectionTitle: { color: c.text, fontSize: 18, fontWeight: '700' },
+  sectionMacros: { color: c.accent, fontSize: 14, fontWeight: '600' },
+  itemsTray: { minHeight: 50, justifyContent: 'center' },
+
   itemCard: {
-    backgroundColor: c.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: c.border, gap: 12,
+    backgroundColor: c.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    gap: 12,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
       android: { elevation: 2 },
@@ -603,21 +762,34 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   cardHeader: { gap: 2 },
   itemTitle: { color: c.text, fontSize: 17, fontWeight: '600', lineHeight: 22 },
-  servingsNote: { color: c.textMuted, fontSize: 13, fontWeight: '500', marginTop: 2 },
+
   factsContainer: { backgroundColor: c.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4 },
   factRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
   factLabel: { color: c.textMuted, fontSize: 14, flex: 1 },
   factValue: { color: c.text, fontSize: 14, fontWeight: '600', textAlign: 'right', flex: 1 },
-  fallbackBarcodeContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
-  fallbackBarcodeText: { color: c.textMuted, fontSize: 14, fontWeight: '500' },
-  pickerContainer: { gap: 6, marginTop: 2 },
-  pickerLabel: { color: c.textMuted, fontSize: 11, fontWeight: '600', letterSpacing: 0.5 },
-  cardActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  viewMoreButton: { flex: 1, backgroundColor: c.surfaceAlt, paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: c.accent, alignItems: 'center', justifyContent: 'center' },
-  viewMoreButtonText: { color: c.accent, fontSize: 14, fontWeight: '600' },
-  removeButton: { flex: 1, backgroundColor: c.surfaceAlt, paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: c.danger, alignItems: 'center', justifyContent: 'center' },
-  removeButtonText: { color: c.danger, fontSize: 14, fontWeight: '600' },
-  mutedText: { color: c.textMuted, fontSize: 15 },
+  fallbackBarcodeContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+  fallbackBarcodeText: { color: c.textMuted, fontSize: 14 },
+  dragHandle: { alignItems: 'center', marginTop: -4 },
+
+  dropPlaceholder: {
+    minHeight: 74,
+    borderWidth: 2,
+    borderColor: c.accent,
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    marginVertical: 4,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  dropPlaceholderText: {
+    color: c.accent,
+    fontWeight: '600',
+    fontSize: 14,
+    marginTop: 4,
+  },
+
   floatingSyncButton: {
     position: 'absolute', right: 16, height: 54, borderRadius: 27, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, paddingHorizontal: 20, gap: 8, zIndex: 40,
     ...Platform.select({
@@ -629,4 +801,22 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   floatingSyncButtonPressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
   floatingSyncButtonDisabled: { opacity: 0.6 },
   floatingSyncButtonText: { color: c.accent, fontSize: 16, fontWeight: '600' },
+
+  toastContainer: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: '#2ecc71',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    zIndex: 9999,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6 },
+      android: { elevation: 10 },
+      web: { boxShadow: '0px 4px 6px rgba(0,0,0,0.3)' }
+    })
+  },
+  toastText: { color: '#fff', fontWeight: '600', marginLeft: 8, fontSize: 14 },
 });

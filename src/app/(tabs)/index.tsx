@@ -1,16 +1,15 @@
+import RadialGauge from "@/components/Gague";
+import { useAuth } from "@/lib/AuthContext";
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useRouter } from 'expo-router'; // Removed unused 'useTheme'
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import ImageViewer from "@/components/ImageViewer";
-import RadialGauge from "@/components/Gague";
 import { useState } from "react";
-import { useAuth } from "@/lib/AuthContext";
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function Dial() {
     // 1. Move hook inside the component
     const { user } = useAuth();
-    const [currentValue, setCurrentValue] = useState(50);
+    const [currentValue, setCurrentValue] = useState(0);
 
     return (
         <View>
@@ -29,12 +28,10 @@ export default function AboutScreen() {
 
     return (
         <View style={styles.container}>
-            <Dial />
-            <View style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 24 }}>
-                <ImageViewer
-                    imgSource={PlaceholderImage}
-                    style={{ width: 260, height: 260, borderRadius: 18 }}
-                />
+            <View style={styles.infoholder}>
+                <View style={styles.infoholderItem}>
+                    <Dial />
+                </View>
             </View>
             <Text style={styles.text}>Welcome to CalCount</Text>
 
@@ -62,6 +59,22 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
         backgroundColor: c.background,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    infoholder: {
+        display: 'flex',
+        position: 'absolute',
+        top: 0,
+        marginLeft: 10,
+        marginTop: 10,
+        border: 1,
+        borderColor: "#00000000",
+        borderRadius: 10,
+    },
+    infoholderItem: {
+        backgroundColor: "#FFFDD0",
+        borderRadius: 10,
+        marginBottom: 10,
+        padding: 10,
     },
     text: {
         color: c.accent,

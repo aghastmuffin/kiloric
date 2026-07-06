@@ -1,16 +1,16 @@
-import { StyleSheet } from 'react-native';
 import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
 import { SearchPreferencesProvider, useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-
+import { StyleSheet } from 'react-native';
 
 function TabNavigator() {
   const { defaultSearchMode } = useSearchPreferences();
   const { activeFontFamily } = useFontPreferences();
   const { colors } = useTheme();
+  
   const showScanTab = defaultSearchMode === 'scan';
   const navigationFontStyle = activeFontFamily
     ? { fontFamily: activeFontFamily }
@@ -26,9 +26,9 @@ function TabNavigator() {
         },
         headerShadowVisible: false,
         headerTintColor: colors.text,
-        headerTitleStyle: { ...navigationFontStyle, fontWeight: '600' as const, fontSize: 17 },
+        headerTitleStyle: { ...navigationFontStyle, fontWeight: '600', fontSize: 17 },
         tabBarIconStyle: { marginBottom: -2 },
-        tabBarLabelStyle: { ...navigationFontStyle, fontSize: 11, fontWeight: '600' as const },
+        tabBarLabelStyle: { ...navigationFontStyle, fontSize: 11, fontWeight: '600' },
         tabBarStyle: {
           backgroundColor: colors.surfaceMuted,
           borderTopColor: colors.border,
@@ -48,22 +48,12 @@ function TabNavigator() {
         }}
       />
       <Tabs.Screen
-        name="scan"
+        name="logfood"
         options={{
-          title: 'Scan',
-          href: showScanTab ? undefined : null,
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'camera' : 'camera-outline'} color={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="text_query"
-        options={{
-          title: 'Manual Search',
+          title: 'Log',
           href: showScanTab ? null : undefined,
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'search' : 'search-outline'} color={color} size={24} />
+            <Ionicons name={focused ? 'add-circle' : 'add-circle-outline'} color={color} size={24} />
           ),
         }}
       />
@@ -88,8 +78,8 @@ function TabNavigator() {
       <Tabs.Screen
         name="about"
         options={{
-          title: 'About',
           href: null,
+          title: 'About',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'information-circle' : 'information-circle-outline'} color={color} size={24}/>
           ),

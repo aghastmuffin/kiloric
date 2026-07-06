@@ -1,13 +1,21 @@
 import { CameraView, CameraType, useCameraPermissions, type BarcodeType } from 'expo-camera';
 import { useState, useCallback } from 'react';
-import { Button, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  AppState,
+  Button,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  type AppStateStatus,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Device from 'expo-device';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useIsFocused } from 'expo-router';
 
 const BARCODE_TYPES: BarcodeType[] = [
   'aztec',
@@ -31,13 +39,25 @@ export default function CameraScannerScreen() {
   const { colors } = useTheme();
   const [facing, setFacing] = useState<CameraType>('back');
   const [scanned, setScanned] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
-  const isFocused = useIsFocused();
 
   useFocusEffect(
     useCallback(() => {
       setScanned(false);
-    }, [])
+
+      const syncCameraEnabled = (appState: AppStateStatus) => {
+        setCameraEnabled(appState === 'active');
+      };
+
+      syncCameraEnabled(AppState.currentState);
+      const subscription = AppState.addEventListener('change', syncCameraEnabled);
+
+      return () => {
+        subscription.remove();
+        setCameraEnabled(false);
+      };
+    }, []),
   );
 
   const handleBarcodeScanned = useCallback(async ({ data }: { data: string }) => {
@@ -79,15 +99,16 @@ export default function CameraScannerScreen() {
 
   return (
       <View style={styles.container}>
-        {isFocused ? (
-            <CameraView
-                style={styles.camera}
-                facing={facing}
-                barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
-                onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-            />
+        {cameraEnabled ? (
+          <CameraView
+            style={styles.camera}
+            facing={facing}
+            active={cameraEnabled}
+            barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
+            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+          />
         ) : (
-            <View style={styles.camera} /> // Placeholder view to prevent layout shifts
+          <View style={styles.camera} />
         )}
 
         <View style={styles.buttonContainer}>

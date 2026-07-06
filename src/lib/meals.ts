@@ -1,4 +1,5 @@
 import { account, databases } from '@/lib/appwrite'
+import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
 import { logAppwriteError } from '@/lib/profile'
 import { AppwriteException, ID, Permission, Role, Query, type Models } from 'react-native-appwrite'
 
@@ -134,6 +135,128 @@ async function assertActiveSession(): Promise<string> {
     logAppwriteError('account.get (meal session check)', err)
     throw new Error('No active Appwrite session. Sign in before logging a meal.')
   }
+}
+
+/** Add a scanned product to today's meal bucket for `mealType` (one doc per type per day). */
+export async function addProductToMeal(
+    ownerId: string,
+    mealType: MealType,
+    barcode: string,
+    productData: Record<string, unknown>,
+    servings = 1,
+): Promise<MealDocument> {
+  const trimmedBarcode = barcode.trim()
+  if (!trimmedBarcode) {
+    throw new Error('A valid barcode is required to add a product to a meal.')
+  }
+
+  const productInput = buildMealInputFromProduct(ownerId, productData, mealType, trimmedBarcode, servings)
+
+  const todayMeals = await getTodayMeals(ownerId)
+  const existingMeal = todayMeals.find((meal) => meal.type === mealType)
+
+  if (existingMeal) {
+    const sum = (current: number | null | undefined, added: number | null | undefined) =>
+        (current ?? 0) + (added ?? 0)
+
+    return updateMeal(existingMeal.$id, {
+      friendlyname: mealType,
+      kcal: sum(existingMeal.kcal, productInput.kcal),
+      protein: sum(existingMeal.protein, productInput.protein),
+      carbs: sum(existingMeal.carbs, productInput.carbs),
+      fat: sum(existingMeal.fat, productInput.fat),
+      items: [...(existingMeal.items ?? []), trimmedBarcode],
+    })
+  }
+
+  return createMeal({
+    ...productInput,
+    friendlyname: mealType,
+    type: mealType,
+    items: [trimmedBarcode],
+  })
+}
+
+type ProductNutrition = {
+  kcal: number | null
+  protein: number | null
+  carbs: number | null
+  fat: number | null
+}
+
+/** Move a barcode from one meal document into another meal type bucket for today. */
+export async function moveProductBetweenMeals(
+    ownerId: string,
+    sourceMealId: string,
+    barcode: string,
+    targetType: MealType,
+    nutrition: ProductNutrition,
+): Promise<void> {
+  if (isMealsConfigMissing()) {
+    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+  }
+
+  await assertActiveSession()
+
+  const sourceMeal = await getMeal(sourceMealId)
+  if (!sourceMeal) throw new Error('Source meal not found.')
+
+  const trimmedBarcode = barcode.trim()
+  const items = [...(sourceMeal.items ?? [])]
+  const itemIndex = items.indexOf(trimmedBarcode)
+  if (itemIndex === -1) throw new Error('Product not found in source meal.')
+
+  items.splice(itemIndex, 1)
+
+  const subtract = (current: number | null | undefined, amount: number | null | undefined) =>
+      Math.max(0, (current ?? 0) - (amount ?? 0))
+
+  if (items.length === 0) {
+    await databases.deleteDocument({
+      databaseId: DATABASE_ID,
+      collectionId: MEALS_COLLECTION_ID,
+      documentId: sourceMealId,
+    })
+  } else {
+    await updateMeal(sourceMealId, {
+      kcal: subtract(sourceMeal.kcal, nutrition.kcal),
+      protein: subtract(sourceMeal.protein, nutrition.protein),
+      carbs: subtract(sourceMeal.carbs, nutrition.carbs),
+      fat: subtract(sourceMeal.fat, nutrition.fat),
+      items,
+    })
+  }
+
+  const todayMeals = await getTodayMeals(ownerId)
+  const targetMeal = todayMeals.find((meal) => meal.type === targetType && meal.$id !== sourceMealId)
+
+  const add = (current: number | null | undefined, amount: number | null | undefined) =>
+      (current ?? 0) + (amount ?? 0)
+
+  if (targetMeal) {
+    await updateMeal(targetMeal.$id, {
+      friendlyname: targetType,
+      kcal: add(targetMeal.kcal, nutrition.kcal),
+      protein: add(targetMeal.protein, nutrition.protein),
+      carbs: add(targetMeal.carbs, nutrition.carbs),
+      fat: add(targetMeal.fat, nutrition.fat),
+      items: [...(targetMeal.items ?? []), trimmedBarcode],
+    })
+    return
+  }
+
+  await createMeal({
+    owner: ownerId,
+    friendlyname: targetType,
+    type: targetType,
+    kcal: nutrition.kcal,
+    protein: nutrition.protein,
+    carbs: nutrition.carbs,
+    fat: nutrition.fat,
+    nutrient_density_score: null,
+    fluid: null,
+    items: [trimmedBarcode],
+  })
 }
 
 export async function createMeal(input: CreateMealInput): Promise<MealDocument> {

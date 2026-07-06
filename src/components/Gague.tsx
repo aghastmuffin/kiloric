@@ -1,12 +1,15 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-    useSharedValue,
-    useAnimatedProps,
-    withTiming,
     Easing,
+    useAnimatedProps,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, G } from 'react-native-svg';
+import Svg, { Circle, G as NativeG } from 'react-native-svg';
+
+// Safely fall back to standard HTML 'g' string component if running on web
+const G = Platform.OS === 'web' ? 'g' : NativeG;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -45,14 +48,24 @@ export default function RadialGauge({
         return { strokeDashoffset };
     });
 
+    const center = size / 2;
+
     return (
         <View style={[styles.container, { width: size, height: size / 2 }]}>
             <Svg width={size} height={size / 2}>
-                <G rotation="-180" origin={`${size / 2}, ${size / 2}`}>
+                {/* Using modern cross-platform transform attributes:
+                  Web uses standard SVG string transforms; Native uses individual properties.
+                */}
+                <G 
+                    {...(Platform.OS === 'web' 
+                        ? { transform: `rotate(-180 ${center} ${center})` } 
+                        : { rotation: -180, originX: center, originY: center }
+                    )}
+                >
                     {/* Background Arc */}
                     <Circle
-                        cx={size / 2}
-                        cy={size / 2}
+                        cx={center}
+                        cy={center}
                         r={radius}
                         stroke={backgroundColor}
                         strokeWidth={strokeWidth}
@@ -62,8 +75,8 @@ export default function RadialGauge({
                     />
                     {/* Foreground Value Arc */}
                     <AnimatedCircle
-                        cx={size / 2}
-                        cy={size / 2}
+                        cx={center}
+                        cy={center}
                         r={radius}
                         stroke={color}
                         strokeWidth={strokeWidth}

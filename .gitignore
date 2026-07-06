@@ -40,3 +40,4 @@ example
 /ios
 /android
 tasks.json
+.env.local

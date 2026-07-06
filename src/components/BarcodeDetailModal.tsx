@@ -1,9 +1,8 @@
 import ImageViewer from '@/components/ImageViewer';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
-import { buildMealInputFromProduct } from '@/lib/mealFromProduct';
 import { appendMealBarcode } from '@/lib/mealItemsStorage';
-import { createMeal } from '@/lib/meals';
+import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
@@ -265,14 +264,11 @@ export default function BarcodeDetailModal({
       onMealAdded?.();
 
       if (user?.$id) {
-        const input = buildMealInputFromProduct(user.$id, data, selectedMealType, barcode);
-        await createMeal(input);
+        await addProductToMeal(user.$id, selectedMealType, barcode ?? '', data);
         router.push('/meals');
         Alert.alert(
           'Added & Synced',
-          input.friendlyname
-            ? `"${input.friendlyname}" was saved to your meals and synced to Appwrite.`
-            : 'This item was saved to your meals and synced to Appwrite.',
+          `Added to your ${selectedMealType} meal and synced to Appwrite.`,
           [{ text: 'OK', onPress: handleClose }],
         );
       } else {
