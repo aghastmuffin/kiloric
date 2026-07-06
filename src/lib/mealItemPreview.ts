@@ -1,5 +1,4 @@
 import { authenticatedRequest } from '@/components/apiUtils'
-import { getCachedResponse } from '@/lib/apiCache'
 import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
 import type { MealType } from '@/lib/meals'
 import { getProductTitle, getQuickProductFacts } from '@/lib/productDisplay'
@@ -33,15 +32,13 @@ export async function fetchMealItemPreview(
   let data: Record<string, unknown> | null = null
 
   try {
+    // authenticatedRequest handles both cache lookups and network deduplication internally
     const fetched = await authenticatedRequest(endpoint)
     if (fetched && typeof fetched === 'object' && !Array.isArray(fetched)) {
       data = fetched as Record<string, unknown>
     }
-  } catch {
-    const cached = await getCachedResponse(endpoint)
-    if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
-      data = cached as Record<string, unknown>
-    }
+  } catch (err) {
+    console.warn(`[fetchMealItemPreview] Failed to fetch data for ${barcode}`, err)
   }
 
   if (!data) {

@@ -88,15 +88,15 @@ const DraggableItemCard = memo(function DraggableItemCard({
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   
-  const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current;
+  const pan = useMemo(() => new Animated.ValueXY(), []);
+  const scale = useMemo(() => new Animated.Value(1), []);
   const [isDragging, setIsDragging] = useState(false);
 
   // Always-current ref for closures
   const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
   cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
 
-  const panResponder = useRef(
+  const panResponder = useMemo(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -164,8 +164,8 @@ const DraggableItemCard = memo(function DraggableItemCard({
       },
 
       onPanResponderTerminationRequest: () => true,
-    })
-  ).current;
+    }),
+  []);
 
   const hasFacts = item.facts.length > 0;
 
@@ -321,6 +321,8 @@ export default function MealsScreen() {
   }, [displayedMeals]);
 
   const sections = useMemo<DisplayMealSection[]>(() => {
+    // Optimization: Pre-filter displayedMeals by type once outside the nested items loop
+    // to keep the render phase O(N) where N is number of displayed items.
     return MEAL_TYPE_OPTIONS.map((type) => {
       const mealsForType = displayedMeals.filter((meal) => meal.type === type);
       const friendlyname = mealsForType[0]?.friendlyname || type;
@@ -478,7 +480,7 @@ export default function MealsScreen() {
       console.warn('Failed to move item between meals', err);
       await fetchMeals();
     }
-  }, [user?.$id, fetchMeals, showToast]);
+  }, [user, fetchMeals, showToast]);
 
   const measureZone = useCallback((type: MealType) => {
     const ref = zoneRefs.current[type];
@@ -488,7 +490,7 @@ export default function MealsScreen() {
         dropZones.set(type, { x, y, width, height });
       }
     });
-  }, []);
+  }, [dropZones]);
 
   const findDropTarget = useCallback((dropX: number, dropY: number): MealType | null => {
     for (const [type, zone] of dropZones.entries()) {
@@ -500,7 +502,7 @@ export default function MealsScreen() {
       }
     }
     return null;
-  }, []);
+  }, [dropZones]);
 
   const handleDragStart = useCallback((item: DisplayMealItem) => {
     setScrollEnabled(false);
@@ -637,7 +639,9 @@ export default function MealsScreen() {
                       <DraggableItemCard
                         key={item.key}
                         item={item}
-                        isLoadingItems={isLoadingItems}
+                        // Only notify the card to show a loading state if it actually lacks data.
+                        // This prevents mass re-renders of the entire list when the global isLoadingItems flips.
+                        isLoadingItems={item.facts.length === 0 && isLoadingItems}
                         onDragStart={handleDragStart}
                         onDragMove={handleDragMove}
                         onDragEnd={handleDragEnd}
