@@ -66,11 +66,6 @@ export const authenticatedRequest = async (
   const cacheTtl = method === 'GET' ? getCacheTtl(endpoint) : null
 
   if (cacheTtl !== null) {
-    const cached = await getCachedResponse(endpoint)
-    if (cached !== null) {
-      return cached
-    }
-
     const cacheKey = normalizeCacheKey(endpoint)
     const inflight = inflightRequests.get(cacheKey)
     if (inflight) {
@@ -79,9 +74,15 @@ export const authenticatedRequest = async (
 
     const promise = (async () => {
       try {
+        // BOLT: Check cache within the in-flight promise to deduplicate I/O
+        // for multiple concurrent requests for the same resource.
+        const cached = await getCachedResponse(endpoint)
+        if (cached !== null) return cached
+
         const data = await performAuthenticatedRequest(endpoint, options)
         if (data !== null && data !== undefined) {
-          await setCachedResponse(endpoint, data, cacheTtl)
+          // BOLT: Persistence happens in background to return data faster
+          void setCachedResponse(endpoint, data, cacheTtl)
         }
         return data
       } catch (err) {
