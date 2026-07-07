@@ -28,7 +28,10 @@ export async function getAccessToken(): Promise<string | null> {
 
       return jwt
     } catch (err) {
-      console.warn('[getAccessToken] failed to create JWT', err)
+      console.warn(
+        '[getAccessToken] failed to create JWT',
+        err instanceof Error ? err.message : 'Unknown error',
+      )
       return null
     } finally {
       inflightPromise = null

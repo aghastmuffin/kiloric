@@ -90,7 +90,7 @@ export function logAppwriteError(context: string, err: unknown): void {
           code: err.code,
           type: err.type,
           message: err.message,
-          response: err.response,
+          // Never log err.response as it may contain PII or sensitive system details
         },
         null,
         2,
@@ -262,7 +262,7 @@ export async function createProfile(userId: string, data: ProfileCreate) {
     databaseId: DATABASE_ID,
     collectionId: USER_PROFILES_COLLECTION_ID,
     documentId: userId,
-    data,
+    // Never log the full data object to avoid leaking PII (email, DOB, etc.)
   })
   return databases.createDocument({
     databaseId: DATABASE_ID,
@@ -280,7 +280,7 @@ export async function createProfile(userId: string, data: ProfileCreate) {
 export async function assertActiveSession(): Promise<string> {
   try {
     const me = await account.get()
-    console.log('[profile] active session for', me.$id, me.email)
+    console.log('[profile] active session for', me.$id)
     return me.$id
   } catch (err) {
     logAppwriteError('account.get (session check)', err)

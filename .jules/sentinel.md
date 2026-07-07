@@ -1,0 +1,4 @@
+## 2025-05-15 - [PII Leakage in Logs]
+**Vulnerability:** Personally Identifiable Information (PII) such as emails, dates of birth, weights, and heights were being logged to the console during profile creation and session assertion. Additionally, raw Appwrite `err.response` objects were being logged, which could contain sensitive system details.
+**Learning:** Standard library or SDK error objects (like `AppwriteException`) often contain a `response` or `data` field that captures the full raw response from the server. Directly logging these objects can inadvertently expose sensitive data.
+**Prevention:** Always sanitize log outputs by picking only specific, safe fields (e.g., `code`, `message`, `type`) instead of logging full objects. Avoid logging user-provided data or profile objects in their entirety.
