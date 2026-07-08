@@ -66,11 +66,6 @@ export const authenticatedRequest = async (
   const cacheTtl = method === 'GET' ? getCacheTtl(endpoint) : null
 
   if (cacheTtl !== null) {
-    const cached = await getCachedResponse(endpoint)
-    if (cached !== null) {
-      return cached
-    }
-
     const cacheKey = normalizeCacheKey(endpoint)
     const inflight = inflightRequests.get(cacheKey)
     if (inflight) {
@@ -79,9 +74,19 @@ export const authenticatedRequest = async (
 
     const promise = (async () => {
       try {
+        // 1. Check cache first, but within the deduplicated promise
+        const cached = await getCachedResponse(endpoint)
+        if (cached !== null) {
+          return cached
+        }
+
+        // 2. Not in cache, perform the actual network request
         const data = await performAuthenticatedRequest(endpoint, options)
         if (data !== null && data !== undefined) {
-          await setCachedResponse(endpoint, data, cacheTtl)
+          // 3. Fire-and-forget the cache update to avoid blocking return
+          setCachedResponse(endpoint, data, cacheTtl).catch((err) => {
+            console.warn('[apiUtils] background cache update failed', err)
+          })
         }
         return data
       } catch (err) {
