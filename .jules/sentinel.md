@@ -1,0 +1,4 @@
+## 2025-05-15 - PII Leakage in Logs and Weak Email Validation
+**Vulnerability:** Personal Identifiable Information (PII) such as user emails and full profile data objects, along with raw Appwrite API responses, were being logged to the console. Additionally, email validation was using a weak string-based check.
+**Learning:** Developers often log full objects or raw error responses for easier debugging without considering that these logs might be persisted in production environments (like Metro logs or external log aggregators). Weak validation logic like `includes('@')` is often used as a placeholder but can easily slip into production.
+**Prevention:** Establish a strict policy against logging raw exception objects (especially `err.response` in Appwrite) or user-provided data. Use robust, standard regular expressions for input validation from the start.
