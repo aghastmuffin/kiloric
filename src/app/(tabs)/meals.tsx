@@ -234,6 +234,9 @@ export default function MealsScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [allMeals, setAllMeals] = useState<MealDocument[]>([]);
   const [itemPreviews, setItemPreviews] = useState<Record<string, MealItemPreview>>({});
+  const previewsRef = useRef(itemPreviews);
+  useEffect(() => { previewsRef.current = itemPreviews; }, [itemPreviews]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -249,9 +252,9 @@ export default function MealsScreen() {
   const dropZones = useRef<Map<MealType, { x: number; y: number; width: number; height: number }>>(new Map()).current;
   const zoneRefs = useRef<Record<string, View | null>>({});
 
-  const fetchMeals = useCallback(async () => {
+  const fetchMeals = useCallback(async (silent = false) => {
     if (!user?.$id) return;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const [todayMeals, historicMeals] = await Promise.all([
         getTodayMeals(user.$id),
@@ -265,8 +268,7 @@ export default function MealsScreen() {
     }
   }, [user]);
 
-  useEffect(() => { void fetchMeals(); }, [fetchMeals]);
-  useFocusEffect(useCallback(() => { void fetchMeals(); }, [fetchMeals]));
+  useFocusEffect(useCallback(() => { void fetchMeals(true); }, [fetchMeals]));
 
   const selectedStart = getStartOfDay(selectedDate).getTime();
   const selectedEnd = selectedStart + 24 * 60 * 60 * 1000;
@@ -280,34 +282,32 @@ export default function MealsScreen() {
     let cancelled = false;
 
     const loadItemPreviews = async () => {
-      const entries: { cacheKey: string; barcode: string; type: MealType }[] = [];
-
+      const uniqueBarcodes = new Map<string, MealType>();
       for (const meal of displayedMeals) {
-        for (const [index, barcode] of (meal.items ?? []).entries()) {
-          entries.push({
-            cacheKey: `${meal.$id}-${index}-${barcode}`,
-            barcode,
-            type: (meal.type ?? 'Other') as MealType,
-          });
+        for (const barcode of (meal.items ?? [])) {
+          if (!uniqueBarcodes.has(barcode)) {
+            uniqueBarcodes.set(barcode, (meal.type ?? 'Other') as MealType);
+          }
         }
       }
 
-      if (entries.length === 0) {
-        setItemPreviews({});
-        return;
-      }
+      const missingBarcodes = Array.from(uniqueBarcodes.entries()).filter(
+        ([barcode]) => !previewsRef.current[barcode]
+      );
+
+      if (missingBarcodes.length === 0) return;
 
       setIsLoadingItems(true);
       try {
-        const previews = await Promise.all(
-          entries.map(async ({ cacheKey, barcode, type }) => {
+        const newPreviews = await Promise.all(
+          missingBarcodes.map(async ([barcode, type]) => {
             const preview = await fetchMealItemPreview(barcode, type);
-            return [cacheKey, preview] as const;
+            return [barcode, preview] as const;
           }),
         );
 
         if (!cancelled) {
-          setItemPreviews(Object.fromEntries(previews));
+          setItemPreviews(prev => ({ ...prev, ...Object.fromEntries(newPreviews) }));
         }
       } catch (error) {
         console.warn('Failed to load meal item previews', error);
@@ -336,7 +336,7 @@ export default function MealsScreen() {
       for (const meal of mealsForType) {
         for (const [index, barcode] of (meal.items ?? []).entries()) {
           const cacheKey = `${meal.$id}-${index}-${barcode}`;
-          const preview = itemPreviews[cacheKey] ?? {
+          const preview = itemPreviews[barcode] ?? {
             barcode,
             title: `Barcode: ${barcode}`,
             facts: [],
@@ -473,12 +473,12 @@ export default function MealsScreen() {
           fat: item.fat,
         },
       );
-      await fetchMeals();
+      await fetchMeals(true);
     } catch (err) {
       console.warn('Failed to move item between meals', err);
-      await fetchMeals();
+      await fetchMeals(true);
     }
-  }, [user?.$id, fetchMeals, showToast]);
+  }, [user, fetchMeals, showToast]);
 
   const measureZone = useCallback((type: MealType) => {
     const ref = zoneRefs.current[type];
