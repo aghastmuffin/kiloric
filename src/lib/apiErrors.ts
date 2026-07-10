@@ -64,3 +64,23 @@ export function showApiError(error: unknown, source: ApiErrorSource = 'appwrite'
     message: formatApiError(error, source),
   })
 }
+
+/** Logs the full Appwrite error to the JS console so it shows in Metro / dev tools. */
+export function logAppwriteError(context: string, err: unknown): void {
+  if (err instanceof AppwriteException) {
+    console.error(
+      `[appwrite] ${context} failed →`,
+      JSON.stringify(
+        {
+          code: err.code,
+          type: err.type,
+          message: err.message,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+  console.error(`[appwrite] ${context} failed →`, err)
+}

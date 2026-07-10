@@ -1,6 +1,6 @@
 import { account, databases } from '@/lib/appwrite'
 import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
-import { logAppwriteError } from '@/lib/profile'
+import { logAppwriteError } from '@/lib/apiErrors'
 import { AppwriteException, ID, Permission, Role, Query, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!

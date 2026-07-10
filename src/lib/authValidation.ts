@@ -1,6 +1,8 @@
 export function isValidEmail(value: string): boolean {
   const trimmed = value.trim()
-  return trimmed.includes('@') && trimmed.includes('.') && trimmed.length >= 5
+  // Production-grade email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(trimmed)
 }
 
 export function isValidPassword(value: string): boolean {
