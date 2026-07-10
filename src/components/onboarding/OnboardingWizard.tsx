@@ -408,7 +408,7 @@ export function OnboardingWizard() {
       }
     } catch (err) {
       const message = formatProfileSaveError(err)
-      console.error('[onboarding] save failed:', message, err)
+      console.error('[onboarding] save failed:', message)
       showApiError(message, 'appwrite')
       setSaveError(message)
     } finally {
