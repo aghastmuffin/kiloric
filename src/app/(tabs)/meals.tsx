@@ -52,7 +52,7 @@ type DisplayMealSection = {
   items: DisplayMealItem[];
 };
 
-function FactRow({ label, value }: { label: string; value: string }) {
+const FactRow = memo(function FactRow({ label, value }: { label: string; value: string }) {
   const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.factRow}>
@@ -60,7 +60,7 @@ function FactRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.factValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
     </View>
   );
-}
+});
 
 function formatSectionMacros(kcal: number, protein: number, carbs: number, fat: number) {
   return `${Math.round(kcal)} kcal · ${Math.round(protein)}g P · ${Math.round(carbs)}g C · ${Math.round(fat)}g F`;
@@ -359,12 +359,12 @@ export default function MealsScreen() {
     });
   }, [displayedMeals, itemPreviews]);
 
-  const dailyTotals = sections.reduce((acc, section) => ({
+  const dailyTotals = useMemo(() => sections.reduce((acc, section) => ({
     kcal: acc.kcal + section.kcal,
     protein: acc.protein + section.protein,
     carbs: acc.carbs + section.carbs,
     fat: acc.fat + section.fat,
-  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 }), [sections]);
 
   const hasItems = sections.some((section) => section.items.length > 0);
 
@@ -637,7 +637,9 @@ export default function MealsScreen() {
                       <DraggableItemCard
                         key={item.key}
                         item={item}
-                        isLoadingItems={isLoadingItems}
+                        // Optimization: Only pass isLoadingItems if this specific card actually needs to show the loader.
+                        // This prevents re-rendering all cards when a single new item is being fetched.
+                        isLoadingItems={isLoadingItems && item.facts.length === 0}
                         onDragStart={handleDragStart}
                         onDragMove={handleDragMove}
                         onDragEnd={handleDragEnd}
