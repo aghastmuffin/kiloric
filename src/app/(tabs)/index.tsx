@@ -1,47 +1,6 @@
-import RadialGauge from "@/components/Gague";
-import { useAuth } from "@/lib/AuthContext";
-import type { ThemeColors } from '@/lib/theme/tokens';
-import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useRouter } from 'expo-router'; // Removed unused 'useTheme'
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-export function Dial() {
-    // 1. Move hook inside the component
-    const { user } = useAuth();
-    const [currentValue, setCurrentValue] = useState(0);
-
-    return (
-        <View>
-            {/* Now 'user' will be correctly populated from context */}
-            {user?.$id ? (
-                <RadialGauge value={currentValue} max={100} />
-            ) : null}
-        </View>
-    );
-}
-
-export default function AboutScreen() {
-    const router = useRouter();
-    const styles = useThemedStyles(makeStyles);
-    const PlaceholderImage = require('../../../assets/images/dark.svg');
-
-    return (
-        <View style={styles.container}>
-            <View style={styles.infoholder}>
-                <View style={styles.infoholderItem}>
-                    <Dial />
-                </View>
-            </View>
-            <Text style={styles.text}>Welcome to CalCount</Text>
-
-            <Pressable onPress={() => router.push('/scan')}>
-                <Text style={styles.text}>Scan</Text>
-            </Pressable>
-
-            <Pressable onPress={() => router.push('/text_query')}>
-                <Text style={styles.text}>Text Query</Text>
-import type { ThemeColors } from '@/lib/theme/tokens';
+import React, { useState, useCallback } from 'react';
+import { ActivityIndicator, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '@/lib/AuthContext';
 import { getProfile } from '@/lib/profile';
@@ -51,6 +10,9 @@ import { showApiError } from '@/lib/apiErrors';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { panelTiming } from '@/lib/motion';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import type { ThemeColors } from '@/lib/theme/tokens';
 
 type DailyData = {
   kcal: number
@@ -96,7 +58,6 @@ export default function DashboardScreen() {
   const router = useRouter();
 
   const [data, setData] = useState<DailyData>(EMPTY_DATA);
-  const [username, setUsername] = useState<string | null>(null);
   const [mealsList, setMealsList] = useState<MealDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -127,7 +88,6 @@ export default function DashboardScreen() {
         targetCarbs: profile?.target_carbs ?? EMPTY_DATA.targetCarbs,
         targetFat: profile?.target_fat ?? EMPTY_DATA.targetFat,
       });
-      setUsername(profile?.username ?? null);
       setMealsList(meals);
     } catch (error) {
       showApiError(error, 'appwrite');
