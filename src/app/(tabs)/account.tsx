@@ -24,7 +24,6 @@ import { useFocusEffect } from 'expo-router';
 export default function AccountScreen() {
   const { user, loading } = useAuth();
   const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
 
   if (loading) {
     return (
