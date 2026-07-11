@@ -41,6 +41,26 @@ export function formatApiError(error: unknown, source: ApiErrorSource): string {
   return 'Something went wrong'
 }
 
+/** Logs the sanitized Appwrite error to the JS console (excludes raw response / PII). */
+export function logAppwriteError(context: string, err: unknown): void {
+  if (err instanceof AppwriteException) {
+    console.error(
+      `[appwrite] ${context} failed →`,
+      JSON.stringify(
+        {
+          code: err.code,
+          type: err.type,
+          message: err.message,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+  console.error(`[appwrite] ${context} failed →`, err)
+}
+
 type ApiErrorPayload = {
   message: string
   source: ApiErrorSource

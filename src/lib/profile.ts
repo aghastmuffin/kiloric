@@ -1,4 +1,5 @@
 import { account, databases } from '@/lib/appwrite'
+import { logAppwriteError } from '@/lib/apiErrors'
 import { AppwriteException, Permission, Role, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -78,26 +79,6 @@ function profileDocumentPermissions(userId: string): string[] {
 
 function isDocumentNotFound(err: unknown): boolean {
   return err instanceof AppwriteException && err.code === 404 && err.type === 'document_not_found'
-}
-
-/** Logs the full Appwrite error to the JS console so it shows in Metro / dev tools. */
-export function logAppwriteError(context: string, err: unknown): void {
-  if (err instanceof AppwriteException) {
-    console.error(
-      `[profile] ${context} failed →`,
-      JSON.stringify(
-        {
-          code: err.code,
-          type: err.type,
-          message: err.message,
-        },
-        null,
-        2,
-      ),
-    )
-    return
-  }
-  console.error(`[profile] ${context} failed →`, err)
 }
 
 /** Human-readable, verbose error string for display in the app (red box). */
