@@ -1,3 +1,4 @@
+import { logAppwriteError } from '@/lib/apiErrors'
 import { account } from '@/lib/appwrite'
 
 let cachedToken: { jwt: string; expiresAt: number } | null = null
@@ -28,7 +29,7 @@ export async function getAccessToken(): Promise<string | null> {
 
       return jwt
     } catch (err) {
-      console.warn('[getAccessToken] failed to create JWT', err)
+      logAppwriteError('createJWT', err)
       return null
     } finally {
       inflightPromise = null
