@@ -1,4 +1,5 @@
 import { account, databases } from '@/lib/appwrite'
+import { logAppwriteError } from '@/lib/apiErrors'
 import { AppwriteException, Permission, Role, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -78,26 +79,6 @@ function profileDocumentPermissions(userId: string): string[] {
 
 function isDocumentNotFound(err: unknown): boolean {
   return err instanceof AppwriteException && err.code === 404 && err.type === 'document_not_found'
-}
-
-/** Logs the full Appwrite error to the JS console so it shows in Metro / dev tools. */
-export function logAppwriteError(context: string, err: unknown): void {
-  if (err instanceof AppwriteException) {
-    console.error(
-      `[profile] ${context} failed →`,
-      JSON.stringify(
-        {
-          code: err.code,
-          type: err.type,
-          message: err.message,
-        },
-        null,
-        2,
-      ),
-    )
-    return
-  }
-  console.error(`[profile] ${context} failed →`, err)
 }
 
 /** Human-readable, verbose error string for display in the app (red box). */
@@ -281,7 +262,7 @@ export async function assertActiveSession(): Promise<string> {
     console.log('[profile] active session for', me.$id)
     return me.$id
   } catch (err) {
-    logAppwriteError('account.get (session check)', err)
+    logAppwriteError('[profile] account.get (session check)', err)
     throw new Error(
       'No active Appwrite session. Sign out and sign in again before saving your profile.',
     )
@@ -326,7 +307,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
   try {
     existing = await getProfile(userId)
   } catch (err) {
-    logAppwriteError('getProfile', err)
+    logAppwriteError('[profile] getProfile', err)
     throw new Error(formatProfileSaveError(err))
   }
 
@@ -334,7 +315,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
     try {
       return await updateProfile(userId, pickWritablePayload(normalized))
     } catch (err) {
-      logAppwriteError('updateProfile', err)
+      logAppwriteError('[profile] updateProfile', err)
       throw new Error(formatProfileSaveError(err))
     }
   }
@@ -361,7 +342,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
     console.log('[profile] patching optional fields →', Object.keys(optionalPayload))
     return await updateProfile(userId, optionalPayload)
   } catch (err) {
-    logAppwriteError('createProfile', err)
+    logAppwriteError('[profile] createProfile', err)
     throw new Error(formatProfileSaveError(err))
   }
 }

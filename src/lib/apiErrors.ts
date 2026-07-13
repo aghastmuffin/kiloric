@@ -64,3 +64,26 @@ export function showApiError(error: unknown, source: ApiErrorSource = 'appwrite'
     message: formatApiError(error, source),
   })
 }
+
+/**
+ * Logs a sanitized Appwrite error to the console.
+ * Explicitly excludes 'response' to prevent PII leakage.
+ */
+export function logAppwriteError(context: string, err: unknown): void {
+  if (err instanceof AppwriteException) {
+    console.error(
+      `${context} failed →`,
+      JSON.stringify(
+        {
+          code: err.code,
+          type: err.type,
+          message: err.message,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+  console.error(`${context} failed →`, err)
+}
