@@ -88,15 +88,20 @@ const DraggableItemCard = memo(function DraggableItemCard({
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   
-  const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current;
+  // Initialize Animated values and PanResponder using useState to ensure they persist
+  // and are only created once, while avoiding render-phase ref access.
+  const [pan] = useState(() => new Animated.ValueXY());
+  const [scale] = useState(() => new Animated.Value(1));
   const [isDragging, setIsDragging] = useState(false);
 
-  // Always-current ref for closures
-  const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
-  cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
+  // Use a stable proxy object updated via useEffect to provide current callbacks
+  // to PanResponder while satisfying React Compiler and ref-during-render rules.
+  const [cbProxy] = useState(() => ({ onDragStart, onDragMove, onDragEnd, findDropTarget, item }));
+  useEffect(() => {
+    Object.assign(cbProxy, { onDragStart, onDragMove, onDragEnd, findDropTarget, item });
+  });
 
-  const panResponder = useRef(
+  const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -112,7 +117,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
           useNativeDriver: false
         }).start();
 
-        cbRef.current.onDragStart(cbRef.current.item);
+        cbProxy.onDragStart(cbProxy.item);
       },
 
       onPanResponderMove: Animated.event(
@@ -120,15 +125,15 @@ const DraggableItemCard = memo(function DraggableItemCard({
         { 
           useNativeDriver: false,
           listener: (e, gs) => {
-             const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-             cbRef.current.onDragMove(target);
+             const target = cbProxy.findDropTarget(gs.moveX, gs.moveY);
+             cbProxy.onDragMove(target);
           }
         },
       ),
 
       onPanResponderRelease: (_e, gs) => {
-        const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-        const currentItem = cbRef.current.item;
+        const target = cbProxy.findDropTarget(gs.moveX, gs.moveY);
+        const currentItem = cbProxy.item;
         const isValidDrop = target !== null && target !== currentItem.sourceType;
 
         // Snap back scale
@@ -141,7 +146,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
         if (isValidDrop) {
           pan.setValue({ x: 0, y: 0 });
           setIsDragging(false);
-          cbRef.current.onDragEnd(currentItem, target);
+          cbProxy.onDragEnd(currentItem, target);
         } else {
           Animated.spring(pan, {
             toValue: { x: 0, y: 0 },
@@ -150,7 +155,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
             tension: 40,
           }).start(() => {
             setIsDragging(false);
-            cbRef.current.onDragEnd(currentItem, null);
+            cbProxy.onDragEnd(currentItem, null);
           });
         }
       },
@@ -165,7 +170,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
 
       onPanResponderTerminationRequest: () => true,
     })
-  ).current;
+  );
 
   const hasFacts = item.facts.length > 0;
 
@@ -233,6 +238,7 @@ export default function MealsScreen() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [allMeals, setAllMeals] = useState<MealDocument[]>([]);
+  // Optimization: Key by barcode to reuse previews across different meals/days
   const [itemPreviews, setItemPreviews] = useState<Record<string, MealItemPreview>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
@@ -265,7 +271,7 @@ export default function MealsScreen() {
     }
   }, [user]);
 
-  useEffect(() => { void fetchMeals(); }, [fetchMeals]);
+  // Optimization: Removed redundant useEffect on mount, useFocusEffect handles initial load
   useFocusEffect(useCallback(() => { void fetchMeals(); }, [fetchMeals]));
 
   const selectedStart = getStartOfDay(selectedDate).getTime();
@@ -280,34 +286,37 @@ export default function MealsScreen() {
     let cancelled = false;
 
     const loadItemPreviews = async () => {
-      const entries: { cacheKey: string; barcode: string; type: MealType }[] = [];
+      // Optimization: Extract unique barcodes from displayed meals
+      const barcodesToFetch = new Set<string>();
+      const barcodeToType = new Map<string, MealType>();
 
       for (const meal of displayedMeals) {
-        for (const [index, barcode] of (meal.items ?? []).entries()) {
-          entries.push({
-            cacheKey: `${meal.$id}-${index}-${barcode}`,
-            barcode,
-            type: (meal.type ?? 'Other') as MealType,
-          });
+        for (const barcode of (meal.items ?? [])) {
+          if (!itemPreviews[barcode]) {
+            barcodesToFetch.add(barcode);
+            barcodeToType.set(barcode, (meal.type ?? 'Other') as MealType);
+          }
         }
       }
 
-      if (entries.length === 0) {
-        setItemPreviews({});
-        return;
-      }
+      if (barcodesToFetch.size === 0) return;
 
       setIsLoadingItems(true);
       try {
-        const previews = await Promise.all(
-          entries.map(async ({ cacheKey, barcode, type }) => {
+        // Optimization: Fetch unique missing previews in parallel
+        const newPreviews = await Promise.all(
+          Array.from(barcodesToFetch).map(async (barcode) => {
+            const type = barcodeToType.get(barcode) || 'Other';
             const preview = await fetchMealItemPreview(barcode, type);
-            return [cacheKey, preview] as const;
+            return [barcode, preview] as const;
           }),
         );
 
         if (!cancelled) {
-          setItemPreviews(Object.fromEntries(previews));
+          setItemPreviews((prev) => ({
+            ...prev,
+            ...Object.fromEntries(newPreviews),
+          }));
         }
       } catch (error) {
         console.warn('Failed to load meal item previews', error);
@@ -318,6 +327,7 @@ export default function MealsScreen() {
 
     void loadItemPreviews();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedMeals]);
 
   const sections = useMemo<DisplayMealSection[]>(() => {
@@ -335,8 +345,7 @@ export default function MealsScreen() {
       const items: DisplayMealItem[] = [];
       for (const meal of mealsForType) {
         for (const [index, barcode] of (meal.items ?? []).entries()) {
-          const cacheKey = `${meal.$id}-${index}-${barcode}`;
-          const preview = itemPreviews[cacheKey] ?? {
+          const preview = itemPreviews[barcode] ?? {
             barcode,
             title: `Barcode: ${barcode}`,
             facts: [],
@@ -348,7 +357,7 @@ export default function MealsScreen() {
 
           items.push({
             ...preview,
-            key: cacheKey,
+            key: `${meal.$id}-${index}-${barcode}`,
             mealId: meal.$id,
             sourceType: type,
           });
@@ -478,7 +487,7 @@ export default function MealsScreen() {
       console.warn('Failed to move item between meals', err);
       await fetchMeals();
     }
-  }, [user?.$id, fetchMeals, showToast]);
+  }, [user, fetchMeals, showToast]);
 
   const measureZone = useCallback((type: MealType) => {
     const ref = zoneRefs.current[type];
@@ -488,7 +497,7 @@ export default function MealsScreen() {
         dropZones.set(type, { x, y, width, height });
       }
     });
-  }, []);
+  }, [dropZones]);
 
   const findDropTarget = useCallback((dropX: number, dropY: number): MealType | null => {
     for (const [type, zone] of dropZones.entries()) {
@@ -500,7 +509,7 @@ export default function MealsScreen() {
       }
     }
     return null;
-  }, []);
+  }, [dropZones]);
 
   const handleDragStart = useCallback((item: DisplayMealItem) => {
     setScrollEnabled(false);
