@@ -1,120 +1,24 @@
-import React, { useState, useCallback } from 'react';
-import { ActivityIndicator, Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
-import { useAuth } from '@/lib/AuthContext';
-import { getProfile } from '@/lib/profile';
-import { getTodayMeals } from '@/lib/meals';
-import type { MealDocument } from '@/lib/meals';
-import { showApiError } from '@/lib/apiErrors';
-import { useFocusEffect, useRouter } from 'expo-router';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { panelTiming } from '@/lib/motion';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Image, SafeAreaView, TextInput } from 'react-native';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import type { ThemeColors } from '@/lib/theme/tokens';
-
-type DailyData = {
-  kcal: number
-  protein: number
-  carbs: number
-  fat: number
-  targetKcal: number
-  targetProtein: number
-  targetCarbs: number
-  targetFat: number
-}
-
-const EMPTY_DATA: DailyData = {
-  kcal: 0,
-  protein: 0,
-  carbs: 0,
-  fat: 0,
-  targetKcal: 2000,
-  targetProtein: 125,
-  targetCarbs: 225,
-  targetFat: 67,
-}
-
-function AnimatedMacroFill({ progress }: { progress: number }) {
-  const styles = useThemedStyles(makeStyles);
-  const width = useSharedValue(0);
-
-  React.useEffect(() => {
-    width.value = withTiming(progress, panelTiming);
-  }, [progress, width]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    width: `${Math.min(Math.max(width.value, 0), 1) * 100}%`,
-  }));
-
-  return <Animated.View style={[styles.macroFill, animatedStyle]} />;
-}
+import Svg, { Circle } from 'react-native-svg';
+import { useRouter } from 'expo-router';
 
 export default function DashboardScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
-  const { user } = useAuth();
   const router = useRouter();
+  
+  const [logText, setLogText] = useState('');
 
-  const [data, setData] = useState<DailyData>(EMPTY_DATA);
-  const [mealsList, setMealsList] = useState<MealDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    if (!user?.$id) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const [profile, meals] = await Promise.all([
-        getProfile(user.$id),
-        getTodayMeals(user.$id),
-      ]);
-      const totals = meals.reduce(
-        (sum, meal) => ({
-          kcal: sum.kcal + (meal.kcal ?? 0),
-          protein: sum.protein + (meal.protein ?? 0),
-          carbs: sum.carbs + (meal.carbs ?? 0),
-          fat: sum.fat + (meal.fat ?? 0),
-        }),
-        { kcal: 0, protein: 0, carbs: 0, fat: 0 },
-      );
-      setData({
-        ...totals,
-        targetKcal: profile?.target_kcal ?? EMPTY_DATA.targetKcal,
-        targetProtein: profile?.target_protein ?? EMPTY_DATA.targetProtein,
-        targetCarbs: profile?.target_carbs ?? EMPTY_DATA.targetCarbs,
-        targetFat: profile?.target_fat ?? EMPTY_DATA.targetFat,
-      });
-      setMealsList(meals);
-    } catch (error) {
-      showApiError(error, 'appwrite');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load])
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator color="#f97316" />
-        <Text style={styles.mutedText}>Loading dashboard…</Text>
-      </View>
-    );
-  }
-
-  const calorieRemaining = Math.max(0, data.targetKcal - data.kcal);
-  const dateLine = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-  const ringProgress = data.targetKcal > 0 ? Math.min(data.kcal / data.targetKcal, 1) : 0;
-  const strokeDashoffset = 628 - (628 * ringProgress);
+  const handleQuickLog = () => {
+    // Add logic to quickly log the text input
+    console.log('Logging:', logText);
+    setLogText('');
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -137,7 +41,7 @@ export default function DashboardScreen() {
           <Text style={styles.todayText}>TODAY</Text>
           <View style={styles.dateRow}>
             <MaterialIcons name="chevron-left" size={24} color={colors.textMuted} />
-            <Text style={styles.dateText}>{dateLine}</Text>
+            <Text style={styles.dateText}>Wed, Oct 25</Text>
             <MaterialIcons name="chevron-right" size={24} color={colors.textMuted} />
           </View>
         </View>
@@ -148,14 +52,14 @@ export default function DashboardScreen() {
             <Circle 
               cx="120" cy="120" r="100" 
               stroke="#f97316" strokeWidth="8" fill="none" 
-              strokeDasharray="628" strokeDashoffset={strokeDashoffset} strokeLinecap="round" 
+              strokeDasharray="628" strokeDashoffset="157" strokeLinecap="round" 
             />
           </Svg>
           <View style={styles.ringCenterText}>
-            <Text style={styles.ringValue}>{Math.round(data.kcal)}</Text>
+            <Text style={styles.ringValue}>1,450</Text>
             <Text style={styles.ringLabel}>kcal eaten</Text>
             <View style={styles.ringRemainingContainer}>
-              <Text style={styles.ringRemainingValue}>{Math.round(calorieRemaining)}</Text>
+              <Text style={styles.ringRemainingValue}>550</Text>
               <Text style={styles.ringRemainingLabel}>REMAINING</Text>
             </View>
           </View>
@@ -165,35 +69,42 @@ export default function DashboardScreen() {
           <View style={styles.macroCard}>
             <View style={styles.macroHeader}>
               <Text style={styles.macroTitle}>PROTEIN</Text>
-              <Text style={styles.macroValues}>{Math.round(data.protein)}/{Math.round(data.targetProtein)}g</Text>
+              <Text style={styles.macroValues}>45/120g</Text>
             </View>
-            <View style={styles.macroTrack}>
-              <AnimatedMacroFill progress={data.targetProtein > 0 ? data.protein / data.targetProtein : 0} />
-            </View>
+            <View style={styles.macroTrack}><View style={[styles.macroFill, {width: '37%'}]} /></View>
           </View>
           <View style={styles.macroCard}>
             <View style={styles.macroHeader}>
               <Text style={styles.macroTitle}>CARBS</Text>
-              <Text style={styles.macroValues}>{Math.round(data.carbs)}/{Math.round(data.targetCarbs)}g</Text>
+              <Text style={styles.macroValues}>150/250g</Text>
             </View>
-            <View style={styles.macroTrack}>
-              <AnimatedMacroFill progress={data.targetCarbs > 0 ? data.carbs / data.targetCarbs : 0} />
-            </View>
+            <View style={styles.macroTrack}><View style={[styles.macroFill, {width: '60%'}]} /></View>
           </View>
           <View style={styles.macroCard}>
             <View style={styles.macroHeader}>
               <Text style={styles.macroTitle}>FATS</Text>
-              <Text style={styles.macroValues}>{Math.round(data.fat)}/{Math.round(data.targetFat)}g</Text>
+              <Text style={styles.macroValues}>30/60g</Text>
             </View>
-            <View style={styles.macroTrack}>
-              <AnimatedMacroFill progress={data.targetFat > 0 ? data.fat / data.targetFat : 0} />
-            </View>
+            <View style={styles.macroTrack}><View style={[styles.macroFill, {width: '50%'}]} /></View>
           </View>
         </View>
 
-        <View style={styles.fabContainer}>
-          <Pressable style={styles.fab} onPress={() => router.push('/(tabs)/logfood')}>
-            <MaterialIcons name="add" size={28} color="#ffffff" />
+        {/* Quick Inline Logging - Replaces the legacy logfood page */}
+        <View style={styles.inlineLogSection}>
+          <View style={styles.inlineLogInputContainer}>
+            <Ionicons name="search" size={20} color={colors.textMuted} style={styles.inlineLogIcon} />
+            <TextInput 
+              style={styles.inlineLogInput}
+              placeholder="Quick log a meal... (e.g. 1 apple)"
+              placeholderTextColor={colors.textFaint}
+              value={logText}
+              onChangeText={setLogText}
+              onSubmitEditing={handleQuickLog}
+              returnKeyType="done"
+            />
+          </View>
+          <Pressable style={styles.inlineLogButton} onPress={handleQuickLog}>
+            <Text style={styles.inlineLogButtonText}>Log</Text>
           </Pressable>
         </View>
 
@@ -201,44 +112,56 @@ export default function DashboardScreen() {
           <View style={styles.mealsHeader}>
             <Text style={styles.mealsTitle}>Today's Meals</Text>
             <Pressable onPress={() => router.push('/(tabs)/meals')}>
-              <Text style={styles.editLink}>View All</Text>
+              <Text style={styles.editLink}>View Draggable Meals</Text>
             </Pressable>
           </View>
 
-          {mealsList.length > 0 ? (
-            <View style={styles.mealsList}>
-              {mealsList.map((meal, index) => {
-                let iconName: any = 'restaurant';
-                if (meal.type === 'Breakfast') iconName = 'bakery-dining';
-                else if (meal.type === 'Lunch') iconName = 'lunch-dining';
-                else if (meal.type === 'Dinner') iconName = 'dinner-dining';
-                else if (meal.type === 'Snack') iconName = 'local-cafe';
-
-                return (
-                  <View key={meal.$id} style={[styles.mealItem, index < mealsList.length - 1 && styles.mealItemBorder]}>
-                    <View style={styles.mealIconContainer}>
-                      <MaterialIcons name={iconName} size={20} color={colors.textMuted} />
-                    </View>
-                    <View style={styles.mealInfo}>
-                      <Text style={styles.mealName}>{meal.friendlyname || meal.type}</Text>
-                      <Text style={styles.mealDesc}>{meal.items?.length || 0} items</Text>
-                    </View>
-                    <View style={styles.mealStats}>
-                      <Text style={styles.mealKcal}>{meal.kcal ?? 0}</Text>
-                      <Text style={styles.mealUnit}>KCAL</Text>
-                    </View>
-                  </View>
-                );
-              })}
+          <View style={styles.mealsList}>
+            {/* Breakfast */}
+            <View style={[styles.mealItem, styles.mealItemBorder]}>
+              <View style={styles.mealIconContainer}>
+                <MaterialIcons name="bakery-dining" size={20} color={colors.textMuted} />
+              </View>
+              <View style={styles.mealInfo}>
+                <Text style={styles.mealName}>Breakfast</Text>
+                <Text style={styles.mealDesc}>Oatmeal & Berries</Text>
+              </View>
+              <View style={styles.mealStats}>
+                <Text style={styles.mealKcal}>350</Text>
+                <Text style={styles.mealUnit}>KCAL</Text>
+              </View>
             </View>
-          ) : (
-            <Text style={styles.mutedText}>No meals logged today. Add one below!</Text>
-          )}
 
-          <Pressable style={styles.addMealButton} onPress={() => router.push('/(tabs)/logfood')}>
-            <MaterialIcons name="restaurant-menu" size={18} color={colors.textMuted} />
-            <Text style={styles.addMealText}>Log another meal</Text>
-          </Pressable>
+            {/* Lunch */}
+            <View style={[styles.mealItem, styles.mealItemBorder]}>
+              <View style={styles.mealIconContainer}>
+                <MaterialIcons name="lunch-dining" size={20} color={colors.textMuted} />
+              </View>
+              <View style={styles.mealInfo}>
+                <Text style={styles.mealName}>Lunch</Text>
+                <Text style={styles.mealDesc}>Chicken Salad</Text>
+              </View>
+              <View style={styles.mealStats}>
+                <Text style={styles.mealKcal}>450</Text>
+                <Text style={styles.mealUnit}>KCAL</Text>
+              </View>
+            </View>
+
+            {/* Dinner */}
+            <View style={styles.mealItem}>
+              <View style={styles.mealIconContainer}>
+                <MaterialIcons name="dinner-dining" size={20} color={colors.textMuted} />
+              </View>
+              <View style={styles.mealInfo}>
+                <Text style={styles.mealName}>Dinner</Text>
+                <Text style={styles.mealDesc}>Salmon & Quinoa</Text>
+              </View>
+              <View style={styles.mealStats}>
+                <Text style={styles.mealKcal}>650</Text>
+                <Text style={styles.mealUnit}>KCAL</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
       </ScrollView>
@@ -250,16 +173,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: c.background,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: c.background,
-    gap: 12,
-  },
-  mutedText: {
-    color: c.textMuted,
   },
   header: {
     flexDirection: 'row',
@@ -402,22 +315,44 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: '#f97316',
     borderRadius: 3,
   },
-  fabContainer: {
+  inlineLogSection: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 8,
+    gap: 12,
+    marginTop: 8,
   },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#f97316',
+  inlineLogInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: c.surfaceAlt,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  inlineLogIcon: {
+    marginRight: 8,
+  },
+  inlineLogInput: {
+    flex: 1,
+    fontSize: 15,
+    color: c.text,
+    height: '100%',
+  },
+  inlineLogButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 20,
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    alignItems: 'center',
+  },
+  inlineLogButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   mealsSection: {
     gap: 12,
@@ -487,21 +422,4 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
     color: c.textMuted,
   },
-  addMealButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderStyle: 'dashed',
-    marginTop: 8,
-  },
-  addMealText: {
-    fontSize: 15,
-    color: c.textMuted,
-  }
 });

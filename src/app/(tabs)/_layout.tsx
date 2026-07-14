@@ -50,8 +50,8 @@ function TabNavigator() {
       <Tabs.Screen
         name="logfood"
         options={{
+          href: null,
           title: 'Log',
-          href: showScanTab ? null : undefined,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'add-circle' : 'add-circle-outline'} color={color} size={24} />
           ),
