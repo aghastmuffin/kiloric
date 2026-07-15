@@ -1,485 +1,649 @@
+import { AccountSignInFlow } from '@/components/auth/AccountSignInFlow';
+import { FontPreferencePicker } from '@/components/FontPreferencePicker';
+import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
+import { showApiError } from '@/lib/apiErrors';
+import { useAuth } from '@/lib/AuthContext';
+import { calculateAge } from '@/lib/nutrition';
+import { getProfile, saveProfileFields } from '@/lib/profile';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Switch } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 export default function AccountScreen() {
-  const { colors } = useTheme();
+  const { user, loading } = useAuth();
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.accent} />
+        <Text style={styles.mutedText}>Restoring session…</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <View style={styles.avatarContainerHeader}>
-            <MaterialIcons name="person" size={20} color="#9d4300" />
+            <MaterialIcons name="person" size={20} color={colors.accent} />
           </View>
           <Text style={styles.headerTitle}>Vitals</Text>
         </View>
-        <TouchableOpacity style={styles.streakContainer}>
-          <Text style={styles.streakText}>🔥 12</Text>
-        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarWrapper}>
-            <Image
-              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBi5LX-rFFo5rd3m5_ZpDvbTd0c2wXKTlAFlLA60CrSwDQUjYn4KTMFa-A7AIQNgrqI8dxm7rfWUtBFvXBcxMFOpDaC_qxJP-wQGC5BmcyuKzBeSiEu-FOGp5DmuJGh5YtNFuvaexl1YpR98Eq2Z3NR0hGdw4KW1kZxw9aCNZXygdXixtY2a8ilKHjSvPfc3bNVSnTLA1-gXaDVsf-ct8EGS8FdI-DWl5UjBQFSKIECiY2dN9o6uIQGatWSdFc1xkSkhYjbxIez_341' }}
-              style={styles.profileAvatar}
-            />
-            <TouchableOpacity style={styles.editAvatarBtn}>
-              <MaterialIcons name="edit" size={16} color="#fff" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.profileName}>Sarah Jenkins</Text>
-          <Text style={styles.profileEmail}>sarah.jenkins@example.com</Text>
-        </View>
-
-        {/* Personal Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Details</Text>
-          <View style={styles.card}>
-            <View style={styles.gridRow}>
-              <View style={[styles.gridItem, styles.gridItemBorderRight, styles.gridItemBorderBottom]}>
-                <Text style={styles.gridLabel}>Weight</Text>
-                <View style={styles.gridInputRow}>
-                  <TextInput style={styles.gridInput} value="68" keyboardType="numeric" />
-                  <Text style={styles.gridUnit}>kg</Text>
-                </View>
-              </View>
-              <View style={[styles.gridItem, styles.gridItemBorderBottom]}>
-                <Text style={styles.gridLabel}>Height</Text>
-                <View style={styles.gridInputRow}>
-                  <TextInput style={styles.gridInput} value="172" keyboardType="numeric" />
-                  <Text style={styles.gridUnit}>cm</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.gridRow}>
-              <View style={[styles.gridItem, styles.gridItemBorderRight]}>
-                <Text style={styles.gridLabel}>Gender</Text>
-                <TextInput style={styles.gridInput} value="Female" />
-              </View>
-              <View style={styles.gridItem}>
-                <Text style={styles.gridLabel}>Age</Text>
-                <TextInput style={styles.gridInput} value="28" keyboardType="numeric" />
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Nutrition Goals */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Nutrition Goals</Text>
-          <View style={styles.card}>
-            <View style={[styles.cardItem, styles.cardItemBorder]}>
-              <View style={styles.goalRow}>
-                <Text style={styles.goalLabel}>Daily Calories</Text>
-                <View style={styles.goalInputRow}>
-                  <TextInput style={styles.goalInput} value="2100" keyboardType="numeric" />
-                  <Text style={styles.goalUnit}>kcal</Text>
-                </View>
-              </View>
-              <View style={styles.progressBarBg}>
-                <View style={[styles.progressBarFill, { width: '70%' }]} />
-              </View>
-            </View>
-            
-            <View style={styles.cardItem}>
-              <View style={styles.macroRow}>
-                <View style={styles.macroHeader}>
-                  <Text style={styles.macroName}>Protein (30%)</Text>
-                  <Text style={styles.macroValue}>158g</Text>
-                </View>
-                <View style={styles.sliderTrack}><View style={[styles.sliderFill, {width: '30%'}]} /></View>
-              </View>
-              <View style={styles.macroRow}>
-                <View style={styles.macroHeader}>
-                  <Text style={styles.macroName}>Carbs (50%)</Text>
-                  <Text style={styles.macroValue}>263g</Text>
-                </View>
-                <View style={styles.sliderTrack}><View style={[styles.sliderFill, {width: '50%'}]} /></View>
-              </View>
-              <View style={styles.macroRow}>
-                <View style={styles.macroHeader}>
-                  <Text style={styles.macroName}>Fats (20%)</Text>
-                  <Text style={styles.macroValue}>47g</Text>
-                </View>
-                <View style={styles.sliderTrack}><View style={[styles.sliderFill, {width: '20%'}]} /></View>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Program Presets */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Program Presets</Text>
-          <View style={styles.presetGrid}>
-            {['Weight Loss', 'Muscle Gain', 'Maintenance', 'Workout Focus'].map((preset) => {
-              const isSelected = preset === 'Muscle Gain';
-              return (
-                <TouchableOpacity 
-                  key={preset} 
-                  style={[styles.presetCard, isSelected && styles.presetCardSelected]}
-                >
-                  <Text style={[styles.presetText, isSelected && styles.presetTextSelected]}>{preset}</Text>
-                  {isSelected && <MaterialIcons name="check-circle" size={20} color="#f97316" />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Account Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
-          <View style={styles.card}>
-            <TouchableOpacity style={[styles.settingsRow, styles.cardItemBorder]}>
-              <View style={styles.settingsRowLeft}>
-                <View style={styles.settingsIcon}>
-                  <MaterialIcons name="notifications" size={20} color={colors.textMuted} />
-                </View>
-                <Text style={styles.settingsText}>Notifications</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.settingsRow, styles.cardItemBorder]}>
-              <View style={styles.settingsRowLeft}>
-                <View style={styles.settingsIcon}>
-                  <MaterialIcons name="lock" size={20} color={colors.textMuted} />
-                </View>
-                <Text style={styles.settingsText}>Privacy & Security</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-
-            <View style={styles.settingsRow}>
-              <View style={styles.settingsRowLeft}>
-                <View style={styles.settingsIcon}>
-                  <MaterialIcons name="dark-mode" size={20} color={colors.textMuted} />
-                </View>
-                <Text style={styles.settingsText}>Dark Mode</Text>
-              </View>
-              <Switch value={false} trackColor={{ true: '#f97316' }} />
-            </View>
-          </View>
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutButton}>
-            <Text style={styles.logoutButtonText}>Log Out</Text>
-          </TouchableOpacity>
-        </View>
-
+      <ScrollView contentContainerStyle={styles.container}>
+        {!user ? <AccountSignInFlow /> : <LoggedInPanel />}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const makeStyles = (c: ThemeColors) => StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: c.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: c.border,
-    backgroundColor: c.background,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatarContainerHeader: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: c.text,
-  },
-  streakContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 99,
-  },
-  streakText: {
-    color: '#9d4300',
-    fontWeight: '500',
-    fontSize: 13,
-  },
-  content: {
-    padding: 20,
-    gap: 24,
-    paddingBottom: 40,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginVertical: 16,
-  },
-  avatarWrapper: {
-    marginBottom: 16,
-    position: 'relative',
-  },
-  profileAvatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2,
-    borderColor: c.surface,
-  },
-  editAvatarBtn: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f97316',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: c.surface,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: c.text,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 15,
-    color: c.textMuted,
-  },
-  section: {
-    gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: c.text,
-    paddingHorizontal: 8,
-  },
-  card: {
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: c.border,
-    overflow: 'hidden',
-  },
-  gridRow: {
-    flexDirection: 'row',
-  },
-  gridItem: {
-    flex: 1,
-    padding: 16,
-    gap: 4,
-  },
-  gridItemBorderRight: {
-    borderRightWidth: 1,
-    borderRightColor: c.border,
-  },
-  gridItemBorderBottom: {
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
-  },
-  gridLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: c.textMuted,
-    textTransform: 'uppercase',
-  },
-  gridInputRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  gridInput: {
-    fontSize: 17,
-    color: '#f97316',
-    padding: 0,
-  },
-  gridUnit: {
-    fontSize: 15,
-    color: c.textMuted,
-  },
-  cardItem: {
-    padding: 16,
-  },
-  cardItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
-  },
-  goalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  goalLabel: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: c.text,
-  },
-  goalInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  goalInput: {
-    fontSize: 17,
-    color: '#f97316',
-    textAlign: 'right',
-    minWidth: 50,
-    padding: 0,
-  },
-  goalUnit: {
-    fontSize: 15,
-    color: c.textMuted,
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: c.surfaceAlt,
-    borderRadius: 3,
-    marginTop: 8,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#f97316',
-    borderRadius: 3,
-  },
-  macroRow: {
-    marginBottom: 16,
-  },
-  macroHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  macroName: {
-    fontSize: 15,
-    color: c.text,
-  },
-  macroValue: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: c.textMuted,
-  },
-  sliderTrack: {
-    height: 4,
-    backgroundColor: c.border,
-    borderRadius: 2,
-  },
-  sliderFill: {
-    height: '100%',
-    backgroundColor: c.borderStrong,
-    borderRadius: 2,
-  },
-  presetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  presetCard: {
-    width: '48%',
-    backgroundColor: c.surface,
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: c.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  presetCardSelected: {
-    borderColor: '#f97316',
-    backgroundColor: 'rgba(249, 115, 22, 0.05)',
-  },
-  presetText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: c.text,
-  },
-  presetTextSelected: {
-    color: c.text,
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  settingsRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  settingsIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: c.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsText: {
-    fontSize: 17,
-    color: c.text,
-  },
-  actionsSection: {
-    gap: 16,
-    marginTop: 16,
-  },
-  saveButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  logoutButtonText: {
-    color: c.danger,
-    fontSize: 17,
-    fontWeight: '500',
-  },
-});
+function LoggedInPanel() {
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
+
+  const [signingOut, setSigningOut] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [program, setProgram] = useState('muscle_gain');
+
+  const [weight, setWeight] = useState('0');
+  const [height, setHeight] = useState('0');
+  const [age, setAge] = useState('—');
+  const [targetKcal, setTargetKcal] = useState('2000');
+  const [targetProtein, setTargetProtein] = useState('125');
+  const [targetCarbs, setTargetCarbs] = useState('225');
+  const [targetFat, setTargetFat] = useState('67');
+  const [dailyFluid, setDailyFluid] = useState('2500');
+  const [username, setUsername] = useState('');
+
+  const loadProfile = useCallback(async () => {
+    if (!user?.$id) return;
+    setLoading(true);
+    try {
+      const profile = await getProfile(user.$id);
+      if (profile) {
+        setWeight(profile.weight?.toString() ?? '0');
+        setHeight(profile.height?.toString() ?? '0');
+        setTargetKcal(profile.target_kcal?.toString() ?? '2000');
+        setTargetProtein(profile.target_protein?.toString() ?? '125');
+        setTargetCarbs(profile.target_carbs?.toString() ?? '225');
+        setTargetFat(profile.target_fat?.toString() ?? '67');
+        setDailyFluid(profile.daily_fluid?.toString() ?? '2500');
+        setUsername(profile.username ?? 'User');
+        if (profile.dateOfBirth) {
+          setAge(String(calculateAge(new Date(profile.dateOfBirth))));
+        }
+      } else {
+        setUsername('User');
+      }
+    } catch (err) {
+      showApiError(err, 'appwrite');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadProfile();
+    }, [loadProfile]),
+  );
+
+  async function handleSave() {
+    if (!user?.$id) return;
+    setSaving(true);
+    try {
+      await saveProfileFields(user.$id, {
+        weight: parseFloat(weight) || 0,
+        height: parseFloat(height) || 0,
+        target_kcal: parseInt(targetKcal, 10) || 0,
+        target_protein: parseInt(targetProtein, 10) || 0,
+        target_carbs: parseInt(targetCarbs, 10) || 0,
+        target_fat: parseInt(targetFat, 10) || 0,
+        daily_fluid: parseInt(dailyFluid, 10) || 0,
+      });
+      Alert.alert('Saved', 'Profile updated successfully.');
+    } catch (err) {
+      showApiError(err, 'appwrite');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch (err) {
+      showApiError(err, 'appwrite');
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
+  const proteinPct =
+    Number(targetKcal) > 0
+      ? Math.round(((Number(targetProtein) * 4) / Number(targetKcal)) * 100)
+      : 0;
+  const carbsPct =
+    Number(targetKcal) > 0 ? Math.round(((Number(targetCarbs) * 4) / Number(targetKcal)) * 100) : 0;
+  const fatPct =
+    Number(targetKcal) > 0 ? Math.round(((Number(targetFat) * 9) / Number(targetKcal)) * 100) : 0;
+
+  return (
+    <View style={styles.content}>
+      <View style={styles.profileHeader}>
+        <View style={styles.avatarWrapper}>
+          <View style={styles.profileAvatarFallback}>
+            <MaterialIcons name="person" size={48} color={colors.textMuted} />
+          </View>
+          <Pressable
+            style={[styles.editAvatarBtn, { backgroundColor: colors.accent }]}
+            onPress={() => router.push('/config')}
+          >
+            <MaterialIcons name="edit" size={16} color={colors.onAccent} />
+          </Pressable>
+        </View>
+        <Text style={styles.profileName}>{username}</Text>
+        <Text style={styles.profileEmail}>{user?.email}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Personal Details</Text>
+        <View style={styles.gridContainer}>
+          <View style={styles.gridRow}>
+            <View style={[styles.gridItem, styles.gridItemBorderRight, styles.gridItemBorderBottom]}>
+              <Text style={styles.gridLabel}>WEIGHT</Text>
+              <View style={styles.gridInputRow}>
+                <TextInput
+                  style={styles.gridInput}
+                  value={weight}
+                  onChangeText={setWeight}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.gridUnit}>kg</Text>
+              </View>
+            </View>
+            <View style={[styles.gridItem, styles.gridItemBorderBottom]}>
+              <Text style={styles.gridLabel}>HEIGHT</Text>
+              <View style={styles.gridInputRow}>
+                <TextInput
+                  style={styles.gridInput}
+                  value={height}
+                  onChangeText={setHeight}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.gridUnit}>cm</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.gridRow}>
+            <View style={[styles.gridItem, styles.gridItemBorderRight]}>
+              <Text style={styles.gridLabel}>AGE</Text>
+              <Text style={styles.gridInput}>{age}</Text>
+            </View>
+            <View style={styles.gridItem}>
+              <Text style={styles.gridLabel}>WATER</Text>
+              <View style={styles.gridInputRow}>
+                <TextInput
+                  style={styles.gridInput}
+                  value={dailyFluid}
+                  onChangeText={setDailyFluid}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.gridUnit}>ml</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Nutrition Goals</Text>
+        <View style={styles.card}>
+          <View style={[styles.cardItem, styles.cardItemBorder]}>
+            <View style={styles.goalRow}>
+              <Text style={styles.goalLabel}>Daily Calories</Text>
+              <View style={styles.goalInputRow}>
+                <TextInput
+                  style={styles.goalInput}
+                  value={targetKcal}
+                  onChangeText={setTargetKcal}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.goalUnit}>kcal</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.cardItem}>
+            <View style={styles.macroRow}>
+              <View style={styles.macroHeader}>
+                <Text style={styles.macroName}>Protein ({proteinPct}%)</Text>
+                <TextInput
+                  style={styles.macroValueInput}
+                  value={targetProtein}
+                  onChangeText={setTargetProtein}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.sliderTrack}>
+                <View
+                  style={[
+                    styles.sliderFill,
+                    { width: `${Math.min(100, proteinPct)}%`, backgroundColor: colors.accent },
+                  ]}
+                />
+              </View>
+            </View>
+            <View style={styles.macroRow}>
+              <View style={styles.macroHeader}>
+                <Text style={styles.macroName}>Carbs ({carbsPct}%)</Text>
+                <TextInput
+                  style={styles.macroValueInput}
+                  value={targetCarbs}
+                  onChangeText={setTargetCarbs}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.sliderTrack}>
+                <View
+                  style={[
+                    styles.sliderFill,
+                    { width: `${Math.min(100, carbsPct)}%`, backgroundColor: colors.accent },
+                  ]}
+                />
+              </View>
+            </View>
+            <View style={styles.macroRow}>
+              <View style={styles.macroHeader}>
+                <Text style={styles.macroName}>Fats ({fatPct}%)</Text>
+                <TextInput
+                  style={styles.macroValueInput}
+                  value={targetFat}
+                  onChangeText={setTargetFat}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.sliderTrack}>
+                <View
+                  style={[
+                    styles.sliderFill,
+                    { width: `${Math.min(100, fatPct)}%`, backgroundColor: colors.accent },
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Program Presets</Text>
+        <View style={styles.presetGrid}>
+          {['Weight Loss', 'Muscle Gain', 'Maintenance'].map((preset) => {
+            const key = preset.toLowerCase().replace(' ', '_');
+            const isSelected = program === key;
+            return (
+              <Pressable
+                key={preset}
+                style={[styles.presetCard, isSelected && styles.presetCardSelected]}
+                onPress={() => setProgram(key)}
+              >
+                <Text style={[styles.presetText, isSelected && { color: colors.accent }]}>{preset}</Text>
+                {isSelected ? <MaterialIcons name="check-circle" size={20} color={colors.accent} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Appearance</Text>
+        <View style={styles.card}>
+          <View style={styles.settingsBlock}>
+            <ThemePreferencePicker />
+            <FontPreferencePicker />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Pressable
+          style={[styles.saveButton, { backgroundColor: colors.accent }, saving && styles.buttonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          <Text style={[styles.saveButtonText, { color: colors.onAccent }]}>
+            {saving ? 'Saving…' : 'Save Changes'}
+          </Text>
+        </Pressable>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/config')}>
+          <Text style={[styles.secondaryButtonText, { color: colors.accent }]}>Edit full profile</Text>
+        </Pressable>
+        <Pressable style={styles.logoutButton} onPress={handleSignOut} disabled={signingOut}>
+          <Text style={styles.logoutButtonText}>{signingOut ? 'Logging out…' : 'Log Out'}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: c.background,
+    },
+    mutedText: {
+      color: c.textMuted,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+      backgroundColor: c.background,
+    },
+    headerTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    avatarContainerHeader: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: c.surfaceAlt,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    headerTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: c.text,
+    },
+    container: {
+      flexGrow: 1,
+      backgroundColor: c.background,
+    },
+    content: {
+      padding: 20,
+      gap: 24,
+      paddingBottom: 40,
+    },
+    profileHeader: {
+      alignItems: 'center',
+      marginVertical: 8,
+    },
+    avatarWrapper: {
+      marginBottom: 16,
+      position: 'relative',
+    },
+    profileAvatarFallback: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: c.surfaceAlt,
+      borderWidth: 2,
+      borderColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    editAvatarBtn: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: c.background,
+    },
+    profileName: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: c.text,
+    },
+    profileEmail: {
+      fontSize: 15,
+      color: c.textMuted,
+      marginTop: 4,
+    },
+    section: {
+      gap: 12,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+      paddingHorizontal: 4,
+    },
+    gridContainer: {
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      overflow: 'hidden',
+    },
+    gridRow: {
+      flexDirection: 'row',
+    },
+    gridItem: {
+      flex: 1,
+      padding: 16,
+      gap: 8,
+    },
+    gridItemBorderRight: {
+      borderRightWidth: StyleSheet.hairlineWidth,
+      borderRightColor: c.border,
+    },
+    gridItemBorderBottom: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    gridLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textMuted,
+      letterSpacing: 0.5,
+    },
+    gridInputRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 6,
+    },
+    gridInput: {
+      fontSize: 22,
+      fontWeight: '600',
+      color: c.text,
+      padding: 0,
+      minWidth: 48,
+    },
+    gridUnit: {
+      fontSize: 14,
+      color: c.textMuted,
+    },
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      overflow: 'hidden',
+    },
+    cardItem: {
+      padding: 16,
+      gap: 12,
+    },
+    cardItemBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    goalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    goalLabel: {
+      fontSize: 16,
+      color: c.text,
+      fontWeight: '500',
+    },
+    goalInputRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 6,
+    },
+    goalInput: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: c.text,
+      textAlign: 'right',
+      minWidth: 64,
+      padding: 0,
+    },
+    goalUnit: {
+      fontSize: 13,
+      color: c.textMuted,
+    },
+    macroRow: {
+      gap: 8,
+      marginBottom: 8,
+    },
+    macroHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    macroName: {
+      fontSize: 14,
+      color: c.text,
+    },
+    macroValueInput: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.text,
+      textAlign: 'right',
+      minWidth: 48,
+      padding: 0,
+    },
+    sliderTrack: {
+      height: 6,
+      backgroundColor: c.border,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    sliderFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    presetGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    presetCard: {
+      flexGrow: 1,
+      minWidth: '45%',
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    presetCardSelected: {
+      borderColor: c.accent,
+      backgroundColor: c.accentSoft,
+    },
+    presetText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.text,
+    },
+    settingsBlock: {
+      padding: 16,
+      gap: 12,
+    },
+    saveButton: {
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    saveButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    secondaryButton: {
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    secondaryButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    logoutButton: {
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      backgroundColor: c.dangerButtonBg,
+    },
+    logoutButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.onDanger,
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+  });

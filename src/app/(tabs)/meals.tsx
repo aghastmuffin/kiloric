@@ -1,16 +1,14 @@
 import { useAuth } from '@/lib/AuthContext';
-import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview';
 import {
   getTodayMeals,
   listHistoricMeals,
-  MEAL_TYPE_OPTIONS,
-  moveProductBetweenMeals,
   type MealDocument,
   type MealType
 } from '@/lib/meals';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { useMealDragAndDrop } from '@/lib/useMealDragAndDrop';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from "expo-router/react-navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -36,12 +34,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 const getStartOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
-type DisplayMealItem = MealItemPreview & {
-  key: string;
-  mealId: string;
-  sourceType: MealType;
-};
-
 type DisplayMealSection = {
   type: MealType;
   friendlyname: string;
@@ -52,176 +44,11 @@ type DisplayMealSection = {
   items: DisplayMealItem[];
 };
 
-const FactRow = memo(function FactRow({ label, value }: { label: string; value: string }) {
-  const styles = useThemedStyles(makeStyles);
-  return (
-    <View style={styles.factRow}>
-      <Text style={styles.factLabel} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
-      <Text style={styles.factValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
-    </View>
-  );
-});
+import { DraggableItemCard, type DisplayMealItem } from '@/components/DraggableItemCard';
 
 function formatSectionMacros(kcal: number, protein: number, carbs: number, fat: number) {
   return `${Math.round(kcal)} kcal · ${Math.round(protein)}g P · ${Math.round(carbs)}g C · ${Math.round(fat)}g F`;
 }
-
-// ─── DraggableItemCard ────────────────────────────────────────────────────────
-
-type DraggableItemCardProps = {
-  item: DisplayMealItem;
-  isLoadingItems: boolean;
-  onDragStart: (item: DisplayMealItem) => void;
-  onDragMove: (targetType: MealType | null) => void;
-  onDragEnd: (item: DisplayMealItem, targetType: MealType | null) => void;
-  findDropTarget: (x: number, y: number) => MealType | null;
-};
-
-const DraggableItemCard = memo(function DraggableItemCard({
-  item,
-  isLoadingItems,
-  onDragStart,
-  onDragMove,
-  onDragEnd,
-  findDropTarget,
-}: DraggableItemCardProps) {
-  const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
-  
-  const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current;
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Always-current ref for closures
-  const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
-  cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-
-      onPanResponderGrant: () => {
-        pan.setValue({ x: 0, y: 0 });
-        setIsDragging(true);
-        
-        // Scale up on drag to make it feel tactile
-        Animated.spring(scale, {
-          toValue: 1.05,
-          friction: 5,
-          useNativeDriver: false
-        }).start();
-
-        cbRef.current.onDragStart(cbRef.current.item);
-      },
-
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { 
-          useNativeDriver: false,
-          listener: (e, gs) => {
-             const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-             cbRef.current.onDragMove(target);
-          }
-        },
-      ),
-
-      onPanResponderRelease: (_e, gs) => {
-        const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-        const currentItem = cbRef.current.item;
-        const isValidDrop = target !== null && target !== currentItem.sourceType;
-
-        // Snap back scale
-        Animated.spring(scale, {
-          toValue: 1,
-          friction: 5,
-          useNativeDriver: false,
-        }).start();
-
-        if (isValidDrop) {
-          pan.setValue({ x: 0, y: 0 });
-          setIsDragging(false);
-          cbRef.current.onDragEnd(currentItem, target);
-        } else {
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-            friction: 5,
-            tension: 40,
-          }).start(() => {
-            setIsDragging(false);
-            cbRef.current.onDragEnd(currentItem, null);
-          });
-        }
-      },
-
-      onPanResponderTerminate: () => {
-        Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: false }).start();
-        Animated.spring(pan, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: false,
-        }).start(() => setIsDragging(false));
-      },
-
-      onPanResponderTerminationRequest: () => true,
-    })
-  ).current;
-
-  const hasFacts = item.facts.length > 0;
-
-  return (
-    <Animated.View
-      style={[
-        styles.itemCard,
-        isDragging && {
-          zIndex: 100,
-          elevation: 12,
-          opacity: 0.95,
-          borderColor: colors.accent,
-          shadowColor: colors.accent,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.35,
-          shadowRadius: 10,
-        },
-        { transform: [{ translateX: pan.x }, { translateY: pan.y }, { scale }] },
-      ]}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.itemTitle} numberOfLines={2} ellipsizeMode="tail">
-          {item.title}
-        </Text>
-      </View>
-
-      <View style={styles.factsContainer}>
-        {hasFacts ? (
-          item.facts.map((fact) => (
-            <FactRow key={`${item.key}-${fact.label}`} label={fact.label} value={fact.value} />
-          ))
-        ) : isLoadingItems ? (
-          <View style={styles.fallbackBarcodeContainer}>
-            <ActivityIndicator size="small" color={colors.accent} />
-            <Text style={styles.fallbackBarcodeText}>Loading product…</Text>
-          </View>
-        ) : (
-          <View style={styles.fallbackBarcodeContainer}>
-            <Ionicons name="barcode-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.fallbackBarcodeText}>Barcode: {item.barcode}</Text>
-          </View>
-        )}
-      </View>
-
-      <View
-        {...panResponder.panHandlers}
-        style={styles.dragHandle}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="reorder-two-outline" size={24} color={colors.textMuted} />
-      </View>
-    </Animated.View>
-  );
-});
-
-// ─── MealsScreen ─────────────────────────────────────────────────────────────
 
 export default function MealsScreen() {
   const { user } = useAuth();
@@ -233,21 +60,14 @@ export default function MealsScreen() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [allMeals, setAllMeals] = useState<MealDocument[]>([]);
-  const [itemPreviews, setItemPreviews] = useState<Record<string, MealItemPreview>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [scrollEnabled, setScrollEnabled] = useState(true);
 
-  // Drag State for Visual Previews
-  const [dragState, setDragState] = useState<{ activeItem: DisplayMealItem | null; targetZone: MealType | null }>({
-    activeItem: null,
-    targetZone: null,
-  });
-
-  const dropZones = useRef<Map<MealType, { x: number; y: number; width: number; height: number }>>(new Map()).current;
-  const zoneRefs = useRef<Record<string, View | null>>({});
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
 
   const fetchMeals = useCallback(async () => {
     if (!user?.$id) return;
@@ -276,88 +96,18 @@ export default function MealsScreen() {
     return timestamp >= selectedStart && timestamp < selectedEnd;
   }), [allMeals, selectedEnd, selectedStart]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadItemPreviews = async () => {
-      const entries: { cacheKey: string; barcode: string; type: MealType }[] = [];
-
-      for (const meal of displayedMeals) {
-        for (const [index, barcode] of (meal.items ?? []).entries()) {
-          entries.push({
-            cacheKey: `${meal.$id}-${index}-${barcode}`,
-            barcode,
-            type: (meal.type ?? 'Other') as MealType,
-          });
-        }
-      }
-
-      if (entries.length === 0) {
-        setItemPreviews({});
-        return;
-      }
-
-      setIsLoadingItems(true);
-      try {
-        const previews = await Promise.all(
-          entries.map(async ({ cacheKey, barcode, type }) => {
-            const preview = await fetchMealItemPreview(barcode, type);
-            return [cacheKey, preview] as const;
-          }),
-        );
-
-        if (!cancelled) {
-          setItemPreviews(Object.fromEntries(previews));
-        }
-      } catch (error) {
-        console.warn('Failed to load meal item previews', error);
-      } finally {
-        if (!cancelled) setIsLoadingItems(false);
-      }
-    };
-
-    void loadItemPreviews();
-    return () => { cancelled = true; };
-  }, [displayedMeals]);
-
-  const sections = useMemo<DisplayMealSection[]>(() => {
-    return MEAL_TYPE_OPTIONS.map((type) => {
-      const mealsForType = displayedMeals.filter((meal) => meal.type === type);
-      const friendlyname = mealsForType[0]?.friendlyname || type;
-
-      const totals = mealsForType.reduce((acc, meal) => ({
-        kcal: acc.kcal + (meal.kcal || 0),
-        protein: acc.protein + (meal.protein || 0),
-        carbs: acc.carbs + (meal.carbs || 0),
-        fat: acc.fat + (meal.fat || 0),
-      }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
-
-      const items: DisplayMealItem[] = [];
-      for (const meal of mealsForType) {
-        for (const [index, barcode] of (meal.items ?? []).entries()) {
-          const cacheKey = `${meal.$id}-${index}-${barcode}`;
-          const preview = itemPreviews[cacheKey] ?? {
-            barcode,
-            title: `Barcode: ${barcode}`,
-            facts: [],
-            kcal: null,
-            protein: null,
-            carbs: null,
-            fat: null,
-          };
-
-          items.push({
-            ...preview,
-            key: cacheKey,
-            mealId: meal.$id,
-            sourceType: type,
-          });
-        }
-      }
-
-      return { type, friendlyname, ...totals, items };
-    });
-  }, [displayedMeals, itemPreviews]);
+  const {
+    sections,
+    isLoadingItems,
+    scrollEnabled,
+    dragState,
+    zoneRefs,
+    measureZone,
+    findDropTarget,
+    handleDragStart,
+    handleDragMove,
+    handleDragEnd,
+  } = useMealDragAndDrop(displayedMeals, setAllMeals, user?.$id, showToast, fetchMeals);
 
   const dailyTotals = useMemo(() => sections.reduce((acc, section) => ({
     kcal: acc.kcal + section.kcal,
@@ -367,11 +117,6 @@ export default function MealsScreen() {
   }), { kcal: 0, protein: 0, carbs: 0, fat: 0 }), [sections]);
 
   const hasItems = sections.some((section) => section.items.length > 0);
-
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
-  }, []);
 
   const handleForceSync = async () => {
     setIsSyncing(true);
@@ -386,150 +131,6 @@ export default function MealsScreen() {
       return next;
     });
   };
-
-  const handleItemDropped = useCallback(async (item: DisplayMealItem, targetType: MealType) => {
-    if (!user?.$id || item.sourceType === targetType) return;
-
-    // Smoother layout transitions with spring
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-
-    setAllMeals((prev) => {
-      const next = prev.map((meal) => ({ ...meal, items: [...(meal.items ?? [])] }));
-
-      const sourceMeal = next.find((meal) => meal.$id === item.mealId);
-      if (!sourceMeal?.items) return prev;
-
-      // Target meal must be on the same day as the source meal. Without this,
-      // `next.find` below matches the *first* meal of `targetType` anywhere in
-      // `allMeals` — which also holds up to 100 historic meals — so dropping an
-      // item into a section that has no meal today (e.g. "Lunch" before you've
-      // logged lunch) could silently attach it to some past day's Lunch instead
-      // of creating today's, making the item disappear from the current view.
-      const dayStart = getStartOfDay(new Date(sourceMeal.$createdAt)).getTime();
-      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-
-      const barcodeIndex = sourceMeal.items.indexOf(item.barcode);
-      if (barcodeIndex === -1) return prev;
-
-      sourceMeal.items.splice(barcodeIndex, 1);
-      sourceMeal.kcal = Math.max(0, (sourceMeal.kcal ?? 0) - (item.kcal ?? 0));
-      sourceMeal.protein = Math.max(0, (sourceMeal.protein ?? 0) - (item.protein ?? 0));
-      sourceMeal.carbs = Math.max(0, (sourceMeal.carbs ?? 0) - (item.carbs ?? 0));
-      sourceMeal.fat = Math.max(0, (sourceMeal.fat ?? 0) - (item.fat ?? 0));
-
-      if (sourceMeal.items.length === 0) {
-        const sourceIndex = next.findIndex((meal) => meal.$id === sourceMeal.$id);
-        if (sourceIndex !== -1) next.splice(sourceIndex, 1);
-      }
-
-      const targetMeal = next.find((meal) => {
-        if (meal.type !== targetType) return false;
-        const ts = new Date(meal.$createdAt).getTime();
-        return ts >= dayStart && ts < dayEnd;
-      });
-      if (targetMeal) {
-        targetMeal.items = [...(targetMeal.items ?? []), item.barcode];
-        targetMeal.kcal = (targetMeal.kcal ?? 0) + (item.kcal ?? 0);
-        targetMeal.protein = (targetMeal.protein ?? 0) + (item.protein ?? 0);
-        targetMeal.carbs = (targetMeal.carbs ?? 0) + (item.carbs ?? 0);
-        targetMeal.fat = (targetMeal.fat ?? 0) + (item.fat ?? 0);
-        targetMeal.type = targetType;
-        targetMeal.friendlyname = targetType;
-      } else {
-        next.push({
-          $id: `optimistic-${item.barcode}-${Date.now()}`,
-          $sequence: '0',
-          $createdAt: new Date().toISOString(),
-          $updatedAt: new Date().toISOString(),
-          $permissions: [],
-          $databaseId: '',
-          $collectionId: '',
-          owner: user.$id,
-          friendlyname: targetType,
-          type: targetType,
-          kcal: item.kcal,
-          protein: item.protein,
-          carbs: item.carbs,
-          fat: item.fat,
-          items: [item.barcode],
-        } as MealDocument);
-      }
-
-      return next;
-    });
-
-    showToast(`Moved to ${targetType}`);
-
-    try {
-      await moveProductBetweenMeals(
-        user.$id,
-        item.mealId,
-        item.barcode,
-        targetType,
-        {
-          kcal: item.kcal,
-          protein: item.protein,
-          carbs: item.carbs,
-          fat: item.fat,
-        },
-      );
-      await fetchMeals();
-    } catch (err) {
-      console.warn('Failed to move item between meals', err);
-      await fetchMeals();
-    }
-  }, [user?.$id, fetchMeals, showToast]);
-
-  const measureZone = useCallback((type: MealType) => {
-    const ref = zoneRefs.current[type];
-    if (!ref) return;
-    ref.measureInWindow((x, y, width, height) => {
-      if (width > 0 && height > 0) {
-        dropZones.set(type, { x, y, width, height });
-      }
-    });
-  }, []);
-
-  const findDropTarget = useCallback((dropX: number, dropY: number): MealType | null => {
-    for (const [type, zone] of dropZones.entries()) {
-      if (
-        dropX >= zone.x && dropX <= zone.x + zone.width &&
-        dropY >= zone.y && dropY <= zone.y + zone.height
-      ) {
-        return type;
-      }
-    }
-    return null;
-  }, []);
-
-  const handleDragStart = useCallback((item: DisplayMealItem) => {
-    setScrollEnabled(false);
-    setDragState({ activeItem: item, targetZone: null });
-    MEAL_TYPE_OPTIONS.forEach((type) => measureZone(type));
-  }, [measureZone]);
-
-  const handleDragMove = useCallback((target: MealType | null) => {
-    setDragState(prev => {
-      // Only trigger a state update if the target crossed bounds to keep things performant
-      if (prev.targetZone !== target) {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-        return { ...prev, targetZone: target };
-      }
-      return prev;
-    });
-  }, []);
-
-  const handleDragEnd = useCallback((item: DisplayMealItem, target: MealType | null) => {
-    setScrollEnabled(true);
-    
-    // Smooth disappearance of the preview placeholder
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-    setDragState({ activeItem: null, targetZone: null });
-
-    if (target !== null && target !== item.sourceType) {
-      void handleItemDropped(item, target);
-    }
-  }, [handleItemDropped]);
 
   const formatDateLabel = (date: Date) => {
     const today = getStartOfDay(new Date());

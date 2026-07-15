@@ -1,17 +1,15 @@
 import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
-import { SearchPreferencesProvider, useSearchPreferences } from '@/lib/SearchPreferencesContext';
+import { SearchPreferencesProvider } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
 function TabNavigator() {
-  const { defaultSearchMode } = useSearchPreferences();
   const { activeFontFamily } = useFontPreferences();
   const { colors } = useTheme();
-  
-  const showScanTab = defaultSearchMode === 'scan';
+
   const navigationFontStyle = activeFontFamily
     ? { fontFamily: activeFontFamily }
     : undefined;
@@ -50,7 +48,6 @@ function TabNavigator() {
       <Tabs.Screen
         name="logfood"
         options={{
-          href: null,
           title: 'Log',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'add-circle' : 'add-circle-outline'} color={color} size={24} />
@@ -62,7 +59,7 @@ function TabNavigator() {
         options={{
           title: 'Meals',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'fast-food' : 'fast-food-outline'} color={color} size={24}/>
+            <Ionicons name={focused ? 'fast-food' : 'fast-food-outline'} color={color} size={24} />
           ),
         }}
       />
@@ -80,13 +77,22 @@ function TabNavigator() {
         options={{
           href: null,
           title: 'About',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'information-circle' : 'information-circle-outline'} color={color} size={24}/>
-          ),
         }}
       />
       <Tabs.Screen
         name="basepg"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="workouts"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="meds"
         options={{
           href: null,
         }}

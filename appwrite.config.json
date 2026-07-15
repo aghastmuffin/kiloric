@@ -121,10 +121,7 @@
         {
             "$id": "users",
             "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")",
-                "update(\"users\")",
-                "delete(\"users\")"
+                "create(\"users\")"
             ],
             "databaseId": "6a32d624001ac88a8608",
             "name": "user",
@@ -335,10 +332,7 @@
         {
             "$id": "meals",
             "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")",
-                "update(\"users\")",
-                "delete(\"users\")"
+                "create(\"users\")"
             ],
             "databaseId": "6a32d624001ac88a8608",
             "name": "meals",

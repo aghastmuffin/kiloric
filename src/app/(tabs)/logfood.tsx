@@ -5,8 +5,8 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -87,11 +87,18 @@ function CrossPlatformDropDown({
 
 export default function Index() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ q?: string }>();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [query, setQuery] = useState<string>('');
   const [searchType, setSearchType] = useState<SearchType>('Text');
+
+  useEffect(() => {
+    if (typeof params.q === 'string' && params.q.trim()) {
+      setQuery(params.q.trim());
+    }
+  }, [params.q]);
 
   const handleTextResponse = useCallback(
     (data: string) => {
