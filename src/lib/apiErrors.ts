@@ -64,3 +64,38 @@ export function showApiError(error: unknown, source: ApiErrorSource = 'appwrite'
     message: formatApiError(error, source),
   })
 }
+
+/**
+ * Safely logs Appwrite and generic errors to the console without leaking PII or raw responses.
+ * Use this instead of console.error(err) for any Appwrite-related failures.
+ */
+export function logAppwriteError(tag: string, err: unknown): void {
+  if (err instanceof AppwriteException) {
+    console.error(
+      `[${tag}] failed →`,
+      JSON.stringify(
+        {
+          code: err.code,
+          type: err.type,
+          message: err.message,
+        },
+        null,
+        2,
+      ),
+    )
+    return
+  }
+
+  if (err instanceof Error) {
+    // Only log essential Error properties to avoid leaking context that might be attached to custom error objects
+    console.error(`[${tag}] failed →`, {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+    })
+    return
+  }
+
+  // Fallback for non-Error objects: ensures we don't accidentally log an object containing 'response' or PII
+  console.error(`[${tag}] failed with unknown error type`)
+}
