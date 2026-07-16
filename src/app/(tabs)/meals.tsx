@@ -88,15 +88,30 @@ const DraggableItemCard = memo(function DraggableItemCard({
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   
-  const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current;
+  const pan = useState(() => new Animated.ValueXY())[0];
+  const scale = useState(() => new Animated.Value(1))[0];
   const [isDragging, setIsDragging] = useState(false);
 
-  // Always-current ref for closures
-  const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
-  cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
+  // Always-current proxy for closures to avoid PanResponder closure staleness
+  // and maintain React Compiler compatibility (avoiding ref access during render).
+  const cbProxy = useMemo(() => ({
+    onDragStart: (item: DisplayMealItem) => {},
+    onDragMove: (target: MealType | null) => {},
+    onDragEnd: (item: DisplayMealItem, target: MealType | null) => {},
+    findDropTarget: (x: number, y: number) => null as MealType | null,
+    item: item,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
 
-  const panResponder = useRef(
+  useEffect(() => {
+    cbProxy.onDragStart = onDragStart;
+    cbProxy.onDragMove = onDragMove;
+    cbProxy.onDragEnd = onDragEnd;
+    cbProxy.findDropTarget = findDropTarget;
+    cbProxy.item = item;
+  }, [onDragStart, onDragMove, onDragEnd, findDropTarget, item, cbProxy]);
+
+  const panResponder = useMemo(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -112,7 +127,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
           useNativeDriver: false
         }).start();
 
-        cbRef.current.onDragStart(cbRef.current.item);
+        cbProxy.onDragStart(cbProxy.item);
       },
 
       onPanResponderMove: Animated.event(
@@ -120,15 +135,15 @@ const DraggableItemCard = memo(function DraggableItemCard({
         { 
           useNativeDriver: false,
           listener: (e, gs) => {
-             const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-             cbRef.current.onDragMove(target);
+             const target = cbProxy.findDropTarget(gs.moveX, gs.moveY);
+             cbProxy.onDragMove(target);
           }
         },
       ),
 
       onPanResponderRelease: (_e, gs) => {
-        const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-        const currentItem = cbRef.current.item;
+        const target = cbProxy.findDropTarget(gs.moveX, gs.moveY);
+        const currentItem = cbProxy.item;
         const isValidDrop = target !== null && target !== currentItem.sourceType;
 
         // Snap back scale
@@ -141,7 +156,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
         if (isValidDrop) {
           pan.setValue({ x: 0, y: 0 });
           setIsDragging(false);
-          cbRef.current.onDragEnd(currentItem, target);
+          cbProxy.onDragEnd(currentItem, target);
         } else {
           Animated.spring(pan, {
             toValue: { x: 0, y: 0 },
@@ -150,7 +165,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
             tension: 40,
           }).start(() => {
             setIsDragging(false);
-            cbRef.current.onDragEnd(currentItem, null);
+            cbProxy.onDragEnd(currentItem, null);
           });
         }
       },
@@ -164,8 +179,9 @@ const DraggableItemCard = memo(function DraggableItemCard({
       },
 
       onPanResponderTerminationRequest: () => true,
-    })
-  ).current;
+    }),
+    [pan, scale, cbProxy]
+  );
 
   const hasFacts = item.facts.length > 0;
 
@@ -246,7 +262,7 @@ export default function MealsScreen() {
     targetZone: null,
   });
 
-  const dropZones = useRef<Map<MealType, { x: number; y: number; width: number; height: number }>>(new Map()).current;
+  const dropZones = useState(() => new Map<MealType, { x: number; y: number; width: number; height: number }>())[0];
   const zoneRefs = useRef<Record<string, View | null>>({});
 
   const fetchMeals = useCallback(async () => {
@@ -265,7 +281,6 @@ export default function MealsScreen() {
     }
   }, [user]);
 
-  useEffect(() => { void fetchMeals(); }, [fetchMeals]);
   useFocusEffect(useCallback(() => { void fetchMeals(); }, [fetchMeals]));
 
   const selectedStart = getStartOfDay(selectedDate).getTime();
@@ -284,18 +299,19 @@ export default function MealsScreen() {
 
       for (const meal of displayedMeals) {
         for (const [index, barcode] of (meal.items ?? []).entries()) {
-          entries.push({
-            cacheKey: `${meal.$id}-${index}-${barcode}`,
-            barcode,
-            type: (meal.type ?? 'Other') as MealType,
-          });
+          const cacheKey = `${meal.$id}-${index}-${barcode}`;
+          // Incremental loading: skip items we already have in the local state
+          if (!itemPreviews[cacheKey]) {
+            entries.push({
+              cacheKey,
+              barcode,
+              type: (meal.type ?? 'Other') as MealType,
+            });
+          }
         }
       }
 
-      if (entries.length === 0) {
-        setItemPreviews({});
-        return;
-      }
+      if (entries.length === 0) return;
 
       setIsLoadingItems(true);
       try {
@@ -307,7 +323,10 @@ export default function MealsScreen() {
         );
 
         if (!cancelled) {
-          setItemPreviews(Object.fromEntries(previews));
+          setItemPreviews(prev => ({
+            ...prev,
+            ...Object.fromEntries(previews),
+          }));
         }
       } catch (error) {
         console.warn('Failed to load meal item previews', error);
@@ -318,6 +337,9 @@ export default function MealsScreen() {
 
     void loadItemPreviews();
     return () => { cancelled = true; };
+    // itemPreviews is intentionally omitted from the dependency array to avoid infinite loops
+    // while maintaining a cache-first incremental loading strategy.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedMeals]);
 
   const sections = useMemo<DisplayMealSection[]>(() => {
@@ -478,7 +500,7 @@ export default function MealsScreen() {
       console.warn('Failed to move item between meals', err);
       await fetchMeals();
     }
-  }, [user?.$id, fetchMeals, showToast]);
+  }, [user, fetchMeals, showToast]);
 
   const measureZone = useCallback((type: MealType) => {
     const ref = zoneRefs.current[type];
@@ -488,7 +510,7 @@ export default function MealsScreen() {
         dropZones.set(type, { x, y, width, height });
       }
     });
-  }, []);
+  }, [dropZones]);
 
   const findDropTarget = useCallback((dropX: number, dropY: number): MealType | null => {
     for (const [type, zone] of dropZones.entries()) {
@@ -500,7 +522,7 @@ export default function MealsScreen() {
       }
     }
     return null;
-  }, []);
+  }, [dropZones]);
 
   const handleDragStart = useCallback((item: DisplayMealItem) => {
     setScrollEnabled(false);
