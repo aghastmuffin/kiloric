@@ -1,0 +1,44 @@
+env: load .env
+env: export EXPO_PUBLIC_APPWRITE_DATABASE_ID EXPO_PUBLIC_APPWRITE_DEP_ENDPOINT EXPO_PUBLIC_APPWRITE_ENDPOINT EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID EXPO_PUBLIC_APPWRITE_PLATFORM_ID EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID EXPO_PUBLIC_APPWRITE_PROJECT_ID EXPO_PUBLIC_APPWRITE_PROJECT_NAME
+Starting project at /app
+Using src/app as the root directory for Expo Router.
+React Compiler enabled
+Starting Metro Bundler
+
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+λ Bundled 33493ms node_modules/.pnpm/@expo+router-server@56.0.16_@expo+metro-runtime@56.0.17_expo-constants@56.0.21_expo-fon_b158e745f0147fa355b5d4fef46f6b5b/node_modules/@expo/router-server/node/render.js (1759 modules)
+λ  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+λ  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+λ  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+(node:76337) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Web Bundled 35887ms node_modules/.pnpm/expo-router@56.2.15_dde154df8d028a989d34c7cbf7dab03f/node_modules/expo-router/entry.js (1543 modules)
+Web Bundled 12695ms node_modules/.pnpm/expo-router@56.2.15_dde154df8d028a989d34c7cbf7dab03f/node_modules/expo-router/entry.js (1547 modules)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"}
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+Web  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+Web  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ Bundled 94ms node_modules/.pnpm/@expo+router-server@56.0.16_@expo+metro-runtime@56.0.17_expo-constants@56.0.21_expo-fon_b158e745f0147fa355b5d4fef46f6b5b/node_modules/@expo/router-server/node/render.js (1 module)
+λ  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+λ  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+λ  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web Bundled 809ms node_modules/.pnpm/expo-router@56.2.15_dde154df8d028a989d34c7cbf7dab03f/node_modules/expo-router/entry.js (1 module)
+Web Bundled 92ms node_modules/.pnpm/expo-router@56.2.15_dde154df8d028a989d34c7cbf7dab03f/node_modules/expo-router/entry.js (1 module)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"}
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+Web  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+Web  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web  WARN  props.pointerEvents is deprecated. Use style.pointerEvents

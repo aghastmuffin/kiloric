@@ -88,15 +88,28 @@ const DraggableItemCard = memo(function DraggableItemCard({
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   
-  const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current;
+  const [pan] = useState(() => new Animated.ValueXY());
+  const [scale] = useState(() => new Animated.Value(1));
   const [isDragging, setIsDragging] = useState(false);
 
-  // Always-current ref for closures
-  const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
-  cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
+  // Stable proxy object updated via useEffect to prevent render-phase ref access
+  const [proxy] = useState(() => ({
+    onDragStart,
+    onDragMove,
+    onDragEnd,
+    findDropTarget,
+    item,
+  }));
 
-  const panResponder = useRef(
+  useEffect(() => {
+    proxy.onDragStart = onDragStart;
+    proxy.onDragMove = onDragMove;
+    proxy.onDragEnd = onDragEnd;
+    proxy.findDropTarget = findDropTarget;
+    proxy.item = item;
+  }, [onDragStart, onDragMove, onDragEnd, findDropTarget, item, proxy]);
+
+  const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -112,7 +125,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
           useNativeDriver: false
         }).start();
 
-        cbRef.current.onDragStart(cbRef.current.item);
+        proxy.onDragStart(proxy.item);
       },
 
       onPanResponderMove: Animated.event(
@@ -120,15 +133,15 @@ const DraggableItemCard = memo(function DraggableItemCard({
         { 
           useNativeDriver: false,
           listener: (e, gs) => {
-             const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-             cbRef.current.onDragMove(target);
+             const target = proxy.findDropTarget(gs.moveX, gs.moveY);
+             proxy.onDragMove(target);
           }
         },
       ),
 
       onPanResponderRelease: (_e, gs) => {
-        const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-        const currentItem = cbRef.current.item;
+        const target = proxy.findDropTarget(gs.moveX, gs.moveY);
+        const currentItem = proxy.item;
         const isValidDrop = target !== null && target !== currentItem.sourceType;
 
         // Snap back scale
@@ -141,7 +154,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
         if (isValidDrop) {
           pan.setValue({ x: 0, y: 0 });
           setIsDragging(false);
-          cbRef.current.onDragEnd(currentItem, target);
+          proxy.onDragEnd(currentItem, target);
         } else {
           Animated.spring(pan, {
             toValue: { x: 0, y: 0 },
@@ -150,7 +163,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
             tension: 40,
           }).start(() => {
             setIsDragging(false);
-            cbRef.current.onDragEnd(currentItem, null);
+            proxy.onDragEnd(currentItem, null);
           });
         }
       },
@@ -165,7 +178,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
 
       onPanResponderTerminationRequest: () => true,
     })
-  ).current;
+  );
 
   const hasFacts = item.facts.length > 0;
 
@@ -478,7 +491,7 @@ export default function MealsScreen() {
       console.warn('Failed to move item between meals', err);
       await fetchMeals();
     }
-  }, [user?.$id, fetchMeals, showToast]);
+  }, [user, fetchMeals, showToast]);
 
   const measureZone = useCallback((type: MealType) => {
     const ref = zoneRefs.current[type];

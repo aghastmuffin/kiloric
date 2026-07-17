@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
     Easing,
     useAnimatedProps,
@@ -12,6 +12,7 @@ import Svg, { Circle, G as NativeG } from 'react-native-svg';
 const G = Platform.OS === 'web' ? 'g' : NativeG;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface RadialGaugeProps {
     value: number;
@@ -40,12 +41,32 @@ export default function RadialGauge({
             duration: 1000,
             easing: Easing.out(Easing.ease),
         });
-    }, [value]);
+    }, [value, animatedValue]);
 
     const animatedProps = useAnimatedProps(() => {
         const percentage = Math.max(0, Math.min(animatedValue.value, max)) / max;
         const strokeDashoffset = circumference - circumference * percentage;
         return { strokeDashoffset };
+    });
+
+    /**
+     * OPTIMIZATION: Animating text updates on the native thread.
+     * By converting the standard <Text> value to an <AnimatedTextInput> and driving
+     * the text/value property directly from `animatedValue` inside useAnimatedProps,
+     * we avoid triggering full React JS render cycles at 60/120fps during the 1-second count-up.
+     * This prevents main thread blockage, reduces JavaScript overhead, and ensures
+     * that both the stroke animation and the text display stay perfectly synchronized.
+     */
+    const animatedTextProps = useAnimatedProps(() => {
+        const displayVal = `${Math.round(animatedValue.value)}`;
+        if (Platform.OS === 'web') {
+            return {
+                value: displayVal,
+            } as any;
+        }
+        return {
+            text: displayVal,
+        } as any;
     });
 
     const center = size / 2;
@@ -89,7 +110,13 @@ export default function RadialGauge({
             </Svg>
             {/* Center Value Text */}
             <View style={styles.textContainer}>
-                <Text style={styles.valueText}>{Math.round(value)}</Text>
+                <AnimatedTextInput
+                    underlineColorAndroid="transparent"
+                    editable={false}
+                    value={`${Math.round(value)}`}
+                    style={styles.valueText}
+                    animatedProps={animatedTextProps}
+                />
                 <Text style={styles.maxText}>/ {max}</Text>
             </View>
         </View>
@@ -110,6 +137,16 @@ const styles = StyleSheet.create({
         fontSize: 32,
         fontWeight: 'bold',
         color: '#2c3e50',
+        textAlign: 'center',
+        padding: 0,
+        margin: 0,
+        borderWidth: 0,
+        backgroundColor: 'transparent',
+        ...Platform.select({
+            web: {
+                outlineStyle: 'none',
+            } as any,
+        }),
     },
     maxText: {
         fontSize: 14,
