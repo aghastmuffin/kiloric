@@ -1,3 +1,7 @@
+
+> taesonco-calcount@1.0.0 web
+> expo start --web
+
 env: load .env
 env: export EXPO_PUBLIC_APPWRITE_DATABASE_ID EXPO_PUBLIC_APPWRITE_DEP_ENDPOINT EXPO_PUBLIC_APPWRITE_ENDPOINT EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID EXPO_PUBLIC_APPWRITE_PLATFORM_ID EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID EXPO_PUBLIC_APPWRITE_PROJECT_ID EXPO_PUBLIC_APPWRITE_PROJECT_NAME EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID
 Starting project at /app
@@ -6,5 +10,108 @@ React Compiler enabled
 Starting Metro Bundler
 
 Waiting on http://localhost:8081
-2 packages may need updating. Run npx expo install --check for details.
+An update for expo is available: 56.0.16 → ~56.0.17
+9 other packages may need updating. Run npx expo install --check for details.
 Logs for your project will appear below.
+λ Bundled 36967ms node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server/node/render.js (2066 modules)
+λ  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+λ  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+λ  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  [Layout children]: No route named "fooddetail" exists in nested children: [
+  '+not-found',
+  'Additions',
+  'cameraview',
+  'config',
+  'credits',
+  'multiresponse',
+  'onboard_success',
+  'onboarding',
+  'present_n_save',
+  '(tabs)'
+]
+(node:68291) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Web Bundled 39632ms node_modules/expo-router/entry.js (1889 modules)
+Web Bundled 15873ms node_modules/expo-router/entry.js (1893 modules)
+λ Bundled 71ms node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server/node/render.js (1 module)
+λ  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+λ  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+λ  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  [Layout children]: No route named "fooddetail" exists in nested children: [
+  '+not-found',
+  'Additions',
+  'cameraview',
+  'config',
+  'credits',
+  'multiresponse',
+  'onboard_success',
+  'onboarding',
+  'present_n_save',
+  '(tabs)'
+]
+Web Bundled 807ms node_modules/expo-router/entry.js (1 module)
+λ Bundled 70ms node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server/node/render.js (1 module)
+λ  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+λ  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+λ  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  [Layout children]: No route named "fooddetail" exists in nested children: [
+  '+not-found',
+  'Additions',
+  'cameraview',
+  'config',
+  'credits',
+  'multiresponse',
+  'onboard_success',
+  'onboarding',
+  'present_n_save',
+  '(tabs)'
+]
+Web Bundled 873ms node_modules/expo-router/entry.js (1 module)
+Web Bundled 89ms node_modules/expo-router/entry.js (1 module)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"}
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+Web  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+Web  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web  WARN  [Layout children]: No route named "fooddetail" exists in nested children: ["+not-found", "Additions", "cameraview", "config", "credits", "multiresponse", "onboard_success", "onboarding", "present_n_save", "(tabs)"]
+Web  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
+Web  WARN  Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+λ Bundled 90ms node_modules/expo/node_modules/@expo/cli/node_modules/@expo/router-server/node/render.js (1 module)
+λ  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+λ  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+λ  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+λ  WARN  [Layout children]: No route named "fooddetail" exists in nested children: [
+  '+not-found',
+  'Additions',
+  'cameraview',
+  'config',
+  'credits',
+  'multiresponse',
+  'onboard_success',
+  'onboarding',
+  'present_n_save',
+  '(tabs)'
+]
+Web Bundled 1224ms node_modules/expo-router/entry.js (1 module)
+Web Bundled 215ms node_modules/expo-router/entry.js (1 module)
+Web  INFO  %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Web  LOG  Running application "main" with appParams:
+ {"hydrate": undefined, "rootTag": "#root"}
+Development-level warnings: ON.
+Performance optimizations: OFF.
+Web  WARN  Route "./Additions.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web  WARN  "textShadow*" style props are deprecated. Use "textShadow".
+Web  WARN  "shadow*" style props are deprecated. Use "boxShadow".
+Web  WARN  Route "./present_n_save.tsx" is missing the required default export. Ensure a React component is exported as default.
+Web  WARN  [Layout children]: No route named "fooddetail" exists in nested children: ["+not-found", "Additions", "cameraview", "config", "credits", "multiresponse", "onboard_success", "onboarding", "present_n_save", "(tabs)"]
+Web  WARN  props.pointerEvents is deprecated. Use style.pointerEvents
+Web  WARN  Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md
+Web  WARN  [getAccessToken] failed to create JWT [AppwriteException: User (role: guests) missing scopes (["account"])]
