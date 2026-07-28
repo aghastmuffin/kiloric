@@ -5,7 +5,9 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    ignores: ["dist/*", "src/dep/**"],
+  },
+  {
     rules: {
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/immutability": "off",
@@ -13,5 +15,3 @@ module.exports = defineConfig([
     }
   }
 ]);
-
-
