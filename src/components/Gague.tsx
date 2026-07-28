@@ -51,7 +51,13 @@ export default function RadialGauge({
     const center = size / 2;
 
     return (
-        <View style={[styles.container, { width: size, height: size / 2 }]}>
+        <View
+            style={[styles.container, { width: size, height: size / 2 }]}
+            accessible={true}
+            accessibilityLabel={`Calorie progress: ${Math.round(value)} out of ${max} calories`}
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 0, max, now: Math.round(value) }}
+        >
             <Svg width={size} height={size / 2}>
                 {/* Using modern cross-platform transform attributes:
                   Web uses standard SVG string transforms; Native uses individual properties.
