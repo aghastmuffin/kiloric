@@ -2,10 +2,13 @@ import { AccountSignInFlow } from '@/components/auth/AccountSignInFlow';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
+import { MacroProgressBar } from '@/components/MacroProgressBar';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateAge } from '@/lib/nutrition';
 import { getProfile, saveProfileFields } from '@/lib/profile';
+import { listHistoricMeals } from '@/lib/meals';
+import { calculateStreak } from '@/lib/gamification';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -24,6 +27,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { MotiView } from 'moti';
+
+import { SkeletonBlock } from '@/components/SkeletonBlock';
 
 export default function AccountScreen() {
   const { user, loading } = useAuth();
@@ -32,10 +38,17 @@ export default function AccountScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.accent} />
-        <Text style={styles.mutedText}>Restoring session…</Text>
-      </View>
+      <SafeAreaView style={[styles.safeArea, { padding: 20 }]}>
+        <View style={{ gap: 20 }}>
+          <SkeletonBlock height={32} width="40%" borderRadius={8} />
+          <View style={{ alignItems: 'center', marginVertical: 20 }}>
+            <SkeletonBlock height={96} width={96} borderRadius={48} />
+            <SkeletonBlock height={24} width={120} borderRadius={8} style={{ marginTop: 12 }} />
+          </View>
+          <SkeletonBlock height={150} borderRadius={16} />
+          <SkeletonBlock height={200} borderRadius={16} />
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -81,11 +94,20 @@ function LoggedInPanel() {
   const [displayUnits, setDisplayUnits] = useState<DisplayUnits>('metric');
   const [goalPlain, setGoalPlain] = useState('');
 
+  // Gamification Stats
+  const [mealsCount, setMealsCount] = useState(0);
+  const [streakVal, setStreakVal] = useState(0);
+  const [daysTracked, setDaysTracked] = useState(0);
+
   const loadProfile = useCallback(async () => {
     if (!user?.$id) return;
     setLoading(true);
     try {
-      const profile = await getProfile(user.$id);
+      const [profile, historicMeals] = await Promise.all([
+        getProfile(user.$id),
+        listHistoricMeals(user.$id, 100),
+      ]);
+
       if (profile) {
         setWeight(profile.weight?.toString() ?? '0');
         setHeight(profile.height?.toString() ?? '0');
@@ -103,6 +125,21 @@ function LoggedInPanel() {
       } else {
         setUsername('User');
       }
+
+      if (historicMeals) {
+        setMealsCount(historicMeals.length);
+        const streak = calculateStreak(historicMeals);
+        setStreakVal(streak);
+
+        // Count unique days tracked
+        const uniqueDays = new Set<string>();
+        historicMeals.forEach((m) => {
+          const d = new Date(m.$createdAt);
+          uniqueDays.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+        });
+        setDaysTracked(uniqueDays.size || 1);
+      }
+
     } catch (err) {
       showApiError(err, 'appwrite');
     } finally {
@@ -151,8 +188,13 @@ function LoggedInPanel() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.accent} />
+      <View style={{ padding: 20, gap: 20 }}>
+        <View style={{ alignItems: 'center', marginVertical: 20 }}>
+          <SkeletonBlock height={96} width={96} borderRadius={48} />
+          <SkeletonBlock height={24} width={120} borderRadius={8} style={{ marginTop: 12 }} />
+        </View>
+        <SkeletonBlock height={150} borderRadius={16} />
+        <SkeletonBlock height={200} borderRadius={16} />
       </View>
     );
   }
@@ -165,6 +207,9 @@ function LoggedInPanel() {
     Number(targetKcal) > 0 ? Math.round(((Number(targetCarbs) * 4) / Number(targetKcal)) * 100) : 0;
   const fatPct =
     Number(targetKcal) > 0 ? Math.round(((Number(targetFat) * 9) / Number(targetKcal)) * 100) : 0;
+
+  // Level computation based on logged meals
+  const calculatedLevel = Math.max(1, Math.floor(mealsCount / 3) + 1);
 
   return (
     <View style={styles.content}>
@@ -180,8 +225,29 @@ function LoggedInPanel() {
             <MaterialIcons name="edit" size={16} color={colors.onAccent} />
           </Pressable>
         </View>
-        <Text style={styles.profileName}>{username}</Text>
+        <View style={styles.profileNameRow}>
+          <Text style={styles.profileName}>{username}</Text>
+          <View style={[styles.levelBadge, { backgroundColor: colors.accentSoft, borderColor: colors.accent }]}>
+            <Text style={[styles.levelBadgeText, { color: colors.accent }]}>Lv. {calculatedLevel}</Text>
+          </View>
+        </View>
         <Text style={styles.profileEmail}>{user?.email}</Text>
+      </View>
+
+      {/* Stats Summary Row */}
+      <View style={styles.statsSummaryRow}>
+        <View style={styles.statsCard}>
+          <Text style={styles.statsVal}>{mealsCount}</Text>
+          <Text style={styles.statsLabel}>Meals Logged</Text>
+        </View>
+        <View style={styles.statsCard}>
+          <Text style={styles.statsVal}>{streakVal}d</Text>
+          <Text style={styles.statsLabel}>Current Streak</Text>
+        </View>
+        <View style={styles.statsCard}>
+          <Text style={styles.statsVal}>{daysTracked}</Text>
+          <Text style={styles.statsLabel}>Days Tracked</Text>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -252,7 +318,7 @@ function LoggedInPanel() {
             </View>
           </View>
 
-          <View style={styles.cardItem}>
+          <View style={[styles.cardItem, { gap: 16 }]}>
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
                 <Text style={styles.macroName}>Protein ({proteinPct}%)</Text>
@@ -263,15 +329,9 @@ function LoggedInPanel() {
                   keyboardType="numeric"
                 />
               </View>
-              <View style={styles.sliderTrack}>
-                <View
-                  style={[
-                    styles.sliderFill,
-                    { width: `${Math.min(100, proteinPct)}%`, backgroundColor: colors.accent },
-                  ]}
-                />
-              </View>
+              <MacroProgressBar progress={proteinPct / 100} gradientColors={['#ffb454', '#f97316']} />
             </View>
+
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
                 <Text style={styles.macroName}>Carbs ({carbsPct}%)</Text>
@@ -282,15 +342,9 @@ function LoggedInPanel() {
                   keyboardType="numeric"
                 />
               </View>
-              <View style={styles.sliderTrack}>
-                <View
-                  style={[
-                    styles.sliderFill,
-                    { width: `${Math.min(100, carbsPct)}%`, backgroundColor: colors.accent },
-                  ]}
-                />
-              </View>
+              <MacroProgressBar progress={carbsPct / 100} gradientColors={['#64d2ff', '#0a84ff']} />
             </View>
+
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
                 <Text style={styles.macroName}>Fats ({fatPct}%)</Text>
@@ -301,14 +355,7 @@ function LoggedInPanel() {
                   keyboardType="numeric"
                 />
               </View>
-              <View style={styles.sliderTrack}>
-                <View
-                  style={[
-                    styles.sliderFill,
-                    { width: `${Math.min(100, fatPct)}%`, backgroundColor: colors.accent },
-                  ]}
-                />
-              </View>
+              <MacroProgressBar progress={fatPct / 100} gradientColors={['#b18cf8', '#5e5ce6']} />
             </View>
           </View>
         </View>
@@ -436,7 +483,7 @@ const makeStyles = (c: ThemeColors) =>
       marginVertical: 8,
     },
     avatarWrapper: {
-      marginBottom: 16,
+      marginBottom: 12,
       position: 'relative',
     },
     profileAvatarFallback: {
@@ -461,15 +508,57 @@ const makeStyles = (c: ThemeColors) =>
       borderWidth: 2,
       borderColor: c.background,
     },
+    profileNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
     profileName: {
       fontSize: 24,
       fontWeight: '700',
       color: c.text,
     },
+    levelBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    levelBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
     profileEmail: {
       fontSize: 15,
       color: c.textMuted,
       marginTop: 4,
+    },
+    statsSummaryRow: {
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
+      marginVertical: 4,
+    },
+    statsCard: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+    },
+    statsVal: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: c.text,
+    },
+    statsLabel: {
+      fontSize: 11,
+      color: c.textMuted,
+      fontWeight: '600',
     },
     section: {
       gap: 12,
@@ -571,7 +660,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     macroRow: {
       gap: 8,
-      marginBottom: 8,
+      width: '100%',
     },
     macroHeader: {
       flexDirection: 'row',
@@ -589,16 +678,6 @@ const makeStyles = (c: ThemeColors) =>
       textAlign: 'right',
       minWidth: 48,
       padding: 0,
-    },
-    sliderTrack: {
-      height: 6,
-      backgroundColor: c.border,
-      borderRadius: 3,
-      overflow: 'hidden',
-    },
-    sliderFill: {
-      height: '100%',
-      borderRadius: 3,
     },
     presetGrid: {
       flexDirection: 'row',

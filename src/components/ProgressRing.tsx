@@ -1,13 +1,16 @@
 import { useTheme } from '@/lib/theme/ThemeContext'
-import { panelTiming } from '@/lib/motion'
-import { useEffect } from 'react'
+import { panelTiming, celebrationSpring } from '@/lib/motion'
+import { useEffect, useRef, useState } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useAnimatedProps,
   useSharedValue,
   withTiming,
+  withSpring,
+  useAnimatedStyle,
 } from 'react-native-reanimated'
 import Svg, { Circle, G as NativeG } from 'react-native-svg'
+import { MotiView } from 'moti'
 
 const G = Platform.OS === 'web' ? 'g' : NativeG
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
@@ -32,18 +35,47 @@ export function ProgressRing({ value, max, label, unit = '', size = 176, color }
   const stroke = color ?? (complete ? colors.success : colors.accent)
 
   const animatedProgress = useSharedValue(0)
+  const scaleValue = useSharedValue(1)
+  const shadowOpacityValue = useSharedValue(0)
+
+  const prevComplete = useRef(complete)
 
   useEffect(() => {
     animatedProgress.value = withTiming(progress, panelTiming)
   }, [progress, animatedProgress])
 
+  useEffect(() => {
+    if (complete && !prevComplete.current) {
+      // Satisfying completion pulse!
+      scaleValue.value = withSpring(1.08, celebrationSpring, (finished) => {
+        if (finished) {
+          scaleValue.value = withSpring(1, celebrationSpring)
+        }
+      })
+      shadowOpacityValue.value = withTiming(0.6, { duration: 300 }, (finished) => {
+        if (finished) {
+          shadowOpacityValue.value = withTiming(0, { duration: 500 })
+        }
+      })
+    }
+    prevComplete.current = complete
+  }, [complete, scaleValue, shadowOpacityValue])
+
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - animatedProgress.value),
   }))
 
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scaleValue.value }],
+    shadowOpacity: shadowOpacityValue.value,
+    shadowColor: colors.success,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 16,
+  }))
+
   return (
-    <View
-      style={[styles.root, { width: size, height: size }]}
+    <Animated.View
+      style={[styles.root, { width: size, height: size }, containerAnimatedStyle]}
       accessibilityLabel={`${label}: ${Math.round(value)} of ${Math.round(max)} ${unit}`}
     >
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
@@ -77,7 +109,7 @@ export function ProgressRing({ value, max, label, unit = '', size = 176, color }
       <Text style={[styles.label, { color: colors.textMuted }]}>
         {label} {unit}
       </Text>
-    </View>
+    </Animated.View>
   )
 }
 

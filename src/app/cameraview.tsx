@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, CameraType, useCameraPermissions, type BarcodeType } from 'expo-camera';
 import * as Device from 'expo-device';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
   AppState,
   Button,
@@ -18,6 +18,13 @@ import {
   ActivityIndicator,
   type AppStateStatus,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 
 const BARCODE_TYPES: BarcodeType[] = [
   'aztec',
@@ -45,6 +52,21 @@ export default function CameraScannerScreen() {
   const router = useRouter();
 
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Animated Scan Line
+  const scanLineY = useSharedValue(0);
+
+  useEffect(() => {
+    scanLineY.value = withRepeat(
+      withTiming(236, { duration: 2200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
+  }, [scanLineY]);
+
+  const animatedLineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scanLineY.value }],
+  }));
 
   const resetScanState = useCallback(() => {
     setScanned(false);
@@ -106,8 +128,6 @@ export default function CameraScannerScreen() {
     [lookupBarcode, scanned],
   );
 
-
-
   if (Platform.OS === 'ios' && !Device.isDevice) {
     return (
       <View style={styles.container}>
@@ -150,6 +170,26 @@ export default function CameraScannerScreen() {
         <View style={styles.camera} />
       )}
 
+      {/* Focus Box & Scan Line Overlay */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <View style={styles.maskOutter}>
+          <View style={styles.maskRow} />
+          <View style={styles.middleRow}>
+            <View style={styles.maskSide} />
+            <View style={styles.scanBox}>
+              <View style={[styles.corner, styles.topLeft, { borderColor: colors.accent }]} />
+              <View style={[styles.corner, styles.topRight, { borderColor: colors.accent }]} />
+              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.accent }]} />
+              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.accent }]} />
+
+              <Animated.View style={[styles.scanLine, { backgroundColor: colors.accent }, animatedLineStyle]} />
+            </View>
+            <View style={styles.maskSide} />
+          </View>
+          <View style={styles.maskRow} />
+        </View>
+      </View>
+
       {detailLoading && (
         <View style={StyleSheet.absoluteFillObject}>
           <View style={styles.loadingOverlay}>
@@ -164,8 +204,6 @@ export default function CameraScannerScreen() {
           <Text style={styles.buttonText}>Flip Camera</Text>
         </TouchableOpacity>
       </View>
-
-
     </View>
   );
 }
@@ -186,6 +224,68 @@ const makeStyles = (c: ThemeColors) =>
     camera: {
       flex: 1,
     },
+    maskOutter: {
+      flex: 1,
+    },
+    maskRow: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    middleRow: {
+      flexDirection: 'row',
+      height: 240,
+    },
+    maskSide: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    scanBox: {
+      width: 240,
+      height: 240,
+      position: 'relative',
+      backgroundColor: 'transparent',
+    },
+    corner: {
+      position: 'absolute',
+      width: 24,
+      height: 24,
+      borderWidth: 3,
+    },
+    topLeft: {
+      top: 0,
+      left: 0,
+      borderRightWidth: 0,
+      borderBottomWidth: 0,
+    },
+    topRight: {
+      top: 0,
+      right: 0,
+      borderLeftWidth: 0,
+      borderBottomWidth: 0,
+    },
+    bottomLeft: {
+      bottom: 0,
+      left: 0,
+      borderRightWidth: 0,
+      borderTopWidth: 0,
+    },
+    bottomRight: {
+      bottom: 0,
+      right: 0,
+      borderLeftWidth: 0,
+      borderTopWidth: 0,
+    },
+    scanLine: {
+      position: 'absolute',
+      left: 6,
+      right: 6,
+      height: 3,
+      opacity: 0.8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.5,
+      shadowRadius: 3,
+    },
     buttonContainer: {
       position: 'absolute',
       bottom: 64,
@@ -197,28 +297,28 @@ const makeStyles = (c: ThemeColors) =>
     button: {
       flex: 1,
       alignItems: 'center',
-      backgroundColor: '#414141',
-      opacity: 0.4,
+      backgroundColor: c.surfaceAlt,
+      borderWidth: 1,
+      borderColor: c.border,
       padding: 12,
       maxWidth: 200,
-      borderRadius: 8,
+      borderRadius: 12,
       marginLeft: 'auto',
       marginRight: 'auto',
     },
     buttonText: {
-      color: 'white',
+      color: c.text,
       fontSize: 16,
-      opacity: 1,
       fontWeight: 'bold',
     },
     loadingOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: c.overlay,
       justifyContent: 'center',
       alignItems: 'center',
     },
     loadingText: {
-      color: 'white',
+      color: c.text,
       marginTop: 12,
       fontSize: 16,
       fontWeight: '600',

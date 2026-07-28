@@ -16,7 +16,11 @@ import {
 import { parseDisplayUnitsPreference, formatFluid, mlToFlOz } from '@/lib/units';
 import { DraggableItemCard } from '@/components/DraggableItemCard';
 import { useMealDragAndDrop } from '@/lib/useMealDragAndDrop';
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { calculateStreak, calculateXP } from '@/lib/gamification';
+import { MacroProgressBar } from '@/components/MacroProgressBar';
+import { SkeletonBlock } from '@/components/SkeletonBlock';
+import { triggerSelectionHaptic, triggerNotificationHaptic } from '@/lib/haptics';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -32,6 +36,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  TouchableOpacity,
 } from 'react-native';
 import { MotiView, MotiText, AnimatePresence } from 'moti';
 
@@ -71,7 +76,7 @@ function isSameLocalDay(a: Date, b: Date): boolean {
 
 function macroPct(value: number, target: number): number {
   if (target <= 0) return 0;
-  return Math.min(100, Math.round((value / target) * 100));
+  return Math.min(100, value / target);
 }
 
 const getStartOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -92,7 +97,11 @@ export default function DashboardScreen() {
   const [waterBusy, setWaterBusy] = useState(false);
   const [waterAnimationKey, setWaterAnimationKey] = useState(0);
   const [logText, setLogText] = useState('');
-  const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(new Set(MEAL_TYPE_OPTIONS)); 
+  const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(new Set(MEAL_TYPE_OPTIONS));
+
+  // Milestone Toast Banner State
+  const [activeToast, setActiveToast] = useState<{ message: string; icon: string } | null>(null);
+  const toastedRefs = useRef({ protein: false, hydration: false, streak: false });
 
   const toggleMealExpanded = (type: MealType) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -188,6 +197,58 @@ export default function DashboardScreen() {
 
   const remaining = Math.max(0, kcalTarget - dailyTotals.kcal);
 
+  // Gamification & Streak calculations
+  const streak = useMemo(() => calculateStreak(allMeals), [allMeals]);
+
+  const xpInfo = useMemo(() => {
+    const kcalHit = dailyTotals.kcal >= kcalTarget * 0.8 && dailyTotals.kcal <= kcalTarget * 1.15;
+    const waterHit = waterMl >= fluidTarget;
+    const proteinHit = proteinTarget > 0 && dailyTotals.protein >= proteinTarget;
+    const carbsHit = carbsTarget > 0 && dailyTotals.carbs >= carbsTarget;
+    const fatHit = fatTarget > 0 && dailyTotals.fat >= fatTarget;
+
+    return calculateXP(
+      displayedMeals.length,
+      waterEntries.length,
+      waterHit,
+      kcalHit,
+      proteinHit,
+      carbsHit,
+      fatHit
+    );
+  }, [displayedMeals.length, waterEntries.length, dailyTotals, waterMl, kcalTarget, fluidTarget, proteinTarget, carbsTarget, fatTarget]);
+
+  // Toast Triggering Effects
+  useEffect(() => {
+    if (viewingToday) {
+      // 1. Protein Target Toast
+      if (proteinTarget > 0 && dailyTotals.protein >= proteinTarget && !toastedRefs.current.protein) {
+        toastedRefs.current.protein = true;
+        setActiveToast({ message: '🎯 Protein target hit!', icon: 'trophy' });
+        triggerNotificationHaptic('success');
+      }
+      // 2. Hydration Complete Toast
+      if (fluidTarget > 0 && waterMl >= fluidTarget && !toastedRefs.current.hydration) {
+        toastedRefs.current.hydration = true;
+        setActiveToast({ message: '💧 Hydration complete!', icon: 'water' });
+        triggerNotificationHaptic('success');
+      }
+      // 3. Streak toast if streak >= 3
+      if (streak >= 3 && !toastedRefs.current.streak) {
+        toastedRefs.current.streak = true;
+        setActiveToast({ message: `🔥 ${streak}-day streak active!`, icon: 'flame' });
+        triggerNotificationHaptic('success');
+      }
+    }
+  }, [dailyTotals.protein, proteinTarget, waterMl, fluidTarget, streak, viewingToday]);
+
+  useEffect(() => {
+    if (activeToast) {
+      const timer = setTimeout(() => setActiveToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeToast]);
+
   const handleQuickLog = () => {
     const query = logText.trim();
     router.push({
@@ -199,6 +260,7 @@ export default function DashboardScreen() {
 
   const handleAddWater = async (amountMl: number) => {
     if (!user?.$id || waterBusy) return;
+    triggerSelectionHaptic();
     setWaterBusy(true);
     setWaterAnimationKey(prev => prev + 1); // Trigger animation on ring
     try {
@@ -225,13 +287,38 @@ export default function DashboardScreen() {
     }
   };
 
+  // Generate date dots: Last 5 days ending today
+  const dateDots = useMemo(() => {
+    const dots = [];
+    const today = new Date();
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      dots.push(d);
+    }
+    return dots;
+  }, []);
+
   if (authLoading || (loading && !profile && allMeals.length === 0 && waterEntries.length === 0 && user)) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <MotiView from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.centered}>
-          <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.mutedText}>Loading your day…</Text>
-        </MotiView>
+      <SafeAreaView style={[styles.safeArea, { padding: 20 }]}>
+        <View style={{ gap: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <SkeletonBlock height={36} width={36} borderRadius={18} />
+            <SkeletonBlock height={30} width={120} borderRadius={8} />
+            <SkeletonBlock height={32} width={32} borderRadius={16} />
+          </View>
+          <SkeletonBlock height={14} width="100%" borderRadius={7} />
+          <View style={{ alignItems: 'center', marginTop: 30 }}>
+            <SkeletonBlock height={200} width={200} borderRadius={100} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+            <SkeletonBlock height={80} borderRadius={16} style={{ flex: 1 }} />
+            <SkeletonBlock height={80} borderRadius={16} style={{ flex: 1 }} />
+            <SkeletonBlock height={80} borderRadius={16} style={{ flex: 1 }} />
+          </View>
+          <SkeletonBlock height={100} borderRadius={24} style={{ marginTop: 20 }} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -252,15 +339,65 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <MotiView from={{ opacity: 0, translateY: -20 }} animate={{ opacity: 1, translateY: 0 }} style={styles.header}>
+      {/* Toast Notification Banner */}
+      <AnimatePresence>
+        {activeToast && (
+          <MotiView
+            from={{ opacity: 0, translateY: -80, scale: 0.9 }}
+            animate={{ opacity: 1, translateY: 0, scale: 1 }}
+            exit={{ opacity: 0, translateY: -40, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={styles.toastBanner}
+          >
+            <Ionicons name={activeToast.icon as any} size={22} color={colors.onAccent} style={{ marginRight: 8 }} />
+            <Text style={styles.toastText}>{activeToast.message}</Text>
+          </MotiView>
+        )}
+      </AnimatePresence>
+
+      <MotiView from={{ opacity: 0, translateY: -10 }} animate={{ opacity: 1, translateY: 0 }} style={styles.header}>
         <Pressable style={styles.avatarContainer} onPress={() => router.push('/(tabs)/account')}>
           <Ionicons name="person" size={18} color={colors.textMuted} />
         </Pressable>
-        <Text style={styles.headerTitle}>CalCount</Text>
+
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>CalCount</Text>
+          {streak > 0 && (
+            <MotiView
+              from={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', damping: 10 }}
+              style={styles.streakBadge}
+            >
+              <Ionicons name="flame" size={16} color={colors.streakColor} />
+              <Text style={[styles.streakText, { color: colors.streakColor }]}>{streak}</Text>
+            </MotiView>
+          )}
+        </View>
+
         <Pressable style={styles.headerAction} onPress={() => router.push('/(tabs)/logfood')}>
-          <Ionicons name="add-circle" size={32} color={colors.accent} />
+          <MotiView
+            from={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', damping: 8 }}
+          >
+            <Ionicons name="add-circle" size={32} color={colors.accent} />
+          </MotiView>
         </Pressable>
       </MotiView>
+
+      {/* Gamified XP Progress Bar */}
+      <View style={styles.xpBarContainer}>
+        <View style={styles.xpHeader}>
+          <View style={[styles.levelBadge, { backgroundColor: colors.accent }]}>
+            <Text style={[styles.levelBadgeText, { color: colors.onAccent }]}>Lv. {xpInfo.level}</Text>
+          </View>
+          <Text style={styles.xpText}>{xpInfo.xpInCurrentLevel} / {xpInfo.xpNeeded} XP</Text>
+        </View>
+        <View style={[styles.xpTrack, { backgroundColor: colors.progressTrail }]}>
+          <View style={[styles.xpFill, { width: `${(xpInfo.xpInCurrentLevel / xpInfo.xpNeeded) * 100}%`, backgroundColor: colors.xpAccent }]} />
+        </View>
+      </View>
 
       <ScrollView
         style={styles.screen}
@@ -280,6 +417,32 @@ export default function DashboardScreen() {
       >
         <View style={styles.dateHeader}>
           <Text style={styles.todayText}>{viewingToday ? 'TODAY' : 'DAY'}</Text>
+
+          {/* horizontal Date Dots selection strip */}
+          <View style={styles.dateDotsStrip}>
+            {dateDots.map((d, index) => {
+              const isSelected = isSameLocalDay(d, selectedDate);
+              const dayName = d.toLocaleDateString(undefined, { weekday: 'narrow' });
+              const dayNum = d.getDate();
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dateDotCard,
+                    isSelected && { backgroundColor: colors.accent, borderColor: colors.accent }
+                  ]}
+                  onPress={() => {
+                    setSelectedDate(d);
+                    setDateDirection(d.getTime() > selectedDate.getTime() ? 1 : -1);
+                  }}
+                >
+                  <Text style={[styles.dateDotDayName, isSelected && { color: colors.onAccent }]}>{dayName}</Text>
+                  <Text style={[styles.dateDotDayNum, isSelected && { color: colors.onAccent }]}>{dayNum}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           <View style={styles.dateRow}>
             <Pressable onPress={() => shiftDay(-1)} hitSlop={12} style={styles.navButton}>
               <MaterialIcons name="chevron-left" size={26} color={colors.text} />
@@ -311,7 +474,15 @@ export default function DashboardScreen() {
             transition={{ type: 'timing', duration: 300 }}
             style={{ gap: 24 }}
           >
-            <View style={styles.ringContainer}>
+            <View style={[
+              styles.ringContainer,
+              dailyTotals.kcal >= kcalTarget * 0.8 && {
+                shadowColor: colors.accent,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.15,
+                shadowRadius: 16,
+              }
+            ]}>
               <ProgressRing
                 value={dailyTotals.kcal}
                 max={kcalTarget}
@@ -326,14 +497,15 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
+            {/* Macro Cards with gradient identity */}
             <View style={styles.macrosRow}>
               {(
                 [
-                  ['PROTEIN', dailyTotals.protein, proteinTarget],
-                  ['CARBS', dailyTotals.carbs, carbsTarget],
-                  ['FATS', dailyTotals.fat, fatTarget],
+                  ['PROTEIN', dailyTotals.protein, proteinTarget, ['#ffb454', '#f97316']],
+                  ['CARBS', dailyTotals.carbs, carbsTarget, ['#64d2ff', '#0a84ff']],
+                  ['FATS', dailyTotals.fat, fatTarget, ['#b18cf8', '#5e5ce6']],
                 ] as const
-              ).map(([label, value, target], idx) => (
+              ).map(([label, value, target, gradient], idx) => (
                 <View key={label} style={styles.macroCard}>
                   <View style={styles.macroHeader}>
                     <Text style={styles.macroTitle}>{label}</Text>
@@ -342,17 +514,10 @@ export default function DashboardScreen() {
                       {target > 0 ? `/${target}g` : 'g'}
                     </Text>
                   </View>
-                  <View style={styles.macroTrack}>
-                    <View
-                      style={[
-                        styles.macroFill,
-                        {
-                          width: `${macroPct(value, target || Math.max(value, 1))}%`,
-                          backgroundColor: colors.accent,
-                        },
-                      ]}
-                    />
-                  </View>
+                  <MacroProgressBar
+                    progress={macroPct(value, target || Math.max(value, 1))}
+                    gradientColors={gradient}
+                  />
                 </View>
               ))}
             </View>
@@ -409,6 +574,7 @@ export default function DashboardScreen() {
               </View>
             </View>
 
+            {/* Quick-log Glassmorphism themed input card */}
             <View style={styles.inlineLogSection}>
               <View style={styles.inlineLogInputContainer}>
                 <Ionicons name="search" size={20} color={colors.textMuted} style={styles.inlineLogIcon} />
@@ -439,8 +605,11 @@ export default function DashboardScreen() {
                   const isTargetZone = dragState.targetZone === section.type && dragState.activeItem?.sourceType !== section.type;
 
                   return (
-                    <View 
+                    <MotiView
                       key={section.type} 
+                      from={{ opacity: 0, translateY: 15 }}
+                      animate={{ opacity: 1, translateY: 0 }}
+                      transition={{ type: 'spring', damping: 14, delay: index * 100 }}
                       style={[styles.mealItemContainer, !isLast && styles.mealItemBorder]}
                       ref={(el) => { zoneRefs.current[section.type] = el; }}
                       onLayout={() => measureZone(section.type)}
@@ -493,7 +662,7 @@ export default function DashboardScreen() {
                           )}
                         </MotiView>
                       )}
-                    </View>
+                    </MotiView>
                   );
                 })}
               </View>
@@ -554,6 +723,11 @@ const makeStyles = (c: ThemeColors) =>
       paddingVertical: 12,
       backgroundColor: c.background,
     },
+    headerCenter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
     avatarContainer: {
       width: 36,
       height: 36,
@@ -568,10 +742,56 @@ const makeStyles = (c: ThemeColors) =>
       color: c.text,
       letterSpacing: -0.5,
     },
+    streakBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(249, 115, 22, 0.1)',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      gap: 3,
+    },
+    streakText: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
     headerAction: {
       width: 36,
       alignItems: 'flex-end',
       justifyContent: 'center',
+    },
+    xpBarContainer: {
+      paddingHorizontal: 20,
+      paddingBottom: 8,
+      gap: 6,
+    },
+    xpHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    levelBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    levelBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    xpText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.textMuted,
+    },
+    xpTrack: {
+      height: 6,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    xpFill: {
+      height: '100%',
+      borderRadius: 3,
     },
     screen: {
       flex: 1,
@@ -583,13 +803,41 @@ const makeStyles = (c: ThemeColors) =>
     },
     dateHeader: {
       alignItems: 'center',
-      gap: 6,
+      gap: 12,
     },
     todayText: {
       fontSize: 12,
       fontWeight: '700',
       color: c.accent,
       letterSpacing: 1.5,
+    },
+    dateDotsStrip: {
+      flexDirection: 'row',
+      gap: 10,
+      justifyContent: 'center',
+      marginVertical: 4,
+    },
+    dateDotCard: {
+      width: 48,
+      height: 58,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+    },
+    dateDotDayName: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textMuted,
+      textTransform: 'uppercase',
+    },
+    dateDotDayNum: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.text,
     },
     dateRow: {
       flexDirection: 'row',
@@ -613,6 +861,7 @@ const makeStyles = (c: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
+      borderRadius: 140,
     },
     ringRemainingValue: {
       fontSize: 20,
@@ -649,16 +898,6 @@ const makeStyles = (c: ThemeColors) =>
       fontSize: 13,
       fontWeight: '600',
       color: c.text,
-    },
-    macroTrack: {
-      height: 8,
-      backgroundColor: c.surfaceAlt,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    macroFill: {
-      height: '100%',
-      borderRadius: 4,
     },
     sectionTitleRow: {
       flexDirection: 'row',
@@ -838,5 +1077,27 @@ const makeStyles = (c: ThemeColors) =>
       fontWeight: '600',
       fontSize: 14,
       marginTop: 4,
+    },
+    toastBanner: {
+      position: 'absolute',
+      top: Platform.OS === 'ios' ? 60 : 20,
+      left: 20,
+      right: 20,
+      backgroundColor: '#10b981', // Solid beautiful emerald success green!
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      zIndex: 999,
+      ...Platform.select({
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+        android: { elevation: 6 },
+      }),
+    },
+    toastText: {
+      color: '#ffffff',
+      fontSize: 16,
+      fontWeight: '700',
     },
   });

@@ -40,6 +40,10 @@ export type ThemeColors = {
   pickerVariant: ColorSchemeName
   /** Accent color fed to native pickers / date pickers. */
   pickerAccent: string
+  xpAccent: string
+  streakColor: string
+  levelGlow: string
+  progressTrail: string
 }
 
 export type OnboardingColors = {
@@ -81,6 +85,10 @@ export const barebonesColors: ThemeColors = {
   overlay: 'rgba(0, 0, 0, 0.6)',
   pickerVariant: 'dark',
   pickerAccent: '#87ff72',
+  xpAccent: '#a855f7',
+  streakColor: '#f97316',
+  levelGlow: 'rgba(253, 224, 71, 0.4)',
+  progressTrail: '#2f343b',
 }
 
 export const iosLightColors: ThemeColors = {
@@ -106,6 +114,10 @@ export const iosLightColors: ThemeColors = {
   overlay: 'rgba(0, 0, 0, 0.4)',
   pickerVariant: 'light',
   pickerAccent: '#007aff',
+  xpAccent: '#5856d6',
+  streakColor: '#ff9500',
+  levelGlow: 'rgba(0, 122, 255, 0.3)',
+  progressTrail: '#e5e5ea',
 }
 
 export const iosDarkColors: ThemeColors = {
@@ -131,6 +143,10 @@ export const iosDarkColors: ThemeColors = {
   overlay: 'rgba(0, 0, 0, 0.6)',
   pickerVariant: 'dark',
   pickerAccent: '#0a84ff',
+  xpAccent: '#5e5ce6',
+  streakColor: '#ff9f0a',
+  levelGlow: 'rgba(10, 132, 255, 0.4)',
+  progressTrail: '#2c2c2e',
 }
 
 // Onboarding keeps its own slightly richer palette (green accent in barebones).
@@ -196,3 +212,18 @@ export function resolveOnboardingColors(
   if (choice === 'barebones') return barebonesOnboardingColors
   return scheme === 'light' ? iosLightOnboardingColors : iosDarkOnboardingColors
 }
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+} as const
+
+export const borderRadius = {
+  sm: 8,
+  md: 14,
+  lg: 20,
+  pill: 999,
+} as const

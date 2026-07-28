@@ -12,15 +12,14 @@ export default function WorkoutsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <Image
-            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDcnl_u4caKVbnx4TM6Gy7AFEKEZ0jthuuDM6KXI-Ftz0_hURI0dCgWqElQ-tce3g58Qw_pleV9PJjflC-tL24aryDqjTo03O6vrxrZx8vl9kYV1EKJpF4FxVbgqvOFrWtCgmlzRysTjHyZcuucEbRL-UA0cYK_pFTA5fu_iraK-bV45X2MPv1p6ZgCnQU2hUSAYlHR4DTho6s7zd_CEpuSUTNbOhwBfk49ZdEzyFl-mfJQJnJWDfTA7Glwpsg5V_jOjSWYrGfqIeV-' }}
-            style={styles.avatar}
-          />
+          <View style={styles.profileAvatarFallback}>
+            <MaterialIcons name="person" size={18} color={colors.textMuted} />
+          </View>
         </View>
         <Text style={styles.headerTitle}>CalCount</Text>
         <TouchableOpacity style={styles.streakContainer}>
-          <Text style={styles.streakText}>7</Text>
-          <MaterialIcons name="local-fire-department" size={20} color="#9d4300" />
+          <Text style={[styles.streakText, { color: colors.streakColor }]}>7</Text>
+          <MaterialIcons name="local-fire-department" size={20} color={colors.streakColor} />
         </TouchableOpacity>
       </View>
 
@@ -53,7 +52,7 @@ export default function WorkoutsScreen() {
         <View style={styles.summarySection}>
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <MaterialIcons name="timer" size={18} color="#f97316" />
+              <MaterialIcons name="timer" size={18} color={colors.accent} />
               <Text style={styles.summaryLabel}>Active Time</Text>
             </View>
             <View style={styles.summaryValueRow}>
@@ -63,7 +62,7 @@ export default function WorkoutsScreen() {
           </View>
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <MaterialIcons name="local-fire-department" size={18} color="#f97316" />
+              <MaterialIcons name="local-fire-department" size={18} color={colors.streakColor} />
               <Text style={styles.summaryLabel}>Energy Burned</Text>
             </View>
             <View style={styles.summaryValueRow}>
@@ -77,7 +76,7 @@ export default function WorkoutsScreen() {
           <View style={styles.planHeader}>
             <Text style={styles.planTitle}>Today's Plan</Text>
             <TouchableOpacity>
-              <Text style={styles.editButton}>Edit</Text>
+              <Text style={[styles.editButton, { color: colors.accent }]}>Edit</Text>
             </TouchableOpacity>
           </View>
 
@@ -93,8 +92,8 @@ export default function WorkoutsScreen() {
                   <Text style={styles.itemSubtitle}>30 min • 250 kcal</Text>
                 </View>
               </View>
-              <View style={styles.checkCircle}>
-                <MaterialIcons name="check" size={16} color="#fff" />
+              <View style={[styles.checkCircle, { backgroundColor: colors.accent }]}>
+                <MaterialIcons name="check" size={16} color={colors.onAccent} />
               </View>
             </View>
 
@@ -128,9 +127,9 @@ export default function WorkoutsScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addButton}>
-          <MaterialIcons name="add" size={24} color="#f97316" />
-          <Text style={styles.addButtonText}>Add New Workout</Text>
+        <TouchableOpacity style={[styles.addButton, { borderColor: colors.accent }]}>
+          <MaterialIcons name="add" size={24} color={colors.accent} />
+          <Text style={[styles.addButtonText, { color: colors.accent }]}>Add New Workout</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -160,9 +159,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surfaceAlt,
     overflow: 'hidden',
   },
-  avatar: {
-    width: '100%',
-    height: '100%',
+  profileAvatarFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 22,
@@ -175,7 +175,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 4,
   },
   streakText: {
-    color: '#9d4300',
     fontWeight: '500',
     fontSize: 13,
   },
@@ -226,10 +225,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.text,
   },
   activeDayItem: {
-    backgroundColor: '#f97316',
+    backgroundColor: c.accent,
     width: 44,
     height: 56,
-    shadowColor: '#f97316',
+    shadowColor: c.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -238,17 +237,18 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   activeDayLabel: {
     fontSize: 11,
     textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.9)',
+    color: c.onAccent,
+    opacity: 0.9,
   },
   activeDayNumber: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#fff',
+    color: c.onAccent,
   },
   activeDayDot: {
     width: 4,
     height: 4,
-    backgroundColor: '#fff',
+    backgroundColor: c.onAccent,
     borderRadius: 2,
     marginTop: 2,
   },
@@ -304,7 +304,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   editButton: {
     fontSize: 13,
-    color: '#f97316',
   },
   listContainer: {
     backgroundColor: c.surface,
@@ -322,7 +321,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderBottomColor: c.border,
   },
   listItemDone: {
-    backgroundColor: 'rgba(248, 249, 255, 0.5)',
+    backgroundColor: c.accentSoft,
   },
   noBorder: {
     borderBottomWidth: 0,
@@ -337,7 +336,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#d3e4fe',
+    backgroundColor: c.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -345,7 +344,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#dce9ff',
+    backgroundColor: c.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -366,7 +365,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#f97316',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -386,7 +384,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 99,
     borderWidth: 1,
-    borderColor: '#f97316',
     alignSelf: 'center',
     width: '100%',
     maxWidth: 300,
@@ -394,6 +391,5 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   addButtonText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#f97316',
   },
 });

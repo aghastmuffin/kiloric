@@ -35,3 +35,29 @@ export const fadeTiming = {
   duration: 240,
   easing: panelEasing,
 } as const
+
+/** Bouncier animation configuration for achievements or milestones. */
+export const celebrationSpring: WithSpringConfig = {
+  damping: 12,
+  stiffness: 120,
+  mass: 0.8,
+}
+
+/** Snap feedback for micro button interactions. */
+export const microBounce: WithSpringConfig = {
+  damping: 15,
+  stiffness: 300,
+  mass: 0.5,
+}
+
+/** Layout timing for count-up tickers. */
+export const countUpTiming = {
+  duration: 1000,
+  easing: Easing.out(Easing.quad),
+} as const
+
+/** Timing configuration for shimmer skeletons. */
+export const shimmerTiming = {
+  duration: 1200,
+  easing: Easing.linear,
+} as const
