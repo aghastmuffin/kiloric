@@ -1,25 +1,77 @@
 import RadialGauge from "@/components/Gague";
 import { useAuth } from "@/lib/AuthContext";
+import { getTodayMeals } from "@/lib/meals";
+import { getProfile } from "@/lib/profile";
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useRouter } from 'expo-router'; // Removed unused 'useTheme'
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router'; // Removed unused 'useTheme'
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function Dial() {
-    // 1. Move hook inside the component
     const { user } = useAuth();
     const [currentValue, setCurrentValue] = useState(0);
+    const [maxVal, setMaxVal] = useState(2000);
+    const [loading, setLoading] = useState(true);
+
+    useFocusEffect(
+        useCallback(() => {
+            if (!user?.$id) {
+                setLoading(false);
+                return;
+            }
+            let active = true;
+            setLoading(true);
+
+            Promise.all([
+                getTodayMeals(user.$id),
+                getProfile(user.$id)
+            ]).then(([meals, profile]) => {
+                if (!active) return;
+                const totalKcal = meals.reduce((sum, meal) => sum + (meal.kcal || 0), 0);
+                setCurrentValue(totalKcal);
+                if (profile?.target_kcal) {
+                    setMaxVal(profile.target_kcal);
+                } else {
+                    setMaxVal(2000);
+                }
+            }).catch((err) => {
+                console.warn("[Dial] failed to fetch today's data:", err);
+            }).finally(() => {
+                if (active) setLoading(false);
+            });
+
+            return () => {
+                active = false;
+            };
+        }, [user])
+    );
+
+    if (!user?.$id) return null;
+
+    if (loading) {
+        return (
+            <View style={dialStyles.centered}>
+                <ActivityIndicator size="small" color="#3498db" />
+            </View>
+        );
+    }
 
     return (
-        <View>
-            {/* Now 'user' will be correctly populated from context */}
-            {user?.$id ? (
-                <RadialGauge value={currentValue} max={100} />
-            ) : null}
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <RadialGauge value={currentValue} max={maxVal} />
         </View>
     );
 }
+
+const dialStyles = StyleSheet.create({
+    centered: {
+        height: 100,
+        width: 200,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+});
 
 export default function AboutScreen() {
     const router = useRouter();
@@ -71,7 +123,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
         borderRadius: 10,
     },
     infoholderItem: {
-        backgroundColor: "#FFFDD0",
+        backgroundColor: c.surface,
         borderRadius: 10,
         marginBottom: 10,
         padding: 10,
