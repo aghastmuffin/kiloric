@@ -1,6 +1,7 @@
 import { AccountSignInFlow } from '@/components/auth/AccountSignInFlow';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
+import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateAge } from '@/lib/nutrition';
@@ -8,6 +9,7 @@ import { getProfile, saveProfileFields } from '@/lib/profile';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { parseDisplayUnitsPreference, appendDisplayUnitsToGoalPlain, type DisplayUnits } from '@/lib/units';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -75,6 +77,9 @@ function LoggedInPanel() {
   const [targetFat, setTargetFat] = useState('67');
   const [dailyFluid, setDailyFluid] = useState('2500');
   const [username, setUsername] = useState('');
+  
+  const [displayUnits, setDisplayUnits] = useState<DisplayUnits>('metric');
+  const [goalPlain, setGoalPlain] = useState('');
 
   const loadProfile = useCallback(async () => {
     if (!user?.$id) return;
@@ -90,6 +95,8 @@ function LoggedInPanel() {
         setTargetFat(profile.target_fat?.toString() ?? '67');
         setDailyFluid(profile.daily_fluid?.toString() ?? '2500');
         setUsername(profile.username ?? 'User');
+        setGoalPlain(profile.goal_plain ?? '');
+        setDisplayUnits(parseDisplayUnitsPreference(profile.goal_plain, profile.country));
         if (profile.dateOfBirth) {
           setAge(String(calculateAge(new Date(profile.dateOfBirth))));
         }
@@ -121,6 +128,7 @@ function LoggedInPanel() {
         target_carbs: parseInt(targetCarbs, 10) || 0,
         target_fat: parseInt(targetFat, 10) || 0,
         daily_fluid: parseInt(dailyFluid, 10) || 0,
+        goal_plain: appendDisplayUnitsToGoalPlain(goalPlain, displayUnits),
       });
       Alert.alert('Saved', 'Profile updated successfully.');
     } catch (err) {
@@ -211,7 +219,7 @@ function LoggedInPanel() {
               <Text style={styles.gridInput}>{age}</Text>
             </View>
             <View style={styles.gridItem}>
-              <Text style={styles.gridLabel}>WATER</Text>
+              <Text style={styles.gridLabel}>WATER TARGET</Text>
               <View style={styles.gridInputRow}>
                 <TextInput
                   style={styles.gridInput}
@@ -327,9 +335,20 @@ function LoggedInPanel() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Appearance</Text>
+        <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.card}>
           <View style={styles.settingsBlock}>
+            <View style={styles.preferenceRow}>
+              <Text style={styles.label}>Unit System</Text>
+              <Text style={styles.hint}>
+                Switch between Metric (kg, ml, cm) and Imperial (lbs, fl oz, inches) for display.
+              </Text>
+              <ThemedSegmentedControl
+                values={['Metric', 'Imperial']}
+                selectedIndex={displayUnits === 'metric' ? 0 : 1}
+                onChange={(idx) => setDisplayUnits(idx === 0 ? 'metric' : 'imperial')}
+              />
+            </View>
             <ThemePreferencePicker />
             <FontPreferencePicker />
           </View>
@@ -611,6 +630,21 @@ const makeStyles = (c: ThemeColors) =>
     settingsBlock: {
       padding: 16,
       gap: 12,
+    },
+    preferenceRow: {
+      marginTop: 4,
+      marginBottom: 12,
+    },
+    label: {
+      color: c.text,
+      fontSize: 16,
+      marginBottom: 6,
+    },
+    hint: {
+      color: c.textFaint,
+      fontSize: 12,
+      marginBottom: 8,
+      lineHeight: 18,
     },
     saveButton: {
       borderRadius: 12,

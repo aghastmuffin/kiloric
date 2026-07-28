@@ -205,7 +205,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: c.surfaceAlt,
-    borderRadius: 12,
+    borderRadius: 24,
     width: '85%',
     maxWidth: 440,
     marginTop: 10,
@@ -219,28 +219,33 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.text,
     paddingLeft: 18,
     paddingRight: 8,
-    paddingVertical: 14,
+    paddingVertical: 18,
     fontSize: 16,
   },
   // Hitbox parameters for your overlay action
   cameraButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cameraIcon: {
     fontSize: 18,
+    color: c.accent,
   },
   button: {
     backgroundColor: c.accent,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 24,
     marginTop: 20,
     width: '85%',
     maxWidth: 440,
     alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: c.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      android: { elevation: 4 },
+    })
   },
   buttonDisabled: {
     opacity: 0.5,

@@ -5,6 +5,10 @@ const { getDefaultConfig } = require('expo/metro-config');
 const config = getDefaultConfig(__dirname)
 
 const fontAwareReactNative = path.resolve(__dirname, 'src/lib/react-native-with-fonts.tsx')
+// Metro's package-exports resolution picks tslib/modules/index.js, which does
+// `import tslib from '../tslib.js'` and destructures tslib.default — undefined
+// under Metro/CJS interop. Force the ESM build Moti (and others) expect.
+const tslibEs6 = require.resolve('tslib/tslib.es6.js')
 const originalResolveRequest = config.resolver.resolveRequest
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
@@ -14,6 +18,13 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     return {
       type: 'sourceFile',
       filePath: fontAwareReactNative,
+    }
+  }
+
+  if (moduleName === 'tslib') {
+    return {
+      type: 'sourceFile',
+      filePath: tslibEs6,
     }
   }
 

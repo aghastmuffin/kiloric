@@ -4,7 +4,8 @@ import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { MotiView } from 'moti';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
@@ -66,7 +67,12 @@ function ObjectCard({
   const entries = Object.entries(item).filter(([key]) => !TITLE_KEYS.includes(key));
 
   return (
-    <View style={styles.card}>
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ delay: 50 + index * 100, type: 'spring', damping: 14 }}
+      style={styles.card}
+    >
       <Text style={styles.cardTitle}>{title}</Text>
       {entries.length > 0 ? (
         entries.map(([key, value]) => (
@@ -80,7 +86,7 @@ function ObjectCard({
           <Text style={styles.viewMoreButtonText}>View More</Text>
         </TouchableOpacity>
       ) : null}
-    </View>
+    </MotiView>
   );
 }
 
@@ -114,9 +120,9 @@ function ResultsBody({
       return <Text style={styles.mutedText}>No matches found. You can return home</Text>;
     }
     return (
-      <View style={styles.card}>
+      <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={styles.card}>
         <Text style={styles.messageText}>{data}</Text>
-      </View>
+      </MotiView>
     );
   }
 
@@ -128,11 +134,11 @@ function ResultsBody({
       data[0].trim().toLowerCase() === TARGET_ERROR
     ) {
       return (
-        <View style={[styles.card, styles.errorCard]}>
+        <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={[styles.card, styles.errorCard]}>
           <Text style={[styles.messageText, styles.errorText]}>
             No matches found. Would you like to add this product? (UNIMPLEMENTED)
           </Text>
-        </View>
+        </MotiView>
       );
     }
 
@@ -149,10 +155,10 @@ function ResultsBody({
       }
 
       return (
-        <View key={index} style={styles.card}>
+        <MotiView key={index} from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: index * 100 }} style={styles.card}>
           <Text style={styles.cardTitle}>Result {index + 1}</Text>
           <Text style={styles.messageText}>{formatValue(item)}</Text>
-        </View>
+        </MotiView>
       );
     });
   }
@@ -170,9 +176,9 @@ function ResultsBody({
   }
 
   return (
-    <View style={styles.card}>
+    <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} style={styles.card}>
       <Text style={styles.messageText}>{formatValue(data)}</Text>
-    </View>
+    </MotiView>
   );
 }
 
@@ -215,10 +221,10 @@ export default function MultiResponseScreen() {
         contentContainerStyle={styles.content}
       >
         {query ? (
-          <View style={styles.header}>
+          <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={styles.header}>
             <Text style={styles.headerLabel}>Search query</Text>
             <Text style={styles.headerQuery}>{query}</Text>
-          </View>
+          </MotiView>
         ) : null}
 
         <ResultsBody data={parsedResult} onViewMore={handleViewMore} />
@@ -247,9 +253,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 16,
   },
   header: {
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: c.surfaceAlt,
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
     borderColor: c.border,
   },
@@ -262,15 +268,20 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   headerQuery: {
     color: c.text,
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   card: {
     backgroundColor: c.surface,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
     borderColor: c.border,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8 },
+      android: { elevation: 2 },
+    })
   },
   errorCard: {
     borderColor: c.danger,
@@ -287,7 +298,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.border,
   },
@@ -299,7 +310,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   rowValue: {
     color: c.text,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     flex: 1.2,
     textAlign: 'right',
   },
@@ -318,17 +329,20 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingVertical: 24,
   },
   viewMoreButton: {
-    backgroundColor: c.surfaceAlt,
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: c.accent,
+    backgroundColor: c.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    marginTop: 20,
     alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: c.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      android: { elevation: 4 },
+    })
   },
   viewMoreButtonText: {
-    color: c.accent,
+    color: c.onAccent,
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });

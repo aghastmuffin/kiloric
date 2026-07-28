@@ -54,15 +54,7 @@ function TabNavigator() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="meals"
-        options={{
-          title: 'Meals',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'fast-food' : 'fast-food-outline'} color={color} size={24} />
-          ),
-        }}
-      />
+
       <Tabs.Screen
         name="account"
         options={{
