@@ -88,15 +88,20 @@ const DraggableItemCard = memo(function DraggableItemCard({
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   
-  const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current;
+  // Use useState initializers instead of useRef.current to avoid accessing refs during render,
+  // guaranteeing compatibility with React strict mode and the React Compiler.
+  const [pan] = useState(() => new Animated.ValueXY());
+  const [scale] = useState(() => new Animated.Value(1));
   const [isDragging, setIsDragging] = useState(false);
 
-  // Always-current ref for closures
+  // Always-current ref for closures, updated in useEffect to avoid render-phase ref modification
   const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
-  cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
+  useEffect(() => {
+    cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
+  }, [onDragStart, onDragMove, onDragEnd, findDropTarget, item]);
 
-  const panResponder = useRef(
+  // eslint-disable-next-line react-hooks/refs
+  const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -165,7 +170,7 @@ const DraggableItemCard = memo(function DraggableItemCard({
 
       onPanResponderTerminationRequest: () => true,
     })
-  ).current;
+  );
 
   const hasFacts = item.facts.length > 0;
 
@@ -234,6 +239,14 @@ export default function MealsScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [allMeals, setAllMeals] = useState<MealDocument[]>([]);
   const [itemPreviews, setItemPreviews] = useState<Record<string, MealItemPreview>>({});
+
+  // Use a ref to always have access to the latest itemPreviews state
+  // without triggering useEffect re-runs or creating stale closures
+  const itemPreviewsRef = useRef(itemPreviews);
+  useEffect(() => {
+    itemPreviewsRef.current = itemPreviews;
+  }, [itemPreviews]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -293,21 +306,38 @@ export default function MealsScreen() {
       }
 
       if (entries.length === 0) {
-        setItemPreviews({});
+        // Keep previously cached previews to enable instant back-and-forth date rendering
+        return;
+      }
+
+      // Performance Optimization (Cache-First Incremental Loading):
+      // Only fetch previews that are not already present in the local component state.
+      // This completely avoids redundant API queries and Promise.all micro-tasks
+      // on already-loaded items when the list changes (e.g. during drag-and-drop or date shifts).
+      const missingEntries = entries.filter((e) => !itemPreviewsRef.current[e.cacheKey]);
+
+      if (missingEntries.length === 0) {
+        // All displayed items are already cached in state, no need to show loading or fetch
         return;
       }
 
       setIsLoadingItems(true);
       try {
         const previews = await Promise.all(
-          entries.map(async ({ cacheKey, barcode, type }) => {
+          missingEntries.map(async ({ cacheKey, barcode, type }) => {
             const preview = await fetchMealItemPreview(barcode, type);
             return [cacheKey, preview] as const;
           }),
         );
 
         if (!cancelled) {
-          setItemPreviews(Object.fromEntries(previews));
+          setItemPreviews((prev) => {
+            const next = { ...prev };
+            for (const [key, val] of previews) {
+              next[key] = val;
+            }
+            return next;
+          });
         }
       } catch (error) {
         console.warn('Failed to load meal item previews', error);
@@ -478,7 +508,7 @@ export default function MealsScreen() {
       console.warn('Failed to move item between meals', err);
       await fetchMeals();
     }
-  }, [user?.$id, fetchMeals, showToast]);
+  }, [user, fetchMeals, showToast]);
 
   const measureZone = useCallback((type: MealType) => {
     const ref = zoneRefs.current[type];
