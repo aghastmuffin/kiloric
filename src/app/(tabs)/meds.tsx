@@ -12,15 +12,14 @@ export default function MedsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Image
-            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAhznGO1t6t7HdPItokTFTkfFra3ydiFKEEAr7Sg6mZngzN0XfBZsRN_6rJAk2z1c4TeHcS7qr5ZgmliZ27Nn3WvsRBjy09J8f5twYfiixPE-dDuHilwftSVXvRgoTZYpY_Tb7Y1jJHDeUHh7q4AqqjIC6CKdzBghUITBqn_A6cJ1rpYpTEwmcgyqS0Ngt5Pi4BQInkKsgPQGVdSSuzrptCPHR6PKmaCOqDsR3h1oQWEXAh39pkgnxqdaAIw68EsG_hGoQjgQWzjvxs' }}
-            style={styles.avatar}
-          />
+          <View style={styles.profileAvatarFallback}>
+            <MaterialIcons name="person" size={18} color={colors.textMuted} />
+          </View>
         </View>
         <Text style={styles.headerTitle}>CalCount</Text>
         <TouchableOpacity style={styles.streakContainer}>
-          <Text style={styles.streakText}>7</Text>
-          <MaterialIcons name="local-fire-department" size={20} color="#9d4300" />
+          <Text style={[styles.streakText, { color: colors.streakColor }]}>7</Text>
+          <MaterialIcons name="local-fire-department" size={20} color={colors.streakColor} />
         </TouchableOpacity>
       </View>
 
@@ -33,12 +32,12 @@ export default function MedsScreen() {
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>Daily Adherence</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>66% COMPLETED</Text>
+            <View style={[styles.badge, { backgroundColor: colors.accentSoft }]}>
+              <Text style={[styles.badgeText, { color: colors.accent }]}>66% COMPLETED</Text>
             </View>
           </View>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: '66%' }]} />
+            <View style={[styles.progressBarFill, { width: '66%', backgroundColor: colors.accent }]} />
           </View>
           <Text style={styles.progressLabel}>2 of 3 taken</Text>
         </View>
@@ -54,8 +53,8 @@ export default function MedsScreen() {
             <View style={styles.listContainer}>
               {/* Item 1 Taken */}
               <View style={[styles.listItem, styles.listItemTaken]}>
-                <View style={styles.checkboxTaken}>
-                  <MaterialIcons name="check" size={16} color="#fff" />
+                <View style={[styles.checkboxTaken, { backgroundColor: colors.accent }]}>
+                  <MaterialIcons name="check" size={16} color={colors.onAccent} />
                 </View>
                 <View style={styles.itemMain}>
                   <Text style={[styles.itemTitle, styles.textStrike]}>Lisinopril</Text>
@@ -66,8 +65,8 @@ export default function MedsScreen() {
 
               {/* Item 2 Taken */}
               <View style={[styles.listItem, styles.listItemTaken, styles.noBorder]}>
-                <View style={styles.checkboxTaken}>
-                  <MaterialIcons name="check" size={16} color="#fff" />
+                <View style={[styles.checkboxTaken, { backgroundColor: colors.accent }]}>
+                  <MaterialIcons name="check" size={16} color={colors.onAccent} />
                 </View>
                 <View style={styles.itemMain}>
                   <Text style={[styles.itemTitle, styles.textStrike]}>Vitamin D3</Text>
@@ -85,20 +84,20 @@ export default function MedsScreen() {
               <Text style={styles.groupTitle}>AFTERNOON</Text>
             </View>
 
-            <View style={styles.activeCard}>
-              <View style={styles.activeIndicator} />
+            <View style={[styles.activeCard, { borderColor: colors.accentSoft }]}>
+              <View style={[styles.activeIndicator, { backgroundColor: colors.accent }]} />
               <View style={styles.activeContent}>
                 <View style={styles.itemLeft}>
                   <View style={styles.checkboxEmpty} />
                   <View style={styles.itemMain}>
                     <Text style={styles.itemTitle}>Metformin</Text>
                     <Text style={styles.itemSubtitle}>
-                      500mg • 1 pill <Text style={styles.errorText}>Overdue (2:00 PM)</Text>
+                      500mg • 1 pill <Text style={[styles.errorText, { color: colors.danger }]}>Overdue (2:00 PM)</Text>
                     </Text>
                   </View>
                 </View>
-                <TouchableOpacity style={styles.actionButton}>
-                  <Text style={styles.actionButtonText}>Mark as Taken</Text>
+                <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.accent }]} activeOpacity={0.8}>
+                  <Text style={[styles.actionButtonText, { color: colors.onAccent }]}>Mark as Taken</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -129,11 +128,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
+    backgroundColor: c.surfaceAlt,
     overflow: 'hidden',
   },
-  avatar: {
-    width: '100%',
-    height: '100%',
+  profileAvatarFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 22,
@@ -146,7 +147,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 4,
   },
   streakText: {
-    color: '#9d4300',
     fontWeight: '500',
     fontSize: 13,
   },
@@ -188,13 +188,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.text,
   },
   badge: {
-    backgroundColor: 'rgba(249,115,22,0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 99,
   },
   badgeText: {
-    color: '#f97316',
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -207,7 +205,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#f97316',
     borderRadius: 3,
   },
   progressLabel: {
@@ -257,7 +254,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#f97316',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -291,13 +287,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: 'rgba(249,115,22,0.2)',
     overflow: 'hidden',
     position: 'relative',
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
     elevation: 2,
   },
   activeIndicator: {
@@ -306,7 +297,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 4,
-    backgroundColor: '#f97316',
   },
   activeContent: {
     padding: 16,
@@ -320,23 +310,16 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 16,
   },
   errorText: {
-    color: c.danger,
     fontWeight: '500',
   },
   actionButton: {
-    backgroundColor: '#f97316',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 99,
     alignItems: 'center',
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
     elevation: 2,
   },
   actionButtonText: {
-    color: '#fff',
     fontSize: 13,
     fontWeight: '600',
   }

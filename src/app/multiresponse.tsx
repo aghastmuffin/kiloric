@@ -1,11 +1,13 @@
 import { authenticatedRequest } from '@/components/apiUtils';
 import BarcodeDetailModal from '@/components/BarcodeDetailModal';
+import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { MotiView } from 'moti';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
@@ -68,9 +70,15 @@ function ObjectCard({
 
   return (
     <MotiView
-      from={{ opacity: 0, translateY: 20 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ delay: 50 + index * 100, type: 'spring', damping: 14 }}
+      from={{ opacity: 0, scale: 0.9, translateY: 30 }}
+      animate={{ opacity: 1, scale: 1, translateY: 0 }}
+      transition={{
+        delay: 50 + index * 100,
+        type: 'spring',
+        damping: 12,
+        stiffness: 100,
+        mass: 0.8,
+      }}
       style={styles.card}
     >
       <Text style={styles.cardTitle}>{title}</Text>
@@ -108,16 +116,43 @@ function ResultsBody({
   onViewMore?: (barcode: string) => void;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const TARGET_ERROR = "404: no products found";
 
   if (data === null || data === undefined) {
-    return <Text style={styles.mutedText}>No results to display.</Text>;
+    return (
+      <View style={styles.emptyStateContainer}>
+        <MotiView
+          from={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 15 }}
+          style={styles.emptyIconCircle}
+        >
+          <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+        </MotiView>
+        <Text style={styles.emptyStateTitle}>No results to display</Text>
+        <Text style={styles.emptyStateSubtitle}>Try searching for another food or scan a barcode</Text>
+      </View>
+    );
   }
 
   // 1. Check direct string match
   if (typeof data === 'string') {
     if (data.trim().toLowerCase() === TARGET_ERROR) {
-      return <Text style={styles.mutedText}>No matches found. You can return home</Text>;
+      return (
+        <View style={styles.emptyStateContainer}>
+          <MotiView
+            from={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={styles.emptyIconCircle}
+          >
+            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+          </MotiView>
+          <Text style={styles.emptyStateTitle}>No matches found</Text>
+          <Text style={styles.emptyStateSubtitle}>We couldn't find any products. You can return home and try again.</Text>
+        </View>
+      );
     }
     return (
       <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={styles.card}>
@@ -134,11 +169,18 @@ function ResultsBody({
       data[0].trim().toLowerCase() === TARGET_ERROR
     ) {
       return (
-        <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={[styles.card, styles.errorCard]}>
-          <Text style={[styles.messageText, styles.errorText]}>
-            No matches found. Would you like to add this product? (UNIMPLEMENTED)
-          </Text>
-        </MotiView>
+        <View style={styles.emptyStateContainer}>
+          <MotiView
+            from={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={styles.emptyIconCircle}
+          >
+            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+          </MotiView>
+          <Text style={styles.emptyStateTitle}>No matches found</Text>
+          <Text style={styles.emptyStateSubtitle}>No matching products were found in the database.</Text>
+        </View>
       );
     }
 
@@ -155,7 +197,19 @@ function ResultsBody({
       }
 
       return (
-        <MotiView key={index} from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: index * 100 }} style={styles.card}>
+        <MotiView
+          key={index}
+          from={{ opacity: 0, scale: 0.9, translateY: 30 }}
+          animate={{ opacity: 1, scale: 1, translateY: 0 }}
+          transition={{
+            delay: index * 100,
+            type: 'spring',
+            damping: 12,
+            stiffness: 100,
+            mass: 0.8,
+          }}
+          style={styles.card}
+        >
           <Text style={styles.cardTitle}>Result {index + 1}</Text>
           <Text style={styles.messageText}>{formatValue(item)}</Text>
         </MotiView>
@@ -169,7 +223,20 @@ function ResultsBody({
     const nestedMessage = obj.error || obj.detail || obj.message || obj.result;
 
     if (typeof nestedMessage === 'string' && nestedMessage.trim().toLowerCase() === TARGET_ERROR) {
-      return <Text style={styles.mutedText}>No matches found. You can return home</Text>;
+      return (
+        <View style={styles.emptyStateContainer}>
+          <MotiView
+            from={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={styles.emptyIconCircle}
+          >
+            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+          </MotiView>
+          <Text style={styles.emptyStateTitle}>No matches found</Text>
+          <Text style={styles.emptyStateSubtitle}>No matching products were found. Try another search!</Text>
+        </View>
+      );
     }
 
     return <ObjectCard item={obj} index={0} onViewMore={onViewMore} />;
@@ -344,5 +411,37 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.onAccent,
     fontSize: 15,
     fontWeight: '700',
+  },
+  // Illustrated Empty State
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  emptyIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: c.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: c.border,
+    marginBottom: 8,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: c.text,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: c.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
   },
 });

@@ -1,0 +1,10 @@
+env: load .env
+env: export EXPO_PUBLIC_APPWRITE_DATABASE_ID EXPO_PUBLIC_APPWRITE_DEP_ENDPOINT EXPO_PUBLIC_APPWRITE_ENDPOINT EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID EXPO_PUBLIC_APPWRITE_PLATFORM_ID EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID EXPO_PUBLIC_APPWRITE_PROJECT_ID EXPO_PUBLIC_APPWRITE_PROJECT_NAME EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID
+Starting project at /app
+Using src/app as the root directory for Expo Router.
+React Compiler enabled
+Starting Metro Bundler
+
+Waiting on http://localhost:8081
+2 packages may need updating. Run npx expo install --check for details.
+Logs for your project will appear below.
