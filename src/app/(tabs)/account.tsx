@@ -3,15 +3,36 @@ import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
 import { MacroProgressBar } from '@/components/MacroProgressBar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import {
+  NativeDatePicker,
+  NativeEnumPicker,
+  NativeIntPicker,
+  NativeDecimalPicker,
+} from '@/components/NativePickers';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
-import { calculateAge } from '@/lib/nutrition';
-import { getProfile, saveProfileFields } from '@/lib/profile';
+import {
+  calculateAge,
+  buildNutritionPlan,
+  calculateWeeklyDeficit,
+  ACTIVITY_OPTIONS,
+  GOAL_OPTIONS,
+  PACE_OPTIONS,
+  DIET_OPTIONS,
+  type Sex,
+  type ActivityLevel,
+  type FitnessGoal,
+  type GoalPace,
+  type DietStyle,
+} from '@/lib/nutrition';
+import { getProfile, saveProfileFields, dateToIso } from '@/lib/profile';
 import { listHistoricMeals } from '@/lib/meals';
 import { calculateStreak } from '@/lib/gamification';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { COUNTRY_OPTIONS } from '@/lib/countries';
 import { parseDisplayUnitsPreference, appendDisplayUnitsToGoalPlain, type DisplayUnits } from '@/lib/units';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -27,7 +48,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { MotiView } from 'moti';
 
 import { SkeletonBlock } from '@/components/SkeletonBlock';
 
@@ -59,7 +79,7 @@ export default function AccountScreen() {
           <View style={styles.avatarContainerHeader}>
             <MaterialIcons name="person" size={20} color={colors.accent} />
           </View>
-          <Text style={styles.headerTitle}>Vitals</Text>
+          <Text style={styles.headerTitle}>Vitals & Profile</Text>
         </View>
       </View>
 
@@ -79,20 +99,47 @@ function LoggedInPanel() {
   const [signingOut, setSigningOut] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [program, setProgram] = useState('muscle_gain');
 
+  // Profile Details
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [country, setCountry] = useState('US');
+  const [dateOfBirth, setDateOfBirth] = useState<Date>(new Date(1990, 0, 15));
+  const [age, setAge] = useState('—');
+
+  // Body Details
   const [weight, setWeight] = useState('0');
   const [height, setHeight] = useState('0');
-  const [age, setAge] = useState('—');
+  const [sex, setSex] = useState<Sex>('female');
+
+  // Goals & Targets
   const [targetKcal, setTargetKcal] = useState('2000');
   const [targetProtein, setTargetProtein] = useState('125');
   const [targetCarbs, setTargetCarbs] = useState('225');
   const [targetFat, setTargetFat] = useState('67');
   const [dailyFluid, setDailyFluid] = useState('2500');
-  const [username, setUsername] = useState('');
+  const [targetWeight, setTargetWeight] = useState('');
+  const [goalPlain, setGoalPlain] = useState('');
+
+  // Options
+  const [activity, setActivity] = useState<ActivityLevel>('moderate');
+  const [fitnessGoal, setFitnessGoal] = useState<FitnessGoal>('lose');
+  const [pace, setPace] = useState<GoalPace>('moderate');
+  const [diet, setDiet] = useState<DietStyle>('balanced');
   
   const [displayUnits, setDisplayUnits] = useState<DisplayUnits>('metric');
-  const [goalPlain, setGoalPlain] = useState('');
+
+  // Formula Auto-update Confirmation Modal state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingTargets, setPendingTargets] = useState<{
+    targetKcal: string;
+    targetProtein: string;
+    targetCarbs: string;
+    targetFat: string;
+    dailyFluid: string;
+    goalPlain: string;
+    targetWeight: string;
+  } | null>(null);
 
   // Gamification Stats
   const [mealsCount, setMealsCount] = useState(0);
@@ -117,10 +164,52 @@ function LoggedInPanel() {
         setTargetFat(profile.target_fat?.toString() ?? '67');
         setDailyFluid(profile.daily_fluid?.toString() ?? '2500');
         setUsername(profile.username ?? 'User');
+        setBio(profile.bio ?? '');
+        setCountry(profile.country ?? 'US');
+        setTargetWeight(profile.target_weight?.toString() ?? '');
         setGoalPlain(profile.goal_plain ?? '');
         setDisplayUnits(parseDisplayUnitsPreference(profile.goal_plain, profile.country));
+
         if (profile.dateOfBirth) {
-          setAge(String(calculateAge(new Date(profile.dateOfBirth))));
+          const dobDate = new Date(profile.dateOfBirth);
+          setDateOfBirth(dobDate);
+          setAge(String(calculateAge(dobDate)));
+        }
+
+        // Try to guess/infer diet, fitnessGoal, pace from goal_plain text
+        if (profile.goal_plain) {
+          const lowerGoal = profile.goal_plain.toLowerCase();
+
+          // Guess Diet
+          if (lowerGoal.includes('high protein')) {
+            setDiet('high_protein');
+          } else if (lowerGoal.includes('low carb') || lowerGoal.includes('lower carb')) {
+            setDiet('low_carb');
+          } else if (lowerGoal.includes('mediterranean')) {
+            setDiet('mediterranean');
+          } else if (lowerGoal.includes('plant-forward')) {
+            setDiet('plant_forward');
+          } else {
+            setDiet('balanced');
+          }
+
+          // Guess Goal
+          if (lowerGoal.includes('reach')) {
+            setFitnessGoal('lose');
+          } else if (lowerGoal.includes('build toward')) {
+            setFitnessGoal('gain');
+          } else if (lowerGoal.includes('maintain')) {
+            setFitnessGoal('maintain');
+          }
+
+          // Guess Pace
+          if (lowerGoal.includes('~0.25') || lowerGoal.includes('gentle')) {
+            setPace('gentle');
+          } else if (lowerGoal.includes('~0.75') || lowerGoal.includes('focused')) {
+            setPace('aggressive');
+          } else {
+            setPace('moderate');
+          }
         }
       } else {
         setUsername('User');
@@ -153,11 +242,104 @@ function LoggedInPanel() {
     }, [loadProfile]),
   );
 
+  // Central trigger to see if changes in personal details warrant a formula recalculation confirmation
+  const checkAndShowFormulaConfirm = (
+    updatedFields: {
+      weightKg?: number;
+      heightCm?: number;
+      dob?: Date;
+      sexVal?: Sex;
+      activityVal?: ActivityLevel;
+      goalVal?: FitnessGoal;
+      paceVal?: GoalPace;
+      dietVal?: DietStyle;
+      targetWeightVal?: number;
+    }
+  ) => {
+    const w = (updatedFields.weightKg ?? parseFloat(weight)) || 75;
+    const h = (updatedFields.heightCm ?? parseFloat(height)) || 170;
+    const dob = updatedFields.dob ?? dateOfBirth;
+    const s = updatedFields.sexVal ?? sex;
+    const act = updatedFields.activityVal ?? activity;
+    const g = updatedFields.goalVal ?? fitnessGoal;
+    const p = updatedFields.paceVal ?? pace;
+    const d = updatedFields.dietVal ?? diet;
+    const tw = updatedFields.targetWeightVal ?? (parseFloat(targetWeight) || null);
+
+    const newPlan = buildNutritionPlan({
+      dateOfBirth: dob,
+      sex: s,
+      heightCm: h,
+      weightKg: w,
+      activity: act,
+      goal: g,
+      pace: p,
+      diet: d,
+      targetWeight: tw,
+    });
+
+    const kcalDiff = newPlan.targetKcal !== parseInt(targetKcal, 10);
+    const pDiff = newPlan.targetProtein !== parseInt(targetProtein, 10);
+    const cDiff = newPlan.targetCarbs !== parseInt(targetCarbs, 10);
+    const fDiff = newPlan.targetFat !== parseInt(targetFat, 10);
+    const fluidDiff = newPlan.dailyFluid !== parseInt(dailyFluid, 10);
+
+    if (kcalDiff || pDiff || cDiff || fDiff || fluidDiff) {
+      setPendingTargets({
+        targetKcal: String(newPlan.targetKcal),
+        targetProtein: String(newPlan.targetProtein),
+        targetCarbs: String(newPlan.targetCarbs),
+        targetFat: String(newPlan.targetFat),
+        dailyFluid: String(newPlan.dailyFluid),
+        goalPlain: newPlan.goalPlain,
+        targetWeight: String(newPlan.targetWeight),
+      });
+      setShowConfirmDialog(true);
+    }
+  };
+
+  const handleApplyPending = () => {
+    if (pendingTargets) {
+      setTargetKcal(pendingTargets.targetKcal);
+      setTargetProtein(pendingTargets.targetProtein);
+      setTargetCarbs(pendingTargets.targetCarbs);
+      setTargetFat(pendingTargets.targetFat);
+      setDailyFluid(pendingTargets.dailyFluid);
+      setGoalPlain(pendingTargets.goalPlain);
+      if (pendingTargets.targetWeight) {
+        setTargetWeight(pendingTargets.targetWeight);
+      }
+    }
+    setShowConfirmDialog(false);
+    setPendingTargets(null);
+  };
+
+  const handleCancelPending = () => {
+    setShowConfirmDialog(false);
+    setPendingTargets(null);
+  };
+
   async function handleSave() {
     if (!user?.$id) return;
     setSaving(true);
     try {
+      const planVal = buildNutritionPlan({
+        dateOfBirth,
+        sex,
+        heightCm: parseFloat(height) || 170,
+        weightKg: parseFloat(weight) || 75,
+        activity,
+        goal: fitnessGoal,
+        pace,
+        diet,
+        targetWeight: parseFloat(targetWeight) || null,
+      });
+
       await saveProfileFields(user.$id, {
+        username: username.trim(),
+        bio: bio.trim() || null,
+        country: country.trim().toUpperCase() || null,
+        dateOfBirth: dateToIso(dateOfBirth),
         weight: parseFloat(weight) || 0,
         height: parseFloat(height) || 0,
         target_kcal: parseInt(targetKcal, 10) || 0,
@@ -165,7 +347,10 @@ function LoggedInPanel() {
         target_carbs: parseInt(targetCarbs, 10) || 0,
         target_fat: parseInt(targetFat, 10) || 0,
         daily_fluid: parseInt(dailyFluid, 10) || 0,
+        target_weight: parseFloat(targetWeight) || null,
         goal_plain: appendDisplayUnitsToGoalPlain(goalPlain, displayUnits),
+        TDEE: planVal.tdee,
+        weekly_deficit: calculateWeeklyDeficit(planVal.tdee, parseInt(targetKcal, 10) || 0),
       });
       Alert.alert('Saved', 'Profile updated successfully.');
     } catch (err) {
@@ -208,11 +393,11 @@ function LoggedInPanel() {
   const fatPct =
     Number(targetKcal) > 0 ? Math.round(((Number(targetFat) * 9) / Number(targetKcal)) * 100) : 0;
 
-  // Level computation based on logged meals
   const calculatedLevel = Math.max(1, Math.floor(mealsCount / 3) + 1);
 
   return (
     <View style={styles.content}>
+      {/* Profile Header Block */}
       <View style={styles.profileHeader}>
         <View style={styles.avatarWrapper}>
           <View style={styles.profileAvatarFallback}>
@@ -237,75 +422,239 @@ function LoggedInPanel() {
       {/* Stats Summary Row */}
       <View style={styles.statsSummaryRow}>
         <View style={styles.statsCard}>
+          <MaterialIcons name="restaurant" size={20} color={colors.accent} />
           <Text style={styles.statsVal}>{mealsCount}</Text>
           <Text style={styles.statsLabel}>Meals Logged</Text>
         </View>
         <View style={styles.statsCard}>
+          <MaterialIcons name="bolt" size={20} color={colors.accent} />
           <Text style={styles.statsVal}>{streakVal}d</Text>
           <Text style={styles.statsLabel}>Current Streak</Text>
         </View>
         <View style={styles.statsCard}>
+          <MaterialIcons name="event" size={20} color={colors.accent} />
           <Text style={styles.statsVal}>{daysTracked}</Text>
           <Text style={styles.statsLabel}>Days Tracked</Text>
         </View>
       </View>
 
+      {/* Account Profile Details Section (Made Editable!) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Personal Details</Text>
+        <View style={styles.sectionHeaderRow}>
+          <MaterialIcons name="face" size={18} color={colors.accent} />
+          <Text style={styles.sectionTitleWithIcon}>Profile Details</Text>
+        </View>
+        <View style={styles.card}>
+          <View style={styles.cardItem}>
+            <View style={styles.labelRow}>
+              <MaterialIcons name="person" size={16} color={colors.accent} />
+              <Text style={styles.labelWithIcon}>Username</Text>
+            </View>
+            <TextInput
+              style={styles.input}
+              value={username}
+              onChangeText={setUsername}
+              placeholder="Your username"
+              placeholderTextColor={colors.textFaint}
+              maxLength={64}
+            />
+
+            <View style={styles.labelRow}>
+              <MaterialIcons name="description" size={16} color={colors.accent} />
+              <Text style={styles.labelWithIcon}>Bio</Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Tell us a little about yourself"
+              placeholderTextColor={colors.textFaint}
+              multiline
+              maxLength={512}
+            />
+
+            <View style={styles.labelRow}>
+              <MaterialIcons name="public" size={16} color={colors.accent} />
+              <Text style={styles.labelWithIcon}>Country</Text>
+            </View>
+            <NativeEnumPicker
+              value={country}
+              options={COUNTRY_OPTIONS}
+              onChange={(val) => {
+                setCountry(val);
+                // Dynamically update displayUnits if country preference dictates it
+                if (val === 'US' || val === 'GB') {
+                  setDisplayUnits('imperial');
+                } else {
+                  setDisplayUnits('metric');
+                }
+              }}
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Personal Body Details Section (Fully Editable!) */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <MaterialIcons name="fitness-center" size={18} color={colors.accent} />
+          <Text style={styles.sectionTitleWithIcon}>Personal Details</Text>
+        </View>
         <View style={styles.gridContainer}>
           <View style={styles.gridRow}>
             <View style={[styles.gridItem, styles.gridItemBorderRight, styles.gridItemBorderBottom]}>
-              <Text style={styles.gridLabel}>WEIGHT</Text>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="fitness-center" size={14} color={colors.accent} />
+                <Text style={styles.gridLabel}>WEIGHT</Text>
+              </View>
               <View style={styles.gridInputRow}>
                 <TextInput
                   style={styles.gridInput}
                   value={weight}
                   onChangeText={setWeight}
                   keyboardType="numeric"
+                  onBlur={() => {
+                    checkAndShowFormulaConfirm({ weightKg: parseFloat(weight) || undefined });
+                  }}
                 />
-                <Text style={styles.gridUnit}>kg</Text>
+                <Text style={styles.gridUnit}>{displayUnits === 'imperial' ? 'lbs' : 'kg'}</Text>
               </View>
             </View>
             <View style={[styles.gridItem, styles.gridItemBorderBottom]}>
-              <Text style={styles.gridLabel}>HEIGHT</Text>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="straighten" size={14} color={colors.accent} />
+                <Text style={styles.gridLabel}>HEIGHT</Text>
+              </View>
               <View style={styles.gridInputRow}>
                 <TextInput
                   style={styles.gridInput}
                   value={height}
                   onChangeText={setHeight}
                   keyboardType="numeric"
+                  onBlur={() => {
+                    checkAndShowFormulaConfirm({ heightCm: parseFloat(height) || undefined });
+                  }}
                 />
-                <Text style={styles.gridUnit}>cm</Text>
+                <Text style={styles.gridUnit}>{displayUnits === 'imperial' ? 'in' : 'cm'}</Text>
               </View>
             </View>
           </View>
           <View style={styles.gridRow}>
             <View style={[styles.gridItem, styles.gridItemBorderRight]}>
-              <Text style={styles.gridLabel}>AGE</Text>
-              <Text style={styles.gridInput}>{age}</Text>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="cake" size={14} color={colors.accent} />
+                <Text style={styles.gridLabel}>BIRTHDATE (AGE: {age})</Text>
+              </View>
+              <NativeDatePicker
+                value={dateOfBirth}
+                onChange={(dob) => {
+                  setDateOfBirth(dob);
+                  setAge(String(calculateAge(dob)));
+                  checkAndShowFormulaConfirm({ dob });
+                }}
+              />
             </View>
             <View style={styles.gridItem}>
-              <Text style={styles.gridLabel}>WATER TARGET</Text>
-              <View style={styles.gridInputRow}>
-                <TextInput
-                  style={styles.gridInput}
-                  value={dailyFluid}
-                  onChangeText={setDailyFluid}
-                  keyboardType="numeric"
-                />
-                <Text style={styles.gridUnit}>ml</Text>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="wc" size={14} color={colors.accent} />
+                <Text style={styles.gridLabel}>SEX</Text>
               </View>
+              <ThemedSegmentedControl
+                values={['Female', 'Male']}
+                selectedIndex={sex === 'female' ? 0 : 1}
+                onChange={(idx) => {
+                  const nextSex = idx === 0 ? 'female' : 'male';
+                  setSex(nextSex);
+                  checkAndShowFormulaConfirm({ sexVal: nextSex });
+                }}
+              />
             </View>
           </View>
         </View>
       </View>
 
+      {/* Activity & Goal Configuration Options (Added Options!) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Nutrition Goals</Text>
+        <View style={styles.sectionHeaderRow}>
+          <MaterialIcons name="tune" size={18} color={colors.accent} />
+          <Text style={styles.sectionTitleWithIcon}>Activity & Goal Settings</Text>
+        </View>
+        <View style={styles.card}>
+          <View style={styles.cardItem}>
+            <View style={styles.labelRow}>
+              <MaterialIcons name="directions-run" size={16} color={colors.accent} />
+              <Text style={styles.labelWithIcon}>Activity Level</Text>
+            </View>
+            <NativeEnumPicker
+              value={activity}
+              options={ACTIVITY_OPTIONS}
+              onChange={(val) => {
+                setActivity(val);
+                checkAndShowFormulaConfirm({ activityVal: val });
+              }}
+            />
+
+            <View style={styles.labelRow}>
+              <MaterialIcons name="track-changes" size={16} color={colors.accent} />
+              <Text style={styles.labelWithIcon}>Fitness Goal</Text>
+            </View>
+            <NativeEnumPicker
+              value={fitnessGoal}
+              options={GOAL_OPTIONS}
+              onChange={(val) => {
+                setFitnessGoal(val);
+                checkAndShowFormulaConfirm({ goalVal: val });
+              }}
+            />
+
+            {fitnessGoal !== 'maintain' && (
+              <>
+                <View style={styles.labelRow}>
+                  <MaterialIcons name="speed" size={16} color={colors.accent} />
+                  <Text style={styles.labelWithIcon}>Preferred Pace</Text>
+                </View>
+                <NativeEnumPicker
+                  value={pace}
+                  options={PACE_OPTIONS}
+                  onChange={(val) => {
+                    setPace(val);
+                    checkAndShowFormulaConfirm({ paceVal: val });
+                  }}
+                />
+              </>
+            )}
+
+            <View style={styles.labelRow}>
+              <MaterialIcons name="restaurant-menu" size={16} color={colors.accent} />
+              <Text style={styles.labelWithIcon}>Dietary Style</Text>
+            </View>
+            <NativeEnumPicker
+              value={diet}
+              options={DIET_OPTIONS}
+              onChange={(val) => {
+                setDiet(val);
+                checkAndShowFormulaConfirm({ dietVal: val });
+              }}
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Nutrition Goals & Daily Targets Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <MaterialIcons name="local-dining" size={18} color={colors.accent} />
+          <Text style={styles.sectionTitleWithIcon}>Nutrition Targets</Text>
+        </View>
         <View style={styles.card}>
           <View style={[styles.cardItem, styles.cardItemBorder]}>
+            {goalPlain ? <Text style={styles.goalDescription}>{goalPlain}</Text> : null}
+
             <View style={styles.goalRow}>
-              <Text style={styles.goalLabel}>Daily Calories</Text>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="local-fire-department" size={16} color={colors.accent} />
+                <Text style={styles.goalLabel}>Daily Calories</Text>
+              </View>
               <View style={styles.goalInputRow}>
                 <TextInput
                   style={styles.goalInput}
@@ -316,12 +665,52 @@ function LoggedInPanel() {
                 <Text style={styles.goalUnit}>kcal</Text>
               </View>
             </View>
+
+            <View style={styles.goalRow}>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="local-drink" size={16} color={colors.accent} />
+                <Text style={styles.goalLabel}>Water Target</Text>
+              </View>
+              <View style={styles.goalInputRow}>
+                <TextInput
+                  style={styles.goalInput}
+                  value={dailyFluid}
+                  onChangeText={setDailyFluid}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.goalUnit}>ml</Text>
+              </View>
+            </View>
+
+            <View style={styles.goalRow}>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="track-changes" size={16} color={colors.accent} />
+                <Text style={styles.goalLabel}>Target Weight</Text>
+              </View>
+              <View style={styles.goalInputRow}>
+                <TextInput
+                  style={styles.goalInput}
+                  value={targetWeight}
+                  onChangeText={setTargetWeight}
+                  keyboardType="numeric"
+                  placeholder="Not set"
+                  placeholderTextColor={colors.textFaint}
+                  onBlur={() => {
+                    checkAndShowFormulaConfirm({ targetWeightVal: parseFloat(targetWeight) || undefined });
+                  }}
+                />
+                <Text style={styles.goalUnit}>{displayUnits === 'imperial' ? 'lbs' : 'kg'}</Text>
+              </View>
+            </View>
           </View>
 
           <View style={[styles.cardItem, { gap: 16 }]}>
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
-                <Text style={styles.macroName}>Protein ({proteinPct}%)</Text>
+                <View style={styles.labelRow}>
+                  <MaterialIcons name="restaurant" size={14} color="#f97316" />
+                  <Text style={styles.macroName}>Protein ({proteinPct}%)</Text>
+                </View>
                 <TextInput
                   style={styles.macroValueInput}
                   value={targetProtein}
@@ -334,7 +723,10 @@ function LoggedInPanel() {
 
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
-                <Text style={styles.macroName}>Carbs ({carbsPct}%)</Text>
+                <View style={styles.labelRow}>
+                  <MaterialIcons name="grain" size={14} color="#0a84ff" />
+                  <Text style={styles.macroName}>Carbs ({carbsPct}%)</Text>
+                </View>
                 <TextInput
                   style={styles.macroValueInput}
                   value={targetCarbs}
@@ -347,7 +739,10 @@ function LoggedInPanel() {
 
             <View style={styles.macroRow}>
               <View style={styles.macroHeader}>
-                <Text style={styles.macroName}>Fats ({fatPct}%)</Text>
+                <View style={styles.labelRow}>
+                  <MaterialIcons name="opacity" size={14} color="#5e5ce6" />
+                  <Text style={styles.macroName}>Fats ({fatPct}%)</Text>
+                </View>
                 <TextInput
                   style={styles.macroValueInput}
                   value={targetFat}
@@ -361,32 +756,19 @@ function LoggedInPanel() {
         </View>
       </View>
 
+      {/* Preferences & UI Settings Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Program Presets</Text>
-        <View style={styles.presetGrid}>
-          {['Weight Loss', 'Muscle Gain', 'Maintenance'].map((preset) => {
-            const key = preset.toLowerCase().replace(' ', '_');
-            const isSelected = program === key;
-            return (
-              <Pressable
-                key={preset}
-                style={[styles.presetCard, isSelected && styles.presetCardSelected]}
-                onPress={() => setProgram(key)}
-              >
-                <Text style={[styles.presetText, isSelected && { color: colors.accent }]}>{preset}</Text>
-                {isSelected ? <MaterialIcons name="check-circle" size={20} color={colors.accent} /> : null}
-              </Pressable>
-            );
-          })}
+        <View style={styles.sectionHeaderRow}>
+          <MaterialIcons name="settings" size={18} color={colors.accent} />
+          <Text style={styles.sectionTitleWithIcon}>Preferences</Text>
         </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.card}>
           <View style={styles.settingsBlock}>
             <View style={styles.preferenceRow}>
-              <Text style={styles.label}>Unit System</Text>
+              <View style={styles.labelRow}>
+                <MaterialIcons name="straighten" size={16} color={colors.accent} />
+                <Text style={styles.labelWithIcon}>Unit System</Text>
+              </View>
               <Text style={styles.hint}>
                 Switch between Metric (kg, ml, cm) and Imperial (lbs, fl oz, inches) for display.
               </Text>
@@ -402,6 +784,7 @@ function LoggedInPanel() {
         </View>
       </View>
 
+      {/* Form Action Buttons */}
       <View style={styles.section}>
         <Pressable
           style={[styles.saveButton, { backgroundColor: colors.accent }, saving && styles.buttonDisabled]}
@@ -419,6 +802,17 @@ function LoggedInPanel() {
           <Text style={styles.logoutButtonText}>{signingOut ? 'Logging out…' : 'Log Out'}</Text>
         </Pressable>
       </View>
+
+      {/* OS Agnostic Formula Auto-update Confirmation Modal */}
+      <ConfirmDialog
+        visible={showConfirmDialog}
+        title="Update Targets?"
+        message={`We detected changes to your personal details. Do you want to automatically update your daily calorie, macro, and hydration targets based on these changes?`}
+        confirmLabel="Update"
+        cancelLabel="Keep Custom"
+        onConfirm={handleApplyPending}
+        onCancel={handleCancelPending}
+      />
     </View>
   );
 }
@@ -571,6 +965,19 @@ const makeStyles = (c: ThemeColors) =>
       letterSpacing: 0.6,
       paddingHorizontal: 4,
     },
+    sectionTitleWithIcon: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 4,
+    },
     gridContainer: {
       backgroundColor: c.surface,
       borderRadius: 12,
@@ -635,6 +1042,7 @@ const makeStyles = (c: ThemeColors) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      marginVertical: 4,
     },
     goalLabel: {
       fontSize: 16,
@@ -657,6 +1065,12 @@ const makeStyles = (c: ThemeColors) =>
     goalUnit: {
       fontSize: 13,
       color: c.textMuted,
+    },
+    goalDescription: {
+      fontSize: 14,
+      color: c.textSoft,
+      lineHeight: 20,
+      marginBottom: 10,
     },
     macroRow: {
       gap: 8,
@@ -718,6 +1132,30 @@ const makeStyles = (c: ThemeColors) =>
       color: c.text,
       fontSize: 16,
       marginBottom: 6,
+    },
+    labelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    labelWithIcon: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.textSoft,
+    },
+    input: {
+      backgroundColor: c.surfaceAlt,
+      color: c.text,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      width: '100%',
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    multilineInput: {
+      minHeight: 80,
+      textAlignVertical: 'top',
     },
     hint: {
       color: c.textFaint,
