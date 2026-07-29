@@ -255,6 +255,13 @@ function pickWritablePayload(
   return patch
 }
 
+// ⚡ Bolt: Memory Cache and Promise Deduplication for profile documents to prevent
+// redundant Appwrite round-trips and simultaneous duplicate requests across different
+// focus/mount effects (e.g. ProfileGate and Dial components loading concurrently).
+let cachedProfile: { userId: string; profile: ProfileDocument | null; expiresAt: number } | null = null
+let inflightProfilePromise: Promise<ProfileDocument | null> | null = null
+let inflightProfileUserId: string | null = null
+
 /** Create profile row keyed by Appwrite Auth user id */
 export async function createProfile(userId: string, data: ProfileCreate) {
   console.log('[profile] createDocument →', {
@@ -262,13 +269,26 @@ export async function createProfile(userId: string, data: ProfileCreate) {
     collectionId: USER_PROFILES_COLLECTION_ID,
     documentId: userId,
   })
-  return databases.createDocument({
+
+  // Invalidate any existing profile cache for this user
+  if (cachedProfile && cachedProfile.userId === userId) {
+    cachedProfile = null
+  }
+
+  const res = await databases.createDocument({
     databaseId: DATABASE_ID,
     collectionId: USER_PROFILES_COLLECTION_ID,
     documentId: userId,
     data,
     permissions: profileDocumentPermissions(userId),
   })
+
+  // Ensure any cached value is invalidated on successful creation
+  if (cachedProfile && cachedProfile.userId === userId) {
+    cachedProfile = null
+  }
+
+  return res
 }
 
 /**
@@ -289,25 +309,75 @@ export async function assertActiveSession(): Promise<string> {
 }
 
 export async function updateProfile(userId: string, data: Partial<ProfileFields>) {
-  return databases.updateDocument({
+  // Invalidate profile cache before updating to prevent any stale reads
+  if (cachedProfile && cachedProfile.userId === userId) {
+    cachedProfile = null
+  }
+
+  const res = await databases.updateDocument({
     databaseId: DATABASE_ID,
     collectionId: USER_PROFILES_COLLECTION_ID,
     documentId: userId,
     data,
   })
+
+  // Ensure profile cache is invalidated after a successful update
+  if (cachedProfile && cachedProfile.userId === userId) {
+    cachedProfile = null
+  }
+
+  return res
 }
 
 export async function getProfile(userId: string): Promise<ProfileDocument | null> {
-  try {
-    return (await databases.getDocument({
-      databaseId: DATABASE_ID,
-      collectionId: USER_PROFILES_COLLECTION_ID,
-      documentId: userId,
-    })) as ProfileDocument
-  } catch (err) {
-    if (isDocumentNotFound(err)) return null
-    throw err
+  // 1. Check if we have a valid, unexpired cached profile for this user
+  if (cachedProfile && cachedProfile.userId === userId && cachedProfile.expiresAt > Date.now()) {
+    return cachedProfile.profile
   }
+
+  // 2. Check if a fetch is already in progress for this same user (Deduplication)
+  if (inflightProfilePromise && inflightProfileUserId === userId) {
+    return inflightProfilePromise
+  }
+
+  // 3. Initiate the request with deduplication
+  inflightProfileUserId = userId
+  inflightProfilePromise = (async () => {
+    try {
+      const profile = (await databases.getDocument({
+        databaseId: DATABASE_ID,
+        collectionId: USER_PROFILES_COLLECTION_ID,
+        documentId: userId,
+      })) as ProfileDocument
+
+      // Cache the result for 15 seconds to prevent hammering of profile reads
+      cachedProfile = {
+        userId,
+        profile,
+        expiresAt: Date.now() + 15 * 1000,
+      }
+
+      return profile
+    } catch (err) {
+      if (isDocumentNotFound(err)) {
+        // Cache negative lookup (profile not found/not complete) briefly to prevent constant 404 queries
+        cachedProfile = {
+          userId,
+          profile: null,
+          expiresAt: Date.now() + 15 * 1000,
+        }
+        return null
+      }
+      throw err
+    } finally {
+      if (inflightProfileUserId === userId) {
+        inflightProfilePromise = null
+        inflightProfileUserId = null
+      }
+    }
+  })()
+
+  return inflightProfilePromise
 }
 
 /**
