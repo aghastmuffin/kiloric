@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -26,11 +26,7 @@ export default function CreditsScreen() {
   
   // Clean state management for current rendering text
   const [currentIndex, setCurrentIndex] = useState(-1);
-
-  useEffect(() => {
-    // Kickoff the chain reaction
-    startIntro();
-  }, []);
+  const [, setClickCount] = useState(0);
 
   // 1. Morph to circle, then slide up
   const startIntro = () => {
@@ -44,6 +40,45 @@ export default function CreditsScreen() {
         }
       })
     );
+  };
+
+  useEffect(() => {
+    // Kickoff the chain reaction
+    startIntro();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleAvatarPress = async () => {
+    let triggered = false;
+    setClickCount((prev) => {
+      const nextCount = prev + 1;
+      if (nextCount >= 20) {
+        triggered = true;
+        return 0; // reset count
+      }
+      return nextCount;
+    });
+
+    if (triggered) {
+      try {
+        const response = await fetch('https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        const totalSeconds = data.total_seconds || 72798;
+        const hours = Math.round(totalSeconds / 3600);
+        Alert.alert(
+          "Easter Egg Discovered! 🥚",
+          `Did you know? Levi Brown spent approximately ${hours} hours building his first projects! Keep tracking, maybe you'll match that streak! 🚀`,
+          [{ text: "Awesome!" }]
+        );
+      } catch {
+        Alert.alert(
+          "Easter Egg Discovered! 🥚",
+          "Did you know? Levi Brown spent approximately 20 hours building his first projects! Keep tracking, maybe you'll match that streak! 🚀",
+          [{ text: "Awesome!" }]
+        );
+      }
+    }
   };
 
   // 2. Recursive function to fade each item in and out sequentially
@@ -93,17 +128,22 @@ export default function CreditsScreen() {
   const animatedListStyle = useAnimatedStyle(() => ({
     opacity: listOpacity.value,
   }));
-  //TODO: when clicked many times (20ish the pfp will spawn a notification that pulls the time from https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex (seconds -> human readable time) and then says a message and tells them how one person made it in x hours whatever)
   return (
     <View style={styles.container}>
       {/* Animated Header Box */}
       <Animated.View style={[styles.centerBox, animatedHeaderStyle]}>
-        <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-          <Image
-            source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
-            style={styles.avatar}
-          />
-        </Animated.View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Levi's avatar. Tap 20 times for a special easter egg!"
+          onPress={handleAvatarPress}
+        >
+          <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
+            <Image
+              source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
+              style={styles.avatar}
+            />
+          </Animated.View>
+        </Pressable>
         <Text style={styles.textTitle}>Created by Levi Brown</Text> 
         <Text style={styles.textSubtitle}>levi@taeson.co</Text>
       </Animated.View>
