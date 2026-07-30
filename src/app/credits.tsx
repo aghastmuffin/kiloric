@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -93,17 +93,55 @@ export default function CreditsScreen() {
   const animatedListStyle = useAnimatedStyle(() => ({
     opacity: listOpacity.value,
   }));
-  //TODO: when clicked many times (20ish the pfp will spawn a notification that pulls the time from https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex (seconds -> human readable time) and then says a message and tells them how one person made it in x hours whatever)
+
+  const [, setClickCount] = useState(0);
+
+  const handleAvatarPress = () => {
+    setClickCount((prev) => {
+      const next = prev + 1;
+      if (next >= 15) {
+        fetch('https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex')
+          .then((res) => res.json())
+          .then((data) => {
+            const seconds = data.total_seconds || 72798;
+            const hours = (seconds / 3600).toFixed(1);
+            Alert.alert(
+              '✨ Secret Unlocked! ✨',
+              `Did you know? Levi Brown built this project with love, spending over ${hours} hours tracking and building it. Keep counting your calories! 🚀`,
+              [{ text: 'Amazing!', onPress: () => setClickCount(0) }]
+            );
+          })
+          .catch(() => {
+            Alert.alert(
+              '✨ Secret Unlocked! ✨',
+              `Did you know? Levi Brown spent over 20.2 hours tracking and building this project with love. Keep counting your calories! 🚀`,
+              [{ text: 'Amazing!', onPress: () => setClickCount(0) }]
+            );
+          });
+        return 0;
+      }
+      return next;
+    });
+  };
+
   return (
     <View style={styles.container}>
       {/* Animated Header Box */}
       <Animated.View style={[styles.centerBox, animatedHeaderStyle]}>
-        <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-          <Image
-            source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
-            style={styles.avatar}
-          />
-        </Animated.View>
+        <Pressable
+          onPress={handleAvatarPress}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Creator avatar"
+          accessibilityHint="Tap repeatedly to unlock a secret"
+        >
+          <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
+            <Image
+              source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
+              style={styles.avatar}
+            />
+          </Animated.View>
+        </Pressable>
         <Text style={styles.textTitle}>Created by Levi Brown</Text> 
         <Text style={styles.textSubtitle}>levi@taeson.co</Text>
       </Animated.View>

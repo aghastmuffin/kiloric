@@ -98,6 +98,10 @@ export default function AboutScreen() {
             <Pressable
                 style={{ position: 'absolute', right: 20, bottom: 20 }}
                 onPress={() => router.push('/credits')}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="View credits"
+                accessibilityHint="Opens the credits and contributors screen"
             >
                 <Text style={styles.text}>Credits</Text>
             </Pressable>

@@ -5,3 +5,7 @@
 ## 2025-03-01 - [ESLint Flat Config Global Ignores Configuration]
 **Learning:** In ESLint flat configuration (e.g., `eslint.config.js`), defining global ignores requires placing an object with *only* the `ignores` key as an element in the config array. Mixing ignores inside other objects or not separating them can cause the glob matching to fail, which allows deprecated directories (e.g. `src/dep/*`) to continue throwing errors during validation.
 **Action:** Define a separate, standalone object with only the `ignores` property inside `defineConfig` to declare global flat ignores correctly.
+
+## 2025-03-02 - [Interactive Easter Eggs and Multi-platform Accessibility]
+**Learning:** For interactive, hidden components (e.g. easter eggs) triggered by rapid clicking, the active trigger element must still follow accessibility standards so screen readers can identify them as interactive without spoiling the mystery. Adding a descriptive `accessibilityLabel="Creator avatar"`, `accessibilityRole="button"`, and a generic hint like `accessibilityHint="Tap repeatedly to unlock a secret"` provides clean context to assistive technologies without diminishing the fun of discovery.
+**Action:** Always wrap easter egg clickable triggers with semantic accessibility properties that indicate interaction availability.
