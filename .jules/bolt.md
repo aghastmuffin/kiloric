@@ -14,3 +14,8 @@
 **Learning:** Concurrent mount and focus hooks on tabs (such as `ProfileGate` checking complete profiles and index `Dial` getting targets/goals) trigger simultaneous duplicate Appwrite query loads for the user's profile. Implementing short-lived in-memory cache and promise-level deduplication for `getProfile(userId)` cuts network queries by 50% and dramatically speeds up focus transitions.
 
 **Action:** Implement short-lived memory caching (15 seconds) and Promise-level deduplication for database/document gets, while clearing on create/update endpoints.
+
+## 2026-07-31 - Safe Async Caching and Mutation Invalidation Race Conditions
+**Learning:** When implementing in-flight promise deduplication and short-lived caching for queries (like `getTodayMeals`), mutative actions (like `createMeal` or `updateMeal`) must invalidate the cache immediately. However, if a deduplicated query is already in-flight, it can resolve *after* the mutation completes, subsequently overwriting the clean/mutated state with stale data.
+
+**Action:** Always maintain a reference to the active promise (`currentPromise`) and explicitly check `if (inflightPromise === currentPromise)` before writing to the cache or clearing the in-flight reference. This ensures slow network responses never overwrite fresh, mutated states.
