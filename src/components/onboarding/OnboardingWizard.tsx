@@ -456,6 +456,7 @@ export function OnboardingWizard() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoFocus
+              maxLength={254}
               style={onboardingStyles.input}
             />
           </>
@@ -483,6 +484,7 @@ export function OnboardingWizard() {
               secureTextEntry
               autoCapitalize="none"
               autoFocus
+              maxLength={128}
               style={onboardingStyles.input}
             />
           </>

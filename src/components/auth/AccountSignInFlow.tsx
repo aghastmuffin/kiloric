@@ -180,6 +180,7 @@ export function AccountSignInFlow() {
                             autoCapitalize="none"
                             keyboardType="email-address"
                             autoFocus
+                            maxLength={254}
                             style={styles.input}
                         />
                     </>
@@ -206,6 +207,7 @@ export function AccountSignInFlow() {
                             secureTextEntry
                             autoCapitalize="none"
                             autoFocus
+                            maxLength={128}
                             style={styles.input}
                         />
                     </>

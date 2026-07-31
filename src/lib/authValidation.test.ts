@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-unresolved
 import { describe, it, expect } from 'vitest'
 import { isValidEmail, isValidPassword } from './authValidation'
 
@@ -22,6 +23,11 @@ describe('isValidEmail', () => {
     expect(isValidEmail('test@@example.com')).toBe(false)
     expect(isValidEmail('test.example.com')).toBe(false)
   })
+
+  it('should reject emails that exceed 254 characters to prevent resource exhaustion', () => {
+    const longEmail = `${'a'.repeat(245)}@example.com` // 245 + 12 = 257 chars
+    expect(isValidEmail(longEmail)).toBe(false)
+  })
 })
 
 describe('isValidPassword', () => {
@@ -33,5 +39,10 @@ describe('isValidPassword', () => {
   it('should reject passwords with fewer than 8 characters', () => {
     expect(isValidPassword('')).toBe(false)
     expect(isValidPassword('1234567')).toBe(false)
+  })
+
+  it('should reject passwords that exceed 128 characters to prevent bcrypt DoS', () => {
+    expect(isValidPassword('a'.repeat(128))).toBe(true)
+    expect(isValidPassword('a'.repeat(129))).toBe(false)
   })
 })
