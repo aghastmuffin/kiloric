@@ -4,7 +4,16 @@ const expoConfig = require("eslint-config-expo/flat");
 
 module.exports = defineConfig([
   {
-    ignores: ["**/dist/**/*", "**/src/dep/**/*", "dist/**/*", "src/dep/**/*"],
+    ignores: [
+      "**/dist/**/*",
+      "**/src/dep/**/*",
+      "dist/**/*",
+      "src/dep/**/*",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "**/src/**/*.test.ts",
+      "**/src/**/*.test.tsx"
+    ],
   },
   expoConfig,
   {
@@ -15,5 +24,3 @@ module.exports = defineConfig([
     }
   }
 ]);
-
-

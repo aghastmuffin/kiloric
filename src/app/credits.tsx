@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -26,10 +26,13 @@ export default function CreditsScreen() {
   
   // Clean state management for current rendering text
   const [currentIndex, setCurrentIndex] = useState(-1);
+  const [, setTapCount] = useState(0);
+  const [loadingSecret, setLoadingSecret] = useState(false);
 
   useEffect(() => {
     // Kickoff the chain reaction
     startIntro();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 1. Morph to circle, then slide up
@@ -81,6 +84,48 @@ export default function CreditsScreen() {
     }));
   };
 
+  const handleAvatarPress = async () => {
+    if (loadingSecret) return;
+
+    setTapCount((prev) => {
+      const next = prev + 1;
+      if (next >= 20) {
+        // Schedule side-effect asynchronously outside the React state transition/render phase
+        setTimeout(triggerSecret, 0);
+        return 0; // reset counter after triggering
+      }
+      return next;
+    });
+  };
+
+  const triggerSecret = async () => {
+    setLoadingSecret(true);
+    try {
+      const response = await fetch(
+        'https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex'
+      );
+      const data = await response.json();
+      const hours = (data.total_seconds / 3600).toFixed(1);
+      const message = `This app was crafted with precision by Levi Brown.\n\nTime spent building Sonex: ${hours} hours!\n\nThank you for discovering this hidden secret! ✨`;
+
+      if (Platform.OS === 'web') {
+        alert(`🚀 Secret Easter Egg Unlocked!\n\n${message}`);
+      } else {
+        Alert.alert('🚀 Secret Easter Egg Unlocked!', message, [{ text: 'Amazing!', onPress: () => {} }]);
+      }
+    } catch {
+      const fallbackMessage = `This app was crafted with precision by Levi Brown.\n\nThank you for discovering this hidden secret! ✨`;
+
+      if (Platform.OS === 'web') {
+        alert(`🚀 Secret Easter Egg Unlocked!\n\n${fallbackMessage}`);
+      } else {
+        Alert.alert('🚀 Secret Easter Egg Unlocked!', fallbackMessage, [{ text: 'Awesome!', onPress: () => {} }]);
+      }
+    } finally {
+      setLoadingSecret(false);
+    }
+  };
+
   // Animated styles linked to shared values
   const animatedHeaderStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerY.value }],
@@ -93,17 +138,29 @@ export default function CreditsScreen() {
   const animatedListStyle = useAnimatedStyle(() => ({
     opacity: listOpacity.value,
   }));
-  //TODO: when clicked many times (20ish the pfp will spawn a notification that pulls the time from https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex (seconds -> human readable time) and then says a message and tells them how one person made it in x hours whatever)
+
   return (
     <View style={styles.container}>
       {/* Animated Header Box */}
       <Animated.View style={[styles.centerBox, animatedHeaderStyle]}>
-        <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-          <Image
-            source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
-            style={styles.avatar}
-          />
-        </Animated.View>
+        <Pressable
+          onPress={handleAvatarPress}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Creator's avatar"
+          accessibilityHint="Tap repeatedly to unlock a secret"
+          style={({ pressed }) => [
+            styles.pressableAvatar,
+            pressed && styles.pressablePressed
+          ]}
+        >
+          <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
+            <Image
+              source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
+              style={styles.avatar}
+            />
+          </Animated.View>
+        </Pressable>
         <Text style={styles.textTitle}>Created by Levi Brown</Text> 
         <Text style={styles.textSubtitle}>levi@taeson.co</Text>
       </Animated.View>
@@ -169,5 +226,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 22,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  pressableAvatar: {
+    borderRadius: 100,
+  },
+  pressablePressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.96 }],
   },
 });
