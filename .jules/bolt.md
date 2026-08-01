@@ -14,3 +14,8 @@
 **Learning:** Concurrent mount and focus hooks on tabs (such as `ProfileGate` checking complete profiles and index `Dial` getting targets/goals) trigger simultaneous duplicate Appwrite query loads for the user's profile. Implementing short-lived in-memory cache and promise-level deduplication for `getProfile(userId)` cuts network queries by 50% and dramatically speeds up focus transitions.
 
 **Action:** Implement short-lived memory caching (15 seconds) and Promise-level deduplication for database/document gets, while clearing on create/update endpoints.
+
+## 2025-05-18 - Meals Cache-First & In-flight Deduplication
+**Learning:** Multiple key screens (such as the Dial progress meter and Meals log) render concurrently on tab focus, triggering duplicate sequential calls to `getTodayMeals` which results in duplicate, overlapping Appwrite query hits. Adding a short-lived (15s TTL) memory cache alongside promise-level request deduplication cuts redundant queries to 0, drastically lowering database utilization. To resolve the Temporal Dead Zone compiler issue (TS2454) when matching resolving in-flight promises, chain the promise with `.then` and `.finally` handlers after constructing the promise.
+
+**Action:** Implement memory cache and promise deduplication for frequent reads, invalidate on mutations, and chain the async promise with outside `.then()` / `.finally()` handlers to maintain compiler safety.
