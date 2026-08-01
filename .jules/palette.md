@@ -5,3 +5,7 @@
 ## 2025-03-01 - [ESLint Flat Config Global Ignores Configuration]
 **Learning:** In ESLint flat configuration (e.g., `eslint.config.js`), defining global ignores requires placing an object with *only* the `ignores` key as an element in the config array. Mixing ignores inside other objects or not separating them can cause the glob matching to fail, which allows deprecated directories (e.g. `src/dep/*`) to continue throwing errors during validation.
 **Action:** Define a separate, standalone object with only the `ignores` property inside `defineConfig` to declare global flat ignores correctly.
+
+## 2026-08-01 - [Interactive Easter Egg Accessible Styling & Functional Updates]
+**Learning:** Interactive easter eggs (such as a multi-tap interaction on a profile photo) must be made completely discoverable and navigable via assistive technologies without giving away the exact secret. This is achieved by wrapping the element in a standard React Native `Pressable` with explicit attributes (`accessibilityRole="button"`, `accessibilityLabel`, and `accessibilityHint="Tap repeatedly to unlock a secret"`). Additionally, to prevent state-batching and stale closures under rapid tapping, state updates must be functional, and network/UI side-effects must be scheduled asynchronously outside the state updater using `setTimeout`.
+**Action:** Wrap interactive easter eggs in an accessible `Pressable` with appropriate ARIA/accessibility attributes and use functional state updaters decoupled from side-effects for rapid interactions.

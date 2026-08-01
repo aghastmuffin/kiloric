@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -26,11 +26,45 @@ export default function CreditsScreen() {
   
   // Clean state management for current rendering text
   const [currentIndex, setCurrentIndex] = useState(-1);
+  const [, setTapCount] = useState(0);
 
   useEffect(() => {
     // Kickoff the chain reaction
     startIntro();
   }, []);
+
+  const handleAvatarTap = () => {
+    setTapCount((prev) => {
+      const nextCount = prev + 1;
+      if (nextCount >= 20) {
+        // Decouple side-effect to keep the state updater pure and fast
+        setTimeout(() => {
+          fetch('https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex')
+            .then((res) => res.json())
+            .then((data) => {
+              const totalSecs = data.total_seconds || 0;
+              const hours = (totalSecs / 3600).toFixed(1);
+              const message = `🚀 Easter Egg Unlocked!\n\nLevi Brown spent around ${hours} hours building this project (tracked on Hackatime)!\n\nThank you for exploring our app's secrets!`;
+              if (Platform.OS === 'web') {
+                alert(message);
+              } else {
+                Alert.alert('Secret Unlocked!', message);
+              }
+            })
+            .catch(() => {
+              const fallbackMsg = `🚀 Easter Egg Unlocked!\n\nLevi Brown crafted this amazing experience just for you.\n\nThank you for exploring our app's secrets!`;
+              if (Platform.OS === 'web') {
+                alert(fallbackMsg);
+              } else {
+                Alert.alert('Secret Unlocked!', fallbackMsg);
+              }
+            });
+        }, 0);
+        return 0; // Reset counter
+      }
+      return nextCount;
+    });
+  };
 
   // 1. Morph to circle, then slide up
   const startIntro = () => {
@@ -98,12 +132,20 @@ export default function CreditsScreen() {
     <View style={styles.container}>
       {/* Animated Header Box */}
       <Animated.View style={[styles.centerBox, animatedHeaderStyle]}>
-        <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-          <Image
-            source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
-            style={styles.avatar}
-          />
-        </Animated.View>
+        <Pressable
+          onPress={handleAvatarTap}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Creator's avatar"
+          accessibilityHint="Tap repeatedly to unlock a secret"
+        >
+          <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
+            <Image
+              source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
+              style={styles.avatar}
+            />
+          </Animated.View>
+        </Pressable>
         <Text style={styles.textTitle}>Created by Levi Brown</Text> 
         <Text style={styles.textSubtitle}>levi@taeson.co</Text>
       </Animated.View>
