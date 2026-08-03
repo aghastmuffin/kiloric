@@ -14,3 +14,8 @@
 **Learning:** Concurrent mount and focus hooks on tabs (such as `ProfileGate` checking complete profiles and index `Dial` getting targets/goals) trigger simultaneous duplicate Appwrite query loads for the user's profile. Implementing short-lived in-memory cache and promise-level deduplication for `getProfile(userId)` cuts network queries by 50% and dramatically speeds up focus transitions.
 
 **Action:** Implement short-lived memory caching (15 seconds) and Promise-level deduplication for database/document gets, while clearing on create/update endpoints.
+
+## 2026-08-03 - Today's Meals Caching, Deduplication & ESM Import Testing
+**Learning:** Concurrent tab mount/focus triggers on the Dial dashboard and the meals log screen cause concurrent duplicate fetches of today's meals. Implementing a 15-second TTL cache and promise-level deduplication on `getTodayMeals` avoids parallel database query redundancy. Furthermore, when writing unit tests for files with ESM absolute imports (`@/`) or modules utilizing Flow, converting internal imports to relative paths (`./`) and mocking out transitive React Native dependencies completely avoids ESM hoisting/Flow parser issues.
+
+**Action:** Use short-lived memory caching and query deduplication for database reads that trigger concurrently on tab transitions, and use relative imports inside lib utility files to ensure easy, config-free unit testing.
