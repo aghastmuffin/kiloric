@@ -12,7 +12,10 @@ export type MealItemEntry = {
 export type MealBarcodesStore = Record<MealType, MealItemEntry[]>
 
 function emptyStore(): MealBarcodesStore {
-  return Object.fromEntries(MEAL_TYPE_OPTIONS.map((type) => [type, []])) as MealBarcodesStore
+  return MEAL_TYPE_OPTIONS.reduce((store, type) => {
+    store[type] = []
+    return store
+  }, {} as MealBarcodesStore)
 }
 
 function normalizeEntry(raw: unknown): MealItemEntry | null {

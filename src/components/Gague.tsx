@@ -44,7 +44,7 @@ export default function RadialGauge({
             duration: 1000,
             easing: Easing.out(Easing.ease),
         });
-    }, [value]);
+    }, [animatedValue, value]);
 
     const animatedProps = useAnimatedProps(() => {
         const percentage = Math.max(0, Math.min(animatedValue.value, max)) / max;

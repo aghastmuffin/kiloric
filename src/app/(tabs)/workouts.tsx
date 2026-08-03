@@ -69,6 +69,9 @@ export default function WorkoutsScreen() {
   const completedCount = exercises.filter((exercise) => completed[`${selectedPillar}-${exercise.id}`]).length
   const isComplete = completedCount === exercises.length
   const progress = (completedCount / exercises.length) * 100
+  const completedSessions = PILLARS.filter((pillar) =>
+    EXERCISES[pillar.id].every((exercise) => completed[`${pillar.id}-${exercise.id}`]),
+  ).length
   const selected = useMemo(
     () => PILLARS.find((pillar) => pillar.id === selectedPillar) ?? PILLARS[0],
     [selectedPillar],
@@ -107,12 +110,12 @@ export default function WorkoutsScreen() {
         <View style={styles.weekCard}>
           <View>
             <Text style={styles.weekLabel}>THIS WEEK</Text>
-            <Text style={styles.weekValue}>2 of 3 sessions</Text>
+            <Text style={styles.weekValue}>{completedSessions} of 3 sessions</Text>
           </View>
           <View style={styles.weekDays}>
-            {['M', 'T', 'W', 'T', 'F'].map((day, index) => (
-              <View key={`${day}-${index}`} style={[styles.dayDot, index < 2 && styles.dayDotActive]}>
-                {index < 2 ? (
+            {['M', 'W', 'F'].map((day, index) => (
+              <View key={`${day}-${index}`} style={[styles.dayDot, index < completedSessions && styles.dayDotActive]}>
+                {index < completedSessions ? (
                   <Ionicons name="checkmark" size={13} color={colors.onAccent} />
                 ) : (
                   <Text style={styles.dayText}>{day}</Text>

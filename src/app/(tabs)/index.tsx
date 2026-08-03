@@ -76,7 +76,7 @@ export default function DashboardScreen() {
         .catch((error) => console.warn('[Dashboard] load failed', error))
         .finally(() => active && setLoading(false))
       return () => { active = false }
-    }, [user?.$id]),
+    }, [user]),
   )
 
   const totals = useMemo(() => ({

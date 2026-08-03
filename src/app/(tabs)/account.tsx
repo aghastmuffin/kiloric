@@ -13,6 +13,12 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import {
+  formatWeightImperial,
+  formatWeightMetric,
+  normalizeStoredTargetWeightKg,
+  parseDisplayUnitsPreference,
+} from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -191,11 +197,21 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
     proteinTargetHit: totals.protein >= proteinTarget,
   });
   const displayName = profile?.username?.trim() || user.name?.trim() || user.email.split('@')[0];
-  const goal = profile?.goal_plain?.trim() || 'Build a consistent, balanced routine';
+  const goal = profile?.goal_plain?.replace(/ · units:(metric|imperial)$/, '').trim()
+    || 'Build a consistent, balanced routine';
+  const displayUnits = parseDisplayUnitsPreference(profile?.goal_plain, profile?.country);
+  const targetWeightKg = profile
+    ? normalizeStoredTargetWeightKg(profile.country, profile.target_weight, profile.height)
+    : null;
+  const targetWeight = targetWeightKg == null
+    ? null
+    : (displayUnits === 'imperial'
+      ? formatWeightImperial(targetWeightKg)
+      : formatWeightMetric(targetWeightKg));
   const targetSummary = [
     profile?.target_kcal ? `${profile.target_kcal.toLocaleString()} kcal` : null,
     profile?.target_protein ? `${profile.target_protein}g protein` : null,
-    profile?.target_weight ? `${profile.target_weight}kg target` : null,
+    targetWeight ? `${targetWeight} target` : null,
   ].filter(Boolean).join(' · ');
 
   async function handleSignOut() {

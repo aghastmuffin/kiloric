@@ -316,13 +316,13 @@ export async function createMeal(input: CreateMealInput): Promise<MealDocument> 
   }
 
   try {
-    return (await databases.createDocument({
+    return await databases.createDocument<MealDocument>({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: ID.unique(),
-      data: normalized,
+      data: normalized as MealFields,
       permissions: mealDocumentPermissions(sessionUserId),
-    })) as MealDocument
+    })
   } catch (err) {
     logAppwriteError('createMeal', err)
     throw new Error(formatMealError(err))
@@ -333,11 +333,11 @@ export async function getMeal(mealId: string): Promise<MealDocument | null> {
   if (isMealsConfigMissing()) return null
 
   try {
-    return (await databases.getDocument({
+    return await databases.getDocument<MealDocument>({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: mealId,
-    })) as MealDocument
+    })
   } catch (err) {
     if (err instanceof AppwriteException && err.code === 404) return null
     throw err
@@ -358,12 +358,12 @@ export async function updateMeal(
   if (validationError) throw new Error(validationError)
 
   try {
-    return (await databases.updateDocument({
+    return await databases.updateDocument<MealDocument>({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: mealId,
       data: normalized,
-    })) as MealDocument
+    })
   } catch (err) {
     logAppwriteError('updateMeal', err)
     throw new Error(formatMealError(err))
@@ -393,7 +393,7 @@ export async function getTodayMeals(userId: string): Promise<MealDocument[]> {
   const todayStartISO = todayStart.toISOString()
 
   try {
-    const response = await databases.listDocuments(
+    const response = await databases.listDocuments<MealDocument>(
         DATABASE_ID,
         MEALS_COLLECTION_ID,
         [
@@ -401,13 +401,13 @@ export async function getTodayMeals(userId: string): Promise<MealDocument[]> {
           Query.greaterThanEqual('$createdAt', todayStartISO),
         ]
     )
-    return response.documents as MealDocument[]
+    return response.documents
   } catch (err) {
     console.warn('[getTodayMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
 
     // SAFE FALLBACK: Same as listHistoricMeals to guarantee results without the composite index
     try {
-      const response = await databases.listDocuments(
+      const response = await databases.listDocuments<MealDocument>(
           DATABASE_ID,
           MEALS_COLLECTION_ID,
           [
@@ -416,7 +416,7 @@ export async function getTodayMeals(userId: string): Promise<MealDocument[]> {
             Query.limit(50),
           ]
       )
-      return (response.documents as MealDocument[]).filter((doc) => new Date(doc.$createdAt) >= todayStart)
+      return response.documents.filter((doc) => new Date(doc.$createdAt) >= todayStart)
     } catch (fallbackErr) {
       logAppwriteError('getTodayMeals fallback', fallbackErr)
       throw new Error(formatMealError(fallbackErr))
@@ -432,7 +432,7 @@ export async function listHistoricMeals(userId: string, limit = 20, offset = 0):
   const todayStartISO = todayStart.toISOString()
 
   try {
-    const response = await databases.listDocuments(
+    const response = await databases.listDocuments<MealDocument>(
         DATABASE_ID,
         MEALS_COLLECTION_ID,
         [
@@ -443,12 +443,12 @@ export async function listHistoricMeals(userId: string, limit = 20, offset = 0):
           Query.offset(offset),
         ]
     )
-    return response.documents as MealDocument[]
+    return response.documents
   } catch (err) {
     console.warn('[listHistoricMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
 
     try {
-      const response = await databases.listDocuments(
+      const response = await databases.listDocuments<MealDocument>(
           DATABASE_ID,
           MEALS_COLLECTION_ID,
           [
@@ -458,7 +458,7 @@ export async function listHistoricMeals(userId: string, limit = 20, offset = 0):
           ]
       )
       const filtered = response.documents.filter((doc) => new Date(doc.$createdAt) < todayStart)
-      return filtered.slice(offset, offset + limit) as MealDocument[]
+      return filtered.slice(offset, offset + limit)
     } catch (fallbackErr) {
       logAppwriteError('listHistoricMeals fallback', fallbackErr)
       throw new Error(formatMealError(fallbackErr))

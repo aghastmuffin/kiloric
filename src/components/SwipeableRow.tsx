@@ -2,7 +2,7 @@ import { useTheme } from '@/lib/theme/ThemeContext'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { type ReactNode, useRef } from 'react'
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, StyleSheet, Text, View } from 'react-native'
 import { RectButton, Swipeable } from 'react-native-gesture-handler'
 
 export type SwipeAction = {
@@ -82,7 +82,7 @@ export function SwipeableRow({
             : undefined
         }
       >
-        <Pressable>{children}</Pressable>
+        <View>{children}</View>
       </Swipeable>
     </View>
   )

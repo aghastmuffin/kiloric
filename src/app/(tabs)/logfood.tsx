@@ -1,6 +1,7 @@
 import { authenticatedRequest } from '@/components/apiUtils';
 import { MealTypePicker } from '@/components/MealTypePicker';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -46,9 +47,12 @@ export default function Index() {
   const router = useRouter();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  const { defaultSearchMode } = useSearchPreferences();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [query, setQuery] = useState<string>('');
-  const [searchType, setSearchType] = useState<SearchType>('Text');
+  const [searchType, setSearchType] = useState<SearchType>(
+    defaultSearchMode === 'scan' ? 'Barcode' : 'Text',
+  );
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
 
   useFocusEffect(

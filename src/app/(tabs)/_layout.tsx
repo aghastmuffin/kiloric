@@ -18,6 +18,7 @@ function TabNavigator() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textFaint,
         tabBarActiveBackgroundColor: colors.accentSoft,

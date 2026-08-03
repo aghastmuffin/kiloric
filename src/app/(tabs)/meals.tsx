@@ -67,6 +67,7 @@ function formatSectionMacros(kcal: number, protein: number, carbs: number, fat: 
 type SwipeableItemCardProps = {
   item: DisplayMealItem;
   isLoadingItems: boolean;
+  actionsEnabled: boolean;
   onDelete: (item: DisplayMealItem) => void;
   onMove: (item: DisplayMealItem) => void;
 };
@@ -74,6 +75,7 @@ type SwipeableItemCardProps = {
 const SwipeableItemCard = memo(function SwipeableItemCard({
   item,
   isLoadingItems,
+  actionsEnabled,
   onDelete,
   onMove,
 }: SwipeableItemCardProps) {
@@ -81,6 +83,37 @@ const SwipeableItemCard = memo(function SwipeableItemCard({
   const { colors } = useTheme();
 
   const hasFacts = item.facts.length > 0;
+
+  const card = (
+    <View style={styles.itemCard}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.itemTitle} numberOfLines={2} ellipsizeMode="tail">
+          {item.title}
+        </Text>
+        {actionsEnabled && <Ionicons name="swap-horizontal-outline" size={18} color={colors.textFaint} />}
+      </View>
+
+      <View style={styles.factsContainer}>
+        {hasFacts ? (
+          item.facts.map((fact) => (
+            <FactRow key={`${item.key}-${fact.label}`} label={fact.label} value={fact.value} />
+          ))
+        ) : isLoadingItems ? (
+          <View style={styles.fallbackBarcodeContainer}>
+            <ActivityIndicator size="small" color={colors.accent} />
+            <Text style={styles.fallbackBarcodeText}>Loading product…</Text>
+          </View>
+        ) : (
+          <View style={styles.fallbackBarcodeContainer}>
+            <Ionicons name="barcode-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.fallbackBarcodeText}>Barcode: {item.barcode}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  if (!actionsEnabled) return card;
 
   return (
     <SwipeableRow
@@ -96,32 +129,7 @@ const SwipeableItemCard = memo(function SwipeableItemCard({
         onPress: () => onMove(item),
       }}
     >
-      <View style={styles.itemCard}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.itemTitle} numberOfLines={2} ellipsizeMode="tail">
-            {item.title}
-          </Text>
-          <Ionicons name="swap-horizontal-outline" size={18} color={colors.textFaint} />
-        </View>
-
-        <View style={styles.factsContainer}>
-          {hasFacts ? (
-            item.facts.map((fact) => (
-              <FactRow key={`${item.key}-${fact.label}`} label={fact.label} value={fact.value} />
-            ))
-          ) : isLoadingItems ? (
-            <View style={styles.fallbackBarcodeContainer}>
-              <ActivityIndicator size="small" color={colors.accent} />
-              <Text style={styles.fallbackBarcodeText}>Loading product…</Text>
-            </View>
-          ) : (
-            <View style={styles.fallbackBarcodeContainer}>
-              <Ionicons name="barcode-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.fallbackBarcodeText}>Barcode: {item.barcode}</Text>
-            </View>
-          )}
-        </View>
-      </View>
+      {card}
     </SwipeableRow>
   );
 });
@@ -174,6 +182,7 @@ export default function MealsScreen() {
 
   const selectedStart = getStartOfDay(selectedDate).getTime();
   const selectedEnd = selectedStart + 24 * 60 * 60 * 1000;
+  const actionsEnabled = selectedStart === getStartOfDay(new Date()).getTime();
 
   const displayedMeals = useMemo(() => allMeals.filter((meal) => {
     const timestamp = new Date(meal.$createdAt).getTime();
@@ -533,6 +542,7 @@ export default function MealsScreen() {
                       <SwipeableItemCard
                         key={item.key}
                         item={item}
+                        actionsEnabled={actionsEnabled}
                         isLoadingItems={isLoadingItems && item.facts.length === 0}
                         onDelete={handleDeleteItem}
                         onMove={setMoveItem}

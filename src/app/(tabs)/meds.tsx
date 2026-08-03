@@ -19,13 +19,15 @@ type ScheduleItem = {
   icon: keyof typeof Ionicons.glyphMap
 }
 
-const DAYS = [
-  { key: 'mon', day: 'MON', date: '03' },
-  { key: 'tue', day: 'TUE', date: '04' },
-  { key: 'wed', day: 'WED', date: '05' },
-  { key: 'thu', day: 'THU', date: '06' },
-  { key: 'fri', day: 'FRI', date: '07' },
-]
+const DAYS = Array.from({ length: 5 }, (_, index) => {
+  const date = new Date()
+  date.setDate(date.getDate() + index)
+  return {
+    key: date.toISOString().slice(0, 10),
+    day: date.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase(),
+    date: String(date.getDate()).padStart(2, '0'),
+  }
+})
 
 const SCHEDULE: ScheduleItem[] = [
   {
