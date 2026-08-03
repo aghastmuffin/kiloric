@@ -1,225 +1,147 @@
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { typography } from '@/lib/theme/typography';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { MotiView } from 'moti';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withSequence,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
 } from 'react-native-reanimated';
+import { useEffect } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width, height } = Dimensions.get('window');
+const MILESTONES = [
+  { icon: 'nutrition-outline' as const, label: 'Personal targets' },
+  { icon: 'analytics-outline' as const, label: 'Daily guidance' },
+  { icon: 'sparkles-outline' as const, label: 'Progress rhythm' },
+];
 
-// --- Configuration Constants ---
-const NUM_BUILDINGS = Math.ceil(width / 35); 
-const NUM_GLOBAL_WINDS = 14; 
-const NUM_BURGER_WINDS = 8;  
-
-const random = (min: number, max: number) => Math.random() * (max - min) + min;
-
-// --- Interfaces ---
-interface BuildingData {
-  id: number;
-  height: number;
-  width: number;
-}
-
-interface WindData {
-  id: string;
-  left: number;
-  topOffset: number;
-  height: number;
-  speedMultiplier: number;
-}
-
-// --- Isolated Sub-Components (Safely handling Hooks) ---
-
-const Building = ({ h, w }: { h: number; w: number }) => {
-  const rows = Math.floor(h / 16);
-  const windows = Array.from({ length: rows * 2 }).map((_, i) => ({
-    top: random(8, h - 12),
-    left: random(4, w - 8),
-  }));
-
-  return (
-    <View style={[styles.building, { height: h, width: w }]}>
-      {windows.map((win, i) => (
-        <View key={i} style={[styles.window, { top: win.top, left: win.left }]} />
-      ))}
-    </View>
-  );
-};
-
-// Moving the loop animation logic inside this component fixes the React Hook violation!
-const WindLine = ({ wind, progress, baseOpacity, extraWidth = 0, isCore = false }: { 
-  wind: WindData; 
-  progress: Animated.SharedValue<number>; 
-  baseOpacity: Animated.SharedValue<number>;
-  extraWidth?: number;
-  isCore?: boolean;
-}) => {
-  const animatedStyle = useAnimatedStyle(() => {
-    const currentY = ((wind.topOffset + progress.value * height * wind.speedMultiplier) % height) - 150;
-    return {
-      opacity: isCore ? baseOpacity.value * 1.4 : baseOpacity.value,
-      transform: [{ translateY: currentY }],
-    };
-  });
-
-  return (
-    <Animated.View 
-      style={[
-        styles.windLine, 
-        { 
-          left: wind.left, 
-          height: wind.height, 
-          width: 2 + extraWidth,
-          backgroundColor: isCore ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.35)'
-        }, 
-        animatedStyle
-      ]} 
-    />
-  );
-};
-
-// --- Main Component ---
-export default function OnboardingAnimation() {
+export default function OnboardingSuccessScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, onboardingColors } = useTheme();
-  // Animation Nodes
-  const burgerY = useSharedValue(0);
-  const burgerScale = useSharedValue(1);
-  const buildingY = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  
-  const windProgress = useSharedValue(0);
-  const windOpacity = useSharedValue(0);
-
-  // Strictly typed states
-  const [skyline, setSkyline] = useState<BuildingData[]>([]);
-  const [globalWinds, setGlobalWinds] = useState<WindData[]>([]);
-  const [burgerWinds, setBurgerWinds] = useState<WindData[]>([]);
+  const orbit = useSharedValue(0);
 
   useEffect(() => {
-    // Generate Skyline layout
-    setSkyline(
-      Array.from({ length: NUM_BUILDINGS }).map((_, i) => ({
-        id: i,
-        height: random(110, 260),
-        width: random(28, 42),
-      }))
-    );
-
-    // Global background winds
-    setGlobalWinds(
-      Array.from({ length: NUM_GLOBAL_WINDS }).map((_, i) => ({
-        id: `g-${i}`,
-        left: random(0, width),
-        topOffset: random(0, height),
-        height: random(70, 140),
-        speedMultiplier: random(0.8, 1.3),
-      }))
-    );
-
-    // Dynamic core winds (Concentrated around burger corridor)
-    setBurgerWinds(
-      Array.from({ length: NUM_BURGER_WINDS }).map((_, i) => ({
-        id: `b-${i}`,
-        left: random(width * 0.5 - 45, width * 0.5 + 45),
-        topOffset: random(0, height * 0.5),
-        height: random(90, 160),
-        speedMultiplier: random(1.2, 1.6),
-      }))
-    );
-
-    // Orchestrate Timelines
-    burgerScale.value = withSequence(
-      withTiming(0.85, { duration: 200, easing: Easing.ease }),
-      withTiming(1.1, { duration: 150, easing: Easing.linear })
-    );
-
-    burgerY.value = withDelay(200, 
-      withTiming(-height * 0.45, { duration: 1000, easing: Easing.out(Easing.quad) })
-    );
-    
-    buildingY.value = withDelay(250, 
-      withTiming(height * 0.55, { duration: 900, easing: Easing.in(Easing.quad) })
-    );
-
-    // Wind Streamer Loops
-    windOpacity.value = withDelay(500, withTiming(0.35, { duration: 300 }));
-    windProgress.value = withDelay(500, 
+    orbit.value = withDelay(
+      500,
       withRepeat(
-        withTiming(1, { duration: 500, easing: Easing.linear }),
+        withTiming(1, { duration: 10000, easing: Easing.linear }),
         -1,
-        false
-      )
+        false,
+      ),
     );
+  }, [orbit]);
 
-    textOpacity.value = withDelay(1100, withTiming(1, { duration: 800 }));
-  }, []);
-
-  // Main UI Layer Animated Styles
-  const burgerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: burgerY.value }, { scale: burgerScale.value }],
-  }));
-
-  const buildingStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: buildingY.value }],
-  }));
-
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
+  const orbitStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${orbit.value * 360}deg` }],
   }));
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      
-      {/* 1. Global Wind Layer */}
-      {globalWinds.map((wind) => (
-        <WindLine 
-          key={wind.id} 
-          wind={wind} 
-          progress={windProgress} 
-          baseOpacity={windOpacity} 
-        />
-      ))}
+    <View
+      style={[
+        styles.screen,
+        {
+          backgroundColor: onboardingColors.background,
+          paddingTop: insets.top + 24,
+          paddingBottom: insets.bottom + 24,
+        },
+      ]}
+    >
+      <View style={[styles.rail, styles.railTop, { backgroundColor: onboardingColors.accentMuted }]} />
+      <View style={[styles.rail, styles.railBottom, { backgroundColor: onboardingColors.accent }]} />
 
-      {/* 2. Concentrated Core Wind Layer */}
-      {burgerWinds.map((wind) => (
-        <WindLine 
-          key={wind.id} 
-          wind={wind} 
-          progress={windProgress} 
-          baseOpacity={windOpacity} 
-          extraWidth={1} 
-          isCore={true}
-        />
-      ))}
+      <MotiView
+        from={{ opacity: 0, translateY: -10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 500 }}
+        style={styles.brandRow}
+      >
+        <View style={[styles.brandMark, { backgroundColor: onboardingColors.accent }]}>
+          <Text style={[styles.brandLetter, { color: colors.onAccent }]}>V</Text>
+        </View>
+        <Text style={[styles.brand, { color: onboardingColors.text }]}>VITALITY</Text>
+        <Text style={[styles.issue, { color: onboardingColors.textMuted }]}>PLAN 01</Text>
+      </MotiView>
 
-      {/* 3. Hero Burger */}
-      <Animated.View style={[styles.burgerContainer, burgerStyle]}>
-        <Text style={styles.burgerEmoji}>🍔</Text>
-      </Animated.View>
+      <View style={styles.hero}>
+        <View style={styles.celebration}>
+          <MotiView
+            from={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', damping: 16, delay: 180 }}
+            style={[
+              styles.outerRoundel,
+              {
+                borderColor: onboardingColors.accentMuted,
+                backgroundColor: onboardingColors.surface,
+              },
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.orbit,
+                { borderColor: onboardingColors.borderSelected },
+                orbitStyle,
+              ]}
+            >
+              <View style={[styles.orbitDot, { backgroundColor: onboardingColors.accent }]} />
+            </Animated.View>
+            <View style={[styles.innerRoundel, { backgroundColor: onboardingColors.accent }]}>
+              <Ionicons name="checkmark" size={48} color={colors.onAccent} />
+            </View>
+          </MotiView>
+          <MotiView
+            from={{ width: 0 }}
+            animate={{ width: 124 }}
+            transition={{ type: 'timing', duration: 650, delay: 400 }}
+            style={[styles.signalLine, { backgroundColor: onboardingColors.accentMuted }]}
+          />
+        </View>
 
-      {/* 4. Falling Silhouette Skyline */}
-      <Animated.View style={[styles.citySilhouette, buildingStyle]}>
-        {skyline.map((b) => (
-          <Building key={b.id} h={b.height} w={b.width} />
-        ))}
-      </Animated.View>
+        <MotiView
+          from={{ opacity: 0, translateY: 18 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'spring', damping: 20, delay: 320 }}
+        >
+          <Text style={[styles.kicker, { color: onboardingColors.accentMuted }]}>YOUR PLAN IS READY</Text>
+          <Text style={[styles.title, { color: onboardingColors.text }]}>
+            Everything in{'\n'}good measure.
+          </Text>
+          <Text style={[styles.subtitle, { color: onboardingColors.textMuted }]}>
+            Your personal nutrition plan is set. Begin with one meal, then let consistency
+            do the rest.
+          </Text>
+        </MotiView>
 
-      {/* 5. Typography Display */}
-      <Animated.View style={[styles.textContainer, textStyle]}>
-        <Text style={[styles.title, { color: colors.text }]}>You&apos;re all set!</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Your personalized calorie and macro plan is ready.
-        </Text>
+        <View style={[styles.milestoneCard, { backgroundColor: onboardingColors.card, borderColor: onboardingColors.border }]}>
+          {MILESTONES.map((item, index) => (
+            <MotiView
+              key={item.label}
+              from={{ opacity: 0, translateX: -10 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              transition={{ type: 'timing', duration: 350, delay: 560 + index * 90 }}
+              style={[styles.milestone, index > 0 && { borderLeftColor: onboardingColors.border }]}
+            >
+              <Ionicons name={item.icon} size={20} color={onboardingColors.accent} />
+              <Text style={[styles.milestoneLabel, { color: onboardingColors.text }]}>{item.label}</Text>
+            </MotiView>
+          ))}
+        </View>
+      </View>
+
+      <MotiView
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 450, delay: 820 }}
+      >
         <Pressable
+          accessibilityRole="button"
           onPress={() => router.replace('/(tabs)')}
           style={({ pressed }) => [
             styles.continueButton,
@@ -227,100 +149,165 @@ export default function OnboardingAnimation() {
             pressed && styles.continueButtonPressed,
           ]}
         >
-          <Text style={[styles.continueButtonText, { color: colors.onAccent }]}>
-            Start tracking
-          </Text>
+          <Text style={[styles.continueButtonText, { color: colors.onAccent }]}>Enter Vitality</Text>
+          <Ionicons name="arrow-forward" size={20} color={colors.onAccent} />
         </Pressable>
-      </Animated.View>
+        <Text style={[styles.footerNote, { color: onboardingColors.textMuted }]}>
+          YOUR DASHBOARD · READY FOR TODAY
+        </Text>
+      </MotiView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
     overflow: 'hidden',
   },
-  burgerContainer: {
+  rail: {
     position: 'absolute',
-    bottom: height * 0.12,
-    zIndex: 15,
+    width: 2,
+    borderRadius: 2,
+    opacity: 0.35,
   },
-  burgerEmoji: {
-    fontSize: 85,
+  railTop: {
+    height: 180,
+    right: 38,
+    top: -22,
+    transform: [{ rotate: '24deg' }],
   },
-  citySilhouette: {
-    position: 'absolute',
-    bottom: 0,
+  railBottom: {
+    height: 220,
+    left: 18,
+    bottom: -80,
+    transform: [{ rotate: '24deg' }],
+  },
+  brandRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    width: '100%',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  building: {
-    backgroundColor: '#12131a',
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-    position: 'relative',
-    marginHorizontal: 1.5,
-  },
-  window: {
-    position: 'absolute',
-    width: 2.5,
-    height: 3.5,
-    backgroundColor: 'rgba(255, 253, 230, 0.75)',
-    borderRadius: 0.5,
-  },
-  windLine: {
-    position: 'absolute',
-    top: 0,
-    borderRadius: 99,
-    zIndex: 2,
-  },
-  textContainer: {
-    position: 'absolute',
-    top: '56%',
     alignItems: 'center',
-    paddingHorizontal: 30,
-    zIndex: 25,
   },
-  title: {
-    fontSize: 34,
-    fontWeight: '900',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-    marginBottom: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
+  brandMark: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subtitle: {
-    fontSize: 15,
-    fontWeight: '400',
-    textAlign: 'center',
-    letterSpacing: 0.2,
+  brandLetter: {
+    ...typography.label,
+    fontWeight: '700',
+  },
+  brand: {
+    ...typography.label,
+    marginLeft: 10,
+    letterSpacing: 1.6,
+  },
+  issue: {
+    ...typography.labelSmall,
+    marginLeft: 'auto',
+  },
+  hero: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+  },
+  celebration: {
+    alignItems: 'flex-start',
     marginBottom: 24,
   },
-  continueButton: {
+  outerRoundel: {
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    borderWidth: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orbit: {
+    position: 'absolute',
+    width: 94,
+    height: 94,
+    borderRadius: 47,
+    borderWidth: 1,
+  },
+  orbitDot: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    left: 7,
+    top: 8,
+  },
+  innerRoundel: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signalLine: {
+    height: 3,
+    marginTop: 12,
+  },
+  kicker: {
+    ...typography.labelSmall,
+    marginBottom: 8,
+    letterSpacing: 1.2,
+  },
+  title: {
+    ...typography.display,
+    fontSize: 46,
+    lineHeight: 50,
+  },
+  subtitle: {
+    ...typography.body,
+    maxWidth: 460,
+    marginTop: 14,
+  },
+  milestoneCard: {
+    flexDirection: 'row',
+    borderWidth: 1,
     borderRadius: 12,
+    marginTop: 24,
+    overflow: 'hidden',
+  },
+  milestone: {
+    flex: 1,
+    minHeight: 84,
+    paddingHorizontal: 10,
     paddingVertical: 14,
-    paddingHorizontal: 28,
-    shadowColor: '#25c946',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.8,
-    shadowRadius: 0,
-    elevation: 4,
+    justifyContent: 'space-between',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+  },
+  milestoneLabel: {
+    ...typography.labelSmall,
+    marginTop: 8,
+  },
+  continueButton: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+    minHeight: 56,
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   continueButtonPressed: {
-    transform: [{ translateY: 2 }],
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 0,
+    opacity: 0.88,
+    transform: [{ translateY: 1 }],
   },
   continueButtonText: {
-    fontWeight: '700',
+    ...typography.label,
     fontSize: 16,
+  },
+  footerNote: {
+    ...typography.labelSmall,
+    textAlign: 'center',
+    marginTop: 12,
   },
 });
