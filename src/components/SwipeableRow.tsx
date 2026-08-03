@@ -1,9 +1,11 @@
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { type ReactNode, useRef } from 'react'
-import { Animated, StyleSheet, Text, View } from 'react-native'
-import { RectButton, Swipeable } from 'react-native-gesture-handler'
+import { type ReactNode } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable'
+
+type SwipeableMethods = { close: () => void }
 
 export type SwipeAction = {
   label: string
@@ -24,10 +26,9 @@ export function SwipeableRow({
   swipeRight?: SwipeAction
 }) {
   const { colors } = useTheme()
-  const ref = useRef<Swipeable>(null)
 
-  const run = async (action: SwipeAction) => {
-    ref.current?.close()
+  const run = async (action: SwipeAction, methods: SwipeableMethods) => {
+    methods.close()
     await Haptics.impactAsync(
       action.destructive
         ? Haptics.ImpactFeedbackStyle.Medium
@@ -38,34 +39,28 @@ export function SwipeableRow({
 
   const renderAction = (
     action: SwipeAction,
-    progress: Animated.AnimatedInterpolation<number>,
-    edge: 'left' | 'right',
+    methods: SwipeableMethods,
   ) => {
-    const translateX = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [edge === 'left' ? -24 : 24, 0],
-    })
     const backgroundColor = action.destructive ? colors.danger : colors.accent
 
     return (
-      <RectButton
+      <Pressable
         accessibilityRole="button"
         accessibilityLabel={action.label}
-        onPress={() => void run(action)}
+        onPress={() => void run(action, methods)}
         style={[styles.action, { backgroundColor }]}
       >
-        <Animated.View style={[styles.actionInner, { transform: [{ translateX }] }]}>
+        <View style={styles.actionInner}>
           <Ionicons name={action.icon} size={20} color={colors.onAccent} />
           <Text style={[styles.actionText, { color: colors.onAccent }]}>{action.label}</Text>
-        </Animated.View>
-      </RectButton>
+        </View>
+      </Pressable>
     )
   }
 
   return (
     <View style={styles.clip}>
-      <Swipeable
-        ref={ref}
+      <ReanimatedSwipeable
         friction={1.8}
         overshootLeft={false}
         overshootRight={false}
@@ -73,17 +68,17 @@ export function SwipeableRow({
         rightThreshold={44}
         renderLeftActions={
           swipeRight
-            ? (progress) => renderAction(swipeRight, progress, 'left')
+            ? (_progress, _translation, methods) => renderAction(swipeRight, methods)
             : undefined
         }
         renderRightActions={
           swipeLeft
-            ? (progress) => renderAction(swipeLeft, progress, 'right')
+            ? (_progress, _translation, methods) => renderAction(swipeLeft, methods)
             : undefined
         }
       >
         <View>{children}</View>
-      </Swipeable>
+      </ReanimatedSwipeable>
     </View>
   )
 }
