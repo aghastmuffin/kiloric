@@ -49,11 +49,12 @@ export function MotionView({
       .stiffness(transition.stiffness ?? 170)
   }
 
-  const transforms: NonNullable<ViewStyle['transform']> = []
-  if (animate.translateX != null) transforms.push({ translateX: animate.translateX })
-  if (animate.translateY != null) transforms.push({ translateY: animate.translateY })
-  if (animate.scale != null) transforms.push({ scale: animate.scale })
-  if (animate.rotate != null) transforms.push({ rotate: animate.rotate })
+  const transforms = [
+    ...(animate.translateX != null ? [{ translateX: animate.translateX }] : []),
+    ...(animate.translateY != null ? [{ translateY: animate.translateY }] : []),
+    ...(animate.scale != null ? [{ scale: animate.scale }] : []),
+    ...(animate.rotate != null ? [{ rotate: animate.rotate }] : []),
+  ] as NonNullable<ViewStyle['transform']>
 
   const targetStyle: ViewStyle = {
     opacity: animate.opacity,
