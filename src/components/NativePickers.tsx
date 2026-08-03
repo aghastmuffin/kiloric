@@ -3,7 +3,6 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import CommunityDateTimePicker from '@expo/ui/community/datetime-picker';
-import { Host } from '@expo/ui/swift-ui';
 import { Picker } from '@react-native-picker/picker';
 import { createElement, type ReactNode, useMemo } from 'react';
 import {
@@ -24,6 +23,9 @@ const pickerHostStyle: ViewStyle = {
 
 function wrapIosPicker(children: ReactNode, compact = false) {
   if (Platform.OS === 'ios') {
+    // Native-only module: a static import crashes Expo Router's web renderer.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Host } = require('@expo/ui/swift-ui') as typeof import('@expo/ui/swift-ui');
     return (
       <Host
         matchContents={{ vertical: true }}
