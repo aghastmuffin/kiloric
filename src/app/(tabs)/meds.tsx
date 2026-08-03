@@ -1,9 +1,9 @@
+import { MotionView } from '@/components/MotionView'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
-import { MotiView } from 'moti'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -161,7 +161,7 @@ export default function MedsScreen() {
           })}
         </View>
 
-        <MotiView
+        <MotionView
           key={selectedDay}
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -180,7 +180,7 @@ export default function MedsScreen() {
             </View>
           </View>
           <View style={styles.progressTrack}>
-            <MotiView
+            <MotionView
               animate={{ width: `${progress}%` }}
               transition={{ type: 'timing', duration: 380 }}
               style={styles.progressFill}
@@ -196,7 +196,7 @@ export default function MedsScreen() {
               color={doneCount === SCHEDULE.length ? colors.success : colors.textMuted}
             />
           </View>
-        </MotiView>
+        </MotionView>
 
         <View style={styles.sectionHeader}>
           <View>
@@ -212,7 +212,7 @@ export default function MedsScreen() {
             const done = Boolean(completed[key])
             const isWellbeing = item.kind === 'wellbeing'
             return (
-              <MotiView
+              <MotionView
                 key={`${selectedDay}-${item.id}`}
                 from={{ opacity: 0, translateX: 10 }}
                 animate={{ opacity: 1, translateX: 0, scale: done ? 0.99 : 1 }}
@@ -257,7 +257,7 @@ export default function MedsScreen() {
                     {done && <Ionicons name="checkmark" size={16} color={colors.onAccent} />}
                   </View>
                 </Pressable>
-              </MotiView>
+              </MotionView>
             )
           })}
         </View>
@@ -287,7 +287,7 @@ export default function MedsScreen() {
                     pressed && styles.pressed,
                   ]}
                 >
-                  <MotiView
+                  <MotionView
                     animate={{ scale: selected ? 1.12 : 1 }}
                     transition={{ type: 'spring', damping: 12 }}
                   >
@@ -296,21 +296,21 @@ export default function MedsScreen() {
                       size={22}
                       color={selected ? colors.onAccent : colors.success}
                     />
-                  </MotiView>
+                  </MotionView>
                   <Text style={[styles.moodLabel, selected && styles.moodLabelSelected]}>{option.label}</Text>
                 </Pressable>
               )
             })}
           </View>
           {mood && (
-            <MotiView
+            <MotionView
               from={{ opacity: 0, translateY: 5 }}
               animate={{ opacity: 1, translateY: 0 }}
               style={styles.moodThanks}
             >
               <Ionicons name="heart-outline" size={15} color={colors.success} />
               <Text style={styles.moodThanksText}>Noted for this preview. Thank you for checking in.</Text>
-            </MotiView>
+            </MotionView>
           )}
         </View>
 

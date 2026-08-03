@@ -1,8 +1,8 @@
+import { MotionView } from '@/components/MotionView';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { typography } from '@/lib/theme/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { MotiView } from 'moti';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -56,7 +56,7 @@ export default function OnboardingSuccessScreen() {
       <View style={[styles.rail, styles.railTop, { backgroundColor: onboardingColors.accentMuted }]} />
       <View style={[styles.rail, styles.railBottom, { backgroundColor: onboardingColors.accent }]} />
 
-      <MotiView
+      <MotionView
         from={{ opacity: 0, translateY: -10 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: 'timing', duration: 500 }}
@@ -67,11 +67,11 @@ export default function OnboardingSuccessScreen() {
         </View>
         <Text style={[styles.brand, { color: onboardingColors.text }]}>VITALITY</Text>
         <Text style={[styles.issue, { color: onboardingColors.textMuted }]}>PLAN 01</Text>
-      </MotiView>
+      </MotionView>
 
       <View style={styles.hero}>
         <View style={styles.celebration}>
-          <MotiView
+          <MotionView
             from={{ opacity: 0, scale: 0.7 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', damping: 16, delay: 180 }}
@@ -95,8 +95,8 @@ export default function OnboardingSuccessScreen() {
             <View style={[styles.innerRoundel, { backgroundColor: onboardingColors.accent }]}>
               <Ionicons name="checkmark" size={48} color={colors.onAccent} />
             </View>
-          </MotiView>
-          <MotiView
+          </MotionView>
+          <MotionView
             from={{ width: 0 }}
             animate={{ width: 124 }}
             transition={{ type: 'timing', duration: 650, delay: 400 }}
@@ -104,7 +104,7 @@ export default function OnboardingSuccessScreen() {
           />
         </View>
 
-        <MotiView
+        <MotionView
           from={{ opacity: 0, translateY: 18 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: 'spring', damping: 20, delay: 320 }}
@@ -117,11 +117,11 @@ export default function OnboardingSuccessScreen() {
             Your personal nutrition plan is set. Begin with one meal, then let consistency
             do the rest.
           </Text>
-        </MotiView>
+        </MotionView>
 
         <View style={[styles.milestoneCard, { backgroundColor: onboardingColors.card, borderColor: onboardingColors.border }]}>
           {MILESTONES.map((item, index) => (
-            <MotiView
+            <MotionView
               key={item.label}
               from={{ opacity: 0, translateX: -10 }}
               animate={{ opacity: 1, translateX: 0 }}
@@ -130,12 +130,12 @@ export default function OnboardingSuccessScreen() {
             >
               <Ionicons name={item.icon} size={20} color={onboardingColors.accent} />
               <Text style={[styles.milestoneLabel, { color: onboardingColors.text }]}>{item.label}</Text>
-            </MotiView>
+            </MotionView>
           ))}
         </View>
       </View>
 
-      <MotiView
+      <MotionView
         from={{ opacity: 0, translateY: 12 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: 'timing', duration: 450, delay: 820 }}
@@ -155,7 +155,7 @@ export default function OnboardingSuccessScreen() {
         <Text style={[styles.footerNote, { color: onboardingColors.textMuted }]}>
           YOUR DASHBOARD · READY FOR TODAY
         </Text>
-      </MotiView>
+      </MotionView>
     </View>
   );
 }

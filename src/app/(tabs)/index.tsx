@@ -1,4 +1,5 @@
 import RadialGauge from '@/components/Gague'
+import { MotionView } from '@/components/MotionView'
 import { useAuth } from '@/lib/AuthContext'
 import { calculateStreak, calculateXP } from '@/lib/gamification'
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals'
@@ -8,7 +9,6 @@ import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
-import { MotiView } from 'moti'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import {
@@ -38,7 +38,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = Math.min(100, Math.max(0, (value / Math.max(1, max)) * 100))
   return (
     <View style={[stylesStatic.track, { backgroundColor: colors.progressTrail }]}>
-      <MotiView
+      <MotionView
         from={{ width: '0%' }}
         animate={{ width: `${pct}%` }}
         transition={{ type: 'timing', duration: 420 }}
@@ -172,7 +172,7 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.card}>
           {quests.map((quest, index) => (
-            <MotiView
+            <MotionView
               key={quest.label}
               animate={{ opacity: 1, translateY: 0, scale: quest.done ? 1 : 0.99 }}
               from={{ opacity: 0, translateY: 8 }}
@@ -184,7 +184,7 @@ export default function DashboardScreen() {
               </View>
               <Text style={[styles.questText, quest.done && styles.questDone]}>{quest.label}</Text>
               <Text style={styles.questProgress}>{quest.progress}</Text>
-            </MotiView>
+            </MotionView>
           ))}
         </View>
 

@@ -1,9 +1,9 @@
+import { MotionView } from '@/components/MotionView'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
-import { MotiView } from 'moti'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -137,7 +137,7 @@ export default function WorkoutsScreen() {
           {PILLARS.map((pillar, index) => {
             const active = pillar.id === selectedPillar
             return (
-              <MotiView
+              <MotionView
                 key={pillar.id}
                 from={{ opacity: 0, translateY: 12 }}
                 animate={{ opacity: 1, translateY: 0, scale: active ? 1 : 0.98 }}
@@ -164,7 +164,7 @@ export default function WorkoutsScreen() {
                   <Text style={[styles.pillarFocus, active && styles.pillarCopyActive]}>{pillar.focus}</Text>
                   <Text style={[styles.pillarMeta, active && styles.pillarCopyActive]}>{pillar.meta}</Text>
                 </Pressable>
-              </MotiView>
+              </MotionView>
             )
           })}
         </ScrollView>
@@ -180,7 +180,7 @@ export default function WorkoutsScreen() {
           </View>
         </View>
         <View style={styles.progressTrack}>
-          <MotiView
+          <MotionView
             animate={{ width: `${progress}%` }}
             transition={{ type: 'timing', duration: 380 }}
             style={styles.progressFill}
@@ -192,7 +192,7 @@ export default function WorkoutsScreen() {
             const key = `${selectedPillar}-${exercise.id}`
             const done = Boolean(completed[key])
             return (
-              <MotiView
+              <MotionView
                 key={key}
                 from={{ opacity: 0, translateX: 12 }}
                 animate={{ opacity: 1, translateX: 0 }}
@@ -234,7 +234,7 @@ export default function WorkoutsScreen() {
                     <Text style={styles.restText}>{exercise.rest}</Text>
                   </View>
                 </Pressable>
-              </MotiView>
+              </MotionView>
             )
           })}
         </View>
@@ -250,21 +250,21 @@ export default function WorkoutsScreen() {
         </View>
 
         {isComplete && (
-          <MotiView
+          <MotionView
             key={`${selectedPillar}-celebration`}
             from={{ opacity: 0, scale: 0.82, translateY: 18 }}
             animate={{ opacity: 1, scale: 1, translateY: 0 }}
             transition={{ type: 'spring', damping: 13, stiffness: 130 }}
             style={styles.celebration}
           >
-            <MotiView
+            <MotionView
               from={{ opacity: 0.25, scale: 0.7 }}
               animate={{ opacity: 0, scale: 1.8 }}
               transition={{ type: 'timing', duration: 1100, loop: true }}
               style={styles.celebrationHalo}
             />
             {PARTICLES.map((particle, index) => (
-              <MotiView
+              <MotionView
                 key={`${particle.x}-${particle.y}`}
                 from={{ opacity: 0, translateX: 0, translateY: 0, scale: 0.3 }}
                 animate={{
@@ -277,16 +277,16 @@ export default function WorkoutsScreen() {
                 style={styles.particle}
               >
                 <Ionicons name={particle.icon} size={index % 2 ? 10 : 15} color={colors.warning} />
-              </MotiView>
+              </MotionView>
             ))}
-            <MotiView
+            <MotionView
               from={{ rotate: '-8deg', scale: 0.7 }}
               animate={{ rotate: '0deg', scale: 1 }}
               transition={{ type: 'spring', damping: 8, delay: 100 }}
               style={styles.trophy}
             >
               <Ionicons name="trophy" size={29} color={colors.onAccent} />
-            </MotiView>
+            </MotionView>
             <Text style={styles.celebrationKicker}>SESSION COMPLETE</Text>
             <Text style={styles.celebrationTitle}>Strong work.</Text>
             <Text style={styles.celebrationText}>
@@ -296,7 +296,7 @@ export default function WorkoutsScreen() {
               <Ionicons name="sparkles-outline" size={15} color={colors.xpAccent} />
               <Text style={styles.rewardText}>+120 MOVEMENT XP</Text>
             </View>
-          </MotiView>
+          </MotionView>
         )}
       </ScrollView>
     </View>
