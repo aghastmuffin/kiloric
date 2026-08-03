@@ -31,7 +31,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import type { Models } from 'react-native-appwrite';
 
 type AppwriteUser = Models.User<Models.Preferences>;
@@ -94,7 +94,7 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
   const toggle = () => setExpanded((prev) => !prev);
 
   return (
-      <Animated.View style={styles.card} layout={LinearTransition.springify().damping(18)}>
+      <Animated.View style={styles.card}>
         <Pressable onPress={toggle} style={styles.header}>
           <View style={styles.settingsHeader}>
             <View>
