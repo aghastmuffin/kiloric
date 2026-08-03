@@ -162,7 +162,11 @@ export default function MealsScreen() {
   const [moveItem, setMoveItem] = useState<DisplayMealItem | null>(null);
 
   const fetchMeals = useCallback(async () => {
-    if (!user?.$id) return;
+    if (!user?.$id) {
+      setAllMeals([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const [todayMeals, historicMeals] = await Promise.all([
