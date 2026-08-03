@@ -5,6 +5,7 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function TabNavigator() {
   const { activeFontFamily } = useFontPreferences();
@@ -70,10 +71,12 @@ function TabNavigator() {
 
 export default function TabLayout() {
   return (
-    <ProfileGate>
-      <SearchPreferencesProvider>
-        <TabNavigator />
-      </SearchPreferencesProvider>
-    </ProfileGate>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ProfileGate>
+          <SearchPreferencesProvider>
+            <TabNavigator />
+          </SearchPreferencesProvider>
+        </ProfileGate>
+    </GestureHandlerRootView>
   );
 }
