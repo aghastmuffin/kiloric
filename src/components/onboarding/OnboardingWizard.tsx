@@ -455,6 +455,7 @@ export function OnboardingWizard() {
               placeholderTextColor={onboardingColors.textMuted}
               autoCapitalize="none"
               keyboardType="email-address"
+              maxLength={254}
               autoFocus
               style={onboardingStyles.input}
             />
@@ -482,6 +483,7 @@ export function OnboardingWizard() {
               placeholderTextColor={onboardingColors.textMuted}
               secureTextEntry
               autoCapitalize="none"
+              maxLength={128}
               autoFocus
               style={onboardingStyles.input}
             />
