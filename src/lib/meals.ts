@@ -184,6 +184,46 @@ type ProductNutrition = {
   fat: number | null
 }
 
+/** Remove one barcode occurrence and its nutrition from a meal bucket. */
+export async function removeProductFromMeal(
+    mealId: string,
+    barcode: string,
+    nutrition: ProductNutrition,
+): Promise<void> {
+  if (isMealsConfigMissing()) {
+    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+  }
+
+  await assertActiveSession()
+  const meal = await getMeal(mealId)
+  if (!meal) throw new Error('Meal not found.')
+
+  const items = [...(meal.items ?? [])]
+  const index = items.indexOf(barcode.trim())
+  if (index === -1) throw new Error('Product not found in meal.')
+  items.splice(index, 1)
+
+  if (items.length === 0) {
+    await databases.deleteDocument({
+      databaseId: DATABASE_ID,
+      collectionId: MEALS_COLLECTION_ID,
+      documentId: mealId,
+    })
+    return
+  }
+
+  const subtract = (current: number | null | undefined, amount: number | null | undefined) =>
+    Math.max(0, (current ?? 0) - (amount ?? 0))
+
+  await updateMeal(mealId, {
+    kcal: subtract(meal.kcal, nutrition.kcal),
+    protein: subtract(meal.protein, nutrition.protein),
+    carbs: subtract(meal.carbs, nutrition.carbs),
+    fat: subtract(meal.fat, nutrition.fat),
+    items,
+  })
+}
+
 /** Move a barcode from one meal document into another meal type bucket for today. */
 export async function moveProductBetweenMeals(
     ownerId: string,
