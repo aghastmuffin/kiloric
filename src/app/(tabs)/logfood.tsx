@@ -1,25 +1,26 @@
 import { authenticatedRequest } from '@/components/apiUtils';
 import { MealTypePicker } from '@/components/MealTypePicker';
-import { SearchModeSwapButton } from '@/components/SearchModeSwapButton';
 import { useTheme } from '@/lib/theme/ThemeContext';
-import type { ThemeColors } from '@/lib/theme/tokens';
+import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View
 } from 'react-native';
 
-const PlaceholderImage = require('../../../assets/images/dark.svg');
-
 type SearchType = 'Text' | 'Barcode';
+const SEARCH_HELPERS = ['Chicken breast', 'Greek yogurt', 'Banana'];
 
 async function fetchQuery(query: string): Promise<string> {
   try {
@@ -41,50 +42,6 @@ async function fetchBarcodeManual(query: string): Promise<string> {
   }
 }
 
-function CrossPlatformDropDown({ 
-  selectedType, 
-  onSelectType 
-}: { 
-  selectedType: SearchType; 
-  onSelectType: (type: SearchType) => void; 
-}) {
-  const [isVisible, setIsVisible] = useState(false);
-  const options: SearchType[] = ['Text', 'Barcode'];
-  const styles = useThemedStyles(makeStyles);
-
-  return (
-    <View style={styles.dropdownContainer}>
-      <TouchableOpacity onPress={() => setIsVisible(!isVisible)} style={styles.dropdownTrigger}>
-        <Text style={styles.dropdownTriggerText}>{selectedType} ▼</Text>
-      </TouchableOpacity>
-
-      {isVisible && (
-        <>
-          <Pressable style={styles.blanket} onPress={() => setIsVisible(false)} />
-          
-          <View style={styles.floatingMenu}>
-            {options.map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={[
-                  styles.dropdownItem,
-                  item === selectedType && styles.dropdownItemSelected
-                ]}
-                onPress={() => {
-                  onSelectType(item);
-                  setIsVisible(false);
-                }}
-              >
-                <Text style={styles.dropdownItemText}>{item}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      )}
-    </View>
-  );
-}
-
 export default function Index() {
   const router = useRouter();
   const styles = useThemedStyles(makeStyles);
@@ -92,6 +49,26 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [query, setQuery] = useState<string>('');
   const [searchType, setSearchType] = useState<SearchType>('Text');
+  const [recentQueries, setRecentQueries] = useState<string[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      AsyncStorage.getItem('saved_barcode')
+        .then((barcode) => {
+          if (!active || !barcode?.trim()) return;
+          setQuery(barcode.trim());
+          setSearchType('Barcode');
+          return AsyncStorage.removeItem('saved_barcode');
+        })
+        .catch((error) => console.error('Could not load scanned barcode', error));
+
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const handleTextResponse = useCallback(
     (data: string) => {
@@ -104,18 +81,23 @@ export default function Index() {
   );
 
   const handleScanPress = async () => {
-    if (!query.trim()) return;
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
 
     setIsLoading(true);
     let result = '';
 
     if (searchType === 'Barcode') {
-      result = await fetchBarcodeManual(query.trim());
+      result = await fetchBarcodeManual(trimmedQuery);
     } else {
-      result = await fetchQuery(query.trim());
+      result = await fetchQuery(trimmedQuery);
     }
 
     setIsLoading(false);
+    setRecentQueries((current) => [
+      trimmedQuery,
+      ...current.filter((item) => item !== trimmedQuery),
+    ].slice(0, 3));
     handleTextResponse(result);
   };
 
@@ -124,46 +106,106 @@ export default function Index() {
   };
 
   return (
-    <View style={styles.container}>
-
-      <View style={styles.headerRow}>
-        <Text style={styles.titleText}>Manually Search {searchType === 'Barcode' ? 'for a' : 'for'}</Text>
-        <CrossPlatformDropDown selectedType={searchType} onSelectType={setSearchType} />
-      </View>
-
-      {/* Outer row wrapper acting as the visual input background/border */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder={searchType === 'Barcode' ? "Enter barcode string..." : "Enter query..."}
-          placeholderTextColor={colors.textFaint}
-          style={styles.input}
-          value={query}
-          onChangeText={setQuery}
-        />
-        
-        {/* The interactive camera overlay button positioned cleanly inside the row */}
-        <TouchableOpacity 
-          style={styles.cameraButton} 
-          onPress={handleCameraPress}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.cameraIcon}>Scan <Ionicons name={'barcode'} size={24} /> </Text>
-        </TouchableOpacity>
-      </View>
-      
-      <TouchableOpacity
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={handleScanPress}
-        disabled={isLoading || !query.trim()}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.buttonText}>
-          {isLoading ? 'Please Wait...' : 'Search'}
+        <Text style={styles.eyebrow}>FOOD LOG</Text>
+        <Text style={styles.titleText}>What are you eating?</Text>
+        <Text style={styles.subtitle}>
+          Search foods by name or scan a package barcode.
         </Text>
-      </TouchableOpacity>
-      
+
+        <View style={styles.modeRow}>
+          {(['Text', 'Barcode'] as SearchType[]).map((type) => {
+            const selected = searchType === type;
+            return (
+              <Pressable
+                key={type}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => setSearchType(type)}
+                style={({ pressed }) => [
+                  styles.modeChip,
+                  selected && styles.modeChipSelected,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons
+                  name={type === 'Text' ? 'search-outline' : 'barcode-outline'}
+                  size={17}
+                  color={selected ? colors.onAccent : colors.textMuted}
+                />
+                <Text style={[styles.modeChipText, selected && styles.modeChipTextSelected]}>
+                  {type}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Ionicons name="search-outline" size={20} color={colors.textMuted} />
+          <TextInput
+            accessibilityLabel={searchType === 'Barcode' ? 'Barcode' : 'Food search'}
+            autoCapitalize={searchType === 'Text' ? 'sentences' : 'none'}
+            keyboardType={searchType === 'Barcode' ? 'number-pad' : 'default'}
+            placeholder={searchType === 'Barcode' ? 'Enter a barcode' : 'Search foods'}
+            placeholderTextColor={colors.textFaint}
+            returnKeyType="search"
+            style={styles.input}
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={() => void handleScanPress()}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scan barcode with camera"
+            style={({ pressed }) => [styles.cameraButton, pressed && styles.pressed]}
+            onPress={handleCameraPress}
+          >
+            <Ionicons name="barcode-outline" size={22} color={colors.onAccent} />
+          </Pressable>
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            (isLoading || !query.trim()) && styles.buttonDisabled,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => void handleScanPress()}
+          disabled={isLoading || !query.trim()}
+        >
+          <Text style={styles.buttonText}>{isLoading ? 'Searching…' : 'Search foods'}</Text>
+        </Pressable>
+
+        <View style={styles.helpers}>
+          <Text style={styles.helperLabel}>
+            {recentQueries.length > 0 ? 'RECENT THIS SESSION' : 'TRY A SEARCH'}
+          </Text>
+          <View style={styles.helperChips}>
+            {(recentQueries.length > 0 ? recentQueries : SEARCH_HELPERS).map((helper) => (
+              <Pressable
+                key={helper}
+                onPress={() => {
+                  setQuery(helper);
+                  setSearchType('Text');
+                }}
+                style={({ pressed }) => [styles.helperChip, pressed && styles.pressed]}
+              >
+                <Text style={styles.helperChipText}>{helper}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
       <MealTypePicker />
-      <SearchModeSwapButton current="text_query" />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -171,146 +213,122 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: c.background,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: 140,
+  },
+  eyebrow: {
+    ...typography.labelSmall,
+    color: c.success,
+    marginBottom: spacing.sm,
+  },
+  titleText: {
+    ...typography.headlineLarge,
+    color: c.text,
+  },
+  subtitle: {
+    ...typography.body,
+    color: c.textMuted,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  modeChip: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
   },
-  imageContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 24,
+  modeChipSelected: {
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
-  image: {
-    width: 260,
-    height: 260,
-    borderRadius: 18,
-    maxWidth: '90%', 
+  modeChipText: {
+    ...typography.label,
+    color: c.textMuted,
   },
-  headerRow: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    marginTop: 20, 
-    marginHorizontal: 20,
-    width: '85%',
-    maxWidth: 440,
+  modeChipTextSelected: {
+    color: c.onAccent,
   },
-  // Row layout framing both TextInput and the camera icon together safely
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: c.surfaceAlt,
-    borderRadius: 12,
-    width: '85%',
-    maxWidth: 440,
-    marginTop: 10,
+    gap: spacing.sm,
+    backgroundColor: c.surface,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: c.border,
+    borderColor: c.borderStrong,
     overflow: 'hidden',
+    paddingLeft: spacing.md,
   },
-  // Allows text layout to take up all empty space up to the camera trigger boundaries
   input: {
     flex: 1,
+    ...typography.body,
     color: c.text,
-    paddingLeft: 18,
-    paddingRight: 8,
-    paddingVertical: 14,
-    fontSize: 16,
+    paddingVertical: 15,
   },
-  // Hitbox parameters for your overlay action
   cameraButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    alignSelf: 'stretch',
+    minWidth: 58,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cameraIcon: {
-    fontSize: 18,
+    backgroundColor: c.accent,
   },
   button: {
     backgroundColor: c.accent,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: 20,
-    width: '85%',
-    maxWidth: 440,
+    paddingVertical: 14,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.md,
     alignItems: 'center',
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
   buttonText: {
+    ...typography.label,
     color: c.onAccent,
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  titleText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: c.text,
-    letterSpacing: -0.3,
+  helpers: {
+    marginTop: spacing.xl,
   },
-  dropdownContainer: {
-    position: 'relative',
-    zIndex: 50,
+  helperLabel: {
+    ...typography.labelSmall,
+    color: c.textMuted,
+    marginBottom: spacing.sm,
   },
-  dropdownTrigger: {
+  helperChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  helperChip: {
     backgroundColor: c.surfaceAlt,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-  },
-  dropdownTriggerText: {
-    color: c.accent, 
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  blanket: {
-    position: 'absolute',
-    top: -1000,
-    left: -1000,
-    right: -1000,
-    bottom: -1000,
-    zIndex: 1,
-  },
-  floatingMenu: {
-    position: 'absolute',
-    top: 48,
-    right: 0,
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    width: 160,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    zIndex: 2,
     borderWidth: 1,
     borderColor: c.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 6,
-      },
-      web: {
-        boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.4)',
-      }
-    }),
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  dropdownItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    marginVertical: 2,
-  },
-  dropdownItemSelected: {
-    backgroundColor: c.accentSoft,
-  },
-  dropdownItemText: {
+  helperChipText: {
+    ...typography.labelSmall,
     color: c.text,
-    fontSize: 16,
-    fontWeight: '500',
+  },
+  pressed: {
+    opacity: 0.75,
   },
 });
