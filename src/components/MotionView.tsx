@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 
 type MotionState = {
   opacity?: number
@@ -66,7 +66,6 @@ export function MotionView({
   return (
     <Animated.View
       entering={entering}
-      layout={LinearTransition.springify().damping(22)}
       style={[style, targetStyle]}
     >
       {children}
