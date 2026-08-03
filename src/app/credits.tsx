@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -26,10 +26,52 @@ export default function CreditsScreen() {
   
   // Clean state management for current rendering text
   const [currentIndex, setCurrentIndex] = useState(-1);
+  const [, setTapCount] = useState(0);
+
+  const showEasterEggAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const fetchAndShowSecret = async () => {
+    try {
+      const response = await fetch('https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex');
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      const seconds = data.total_seconds || 72798;
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const duration = `${hours} hours and ${minutes} minutes`;
+      showEasterEggAlert(
+        "🎉 Secret Unlocked!",
+        `Did you know? Levi Brown spent exactly ${duration} building CalCount (formerly Sonex). This entire app was crafted by one developer's complete focus and passion!`
+      );
+    } catch {
+      showEasterEggAlert(
+        "🎉 Secret Unlocked!",
+        `Did you know? Levi Brown spent over 20 hours building CalCount (formerly Sonex) with complete focus and passion!`
+      );
+    }
+  };
+
+  const handleAvatarTap = () => {
+    setTapCount((prev) => {
+      const next = prev + 1;
+      if (next >= 20) {
+        setTimeout(fetchAndShowSecret, 0);
+        return 0;
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     // Kickoff the chain reaction
     startIntro();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 1. Morph to circle, then slide up
@@ -93,17 +135,24 @@ export default function CreditsScreen() {
   const animatedListStyle = useAnimatedStyle(() => ({
     opacity: listOpacity.value,
   }));
-  //TODO: when clicked many times (20ish the pfp will spawn a notification that pulls the time from https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex (seconds -> human readable time) and then says a message and tells them how one person made it in x hours whatever)
   return (
     <View style={styles.container}>
       {/* Animated Header Box */}
       <Animated.View style={[styles.centerBox, animatedHeaderStyle]}>
-        <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-          <Image
-            source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
-            style={styles.avatar}
-          />
-        </Animated.View>
+        <Pressable
+          onPress={handleAvatarTap}
+          accessible={true}
+          accessibilityLabel="Creator's avatar"
+          accessibilityRole="button"
+          accessibilityHint="Tap repeatedly to unlock a secret"
+        >
+          <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
+            <Image
+              source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
+              style={styles.avatar}
+            />
+          </Animated.View>
+        </Pressable>
         <Text style={styles.textTitle}>Created by Levi Brown</Text> 
         <Text style={styles.textSubtitle}>levi@taeson.co</Text>
       </Animated.View>
