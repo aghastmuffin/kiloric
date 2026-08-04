@@ -86,7 +86,7 @@ function RootNavigation() {
               <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
               <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
               <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
-              <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Results" }} />
+              <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Search Results" }} />
               <Stack.Screen name="fooddetail" options={{ headerShown: true, headerTitle: "Food Details" }} />
             </Stack>
           </MealTypePreferencesProvider>
