@@ -1,6 +1,6 @@
-import { account, databases } from '@/lib/appwrite'
-import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
-import { logAppwriteError } from '@/lib/profile'
+import { account, databases } from './appwrite'
+import { buildMealInputFromProduct } from './mealFromProduct'
+import { logAppwriteError } from './profile'
 import { AppwriteException, ID, Permission, Role, Query, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -196,7 +196,9 @@ export async function moveProductBetweenMeals(
     throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
   }
 
-  await assertActiveSession()
+  const sessionUserId = await assertActiveSession()
+  clearTodayMealsCache(sessionUserId)
+  clearTodayMealsCache(ownerId)
 
   const sourceMeal = await getMeal(sourceMealId)
   if (!sourceMeal) throw new Error('Source meal not found.')
@@ -217,6 +219,8 @@ export async function moveProductBetweenMeals(
       collectionId: MEALS_COLLECTION_ID,
       documentId: sourceMealId,
     })
+    clearTodayMealsCache(sessionUserId)
+    clearTodayMealsCache(ownerId)
   } else {
     await updateMeal(sourceMealId, {
       kcal: subtract(sourceMeal.kcal, nutrition.kcal),
@@ -242,6 +246,8 @@ export async function moveProductBetweenMeals(
       fat: add(targetMeal.fat, nutrition.fat),
       items: [...(targetMeal.items ?? []), trimmedBarcode],
     })
+    clearTodayMealsCache(sessionUserId)
+    clearTodayMealsCache(ownerId)
     return
   }
 
@@ -257,6 +263,8 @@ export async function moveProductBetweenMeals(
     fluid: null,
     items: [trimmedBarcode],
   })
+  clearTodayMealsCache(sessionUserId)
+  clearTodayMealsCache(ownerId)
 }
 
 export async function createMeal(input: CreateMealInput): Promise<MealDocument> {
@@ -275,14 +283,23 @@ export async function createMeal(input: CreateMealInput): Promise<MealDocument> 
     throw new Error('You can only create meals for your own profile.')
   }
 
+  // Securely invalidate today's meals cache for this user
+  clearTodayMealsCache(sessionUserId)
+  clearTodayMealsCache(ownerId)
+
   try {
-    return (await databases.createDocument({
+    const res = (await databases.createDocument({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: ID.unique(),
       data: normalized,
       permissions: mealDocumentPermissions(sessionUserId),
     })) as MealDocument
+
+    // Ensure invalidation on successful operation
+    clearTodayMealsCache(sessionUserId)
+    clearTodayMealsCache(ownerId)
+    return res
   } catch (err) {
     logAppwriteError('createMeal', err)
     throw new Error(formatMealError(err))
@@ -312,18 +329,25 @@ export async function updateMeal(
     throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
   }
 
-  await assertActiveSession()
+  const sessionUserId = await assertActiveSession()
   const normalized = normalizeMealWritePayload(data)
   const validationError = validateMealPatchPayload(normalized)
   if (validationError) throw new Error(validationError)
 
+  // Securely invalidate today's meals cache for this user
+  clearTodayMealsCache(sessionUserId)
+
   try {
-    return (await databases.updateDocument({
+    const res = (await databases.updateDocument({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: mealId,
       data: normalized,
     })) as MealDocument
+
+    // Ensure invalidation on successful operation
+    clearTodayMealsCache(sessionUserId)
+    return res
   } catch (err) {
     logAppwriteError('updateMeal', err)
     throw new Error(formatMealError(err))
@@ -344,44 +368,95 @@ export function formatMealError(err: unknown): string {
   return raw
 }
 
+// ⚡ Bolt: Memory Cache and Promise Deduplication for today's meals document reads to prevent
+// redundant Appwrite database round-trips and simultaneous duplicate requests across different
+// focus/mount effects (e.g. index/Dial and meals view components loading concurrently).
+let cachedTodayMeals: { userId: string; meals: MealDocument[]; expiresAt: number } | null = null
+let inflightTodayMealsPromise: Promise<MealDocument[]> | null = null
+let inflightTodayMealsUserId: string | null = null
+
+export function clearTodayMealsCache(userId: string): void {
+  if (cachedTodayMeals && cachedTodayMeals.userId === userId) {
+    cachedTodayMeals = null
+  }
+}
+
 /** Fetch today's meals (Mirrors the fallback logic in listHistoricMeals to bypass missing index errors) */
 export async function getTodayMeals(userId: string): Promise<MealDocument[]> {
   if (isMealsConfigMissing()) return []
+
+  // 1. Check if we have a valid, unexpired cached meals list for this user
+  if (cachedTodayMeals && cachedTodayMeals.userId === userId && cachedTodayMeals.expiresAt > Date.now()) {
+    return cachedTodayMeals.meals
+  }
+
+  // 2. Check if a fetch is already in progress for this same user (Deduplication)
+  if (inflightTodayMealsPromise && inflightTodayMealsUserId === userId) {
+    return inflightTodayMealsPromise
+  }
 
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
   const todayStartISO = todayStart.toISOString()
 
-  try {
-    const response = await databases.listDocuments(
-        DATABASE_ID,
-        MEALS_COLLECTION_ID,
-        [
-          Query.equal('owner', userId),
-          Query.greaterThanEqual('$createdAt', todayStartISO),
-        ]
-    )
-    return response.documents as MealDocument[]
-  } catch (err) {
-    console.warn('[getTodayMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
-
-    // SAFE FALLBACK: Same as listHistoricMeals to guarantee results without the composite index
+  inflightTodayMealsUserId = userId
+  inflightTodayMealsPromise = (async () => {
     try {
       const response = await databases.listDocuments(
           DATABASE_ID,
           MEALS_COLLECTION_ID,
           [
             Query.equal('owner', userId),
-            Query.orderDesc('$createdAt'),
-            Query.limit(50),
+            Query.greaterThanEqual('$createdAt', todayStartISO),
           ]
       )
-      return (response.documents as MealDocument[]).filter((doc) => new Date(doc.$createdAt) >= todayStart)
-    } catch (fallbackErr) {
-      logAppwriteError('getTodayMeals fallback', fallbackErr)
-      throw new Error(formatMealError(fallbackErr))
+      const meals = response.documents as MealDocument[]
+
+      // Cache the result for 15 seconds to prevent hammering of meal reads
+      cachedTodayMeals = {
+        userId,
+        meals,
+        expiresAt: Date.now() + 15 * 1000,
+      }
+
+      return meals
+    } catch (err) {
+      console.warn('[getTodayMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
+
+      // SAFE FALLBACK: Same as listHistoricMeals to guarantee results without the composite index
+      try {
+        const response = await databases.listDocuments(
+            DATABASE_ID,
+            MEALS_COLLECTION_ID,
+            [
+              Query.equal('owner', userId),
+              Query.orderDesc('$createdAt'),
+              Query.limit(50),
+            ]
+        )
+        const meals = (response.documents as MealDocument[]).filter((doc) => new Date(doc.$createdAt) >= todayStart)
+
+        // Cache the result for 15 seconds
+        cachedTodayMeals = {
+          userId,
+          meals,
+          expiresAt: Date.now() + 15 * 1000,
+        }
+
+        return meals
+      } catch (fallbackErr) {
+        logAppwriteError('getTodayMeals fallback', fallbackErr)
+        throw new Error(formatMealError(fallbackErr))
+      }
+    } finally {
+      if (inflightTodayMealsUserId === userId) {
+        inflightTodayMealsPromise = null
+        inflightTodayMealsUserId = null
+      }
     }
-  }
+  })()
+
+  return inflightTodayMealsPromise
 }
 
 export async function listHistoricMeals(userId: string, limit = 20, offset = 0): Promise<MealDocument[]> {

@@ -14,3 +14,8 @@
 **Learning:** Concurrent mount and focus hooks on tabs (such as `ProfileGate` checking complete profiles and index `Dial` getting targets/goals) trigger simultaneous duplicate Appwrite query loads for the user's profile. Implementing short-lived in-memory cache and promise-level deduplication for `getProfile(userId)` cuts network queries by 50% and dramatically speeds up focus transitions.
 
 **Action:** Implement short-lived memory caching (15 seconds) and Promise-level deduplication for database/document gets, while clearing on create/update endpoints.
+
+## 2025-05-18 - Today Meals Caching & Deduplication
+**Learning:** Overlapping mount or focus triggers (such as index/Dial and meals logs screens loading simultaneously) cause concurrent duplicate Appwrite queries for today's logged meals (`getTodayMeals`). Implementing in-memory caching (15s TTL) and promise-based request deduplication per user resolves these redundant database reads, and invalidating the cache securely across all mutation APIs guarantees absolute safety and consistency.
+
+**Action:** When fetching resources loaded concurrently by multiple UI components, always apply in-flight promise deduplication and short-lived caching, and hook invalidation into all path mutations (creations, updates, relocations, deletions).

@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-unresolved
 import { describe, it, expect } from 'vitest'
 import { isValidEmail, isValidPassword } from './authValidation'
 
