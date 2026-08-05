@@ -1,6 +1,6 @@
-import { account, databases } from '@/lib/appwrite'
-import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
-import { logAppwriteError } from '@/lib/profile'
+import { account, databases } from './appwrite'
+import { buildMealInputFromProduct } from './mealFromProduct'
+import { logAppwriteError } from './profile'
 import { AppwriteException, ID, Permission, Role, Query, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -150,31 +150,43 @@ export async function addProductToMeal(
     throw new Error('A valid barcode is required to add a product to a meal.')
   }
 
-  const productInput = buildMealInputFromProduct(ownerId, productData, mealType, trimmedBarcode, servings)
+  // Pre-emptively clear today's meals cache for safety
+  clearTodayMealsCache(ownerId)
 
-  const todayMeals = await getTodayMeals(ownerId)
-  const existingMeal = todayMeals.find((meal) => meal.type === mealType)
+  try {
+    const productInput = buildMealInputFromProduct(ownerId, productData, mealType, trimmedBarcode, servings)
 
-  if (existingMeal) {
-    const sum = (current: number | null | undefined, added: number | null | undefined) =>
-        (current ?? 0) + (added ?? 0)
+    const todayMeals = await getTodayMeals(ownerId)
+    const existingMeal = todayMeals.find((meal) => meal.type === mealType)
 
-    return updateMeal(existingMeal.$id, {
+    if (existingMeal) {
+      const sum = (current: number | null | undefined, added: number | null | undefined) =>
+          (current ?? 0) + (added ?? 0)
+
+      const res = await updateMeal(existingMeal.$id, {
+        friendlyname: mealType,
+        kcal: sum(existingMeal.kcal, productInput.kcal),
+        protein: sum(existingMeal.protein, productInput.protein),
+        carbs: sum(existingMeal.carbs, productInput.carbs),
+        fat: sum(existingMeal.fat, productInput.fat),
+        items: [...(existingMeal.items ?? []), trimmedBarcode],
+      })
+      clearTodayMealsCache(ownerId)
+      return res
+    }
+
+    const res = await createMeal({
+      ...productInput,
       friendlyname: mealType,
-      kcal: sum(existingMeal.kcal, productInput.kcal),
-      protein: sum(existingMeal.protein, productInput.protein),
-      carbs: sum(existingMeal.carbs, productInput.carbs),
-      fat: sum(existingMeal.fat, productInput.fat),
-      items: [...(existingMeal.items ?? []), trimmedBarcode],
+      type: mealType,
+      items: [trimmedBarcode],
     })
+    clearTodayMealsCache(ownerId)
+    return res
+  } catch (err) {
+    clearTodayMealsCache(ownerId)
+    throw err
   }
-
-  return createMeal({
-    ...productInput,
-    friendlyname: mealType,
-    type: mealType,
-    items: [trimmedBarcode],
-  })
 }
 
 type ProductNutrition = {
@@ -196,67 +208,82 @@ export async function moveProductBetweenMeals(
     throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
   }
 
-  await assertActiveSession()
+  const sessionUserId = await assertActiveSession()
 
-  const sourceMeal = await getMeal(sourceMealId)
-  if (!sourceMeal) throw new Error('Source meal not found.')
-
-  const trimmedBarcode = barcode.trim()
-  const items = [...(sourceMeal.items ?? [])]
-  const itemIndex = items.indexOf(trimmedBarcode)
-  if (itemIndex === -1) throw new Error('Product not found in source meal.')
-
-  items.splice(itemIndex, 1)
-
-  const subtract = (current: number | null | undefined, amount: number | null | undefined) =>
-      Math.max(0, (current ?? 0) - (amount ?? 0))
-
-  if (items.length === 0) {
-    await databases.deleteDocument({
-      databaseId: DATABASE_ID,
-      collectionId: MEALS_COLLECTION_ID,
-      documentId: sourceMealId,
-    })
-  } else {
-    await updateMeal(sourceMealId, {
-      kcal: subtract(sourceMeal.kcal, nutrition.kcal),
-      protein: subtract(sourceMeal.protein, nutrition.protein),
-      carbs: subtract(sourceMeal.carbs, nutrition.carbs),
-      fat: subtract(sourceMeal.fat, nutrition.fat),
-      items,
-    })
+  if (ownerId !== sessionUserId) {
+    throw new Error('You can only move products between meals on your own profile.')
   }
 
-  const todayMeals = await getTodayMeals(ownerId)
-  const targetMeal = todayMeals.find((meal) => meal.type === targetType && meal.$id !== sourceMealId)
+  // Pre-emptively clear today's meals cache for safety
+  clearTodayMealsCache(sessionUserId)
 
-  const add = (current: number | null | undefined, amount: number | null | undefined) =>
-      (current ?? 0) + (amount ?? 0)
+  try {
+    const sourceMeal = await getMeal(sourceMealId)
+    if (!sourceMeal) throw new Error('Source meal not found.')
 
-  if (targetMeal) {
-    await updateMeal(targetMeal.$id, {
+    const trimmedBarcode = barcode.trim()
+    const items = [...(sourceMeal.items ?? [])]
+    const itemIndex = items.indexOf(trimmedBarcode)
+    if (itemIndex === -1) throw new Error('Product not found in source meal.')
+
+    items.splice(itemIndex, 1)
+
+    const subtract = (current: number | null | undefined, amount: number | null | undefined) =>
+        Math.max(0, (current ?? 0) - (amount ?? 0))
+
+    if (items.length === 0) {
+      await databases.deleteDocument({
+        databaseId: DATABASE_ID,
+        collectionId: MEALS_COLLECTION_ID,
+        documentId: sourceMealId,
+      })
+    } else {
+      await updateMeal(sourceMealId, {
+        kcal: subtract(sourceMeal.kcal, nutrition.kcal),
+        protein: subtract(sourceMeal.protein, nutrition.protein),
+        carbs: subtract(sourceMeal.carbs, nutrition.carbs),
+        fat: subtract(sourceMeal.fat, nutrition.fat),
+        items,
+      })
+    }
+
+    const todayMeals = await getTodayMeals(ownerId)
+    const targetMeal = todayMeals.find((meal) => meal.type === targetType && meal.$id !== sourceMealId)
+
+    const add = (current: number | null | undefined, amount: number | null | undefined) =>
+        (current ?? 0) + (amount ?? 0)
+
+    if (targetMeal) {
+      await updateMeal(targetMeal.$id, {
+        friendlyname: targetType,
+        kcal: add(targetMeal.kcal, nutrition.kcal),
+        protein: add(targetMeal.protein, nutrition.protein),
+        carbs: add(targetMeal.carbs, nutrition.carbs),
+        fat: add(targetMeal.fat, nutrition.fat),
+        items: [...(targetMeal.items ?? []), trimmedBarcode],
+      })
+      clearTodayMealsCache(sessionUserId)
+      return
+    }
+
+    await createMeal({
+      owner: ownerId,
       friendlyname: targetType,
-      kcal: add(targetMeal.kcal, nutrition.kcal),
-      protein: add(targetMeal.protein, nutrition.protein),
-      carbs: add(targetMeal.carbs, nutrition.carbs),
-      fat: add(targetMeal.fat, nutrition.fat),
-      items: [...(targetMeal.items ?? []), trimmedBarcode],
+      type: targetType,
+      kcal: nutrition.kcal,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      nutrient_density_score: null,
+      fluid: null,
+      items: [trimmedBarcode],
     })
-    return
-  }
 
-  await createMeal({
-    owner: ownerId,
-    friendlyname: targetType,
-    type: targetType,
-    kcal: nutrition.kcal,
-    protein: nutrition.protein,
-    carbs: nutrition.carbs,
-    fat: nutrition.fat,
-    nutrient_density_score: null,
-    fluid: null,
-    items: [trimmedBarcode],
-  })
+    clearTodayMealsCache(sessionUserId)
+  } catch (err) {
+    clearTodayMealsCache(sessionUserId)
+    throw err
+  }
 }
 
 export async function createMeal(input: CreateMealInput): Promise<MealDocument> {
@@ -275,15 +302,23 @@ export async function createMeal(input: CreateMealInput): Promise<MealDocument> 
     throw new Error('You can only create meals for your own profile.')
   }
 
+  // Pre-emptively clear today's meals cache for safety
+  clearTodayMealsCache(sessionUserId)
+
   try {
-    return (await databases.createDocument({
+    const res = (await databases.createDocument({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: ID.unique(),
       data: normalized,
       permissions: mealDocumentPermissions(sessionUserId),
     })) as MealDocument
+
+    // Clear cache again after successful creation
+    clearTodayMealsCache(sessionUserId)
+    return res
   } catch (err) {
+    clearTodayMealsCache(sessionUserId)
     logAppwriteError('createMeal', err)
     throw new Error(formatMealError(err))
   }
@@ -312,19 +347,27 @@ export async function updateMeal(
     throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
   }
 
-  await assertActiveSession()
+  const sessionUserId = await assertActiveSession()
   const normalized = normalizeMealWritePayload(data)
   const validationError = validateMealPatchPayload(normalized)
   if (validationError) throw new Error(validationError)
 
+  // Pre-emptively clear today's meals cache for safety
+  clearTodayMealsCache(sessionUserId)
+
   try {
-    return (await databases.updateDocument({
+    const res = (await databases.updateDocument({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: mealId,
       data: normalized,
     })) as MealDocument
+
+    // Clear cache again after successful update
+    clearTodayMealsCache(sessionUserId)
+    return res
   } catch (err) {
+    clearTodayMealsCache(sessionUserId)
     logAppwriteError('updateMeal', err)
     throw new Error(formatMealError(err))
   }
@@ -344,44 +387,97 @@ export function formatMealError(err: unknown): string {
   return raw
 }
 
+// ⚡ Bolt: Memory Cache and Promise Deduplication for today's meals to prevent
+// redundant Appwrite round-trips and simultaneous duplicate requests across different
+// focus/mount effects (e.g. index/Dial and meals view loading simultaneously).
+let cachedTodayMeals: { userId: string; meals: MealDocument[]; expiresAt: number } | null = null
+let inflightTodayMealsPromise: Promise<MealDocument[]> | null = null
+let inflightTodayMealsUserId: string | null = null
+
+export function clearTodayMealsCache(userId: string): void {
+  if (cachedTodayMeals && cachedTodayMeals.userId === userId) {
+    cachedTodayMeals = null
+  }
+  if (inflightTodayMealsUserId === userId) {
+    inflightTodayMealsPromise = null
+    inflightTodayMealsUserId = null
+  }
+}
+
 /** Fetch today's meals (Mirrors the fallback logic in listHistoricMeals to bypass missing index errors) */
-export async function getTodayMeals(userId: string): Promise<MealDocument[]> {
-  if (isMealsConfigMissing()) return []
+export function getTodayMeals(userId: string): Promise<MealDocument[]> {
+  if (isMealsConfigMissing()) return Promise.resolve([])
+
+  // 1. Check if we have a valid, unexpired cached today's meals for this user
+  if (cachedTodayMeals && cachedTodayMeals.userId === userId && cachedTodayMeals.expiresAt > Date.now()) {
+    return Promise.resolve(cachedTodayMeals.meals)
+  }
+
+  // 2. Check if a fetch is already in progress for this same user (Deduplication)
+  if (inflightTodayMealsPromise && inflightTodayMealsUserId === userId) {
+    return inflightTodayMealsPromise
+  }
 
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
   const todayStartISO = todayStart.toISOString()
 
-  try {
-    const response = await databases.listDocuments(
-        DATABASE_ID,
-        MEALS_COLLECTION_ID,
-        [
-          Query.equal('owner', userId),
-          Query.greaterThanEqual('$createdAt', todayStartISO),
-        ]
-    )
-    return response.documents as MealDocument[]
-  } catch (err) {
-    console.warn('[getTodayMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
-
-    // SAFE FALLBACK: Same as listHistoricMeals to guarantee results without the composite index
+  const fetchFn = async (): Promise<MealDocument[]> => {
     try {
       const response = await databases.listDocuments(
           DATABASE_ID,
           MEALS_COLLECTION_ID,
           [
             Query.equal('owner', userId),
-            Query.orderDesc('$createdAt'),
-            Query.limit(50),
+            Query.greaterThanEqual('$createdAt', todayStartISO),
           ]
       )
-      return (response.documents as MealDocument[]).filter((doc) => new Date(doc.$createdAt) >= todayStart)
-    } catch (fallbackErr) {
-      logAppwriteError('getTodayMeals fallback', fallbackErr)
-      throw new Error(formatMealError(fallbackErr))
+      return response.documents as MealDocument[]
+    } catch (err) {
+      console.warn('[getTodayMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
+
+      // SAFE FALLBACK: Same as listHistoricMeals to guarantee results without the composite index
+      try {
+        const response = await databases.listDocuments(
+            DATABASE_ID,
+            MEALS_COLLECTION_ID,
+            [
+              Query.equal('owner', userId),
+              Query.orderDesc('$createdAt'),
+              Query.limit(50),
+            ]
+        )
+        return (response.documents as MealDocument[]).filter((doc) => new Date(doc.$createdAt) >= todayStart)
+      } catch (fallbackErr) {
+        logAppwriteError('getTodayMeals fallback', fallbackErr)
+        throw new Error(formatMealError(fallbackErr))
+      }
     }
   }
+
+  inflightTodayMealsUserId = userId
+  const currentPromise = fetchFn()
+  inflightTodayMealsPromise = currentPromise
+
+  currentPromise
+    .then((meals) => {
+      if (inflightTodayMealsPromise === currentPromise) {
+        cachedTodayMeals = {
+          userId,
+          meals,
+          expiresAt: Date.now() + 15 * 1000,
+        }
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (inflightTodayMealsPromise === currentPromise) {
+        inflightTodayMealsPromise = null
+        inflightTodayMealsUserId = null
+      }
+    })
+
+  return currentPromise
 }
 
 export async function listHistoricMeals(userId: string, limit = 20, offset = 0): Promise<MealDocument[]> {

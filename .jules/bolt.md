@@ -14,3 +14,8 @@
 **Learning:** Concurrent mount and focus hooks on tabs (such as `ProfileGate` checking complete profiles and index `Dial` getting targets/goals) trigger simultaneous duplicate Appwrite query loads for the user's profile. Implementing short-lived in-memory cache and promise-level deduplication for `getProfile(userId)` cuts network queries by 50% and dramatically speeds up focus transitions.
 
 **Action:** Implement short-lived memory caching (15 seconds) and Promise-level deduplication for database/document gets, while clearing on create/update endpoints.
+
+## 2025-05-18 - Async Return Wrapping and Promise Identity
+**Learning:** In JavaScript, declaring a function as `async` automatically wraps any returned Promise in a new Promise instance at runtime. If testing for strict reference equality of concurrent deduplicated promises (e.g., `p1 === p2`), the assertion fails even if the exact same promise reference is returned from the function body. Declaring the function as a standard synchronous function that returns a `Promise` avoids this wrapping overhead, preserves promise identity, and is fully compatible with `await` on the caller side.
+
+**Action:** For promise-level deduplication where strict reference checking or zero wrapping overhead is desired, define the function as a normal function returning `Promise` rather than an `async` function.
