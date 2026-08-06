@@ -448,3 +448,10 @@ export function dateToIso(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0')
   return dateInputToIso(`${year}-${month}-${day}`)
 }
+
+/** Clear any cached Profile document and any inflight fetching promise to prevent PII leakage on logout. */
+export function clearProfileCache(): void {
+  cachedProfile = null
+  inflightProfilePromise = null
+  inflightProfileUserId = null
+}

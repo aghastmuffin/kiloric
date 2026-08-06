@@ -63,6 +63,8 @@ type Props = {
   error: string | null;
   onClose: () => void;
   onMealAdded?: () => void;
+  /** Scan flow: ask “Is this correct?” with Yes / No, scan again actions. */
+  confirmMode?: boolean;
 };
 
 function formatLabel(key: string): string {
@@ -169,6 +171,7 @@ export default function BarcodeDetailModal({
   error,
   onClose,
   onMealAdded,
+  confirmMode = false,
 }: Props) {
   const { user } = useAuth();
   const { selectedMealType } = useMealTypePreferences();
@@ -265,11 +268,18 @@ export default function BarcodeDetailModal({
 
       if (user?.$id) {
         await addProductToMeal(user.$id, selectedMealType, barcode ?? '', data);
-        router.push('/meals');
         Alert.alert(
           'Added & Synced',
           `Added to your ${selectedMealType} meal and synced to Appwrite.`,
-          [{ text: 'OK', onPress: handleClose }],
+          [
+            {
+              text: 'View dashboard',
+              onPress: () => {
+                handleClose();
+                router.replace('/(tabs)');
+              },
+            },
+          ],
         );
       } else {
         Alert.alert(
@@ -292,8 +302,15 @@ export default function BarcodeDetailModal({
       <View style={styles.root}>
         <Animated.View style={[styles.backdrop, backdropStyle]} />
         <Animated.View style={[styles.popup, popupStyle]}>
-          <Text style={styles.title}>Product details</Text>
+          <Text style={styles.title}>
+            {confirmMode ? 'Is this correct?' : 'Product details'}
+          </Text>
           {barcode ? <Text style={styles.subtitle}>Barcode: {barcode}</Text> : null}
+          {confirmMode && !isLoading && !error && data ? (
+            <Text style={styles.confirmHint}>
+              Review the product below, then confirm to add it to {selectedMealType}.
+            </Text>
+          ) : null}
 
           {isLoading ? (
             <View style={styles.centered}>
@@ -367,7 +384,9 @@ export default function BarcodeDetailModal({
 
           <View style={styles.footer}>
             <Pressable style={styles.redButton} onPress={handleClose}>
-              <Text style={styles.footerButtonText}>Close</Text>
+              <Text style={styles.footerButtonText}>
+                {confirmMode ? 'No, scan again' : 'Close'}
+              </Text>
             </Pressable>
             <Pressable
               style={[
@@ -381,7 +400,15 @@ export default function BarcodeDetailModal({
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
                 <Text style={styles.footerButtonText}>
-                  {mealAdded ? 'Added' : user ? 'Add to meals' : 'Add locally'}
+                  {mealAdded
+                    ? 'Added'
+                    : confirmMode
+                      ? user
+                        ? 'Yes, add to meals'
+                        : 'Yes, add locally'
+                      : user
+                        ? 'Add to meals'
+                        : 'Add locally'}
                 </Text>
               )}
             </Pressable>
@@ -399,7 +426,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 16,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: c.overlay,
   },
   popup: {
@@ -422,6 +449,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     paddingHorizontal: 16,
     paddingTop: 4,
+    paddingBottom: 12,
+  },
+  confirmHint: {
+    color: c.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    paddingHorizontal: 16,
     paddingBottom: 12,
   },
   body: {

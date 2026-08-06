@@ -6,7 +6,7 @@ import { MealTypePreferencesProvider } from '@/lib/MealTypePreferencesContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
@@ -16,11 +16,11 @@ import 'react-native-url-polyfill/auto';
 SplashScreen.preventAutoHideAsync();
 
 function buildNavigationTheme(
-  base: Theme,
+  base: typeof DefaultTheme,
   colors: ThemeColors,
   activeFontFamily?: string,
-): Theme {
-  const themed: Theme = {
+) {
+  const themed = {
     ...base,
     colors: {
       ...base.colors,
@@ -81,15 +81,13 @@ function RootNavigation() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="cameraview"
-                options={{ headerShown: true, headerTitle: "Scan Barcode", unmountOnBlur: true }}
+                options={{ headerShown: true, headerTitle: "Scan Barcode" }}
               />
               <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
               <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
-              <Stack.Screen name="Additions" options={{ headerShown: false }} />
               <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
-              <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Results" }} />
+              <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Search Results" }} />
               <Stack.Screen name="fooddetail" options={{ headerShown: true, headerTitle: "Food Details" }} />
-              <Stack.Screen name="present_n_save" options={{ headerShown: true, headerTitle: "Confirm Selection" }} />
             </Stack>
           </MealTypePreferencesProvider>
         </AuthProvider>

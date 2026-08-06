@@ -3,15 +3,5 @@ module.exports = function (api) {
 
   return {
     presets: ['babel-preset-expo'],
-    plugins: [
-      [
-        'babel-plugin-module-resolver',
-        {
-          alias: {
-            'react-native-original': 'react-native',
-          },
-        },
-      ],
-    ],
   }
 }

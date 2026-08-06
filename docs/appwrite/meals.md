@@ -48,6 +48,8 @@ Pass the profile document id (same as Appwrite Auth `user.$id`) when creating a 
 
 Each document gets read/update/delete for `Role.user(ownerId)` on create (see `createMeal` in `src/lib/meals.ts`).
 
+**Indexes:** none on `owner` — Appwrite does not allow indexes on relationship attributes. Meal list queries fall back to client-side date filtering when needed (`getTodayMeals` / `listHistoricMeals`).
+
 ## Create collection via script
 
 Requires a **server API key** with `databases.write` (never put this in the Expo app):

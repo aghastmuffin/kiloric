@@ -13,6 +13,22 @@ export type DietStyle =
   | 'mediterranean'
   | 'plant_forward'
 
+export const NUTRITION_FORMULA_VERSION = 2
+
+export type MacroPercentages = {
+  protein: number
+  carbs: number
+  fat: number
+}
+
+export const DIET_MACRO_PERCENTAGES: Record<DietStyle, MacroPercentages> = {
+  balanced: { protein: 25, carbs: 45, fat: 30 },
+  high_protein: { protein: 30, carbs: 40, fat: 30 },
+  low_carb: { protein: 30, carbs: 20, fat: 50 },
+  mediterranean: { protein: 20, carbs: 40, fat: 40 },
+  plant_forward: { protein: 20, carbs: 50, fat: 30 },
+}
+
 export const ACTIVITY_OPTIONS: {
   value: ActivityLevel
   label: string
@@ -55,7 +71,7 @@ const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
 
 const PACE_DEFICIT: Record<GoalPace, number> = {
   gentle: 250,
-  moderate: 500,
+  moderate: 550,
   aggressive: 750,
 }
 
@@ -87,7 +103,7 @@ export function calculateAge(dateOfBirth: Date, referenceDate = new Date()): num
   if (monthDiff < 0 || (monthDiff === 0 && referenceDate.getDate() < dateOfBirth.getDate())) {
     age -= 1
   }
-  return Math.max(age, 13)
+  return age < 0 ? 0 : age
 }
 
 /** Mifflin–St Jeor equation */
@@ -152,13 +168,25 @@ export function estimateWeeklyWeightChangeKg(weeklyDeficit: number): number {
 
 export function calculateMacros(
   targetKcal: number,
-  weightKg: number,
-  diet: DietStyle,
+  weightKgOrDiet: number | DietStyle,
+  diet?: DietStyle,
 ): { protein: number; carbs: number; fat: number } {
+  if (typeof weightKgOrDiet === 'string') {
+    const dietVal = weightKgOrDiet as DietStyle
+    const pcts = DIET_MACRO_PERCENTAGES[dietVal] || DIET_MACRO_PERCENTAGES.balanced
+    const protein = Math.round((targetKcal * (pcts.protein / 100)) / 4)
+    const carbs = Math.round((targetKcal * (pcts.carbs / 100)) / 4)
+    const fat = Math.round((targetKcal * (pcts.fat / 100)) / 9)
+    return { protein, carbs, fat }
+  }
+
+  const weightKg = weightKgOrDiet
+  const dietVal = diet ?? 'balanced'
+
   let proteinPerKg = 1.8
   let fatPercent = 0.3
 
-  switch (diet) {
+  switch (dietVal) {
     case 'high_protein':
       proteinPerKg = 2.2
       fatPercent = 0.25
@@ -183,7 +211,7 @@ export function calculateMacros(
   let fat = Math.round((targetKcal * fatPercent) / 9)
   let carbs = Math.round((targetKcal - protein * 4 - fat * 9) / 4)
 
-  if (diet === 'low_carb') {
+  if (dietVal === 'low_carb') {
     carbs = Math.min(Math.max(carbs, 60), 120)
     fat = Math.round((targetKcal - protein * 4 - carbs * 4) / 9)
   }
@@ -196,8 +224,40 @@ export function calculateMacros(
   return { protein, carbs, fat }
 }
 
-export function calculateDailyFluid(weightKg: number): number {
+export function calculateDailyFluid(
+  weightKg: number,
+  sex?: Sex,
+  age?: number,
+): number {
+  if (sex !== undefined && age !== undefined) {
+    if (age < 18) {
+      return sex === 'female' ? 1800 : 2000
+    }
+    return sex === 'female' ? 2200 : 3000
+  }
   return Math.round((weightKg * 35) / 50) * 50
+}
+
+export function validateMacroPercentages(pcts: MacroPercentages): string | null {
+  const sum = pcts.protein + pcts.carbs + pcts.fat
+  if (sum !== 100) {
+    return `Macro percentages must sum to 100%. Currently they sum to ${sum}%.`
+  }
+  return null
+}
+
+export function macroReferenceWarnings(pcts: MacroPercentages): string[] {
+  const warnings: string[] = []
+  if (pcts.carbs < 45 || pcts.carbs > 65) {
+    warnings.push('Carbohydrate is outside the adult AMDR of 45–65%.')
+  }
+  if (pcts.protein < 10 || pcts.protein > 35) {
+    warnings.push('Protein is outside the adult AMDR of 10–35%.')
+  }
+  if (pcts.fat < 20 || pcts.fat > 35) {
+    warnings.push('Fat is outside the adult AMDR of 20–35%.')
+  }
+  return warnings
 }
 
 function getDietLabel(diet: DietStyle): string {
@@ -264,7 +324,7 @@ export function buildNutritionPlan(input: {
     targetProtein: macros.protein,
     targetCarbs: macros.carbs,
     targetFat: macros.fat,
-    dailyFluid: calculateDailyFluid(input.weightKg),
+    dailyFluid: calculateDailyFluid(input.weightKg, input.sex, age),
     weeklyDeficit,
     targetWeight,
     mealsLabel: buildMealsLabel(input.diet),

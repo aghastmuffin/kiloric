@@ -7,7 +7,9 @@ import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext'
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext' // Added to power state hooks
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
@@ -105,10 +107,29 @@ export function AccountSignInFlow() {
             <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
                 {step === 'landing' ? (
                     <>
-                        <Text style={styles.title}>Account</Text>
+                        <View style={styles.heroBadge}>
+                            <Ionicons name="person" size={30} color={colors.accent} />
+                        </View>
+                        <Text style={styles.eyebrow}>YOUR VITALITY</Text>
+                        <Text style={styles.title}>Welcome back</Text>
                         <Text style={styles.subtitle}>
-                            Sign in to sync your profile and meals, or create a new account to get started.
+                            Sign in to sync your profile, streaks and meals — or create a new account to start your run.
                         </Text>
+
+                        <Pressable
+                            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+                            onPress={goToEmail}
+                        >
+                            <Ionicons name="log-in-outline" size={18} color={colors.onAccent} />
+                            <Text style={styles.buttonText}>Sign in</Text>
+                        </Pressable>
+
+                        <Pressable
+                            style={({ pressed }) => [styles.buttonSecondary, pressed && styles.buttonPressed]}
+                            onPress={() => router.replace('/onboarding')}
+                        >
+                            <Text style={styles.buttonSecondaryText}>Create account</Text>
+                        </Pressable>
 
                         {/* Collapsible Local Card component wrapper */}
                         <View style={styles.card}>
@@ -116,14 +137,26 @@ export function AccountSignInFlow() {
                                 onPress={() => setSettingsExpanded(!settingsExpanded)}
                                 style={styles.header}
                             >
-                                <Text style={styles.hint}>
-                                    {settingsExpanded ? '▲ Compact Settings' : '▼ View Settings'}
-                                </Text>
+                                <View style={styles.settingsHeaderRow}>
+                                    <View style={styles.settingsHeaderLeft}>
+                                        <View style={styles.settingsIconBadge}>
+                                            <Ionicons name="options-outline" size={17} color={colors.accent} />
+                                        </View>
+                                        <View>
+                                            <Text style={styles.settingsKicker}>PREFERENCES</Text>
+                                            <Text style={styles.sectionTitle}>Settings</Text>
+                                        </View>
+                                    </View>
+                                    <Ionicons
+                                        name={settingsExpanded ? 'chevron-up' : 'chevron-down'}
+                                        size={19}
+                                        color={colors.textMuted}
+                                    />
+                                </View>
                             </Pressable>
 
                             {settingsExpanded && (
                                 <View style={styles.settingsCardInner}>
-                                    <Text style={styles.sectionTitle}>Settings</Text>
                                     <Text style={styles.label}>Default search tab</Text>
                                     <Text style={styles.hint}>
                                         Choose whether the bottom tab opens camera scan or manual text search.
@@ -142,20 +175,6 @@ export function AccountSignInFlow() {
                                 </View>
                             )}
                         </View>
-
-                        <Pressable
-                            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-                            onPress={goToEmail}
-                        >
-                            <Text style={styles.buttonText}>Sign in</Text>
-                        </Pressable>
-
-                        <Pressable
-                            style={({ pressed }) => [styles.buttonSecondary, pressed && styles.buttonPressed]}
-                            onPress={() => router.replace('/onboarding')}
-                        >
-                            <Text style={styles.buttonSecondaryText}>Create account</Text>
-                        </Pressable>
                     </>
                 ) : null}
 
@@ -257,50 +276,91 @@ const makeStyles = (c: ThemeColors) =>
             padding: 20,
             paddingBottom: 120,
         },
+        heroBadge: {
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: c.accentSoft,
+            borderWidth: 2,
+            borderColor: c.accent,
+            marginBottom: 16,
+        },
+        eyebrow: {
+            ...typography.labelSmall,
+            color: c.textFaint,
+            marginBottom: 4,
+        },
         title: {
+            ...typography.headlineLarge,
             color: c.text,
-            fontSize: 28,
-            fontWeight: '700',
             marginBottom: 8,
         },
         subtitle: {
+            ...typography.body,
             color: c.textMuted,
-            fontSize: 14,
-            lineHeight: 20,
-            marginBottom: 20,
+            marginBottom: 24,
         },
         sectionTitle: {
+            ...typography.headline,
+            fontSize: 20,
+            lineHeight: 26,
             color: c.text,
-            fontSize: 18,
-            fontWeight: '600',
-            marginTop: 8,
-            marginBottom: 8,
+        },
+        settingsHeaderRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+        },
+        settingsHeaderLeft: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+        },
+        settingsIconBadge: {
+            width: 36,
+            height: 36,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: c.accentSoft,
+        },
+        settingsKicker: {
+            ...typography.labelSmall,
+            fontSize: 10,
+            color: c.textFaint,
         },
         label: {
+            ...typography.body,
+            fontWeight: '600',
             color: c.text,
-            fontSize: 16,
             marginBottom: 6,
         },
         input: {
-            backgroundColor: c.surfaceAlt,
+            backgroundColor: c.surface,
             color: c.text,
-            borderRadius: 8,
-            padding: 12,
-            fontSize: 16,
+            ...typography.body,
+            borderRadius: 14,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
             marginBottom: 16,
-            borderWidth: 1,
+            borderWidth: 1.5,
             borderColor: c.border,
         },
         card: {
             backgroundColor: c.surface,
-            borderRadius: 12,
+            borderRadius: 20,
             padding: 16,
-            marginBottom: 20,
+            marginTop: 24,
             borderWidth: 1,
             borderColor: c.border,
         },
         settingsCardInner: {
-            marginTop: 10,
+            marginTop: 16,
+            paddingTop: 14,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: c.border,
         },
         errorBox: {
             backgroundColor: c.dangerSoft,
@@ -323,29 +383,35 @@ const makeStyles = (c: ThemeColors) =>
             fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
         },
         button: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 8,
             backgroundColor: c.accent,
-            borderRadius: 8,
-            padding: 14,
+            borderRadius: 999,
+            padding: 16,
             alignItems: 'center',
             marginTop: 8,
+            shadowColor: c.accent,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.22,
+            shadowRadius: 10,
+            elevation: 3,
         },
         buttonSecondary: {
-            borderRadius: 8,
-            padding: 14,
+            borderRadius: 999,
+            padding: 15,
             alignItems: 'center',
             marginTop: 12,
-            borderWidth: 1,
+            borderWidth: 1.5,
             borderColor: c.accent,
         },
         buttonText: {
+            ...typography.label,
             color: c.onAccent,
-            fontWeight: '600',
-            fontSize: 16,
         },
         buttonSecondaryText: {
+            ...typography.label,
             color: c.accent,
-            fontWeight: '600',
-            fontSize: 16,
         },
         buttonPressed: {
             opacity: 0.85,
@@ -369,28 +435,26 @@ const makeStyles = (c: ThemeColors) =>
         },
         footerSecondary: {
             flex: 1,
-            borderRadius: 12,
+            borderRadius: 999,
             paddingVertical: 14,
             alignItems: 'center',
-            borderWidth: 1,
+            borderWidth: 1.5,
             borderColor: c.border,
         },
         footerSecondaryText: {
+            ...typography.label,
             color: c.textMuted,
-            fontWeight: '600',
-            fontSize: 16,
         },
         footerPrimary: {
             flex: 2,
             backgroundColor: c.accent,
-            borderRadius: 12,
+            borderRadius: 999,
             paddingVertical: 14,
             alignItems: 'center',
         },
         footerPrimaryText: {
+            ...typography.label,
             color: c.onAccent,
-            fontWeight: '700',
-            fontSize: 16,
         },
         header: {
             paddingVertical: 4,

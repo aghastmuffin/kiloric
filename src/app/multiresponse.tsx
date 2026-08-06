@@ -1,10 +1,15 @@
 import { authenticatedRequest } from '@/components/apiUtils';
 import BarcodeDetailModal from '@/components/BarcodeDetailModal';
-import type { ThemeColors } from '@/lib/theme/tokens';
+import { useAuth } from '@/lib/AuthContext';
+import { addProductToMeal } from '@/lib/meals';
+import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
+import { spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useLocalSearchParams } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, useTheme } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
@@ -28,6 +33,13 @@ function getItemTitle(item: Record<string, unknown>, index: number): string {
     const value = item[key];
     if (typeof value === 'string' && value.trim()) return value;
   }
+  const product = getProductData(item);
+  if (product !== item) {
+    for (const key of TITLE_KEYS) {
+      const value = product[key];
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+  }
   return `Result ${index + 1}`;
 }
 
@@ -38,7 +50,19 @@ function getItemBarcode(item: Record<string, unknown>): string | null {
       return String(value);
     }
   }
+  const product = getProductData(item);
+  if (product !== item) return getItemBarcode(product);
   return null;
+}
+
+function getProductData(item: Record<string, unknown>): Record<string, unknown> {
+  for (const key of ['product', 'product_data', 'data']) {
+    const value = item[key];
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+  }
+  return item;
 }
 
 function ResultRow({ label, value }: { label: string; value: string }) {
@@ -55,10 +79,14 @@ function ObjectCard({
   item,
   index,
   onViewMore,
+  onAdd,
+  addStatus,
 }: {
   item: Record<string, unknown>;
   index: number;
   onViewMore?: (barcode: string) => void;
+  onAdd?: (item: Record<string, unknown>, index: number) => void;
+  addStatus?: { state: 'adding' | 'added' | 'error'; message: string };
 }) {
   const styles = useThemedStyles(makeStyles);
   const title = getItemTitle(item, index);
@@ -76,9 +104,7 @@ function ObjectCard({
         <Text style={styles.mutedText}>No additional details</Text>
       )}
       {barcode && onViewMore ? (
-        <TouchableOpacity style={styles.viewMoreButton} onPress={() => onViewMore(barcode)}>
-          <Text style={styles.viewMoreButtonText}>View More</Text>
-        </TouchableOpacity>
+        <Text style={styles.viewMoreButtonText}>View more →</Text>
       ) : null}
     </View>
   );
@@ -97,26 +123,57 @@ function parseResult(raw: string | undefined): unknown {
 function ResultsBody({
   data,
   onViewMore,
+  onAdd,
+  addStatuses,
 }: {
   data: unknown;
   onViewMore?: (barcode: string) => void;
+  onAdd?: (item: Record<string, unknown>, index: number) => void;
+  addStatuses?: Record<number, { state: 'adding' | 'added' | 'error'; message: string }>;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const TARGET_ERROR = "404: no products found";
 
   if (data === null || data === undefined) {
-    return <Text style={styles.mutedText}>No results to display.</Text>;
+    return (
+      <View style={styles.emptyStateContainer}>
+        <MotiView
+          from={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 15 }}
+          style={styles.emptyIconCircle}
+        >
+          <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+        </MotiView>
+        <Text style={styles.emptyStateTitle}>No results to display</Text>
+        <Text style={styles.emptyStateSubtitle}>Try searching for another food or scan a barcode</Text>
+      </View>
+    );
   }
 
   // 1. Check direct string match
   if (typeof data === 'string') {
     if (data.trim().toLowerCase() === TARGET_ERROR) {
-      return <Text style={styles.mutedText}>No matches found. You can return home</Text>;
+      return (
+        <View style={styles.emptyStateContainer}>
+          <MotiView
+            from={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={styles.emptyIconCircle}
+          >
+            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+          </MotiView>
+          <Text style={styles.emptyStateTitle}>No matches found</Text>
+          <Text style={styles.emptyStateSubtitle}>We couldn't find any products. You can return home and try again.</Text>
+        </View>
+      );
     }
     return (
-      <View style={styles.card}>
+      <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={styles.card}>
         <Text style={styles.messageText}>{data}</Text>
-      </View>
+      </MotiView>
     );
   }
 
@@ -144,15 +201,29 @@ function ResultsBody({
             item={item as Record<string, unknown>}
             index={index}
             onViewMore={onViewMore}
+            onAdd={onAdd}
+            addStatus={addStatuses?.[index]}
           />
         );
       }
 
       return (
-        <View key={index} style={styles.card}>
+        <MotiView
+          key={index}
+          from={{ opacity: 0, scale: 0.9, translateY: 30 }}
+          animate={{ opacity: 1, scale: 1, translateY: 0 }}
+          transition={{
+            delay: index * 100,
+            type: 'spring',
+            damping: 12,
+            stiffness: 100,
+            mass: 0.8,
+          }}
+          style={styles.card}
+        >
           <Text style={styles.cardTitle}>Result {index + 1}</Text>
           <Text style={styles.messageText}>{formatValue(item)}</Text>
-        </View>
+        </MotiView>
       );
     });
   }
@@ -163,28 +234,54 @@ function ResultsBody({
     const nestedMessage = obj.error || obj.detail || obj.message || obj.result;
 
     if (typeof nestedMessage === 'string' && nestedMessage.trim().toLowerCase() === TARGET_ERROR) {
-      return <Text style={styles.mutedText}>No matches found. You can return home</Text>;
+      return (
+        <View style={styles.emptyStateContainer}>
+          <MotiView
+            from={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={styles.emptyIconCircle}
+          >
+            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+          </MotiView>
+          <Text style={styles.emptyStateTitle}>No matches found</Text>
+          <Text style={styles.emptyStateSubtitle}>No matching products were found. Try another search!</Text>
+        </View>
+      );
     }
 
-    return <ObjectCard item={obj} index={0} onViewMore={onViewMore} />;
+    return (
+      <ObjectCard
+        item={obj}
+        index={0}
+        onViewMore={onViewMore}
+        onAdd={onAdd}
+        addStatus={addStatuses?.[0]}
+      />
+    );
   }
 
   return (
-    <View style={styles.card}>
+    <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} style={styles.card}>
       <Text style={styles.messageText}>{formatValue(data)}</Text>
-    </View>
+    </MotiView>
   );
 }
 
 export default function MultiResponseScreen() {
   const { query, result } = useLocalSearchParams<{ query?: string; result?: string }>();
   const styles = useThemedStyles(makeStyles);
+  const { user } = useAuth();
+  const { selectedMealType } = useMealTypePreferences();
   const parsedResult = parseResult(result);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<Record<string, unknown> | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [addStatuses, setAddStatuses] = useState<
+    Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
+  >({});
 
   const handleViewMore = useCallback(async (barcode: string) => {
     setSelectedBarcode(barcode);
@@ -208,6 +305,46 @@ export default function MultiResponseScreen() {
     }
   }, []);
 
+  const handleQuickAdd = useCallback(async (
+    item: Record<string, unknown>,
+    index: number,
+  ) => {
+    if (addStatuses[index]?.state === 'adding') return;
+
+    const barcode = getItemBarcode(item);
+    if (!barcode) return;
+    if (!user?.$id) {
+      setAddStatuses((current) => ({
+        ...current,
+        [index]: { state: 'error', message: 'Sign in to add foods.' },
+      }));
+      return;
+    }
+
+    setAddStatuses((current) => ({
+      ...current,
+      [index]: { state: 'adding', message: `Adding to ${selectedMealType}…` },
+    }));
+    try {
+      await addProductToMeal(
+        user.$id,
+        selectedMealType,
+        barcode,
+        getProductData(item),
+      );
+      setAddStatuses((current) => ({
+        ...current,
+        [index]: { state: 'added', message: `Added to ${selectedMealType}.` },
+      }));
+    } catch (error) {
+      console.error('Could not quick-add search result', error);
+      setAddStatuses((current) => ({
+        ...current,
+        [index]: { state: 'error', message: 'Couldn’t add. Try again.' },
+      }));
+    }
+  }, [addStatuses, selectedMealType, user]);
+
   return (
     <>
       <ScrollView
@@ -221,7 +358,12 @@ export default function MultiResponseScreen() {
           </View>
         ) : null}
 
-        <ResultsBody data={parsedResult} onViewMore={handleViewMore} />
+        <ResultsBody
+          data={parsedResult}
+          onViewMore={handleViewMore}
+          onAdd={(item, index) => void handleQuickAdd(item, index)}
+          addStatuses={addStatuses}
+        />
       </ScrollView>
 
       <BarcodeDetailModal
@@ -232,19 +374,26 @@ export default function MultiResponseScreen() {
         error={detailError}
         onClose={() => setModalVisible(false)}
       />
-    </>
+    </GestureHandlerRootView>
   );
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: c.background,
+  },
   container: {
     flex: 1,
     backgroundColor: c.background,
   },
   content: {
-    padding: 20,
-    paddingBottom: 40,
-    gap: 16,
+    width: '100%',
+    maxWidth: 620,
+    alignSelf: 'center',
+    padding: spacing.lg,
+    paddingBottom: 48,
+    gap: spacing.md,
   },
   header: {
     backgroundColor: c.surface,
@@ -253,7 +402,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: c.border,
   },
-  headerLabel: {
+  mealChipText: {
+    ...typography.labelSmall,
+    color: c.accent,
+  },
+  swipeHint: {
+    ...typography.labelSmall,
     color: c.textMuted,
     fontSize: 13,
     textTransform: 'uppercase',
@@ -271,16 +425,37 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: c.border,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8 },
+      android: { elevation: 2 },
+    })
+  },
+  cardPressed: {
+    opacity: 0.8,
   },
   errorCard: {
     borderColor: c.danger,
     backgroundColor: c.dangerSoft,
   },
+  cardHeading: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  cardHeadingText: {
+    flex: 1,
+  },
   cardTitle: {
-    color: c.accent,
-    fontSize: 18,
+    ...typography.bodyLarge,
+    color: c.text,
     fontWeight: '700',
-    marginBottom: 12,
+  },
+  barcodeText: {
+    ...typography.labelSmall,
+    color: c.textMuted,
+    marginTop: 2,
   },
   row: {
     flexDirection: 'row',
@@ -292,11 +467,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderBottomColor: c.border,
   },
   rowLabel: {
+    ...typography.labelSmall,
     color: c.textMuted,
-    fontSize: 14,
     flex: 1,
   },
   rowValue: {
+    ...typography.labelSmall,
     color: c.text,
     fontSize: 14,
     fontWeight: '500',
@@ -304,16 +480,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     textAlign: 'right',
   },
   messageText: {
+    ...typography.body,
     color: c.text,
-    fontSize: 15,
-    lineHeight: 22,
   },
   errorText: {
     color: c.danger,
   },
   mutedText: {
+    ...typography.body,
     color: c.textMuted,
-    fontSize: 15,
     textAlign: 'center',
     paddingVertical: 24,
   },
