@@ -23,16 +23,26 @@ describe('isValidEmail', () => {
     expect(isValidEmail('test@@example.com')).toBe(false)
     expect(isValidEmail('test.example.com')).toBe(false)
   })
+
+  it('should reject email formats exceeding 254 characters', () => {
+    const longDomain = 'a'.repeat(250) + '@example.com'
+    expect(isValidEmail(longDomain)).toBe(false)
+  })
 })
 
 describe('isValidPassword', () => {
-  it('should accept passwords with 8 or more characters', () => {
+  it('should accept passwords with 8 or more characters up to 128 characters', () => {
     expect(isValidPassword('12345678')).toBe(true)
     expect(isValidPassword('password123')).toBe(true)
+    expect(isValidPassword('a'.repeat(128))).toBe(true)
   })
 
   it('should reject passwords with fewer than 8 characters', () => {
     expect(isValidPassword('')).toBe(false)
     expect(isValidPassword('1234567')).toBe(false)
+  })
+
+  it('should reject passwords exceeding 128 characters', () => {
+    expect(isValidPassword('a'.repeat(129))).toBe(false)
   })
 })

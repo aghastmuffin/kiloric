@@ -198,6 +198,7 @@ export function AccountSignInFlow() {
                             placeholderTextColor={colors.textFaint}
                             autoCapitalize="none"
                             keyboardType="email-address"
+                            maxLength={254}
                             autoFocus
                             style={styles.input}
                         />
@@ -224,6 +225,7 @@ export function AccountSignInFlow() {
                             placeholderTextColor={colors.textFaint}
                             secureTextEntry
                             autoCapitalize="none"
+                            maxLength={128}
                             autoFocus
                             style={styles.input}
                         />
