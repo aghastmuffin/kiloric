@@ -40,6 +40,11 @@ export type ThemeColors = {
   pickerVariant: ColorSchemeName
   /** Accent color fed to native pickers / date pickers. */
   pickerAccent: string
+  /** Restrained game-layer accents. */
+  xpAccent: string
+  streakColor: string
+  levelGlow: string
+  progressTrail: string
 }
 
 export type OnboardingColors = {
@@ -81,31 +86,39 @@ export const barebonesColors: ThemeColors = {
   overlay: 'rgba(0, 0, 0, 0.6)',
   pickerVariant: 'dark',
   pickerAccent: '#87ff72',
+  xpAccent: '#aec7f7',
+  streakColor: '#becab6',
+  levelGlow: 'rgba(174, 199, 247, 0.35)',
+  progressTrail: '#3a3f47',
 }
 
 export const iosLightColors: ThemeColors = {
-  background: '#f2f2f7',
+  background: '#F8F8F4',
   surface: '#ffffff',
-  surfaceAlt: '#ffffff',
-  surfaceMuted: '#f9f9f9',
-  border: '#d1d1d6',
-  borderStrong: '#c6c6c8',
-  text: '#000000',
-  textMuted: '#6c6c70',
-  textFaint: '#8e8e93',
-  accent: '#007aff',
+  surfaceAlt: '#F4F4F0',
+  surfaceMuted: '#F8F8F4',
+  border: '#DADAD6',
+  borderStrong: '#C9C6C1',
+  text: '#353C44',
+  textMuted: '#787672',
+  textFaint: '#92908B',
+  accent: '#1B365D',
   onAccent: '#ffffff',
-  accentSoft: 'rgba(0, 122, 255, 0.12)',
-  danger: '#ff3b30',
-  onDanger: '#ff3b30',
-  dangerButtonBg: 'rgba(255, 59, 48, 0.12)',
-  dangerSoft: 'rgba(255, 59, 48, 0.10)',
-  warning: '#ff9500',
-  success: '#34c759',
-  mono: '#0040dd',
-  overlay: 'rgba(0, 0, 0, 0.4)',
+  accentSoft: '#DAE6D1',
+  danger: '#BA1A1A',
+  onDanger: '#93000A',
+  dangerButtonBg: '#FFDAD6',
+  dangerSoft: '#FFDAD6',
+  warning: '#8A6500',
+  success: '#667160',
+  mono: '#1B365D',
+  overlay: 'rgba(27, 54, 93, 0.38)',
   pickerVariant: 'light',
-  pickerAccent: '#007aff',
+  pickerAccent: '#1B365D',
+  xpAccent: '#1B365D',
+  streakColor: '#667160',
+  levelGlow: 'rgba(27, 54, 93, 0.18)',
+  progressTrail: '#E2E3DF',
 }
 
 export const iosDarkColors: ThemeColors = {
@@ -131,6 +144,10 @@ export const iosDarkColors: ThemeColors = {
   overlay: 'rgba(0, 0, 0, 0.6)',
   pickerVariant: 'dark',
   pickerAccent: '#0a84ff',
+  xpAccent: '#AEC7F7',
+  streakColor: '#BECAB6',
+  levelGlow: 'rgba(174, 199, 247, 0.28)',
+  progressTrail: '#373633',
 }
 
 // Onboarding keeps its own slightly richer palette (green accent in barebones).
@@ -150,18 +167,18 @@ const barebonesOnboardingColors: OnboardingColors = {
 }
 
 const iosLightOnboardingColors: OnboardingColors = {
-  background: '#f2f2f7',
+  background: '#F8F8F4',
   surface: '#ffffff',
   card: '#ffffff',
-  cardSelected: 'rgba(0, 122, 255, 0.10)',
-  border: '#d1d1d6',
-  borderSelected: '#007aff',
-  accent: '#007aff',
-  accentMuted: '#3395ff',
-  text: '#000000',
-  textMuted: '#6c6c70',
-  textSoft: '#3c3c43',
-  danger: '#ff3b30',
+  cardSelected: '#DAE6D1',
+  border: '#DADAD6',
+  borderSelected: '#1B365D',
+  accent: '#1B365D',
+  accentMuted: '#667160',
+  text: '#353C44',
+  textMuted: '#787672',
+  textSoft: '#576251',
+  danger: '#BA1A1A',
 }
 
 const iosDarkOnboardingColors: OnboardingColors = {
@@ -180,6 +197,9 @@ const iosDarkOnboardingColors: OnboardingColors = {
 }
 
 export type AppThemeChoice = 'ios' | 'barebones'
+
+export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const
+export const borderRadius = { sm: 4, md: 8, lg: 12, pill: 999 } as const
 
 export function resolveThemeColors(
   choice: AppThemeChoice,

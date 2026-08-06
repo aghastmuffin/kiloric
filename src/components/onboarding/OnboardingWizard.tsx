@@ -436,7 +436,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              Start with the email you want to use for your CalCount account.
+              Start with the email you want to use for your Vitality account.
             </Text>
             {authError ? (
               <View style={onboardingStyles.errorBox}>
@@ -492,7 +492,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              A quick setup so CalCount can personalize calories, macros, and hydration for you.
+              A quick setup so Vitality can personalize calories, macros, and hydration for you.
             </Text>
             <View style={onboardingStyles.infoCard}>
               <Text style={onboardingStyles.infoCardTitle}>We&apos;ll handle the math</Text>
