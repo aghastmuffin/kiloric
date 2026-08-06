@@ -90,6 +90,10 @@ function RootNavigation() {
                 <Stack.Screen name="Additions" options={{ headerShown: false }} />
                 <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
                 <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Results" }} />
+                <Stack.Screen
+                  name="contribute-food"
+                  options={{ headerShown: true, headerTitle: "Add missing food" }}
+                />
                 <Stack.Screen name="fooddetail" options={{ headerShown: true, headerTitle: "Food Details" }} />
                 <Stack.Screen name="present_n_save" options={{ headerShown: true, headerTitle: "Confirm Selection" }} />
               </Stack>

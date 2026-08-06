@@ -491,12 +491,447 @@
                     ]
                 }
             ]
+        },
+        {
+            "$id": "food_contributions",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a4577f00008c718d204",
+            "name": "Food contributions",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": "pending",
+                    "encrypt": false
+                },
+                {
+                    "key": "photo_file_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "source_query",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "code",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "product_name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "brands",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "categories",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 512,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "quantity",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "serving_size",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "allergens",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 512,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "traces_tags",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 512,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "image_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1024,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "nutriscore_grade",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 8,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ecoscore_grade",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 8,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "serving_quantity",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "nova_group",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "additives_n",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "carbon_footprint_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "energy_kcal_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "energy_kj_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "proteins_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "carbohydrates_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "fiber_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "sugars_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "added_sugars_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "polyols_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "saturated_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "trans_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "monounsaturated_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "polyunsaturated_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "sodium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "cholesterol_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "vitamin_a_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "vitamin_c_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "vitamin_d_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "vitamin_b12_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "calcium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "iron_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "potassium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "magnesium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "caffeine_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                },
+                {
+                    "key": "taurine_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000.0,
+                    "max": 1000000000000.0
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "code",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "code"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         }
     ],
     "buckets": [
         {
             "$id": "6a32e0dd000f9dee7b98",
             "$permissions": [
+                "create(\"users\")",
                 "create(\"team:6a387d9f001617fc9bcf\")",
                 "read(\"team:6a387d9f001617fc9bcf\")",
                 "update(\"team:6a387d9f001617fc9bcf\")",

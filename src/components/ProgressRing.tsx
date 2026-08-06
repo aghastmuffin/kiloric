@@ -1,7 +1,7 @@
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { panelTiming, celebrationSpring } from '@/lib/motion'
-import { useEffect, useRef, useState } from 'react'
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useRef } from 'react'
+import { Platform, StyleSheet, Text } from 'react-native'
 import Animated, {
   useAnimatedProps,
   useSharedValue,
@@ -10,7 +10,6 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated'
 import Svg, { Circle, G as NativeG } from 'react-native-svg'
-import { MotiView } from 'moti'
 
 const G = Platform.OS === 'web' ? 'g' : NativeG
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)

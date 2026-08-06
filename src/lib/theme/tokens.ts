@@ -179,6 +179,9 @@ const iosDarkOnboardingColors: OnboardingColors = {
   danger: '#ff453a',
 }
 
+export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const
+export const borderRadius = { sm: 4, md: 8, lg: 12, pill: 999 } as const
+
 export type AppThemeChoice = 'ios' | 'barebones'
 
 export function resolveThemeColors(

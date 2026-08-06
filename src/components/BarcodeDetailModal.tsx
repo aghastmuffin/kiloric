@@ -313,6 +313,20 @@ export default function BarcodeDetailModal({
           ) : error ? (
             <View style={styles.centered}>
               <Text style={styles.errorText}>{error}</Text>
+              {barcode ? (
+                <TouchableOpacity
+                  style={styles.contributeButton}
+                  onPress={() => {
+                    onClose()
+                    router.push({
+                      pathname: '/contribute-food',
+                      params: { code: barcode, query: barcode },
+                    })
+                  }}
+                >
+                  <Text style={styles.contributeButtonText}>Add this product</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : data ? (
             <View style={styles.body}>
@@ -599,5 +613,17 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  contributeButton: {
+    marginTop: 8,
+    backgroundColor: c.accent,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  contributeButtonText: {
+    color: c.onAccent,
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

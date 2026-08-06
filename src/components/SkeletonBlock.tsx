@@ -1,12 +1,12 @@
-import { useTheme } from '@/lib/theme/ThemeContext';
-import { MotiView } from 'moti';
-import { StyleSheet } from 'react-native';
+import { MotionView } from '@/components/MotionView'
+import { useTheme } from '@/lib/theme/ThemeContext'
+import { StyleSheet } from 'react-native'
 
 type SkeletonBlockProps = {
-  width?: any;
-  height?: any;
-  borderRadius?: number;
-  style?: any;
+  width?: number | `${number}%`
+  height?: number
+  borderRadius?: number
+  style?: object
 }
 
 export function SkeletonBlock({
@@ -15,16 +15,15 @@ export function SkeletonBlock({
   borderRadius = 8,
   style,
 }: SkeletonBlockProps) {
-  const { colors } = useTheme();
+  const { colors } = useTheme()
   return (
-    <MotiView
+    <MotionView
       from={{ opacity: 0.3 }}
       animate={{ opacity: 0.8 }}
       transition={{
         type: 'timing',
         duration: 800,
         loop: true,
-        repeatReverse: true,
       }}
       style={[
         styles.skeleton,
@@ -37,11 +36,11 @@ export function SkeletonBlock({
         style,
       ]}
     />
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   skeleton: {
     overflow: 'hidden',
   },
-});
+})

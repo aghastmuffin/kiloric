@@ -682,6 +682,17 @@ export default function LogFoodScreen() {
               }}
               onOpenDetail={(barcode) => void openDetail(barcode)}
               onBack={clearSearch}
+              onContribute={() => {
+                const trimmed = query.trim()
+                const looksLikeBarcode = /^\d{8,14}$/.test(trimmed)
+                router.push({
+                  pathname: '/contribute-food',
+                  params: {
+                    query: trimmed,
+                    ...(looksLikeBarcode ? { code: trimmed } : {}),
+                  },
+                })
+              }}
             />
           ) : (
             <IdleLogPanels
@@ -1165,6 +1176,7 @@ function SearchResultsPanel({
   onToggleFavorite,
   onOpenDetail,
   onBack,
+  onContribute,
 }: {
   colors: ThemeColors
   styles: ReturnType<typeof makeStyles>
@@ -1181,6 +1193,7 @@ function SearchResultsPanel({
   onToggleFavorite: (item: SearchResult) => void
   onOpenDetail: (barcode: string) => void
   onBack: () => void
+  onContribute: () => void
 }) {
   return (
     <MotionView
@@ -1246,6 +1259,13 @@ function SearchResultsPanel({
         ) : searchError ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>{searchError}</Text>
+            <Pressable
+              style={styles.contributeLink}
+              onPress={onContribute}
+              accessibilityRole="button"
+            >
+              <Text style={styles.contributeLinkText}>Add this product</Text>
+            </Pressable>
           </View>
         ) : (
           results.map((item, index) => {
@@ -1787,6 +1807,16 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     ...typography.body,
     color: c.textMuted,
     textAlign: 'center',
+  },
+  contributeLink: {
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  contributeLinkText: {
+    ...typography.label,
+    color: c.accent,
+    fontWeight: '700',
   },
   pressed: {
     opacity: 0.78,
