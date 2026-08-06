@@ -3,13 +3,15 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/hanken-grotesk": "^0.4.3",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@expo-google-fonts/source-serif-4": "^0.4.1",
     "@expo/ui": "~56.0.22",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-picker/picker": "2.11.4",
     "@react-navigation/native": "^7.3.3",
-    "babel-plugin-module-resolver": "^5.0.3",
     "expo": "~56.0.16",
     "expo-camera": "~56.0.8",
     "expo-constants": "~56.0.18",
@@ -17,7 +19,7 @@
     "expo-device": "~56.0.4",
     "expo-font": "~56.0.7",
     "expo-glass-effect": "~56.0.4",
-    "expo-haptics": "^57.0.1",
+    "expo-haptics": "~56.0.3",
     "expo-image": "~56.0.11",
     "expo-linking": "~56.0.15",
     "expo-router": "~56.2.15",
@@ -26,7 +28,6 @@
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
     "expo-web-browser": "~56.0.5",
-    "moti": "^0.30.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",
@@ -39,8 +40,7 @@
     "react-native-url-polyfill": "^3.0.0",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.8.3",
-    "tslib": "^2.8.1"
+    "react-native-worklets": "0.8.3"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

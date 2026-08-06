@@ -1,51 +1,51 @@
-import { useFontPreferences } from '@/lib/FontPreferencesContext';
-import { useMemo } from 'react';
+import {
+  FONT_FAMILY,
+  HEADLINE_FONT_FAMILY,
+  MONO_FONT_FAMILY,
+} from '@/lib/fonts'
 
-export type TypographyStyles = {
-  heading1: { fontFamily?: string; fontSize: number; fontWeight: 'bold'; lineHeight?: number }
-  heading2: { fontFamily?: string; fontSize: number; fontWeight: '600'; lineHeight?: number }
-  body: { fontFamily?: string; fontSize: number; fontWeight: 'normal'; lineHeight?: number }
-  caption: { fontFamily?: string; fontSize: number; fontWeight: 'normal'; lineHeight?: number }
-  stat: { fontFamily?: string; fontSize: number; fontWeight: 'bold'; lineHeight?: number }
-}
-
-export function getTypographyStyles(activeFontFamily?: string): TypographyStyles {
-  const fontStyle = activeFontFamily ? { fontFamily: activeFontFamily } : {};
-  return {
-    heading1: {
-      ...fontStyle,
-      fontSize: 28,
-      fontWeight: 'bold',
-      lineHeight: 34,
-    },
-    heading2: {
-      ...fontStyle,
-      fontSize: 20,
-      fontWeight: '600',
-      lineHeight: 26,
-    },
-    body: {
-      ...fontStyle,
-      fontSize: 16,
-      fontWeight: 'normal',
-      lineHeight: 22,
-    },
-    caption: {
-      ...fontStyle,
-      fontSize: 12,
-      fontWeight: 'normal',
-      lineHeight: 16,
-    },
-    stat: {
-      ...fontStyle,
-      fontSize: 36,
-      fontWeight: 'bold',
-      lineHeight: 42,
-    },
-  };
-}
-
-export function useTypography(): TypographyStyles {
-  const { activeFontFamily } = useFontPreferences();
-  return useMemo(() => getTypographyStyles(activeFontFamily), [activeFontFamily]);
-}
+export const typography = {
+  display: {
+    fontFamily: HEADLINE_FONT_FAMILY,
+    fontSize: 48,
+    lineHeight: 56,
+    fontWeight: '700' as const,
+    letterSpacing: -0.96,
+  },
+  headlineLarge: {
+    fontFamily: HEADLINE_FONT_FAMILY,
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: '600' as const,
+  },
+  headline: {
+    fontFamily: HEADLINE_FONT_FAMILY,
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: '600' as const,
+  },
+  bodyLarge: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 18,
+    lineHeight: 28,
+  },
+  body: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  label: {
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500' as const,
+    letterSpacing: 0.28,
+  },
+  labelSmall: {
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500' as const,
+    letterSpacing: 0.6,
+  },
+} as const

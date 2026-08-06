@@ -3,27 +3,22 @@ import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { Platform, Pressable, StyleSheet } from 'react-native'
+import { Pressable, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
-/** Typical tab bar height above the home-indicator safe area. */
-const TAB_BAR_HEIGHT = Platform.select({ ios: 49, android: 56, default: 56 }) ?? 56
 
 type SearchScreen = 'scan' | 'text_query'
 
 const SWAP_CONFIG: Record<
     SearchScreen,
-    { target: SearchScreen; icon: keyof typeof Ionicons.glyphMap; label: string }
+    { icon: keyof typeof Ionicons.glyphMap; label: string }
 > = {
   scan: {
-    target: 'text_query',
     icon: 'search-outline',
-    label: 'Switch to text search',
+    label: 'Open text food search',
   },
   text_query: {
-    target: 'scan',
-    icon: 'camera-outline',
-    label: 'Switch to camera scan',
+    icon: 'barcode-outline',
+    label: 'Open barcode food logging',
   },
 }
 
@@ -36,14 +31,14 @@ export function SearchModeSwapButton({ current }: Props) {
   const insets = useSafeAreaInsets()
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
-  const { target, icon, label } = SWAP_CONFIG[current]
+  const { icon, label } = SWAP_CONFIG[current]
   const bottomOffset =  insets.bottom + 18 //match right offset
 
   return (
       <Pressable
           accessibilityRole="button"
           accessibilityLabel={label}
-          onPress={() => router.push(`/(tabs)/${target}`)}
+          onPress={() => router.push('/(tabs)/logfood')}
           style={({ pressed }) => [
             styles.button,
             { bottom: bottomOffset },

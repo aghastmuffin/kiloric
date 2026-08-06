@@ -125,7 +125,7 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 9999,
     elevation: 9999,
   },
