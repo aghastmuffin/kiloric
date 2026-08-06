@@ -2,10 +2,10 @@
  * @deprecated Prefer Log (`logfood`) for search + logging.
  * Kept as a redirect so old deep links keep working.
  */
+import { useTheme } from '@/lib/theme/ThemeContext'
 import { useRouter } from 'expo-router'
 import { useEffect } from 'react'
 import { ActivityIndicator, View } from 'react-native'
-import { useTheme } from '@/lib/theme/ThemeContext'
 
 export default function SearchRewriteScreen() {
   const router = useRouter()

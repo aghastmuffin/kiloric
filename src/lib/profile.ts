@@ -264,6 +264,8 @@ let inflightProfileUserId: string | null = null
 
 /** Create profile row keyed by Appwrite Auth user id */
 export async function createProfile(userId: string, data: ProfileCreate) {
+  await assertAuthenticatedUserId(userId)
+
   console.log('[profile] createDocument →', {
     databaseId: DATABASE_ID,
     collectionId: USER_PROFILES_COLLECTION_ID,
@@ -308,7 +310,21 @@ export async function assertActiveSession(): Promise<string> {
   }
 }
 
+/**
+ * Asserts that the currently logged-in user matches the requested user ID.
+ * This prevents Broken Object Level Authorization (BOLA) / IDOR vulnerabilities.
+ */
+export async function assertAuthenticatedUserId(userId: string): Promise<string> {
+  const sessionUserId = await assertActiveSession()
+  if (sessionUserId !== userId) {
+    throw new Error('Unauthorized: You are not permitted to modify this profile.')
+  }
+  return sessionUserId
+}
+
 export async function updateProfile(userId: string, data: Partial<ProfileFields>) {
+  await assertAuthenticatedUserId(userId)
+
   // Invalidate profile cache before updating to prevent any stale reads
   if (cachedProfile && cachedProfile.userId === userId) {
     cachedProfile = null
@@ -385,6 +401,8 @@ export async function getProfile(userId: string): Promise<ProfileDocument | null
  * the fields provided on later saves.
  */
 export async function saveProfileFields(userId: string, data: Partial<ProfileFields>) {
+  await assertAuthenticatedUserId(userId)
+
   const normalized = normalizeProfileWritePayload(data)
   const validationError = validateProfileWritePayload(normalized)
   if (validationError) {
