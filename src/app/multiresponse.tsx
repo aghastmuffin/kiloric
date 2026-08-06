@@ -4,12 +4,12 @@ import { useAuth } from '@/lib/AuthContext';
 import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { spacing, type ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useTheme } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
@@ -374,7 +374,7 @@ export default function MultiResponseScreen() {
         error={detailError}
         onClose={() => setModalVisible(false)}
       />
-    </GestureHandlerRootView>
+    </>
   );
 }
 
