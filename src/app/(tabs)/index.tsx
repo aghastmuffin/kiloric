@@ -2,9 +2,11 @@ import RadialGauge from "@/components/Gague";
 import { useAuth } from "@/lib/AuthContext";
 import { getTodayMeals } from "@/lib/meals";
 import { getProfile } from "@/lib/profile";
+import { triggerSelectionHaptic } from "@/lib/haptics";
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useRouter, useFocusEffect } from 'expo-router'; // Removed unused 'useTheme'
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -74,32 +76,67 @@ const dialStyles = StyleSheet.create({
 });
 
 export default function AboutScreen() {
+    const { user } = useAuth();
     const router = useRouter();
     const styles = useThemedStyles(makeStyles);
-    const PlaceholderImage = require('../../../assets/images/dark.svg');
+
+    const handlePress = (path: "/cameraview" | "/(tabs)/logfood" | "/credits") => {
+        triggerSelectionHaptic();
+        router.push(path);
+    };
 
     return (
         <View style={styles.container}>
-            <View style={styles.infoholder}>
-                <View style={styles.infoholderItem}>
+            {user?.$id ? (
+                <View style={styles.infoholder}>
                     <Dial />
                 </View>
+            ) : null}
+
+            <Text style={styles.welcomeText}>Welcome to CalCount</Text>
+
+            <View style={styles.buttonGroup}>
+                <Pressable
+                    onPress={() => handlePress('/cameraview')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Scan barcode"
+                    accessibilityHint="Opens camera to scan food barcodes and log nutrition automatically"
+                    style={({ pressed }) => [
+                        styles.button,
+                        pressed && styles.buttonPressed
+                    ]}
+                >
+                    <Ionicons name="barcode-outline" size={20} color="#ffd33d" />
+                    <Text style={styles.buttonText}>Scan Barcode</Text>
+                </Pressable>
+
+                <Pressable
+                    onPress={() => handlePress('/(tabs)/logfood')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search foods"
+                    accessibilityHint="Search food database by name or search terms"
+                    style={({ pressed }) => [
+                        styles.button,
+                        pressed && styles.buttonPressed
+                    ]}
+                >
+                    <Ionicons name="search-outline" size={20} color="#ffd33d" />
+                    <Text style={styles.buttonText}>Search Foods</Text>
+                </Pressable>
             </View>
-            <Text style={styles.text}>Welcome to CalCount</Text>
-
-            <Pressable onPress={() => router.push('/scan')}>
-                <Text style={styles.text}>Scan</Text>
-            </Pressable>
-
-            <Pressable onPress={() => router.push('/text_query')}>
-                <Text style={styles.text}>Text Query</Text>
-            </Pressable>
 
             <Pressable
-                style={{ position: 'absolute', right: 20, bottom: 20 }}
-                onPress={() => router.push('/credits')}
+                onPress={() => handlePress('/credits')}
+                accessibilityRole="button"
+                accessibilityLabel="Credits and easter eggs"
+                accessibilityHint="Learn about the creators of CalCount"
+                style={({ pressed }) => [
+                    styles.creditsButton,
+                    pressed && styles.creditsButtonPressed
+                ]}
             >
-                <Text style={styles.text}>Credits</Text>
+                <Ionicons name="sparkles-outline" size={14} color="#ffd33d" style={{ marginRight: 4 }} />
+                <Text style={styles.creditsText}>Credits</Text>
             </Pressable>
         </View>
     );
@@ -111,26 +148,75 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
         backgroundColor: c.background,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 24,
+        gap: 16,
     },
     infoholder: {
-        display: 'flex',
-        position: 'absolute',
-        top: 0,
-        marginLeft: 10,
-        marginTop: 10,
-        border: 1,
-        borderColor: "#00000000",
-        borderRadius: 10,
-    },
-    infoholderItem: {
         backgroundColor: c.surface,
-        borderRadius: 10,
-        marginBottom: 10,
-        padding: 10,
+        borderRadius: 20,
+        padding: 24,
+        borderWidth: 1,
+        borderColor: c.border,
+        width: '100%',
+        maxWidth: 320,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
     },
-    text: {
-        color: c.accent,
+    welcomeText: {
+        color: c.text,
+        fontSize: 22,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 12,
+    },
+    buttonGroup: {
+        width: '100%',
+        maxWidth: 280,
+        gap: 12,
+    },
+    button: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        backgroundColor: c.surface,
+        borderWidth: 1.5,
+        borderColor: c.border,
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 1,
+    },
+    buttonPressed: {
+        opacity: 0.85,
+        transform: [{ scale: 0.98 }],
+        borderColor: c.accent,
+        backgroundColor: c.accentSoft,
+    },
+    buttonText: {
+        color: c.text,
         fontSize: 16,
+        fontWeight: '600',
+    },
+    creditsButton: {
+        position: 'absolute',
+        bottom: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
         paddingVertical: 6,
+    },
+    creditsButtonPressed: {
+        opacity: 0.6,
+    },
+    creditsText: {
+        color: c.textMuted,
+        fontSize: 14,
+        textDecorationLine: 'underline',
     },
 });
