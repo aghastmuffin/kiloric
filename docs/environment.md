@@ -23,7 +23,8 @@ npx expo start -c
 | Variable | Description |
 |----------|-------------|
 | `EXPO_PUBLIC_APPWRITE_PLATFORM_WEB` | Web platform hostname if registered separately in Appwrite |
-| `EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID` | Planned meals collection (not fully wired yet) |
+| `EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID` | Meals table ID (typically `meals`) |
+| `EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID` | Water logs table ID (typically `water_logs`) |
 
 ## Example
 
@@ -33,6 +34,8 @@ EXPO_PUBLIC_APPWRITE_PROJECT_ID=your-project-id
 EXPO_PUBLIC_APPWRITE_PLATFORM_ID=co.taeson.calcount
 EXPO_PUBLIC_APPWRITE_DATABASE_ID=your-database-id
 EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID=users
+EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID=meals
+EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID=water_logs
 ```
 
 ## Validation

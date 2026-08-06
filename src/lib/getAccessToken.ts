@@ -37,3 +37,9 @@ export async function getAccessToken(): Promise<string | null> {
 
   return inflightPromise
 }
+
+/** Clear any cached JWT token and any inflight fetching promise to prevent session staining/leakage on logout. */
+export function clearCachedToken(): void {
+  cachedToken = null
+  inflightPromise = null
+}
