@@ -1,56 +1,37 @@
-import { useAuth } from '@/lib/AuthContext';
-import { getProfile, isProfileComplete } from '@/lib/profile';
-import { useTheme } from '@/lib/theme/ThemeContext';
-import type { ThemeColors } from '@/lib/theme/tokens';
-import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useRouter } from 'expo-router';
-import { type ReactNode, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '@/lib/AuthContext'
+import { useProfile } from '@/lib/ProfileContext'
+import { useTheme } from '@/lib/theme/ThemeContext'
+import type { ThemeColors } from '@/lib/theme/tokens'
+import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { useRouter } from 'expo-router'
+import { type ReactNode, useEffect } from 'react'
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 
 export function ProfileGate({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
-  const [checkingProfile, setCheckingProfile] = useState(Boolean(user?.$id));
+  const { user, loading: authLoading } = useAuth()
+  const { isComplete, loading: profileLoading } = useProfile()
+  const router = useRouter()
+  const styles = useThemedStyles(makeStyles)
+  const { colors } = useTheme()
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!user?.$id) {
-      setCheckingProfile(false);
-      return;
+    if (authLoading || profileLoading) return
+    if (!user?.$id) return
+    if (!isComplete) {
+      router.replace('/onboarding')
     }
+  }, [authLoading, isComplete, profileLoading, router, user?.$id])
 
-    let active = true;
-    setCheckingProfile(true);
-
-    getProfile(user.$id)
-      .then((profile) => {
-        if (!active) return;
-        if (!isProfileComplete(profile)) {
-          router.replace('/onboarding');
-        }
-      })
-      .finally(() => {
-        if (active) setCheckingProfile(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [authLoading, router, user?.$id]);
-
-  if (authLoading || checkingProfile) {
+  if (authLoading || (user?.$id && profileLoading)) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color={colors.accent} />
         <Text style={styles.mutedText}>Loading account…</Text>
       </View>
-    );
+    )
   }
 
-  return children;
+  return children
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
@@ -64,4 +45,4 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   mutedText: {
     color: c.textMuted,
   },
-});
+})

@@ -5,7 +5,11 @@ import type {
   GoalPace,
   Sex,
 } from '@/lib/nutrition'
-import { guessCountryCode, usernameFromEmail } from '@/lib/nutrition'
+import { guessCountryCode, NUTRITION_FORMULA_VERSION, usernameFromEmail } from '@/lib/nutrition'
+import {
+  defaultMealSlots,
+  type PlanPreferences,
+} from '@/lib/planPreferences'
 import { defaultDisplayUnits, type DisplayUnits } from '@/lib/units'
 
 export type MacroOverrides = {
@@ -79,5 +83,34 @@ export function createDefaultFormState(email?: string | null): OnboardingFormSta
     targetWeight: null,
     displayUnits: defaultDisplayUnits(country),
     macroOverrides: null,
+  }
+}
+
+/** Build Auth plan prefs from the wizard form (lifestyle inputs + optional overrides). */
+export function planPreferencesFromForm(
+  form: OnboardingFormState,
+  dailyFluid?: number | null,
+): PlanPreferences {
+  return {
+    version: NUTRITION_FORMULA_VERSION,
+    sex: form.sex,
+    activity: form.activity,
+    goal: form.goal,
+    pace: form.pace,
+    diet: form.diet,
+    targetWeightKg: form.targetWeight,
+    displayUnits: form.displayUnits,
+    overrides: form.macroOverrides
+      ? {
+          targetKcal: form.macroOverrides.targetKcal,
+          dailyFluid: dailyFluid ?? undefined,
+          macroGrams: {
+            protein: form.macroOverrides.targetProtein,
+            carbs: form.macroOverrides.targetCarbs,
+            fat: form.macroOverrides.targetFat,
+          },
+        }
+      : {},
+    mealSlots: defaultMealSlots(),
   }
 }

@@ -7,7 +7,7 @@ import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
-import { getProfile, type ProfileDocument } from '@/lib/profile';
+import { useProfile } from '@/lib/ProfileContext';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
@@ -186,39 +186,40 @@ type LoggedInPanelProps = {
 
 function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchModeChange }: LoggedInPanelProps) {
   const { signOut } = useAuth();
+  const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile();
   const router = useRouter();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const [signingOut, setSigningOut] = useState(false);
-  const [profile, setProfile] = useState<ProfileDocument | null>(null);
   const [todayMeals, setTodayMeals] = useState<MealDocument[]>([]);
   const [historicMeals, setHistoricMeals] = useState<MealDocument[]>([]);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingMeals, setLoadingMeals] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setLoadingProfile(true);
+      setLoadingMeals(true);
+      void refreshProfile();
       Promise.all([
-        getProfile(user.$id),
         getTodayMeals(user.$id),
         listHistoricMeals(user.$id, 100),
       ])
-        .then(([nextProfile, today, history]) => {
+        .then(([today, history]) => {
           if (!active) return;
-          setProfile(nextProfile);
           setTodayMeals(today);
           setHistoricMeals(history);
         })
-        .catch((error) => console.warn('[Account] profile summary load failed', error))
+        .catch((error) => console.warn('[Account] meal summary load failed', error))
         .finally(() => {
-          if (active) setLoadingProfile(false);
+          if (active) setLoadingMeals(false);
         });
       return () => {
         active = false;
       };
-    }, [user.$id]),
+    }, [refreshProfile, user.$id]),
   );
+
+  const loadingSummary = profileLoading || loadingMeals;
 
   const totals = useMemo(
     () => ({
@@ -280,7 +281,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
               </View>
               <View style={styles.levelBadge}>
                 <Text style={styles.levelBadgeText}>
-                  {loadingProfile ? 'LV —' : `LV ${xp.level}`}
+                  {loadingSummary ? 'LV —' : `LV ${xp.level}`}
                 </Text>
               </View>
             </View>
@@ -298,11 +299,11 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
                 <Text style={styles.xpLabel}>DAILY XP</Text>
               </View>
               <Text style={styles.xpValue}>
-                {loadingProfile ? '…' : `${xp.xpInCurrentLevel} / ${xp.xpNeeded} XP`}
+                {loadingSummary ? '…' : `${xp.xpInCurrentLevel} / ${xp.xpNeeded} XP`}
               </Text>
             </View>
             <XPProgressBar
-              progress={loadingProfile ? 0 : xp.xpInCurrentLevel / xp.xpNeeded}
+              progress={loadingSummary ? 0 : xp.xpInCurrentLevel / xp.xpNeeded}
             />
             <Text style={styles.xpHint}>
               Earn XP by logging meals, drinking water and hitting your targets.
@@ -315,14 +316,14 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             <View style={[styles.statIconWrap, styles.statIconStreak]}>
               <Ionicons name="flame" size={19} color={colors.streakColor} />
             </View>
-            <Text style={styles.statValue}>{loadingProfile ? '—' : streak}</Text>
+            <Text style={styles.statValue}>{loadingSummary ? '—' : streak}</Text>
             <Text style={styles.statLabel}>DAY STREAK</Text>
           </View>
           <View style={styles.statTile}>
             <View style={[styles.statIconWrap, styles.statIconMeals]}>
               <Ionicons name="restaurant" size={17} color={colors.success} />
             </View>
-            <Text style={styles.statValue}>{loadingProfile ? '—' : todayMeals.length}</Text>
+            <Text style={styles.statValue}>{loadingSummary ? '—' : todayMeals.length}</Text>
             <Text style={styles.statLabel}>MEALS TODAY</Text>
           </View>
           <View style={styles.statTile}>
@@ -330,7 +331,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
               <Ionicons name="flash" size={18} color={colors.accent} />
             </View>
             <Text style={styles.statValue}>
-              {loadingProfile ? '—' : Math.round(totals.kcal).toLocaleString()}
+              {loadingSummary ? '—' : Math.round(totals.kcal).toLocaleString()}
             </Text>
             <Text style={styles.statLabel}>KCAL TODAY</Text>
           </View>
@@ -344,7 +345,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
 
         <TouchableOpacity
             style={[styles.button, signingOut && styles.buttonDisabled]}
-            onPress={() => router.push('/config')}
+            onPress={() => router.push('/onboarding')}
         >
           <Ionicons name="create-outline" size={18} color={colors.onAccent} />
           <Text style={styles.buttonText}>Edit profile & goals</Text>

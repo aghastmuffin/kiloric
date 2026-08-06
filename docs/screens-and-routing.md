@@ -32,7 +32,7 @@ User can still swap modes temporarily via `SearchModeSwapButton` without changin
 | `cameraview.tsx` | `/cameraview` | — | Barcode scanner; writes `saved_barcode` to AsyncStorage |
 | `onboarding.tsx` | `/onboarding` | — | Hosts `OnboardingWizard` |
 | `onboard_success.tsx` | `/onboard_success` | — | Success screen after onboarding |
-| `config.tsx` | `/config` | — | Full profile editor (all Appwrite fields) |
+| `config.tsx` | `/config` | — | Redirects to `/onboarding` (legacy route) |
 | `multiresponse.tsx` | `/multiresponse` | `data` (JSON string) | Renders fuzzy search result list |
 | `fooddetail.tsx` | `/fooddetail` | `code` | Fetches `/api/barcode/:code` for detail view |
 | `present_n_save.tsx` | `/present_n_save` | — | Stub for confirm/save flow |

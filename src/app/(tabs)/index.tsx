@@ -1,17 +1,17 @@
 import RadialGauge from "@/components/Gague";
 import { useAuth } from "@/lib/AuthContext";
 import { getTodayMeals } from "@/lib/meals";
-import { getProfile } from "@/lib/profile";
+import { useProfile } from "@/lib/ProfileContext";
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useRouter, useFocusEffect } from 'expo-router'; // Removed unused 'useTheme'
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function Dial() {
     const { user } = useAuth();
+    const { profile, refresh: refreshProfile } = useProfile();
     const [currentValue, setCurrentValue] = useState(0);
-    const [maxVal, setMaxVal] = useState(2000);
     const [loading, setLoading] = useState(true);
 
     useFocusEffect(
@@ -22,19 +22,12 @@ export function Dial() {
             }
             let active = true;
             setLoading(true);
+            void refreshProfile();
 
-            Promise.all([
-                getTodayMeals(user.$id),
-                getProfile(user.$id)
-            ]).then(([meals, profile]) => {
+            getTodayMeals(user.$id).then((meals) => {
                 if (!active) return;
                 const totalKcal = meals.reduce((sum, meal) => sum + (meal.kcal || 0), 0);
                 setCurrentValue(totalKcal);
-                if (profile?.target_kcal) {
-                    setMaxVal(profile.target_kcal);
-                } else {
-                    setMaxVal(2000);
-                }
             }).catch((err) => {
                 console.warn("[Dial] failed to fetch today's data:", err);
             }).finally(() => {
@@ -44,8 +37,10 @@ export function Dial() {
             return () => {
                 active = false;
             };
-        }, [user])
+        }, [refreshProfile, user])
     );
+
+    const target = profile?.target_kcal ?? 2000;
 
     if (!user?.$id) return null;
 
@@ -59,7 +54,7 @@ export function Dial() {
 
     return (
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <RadialGauge value={currentValue} max={maxVal} />
+            <RadialGauge value={currentValue} max={target} />
         </View>
     );
 }

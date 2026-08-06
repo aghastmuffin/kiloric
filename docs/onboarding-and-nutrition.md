@@ -8,7 +8,7 @@ First-time setup collects profile data, computes a nutrition plan, and saves eve
 |---------|-------------|
 | Sign up → `signed_in` | `/onboarding` |
 | `ProfileGate` detects incomplete profile | `/onboarding` |
-| Account → Edit profile | `/config` (full editor, not wizard) |
+| Account → Edit profile | `/onboarding` (same wizard, edit mode) |
 
 Success path: onboarding wizard → `/onboard_success` → main tabs.
 
@@ -42,14 +42,17 @@ UI building blocks: `ProgressHeader`, `StepTransition`, `SelectionCard`, `BodyMe
 
 ### Save payload
 
-On confirm, wizard calls `saveProfileFields(user.$id, { ... })` with:
+On confirm, wizard calls `saveAccountDetails` via `ProfileContext`, which:
 
-- Required profile fields (`username`, `email`, `dateOfBirth`, `weight`, `height`, `role`)
-- Optional: `bio`, `country`, `lastLogin`
-- Nutrition targets from `buildNutritionPlan()`:
-  - `target_kcal`, `target_protein`, `target_carbs`, `target_fat`
-  - `daily_fluid`, `TDEE`, `weekly_deficit`, `target_weight`
-  - `goal_plain` (human-readable goal + diet + units)
+1. Writes the `users` profile document (`saveProfileFields`) with:
+   - Required profile fields (`username`, `email`, `dateOfBirth`, `weight`, `height`, `role`)
+   - Optional: `bio`, `country`, `lastLogin`
+   - Nutrition targets from `buildNutritionPlan()`:
+     - `target_kcal`, `target_protein`, `target_carbs`, `target_fat`
+     - `daily_fluid`, `TDEE`, `weekly_deficit`, `target_weight`
+     - `goal_plain` (human-readable goal + diet + units)
+2. Persists lifestyle inputs (sex, activity, goal, pace, diet, display units, overrides) to Auth prefs as `calcountPlan` via `savePlanPreferences`
+3. Syncs username to Auth `name` when it changes
 
 The `meals` relationship field is **never** written as plain text.
 

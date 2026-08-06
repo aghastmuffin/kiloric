@@ -61,7 +61,7 @@ export function ProgressHeader({ step, steps, isRequired }: ProgressHeaderProps)
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <Text style={styles.eyebrow}>
-        {isRequired ? 'Setup' : 'Edit profile'} · Step {stepIndex + 1} of {steps.length}
+        {isRequired ? 'Setup' : 'Your vitality'} · Step {stepIndex + 1} of {steps.length}
       </Text>
       <Animated.Text style={[onboardingStyles.stepTitle, titleStyle]}>
         {STEP_LABELS[step]}

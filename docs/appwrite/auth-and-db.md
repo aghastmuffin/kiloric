@@ -88,7 +88,7 @@ function MyScreen() {
 }
 ```
 
-Examples in this repo: `src/app/(tabs)/account.tsx`, `src/app/config.tsx`, `src/components/onboarding/OnboardingWizard.tsx`.
+Examples in this repo: `src/app/(tabs)/account.tsx`, `src/lib/ProfileContext.tsx`, `src/components/onboarding/OnboardingWizard.tsx`.
 
 ### Gate screens that need a logged-in user
 
@@ -196,7 +196,7 @@ async function handleSave() {
 }
 ```
 
-See `src/app/config.tsx` and `src/components/onboarding/OnboardingWizard.tsx`.
+See `src/lib/ProfileContext.tsx` and `src/components/onboarding/OnboardingWizard.tsx`.
 
 ### Low-level create / update (new collections)
 

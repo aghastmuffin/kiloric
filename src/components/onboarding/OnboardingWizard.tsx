@@ -14,6 +14,7 @@ import {
   DEFAULT_DATE_OF_BIRTH,
   AUTH_ONBOARDING_STEPS,
   getOnboardingSteps,
+  planPreferencesFromForm,
   type MacroOverrides,
   type OnboardingFormState,
   type OnboardingStep,
@@ -22,8 +23,6 @@ import { UnitToggle } from '@/components/onboarding/UnitToggle'
 import { showApiError } from '@/lib/apiErrors'
 import { isValidEmail, isValidPassword } from '@/lib/authValidation'
 import { useAuth } from '@/lib/AuthContext'
-import { useTheme } from '@/lib/theme/ThemeContext'
-import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import { COUNTRY_OPTIONS } from '@/lib/countries'
 import {
   ACTIVITY_OPTIONS,
@@ -36,14 +35,17 @@ import {
   type NutritionPlan,
   type Sex,
 } from '@/lib/nutrition'
+import type { PlanPreferences } from '@/lib/planPreferences'
+import { useProfile } from '@/lib/ProfileContext'
 import {
   dateToIso,
   DEFAULT_PROFILE_ROLE,
   formatProfileSaveError,
-  getProfile,
   isProfileComplete,
-  saveProfileFields,
+  type ProfileDocument,
 } from '@/lib/profile'
+import { useTheme } from '@/lib/theme/ThemeContext'
+import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import {
   appendDisplayUnitsToGoalPlain,
   defaultDisplayUnits,
@@ -86,8 +88,93 @@ function getEffectiveMacros(plan: NutritionPlan, overrides: MacroOverrides | nul
   }
 }
 
+function macroOverridesFromSources(
+  planPrefs: PlanPreferences,
+  profile: ProfileDocument | null,
+): MacroOverrides | null {
+  const grams = planPrefs.overrides.macroGrams
+  if (planPrefs.overrides.targetKcal != null && grams) {
+    return {
+      targetKcal: planPrefs.overrides.targetKcal,
+      targetProtein: grams.protein,
+      targetCarbs: grams.carbs,
+      targetFat: grams.fat,
+    }
+  }
+
+  if (
+    profile?.target_kcal != null &&
+    profile.target_protein != null &&
+    profile.target_carbs != null &&
+    profile.target_fat != null
+  ) {
+    return {
+      targetKcal: profile.target_kcal,
+      targetProtein: profile.target_protein,
+      targetCarbs: profile.target_carbs,
+      targetFat: profile.target_fat,
+    }
+  }
+
+  return null
+}
+
+function buildFormFromAccount(
+  email: string | null | undefined,
+  profile: ProfileDocument | null,
+  planPrefs: PlanPreferences,
+): OnboardingFormState {
+  const defaults = createDefaultFormState(email)
+  if (!profile) {
+    return {
+      ...defaults,
+      sex: planPrefs.sex,
+      activity: planPrefs.activity,
+      goal: planPrefs.goal,
+      pace: planPrefs.pace,
+      diet: planPrefs.diet,
+      displayUnits: planPrefs.displayUnits,
+      targetWeight: planPrefs.targetWeightKg,
+      macroOverrides: macroOverridesFromSources(planPrefs, null),
+    }
+  }
+
+  const country = profile.country ?? defaults.country
+  const body = normalizeStoredMetricsToMetric(
+    country,
+    profile.height ?? defaults.height,
+    profile.weight ?? defaults.weight,
+  )
+  const unitsFromGoal = parseDisplayUnitsPreference(profile.goal_plain, country)
+
+  return {
+    username: profile.username ?? defaults.username,
+    dateOfBirth: parseProfileDate(profile.dateOfBirth),
+    country,
+    bio: profile.bio ?? '',
+    sex: planPrefs.sex,
+    height: body.heightCm,
+    weight: body.weightKg,
+    activity: planPrefs.activity,
+    goal: planPrefs.goal,
+    pace: planPrefs.pace,
+    diet: planPrefs.diet,
+    targetWeight:
+      planPrefs.targetWeightKg ??
+      normalizeStoredTargetWeightKg(country, profile.target_weight, profile.height ?? defaults.height),
+    displayUnits: planPrefs.displayUnits || unitsFromGoal,
+    macroOverrides: macroOverridesFromSources(planPrefs, profile),
+  }
+}
+
 export function OnboardingWizard() {
   const { user, loading, signOut, signUp } = useAuth()
+  const {
+    profile,
+    plan: planPrefs,
+    loading: profileLoading,
+    saveAccountDetails,
+  } = useProfile()
   const router = useRouter()
   const navigation = useNavigation()
   const { onboardingColors } = useTheme()
@@ -100,13 +187,14 @@ export function OnboardingWizard() {
   const [authPassword, setAuthPassword] = useState('')
   const [authError, setAuthError] = useState<string | null>(null)
   const [navDirection, setNavDirection] = useState<'forward' | 'back'>('forward')
-  const [profileComplete, setProfileComplete] = useState(false)
   const [form, setForm] = useState<OnboardingFormState>(() => createDefaultFormState())
-  const [loadingProfile, setLoadingProfile] = useState(true)
+  const [formHydrated, setFormHydrated] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+
+  const profileComplete = isProfileComplete(profile)
 
   const visibleSteps = useMemo(
     () => getOnboardingSteps(Boolean(user?.$id)),
@@ -198,74 +286,21 @@ export function OnboardingWizard() {
   }, [isRequired])
 
   useEffect(() => {
+    setFormHydrated(false)
+  }, [user?.$id])
+
+  useEffect(() => {
     if (!user?.$id) {
-      setLoadingProfile(false)
+      setForm(createDefaultFormState())
+      setFormHydrated(true)
       return
     }
 
-    let active = true
+    if (profileLoading || formHydrated) return
 
-    getProfile(user.$id)
-      .then((profile) => {
-        if (!active) return
-
-        const complete = isProfileComplete(profile)
-        setProfileComplete(complete)
-
-        const defaults = createDefaultFormState(user.email)
-        if (!profile) {
-          setForm(defaults)
-          return
-        }
-
-        const country = profile.country ?? defaults.country
-        const body = normalizeStoredMetricsToMetric(
-          country,
-          profile.height ?? defaults.height,
-          profile.weight ?? defaults.weight,
-        )
-        const hasSavedMacros =
-          profile.target_kcal != null &&
-          profile.target_protein != null &&
-          profile.target_carbs != null &&
-          profile.target_fat != null
-
-        setForm({
-          username: profile.username ?? defaults.username,
-          dateOfBirth: parseProfileDate(profile.dateOfBirth),
-          country,
-          bio: profile.bio ?? '',
-          sex: defaults.sex,
-          height: body.heightCm,
-          weight: body.weightKg,
-          activity: defaults.activity,
-          goal: defaults.goal,
-          pace: defaults.pace,
-          diet: defaults.diet,
-          targetWeight: normalizeStoredTargetWeightKg(
-            country,
-            profile.target_weight,
-            profile.height ?? defaults.height,
-          ),
-          displayUnits: parseDisplayUnitsPreference(profile.goal_plain, country),
-          macroOverrides: hasSavedMacros
-            ? {
-                targetKcal: profile.target_kcal!,
-                targetProtein: profile.target_protein!,
-                targetCarbs: profile.target_carbs!,
-                targetFat: profile.target_fat!,
-              }
-            : null,
-        })
-      })
-      .finally(() => {
-        if (active) setLoadingProfile(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [user?.$id, user?.email])
+    setForm(buildFormFromAccount(user.email, profile, planPrefs))
+    setFormHydrated(true)
+  }, [user?.$id, user?.email, profile, planPrefs, profileLoading, formHydrated])
 
   function validateStep(current: OnboardingStep): string | null {
     switch (current) {
@@ -375,28 +410,45 @@ export function OnboardingWizard() {
     const goalPlain = appendDisplayUnitsToGoalPlain(plan.goalPlain, form.displayUnits)
     const weeklyDeficitToSave = calculateWeeklyDeficit(plan.tdee, macros.targetKcal)
 
+    const nextForm: OnboardingFormState = {
+      ...form,
+      targetWeight: targetKg,
+      macroOverrides: form.macroOverrides
+        ? {
+            targetKcal: macros.targetKcal,
+            targetProtein: macros.targetProtein,
+            targetCarbs: macros.targetCarbs,
+            targetFat: macros.targetFat,
+          }
+        : null,
+    }
+
     setSaving(true)
     setSaveError(null)
     try {
-      await saveProfileFields(user.$id, {
-        username: form.username.trim(),
-        email: user.email,
-        dateOfBirth: dateToIso(form.dateOfBirth),
-        height: roundMetric(form.height),
-        weight: roundMetric(form.weight),
-        role: DEFAULT_PROFILE_ROLE,
-        lastLogin: new Date().toISOString(),
-        bio: form.bio.trim() || null,
-        country: form.country.trim().toUpperCase() || null,
-        target_kcal: macros.targetKcal,
-        target_protein: macros.targetProtein,
-        target_carbs: macros.targetCarbs,
-        target_fat: macros.targetFat,
-        daily_fluid: plan.dailyFluid,
-        TDEE: plan.tdee,
-        goal_plain: goalPlain,
-        target_weight: targetKg,
-        weekly_deficit: weeklyDeficitToSave,
+      await saveAccountDetails({
+        profile: {
+          username: form.username.trim(),
+          email: user.email,
+          dateOfBirth: dateToIso(form.dateOfBirth),
+          height: roundMetric(form.height),
+          weight: roundMetric(form.weight),
+          role: DEFAULT_PROFILE_ROLE,
+          lastLogin: new Date().toISOString(),
+          bio: form.bio.trim() || null,
+          country: form.country.trim().toUpperCase() || null,
+          target_kcal: macros.targetKcal,
+          target_protein: macros.targetProtein,
+          target_carbs: macros.targetCarbs,
+          target_fat: macros.targetFat,
+          daily_fluid: plan.dailyFluid,
+          TDEE: plan.tdee,
+          goal_plain: goalPlain,
+          target_weight: targetKg,
+          weekly_deficit: weeklyDeficitToSave,
+        },
+        plan: planPreferencesFromForm(nextForm, plan.dailyFluid),
+        authName: form.username.trim(),
       })
 
       allowLeaveRef.current = true
@@ -494,13 +546,18 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              A quick setup so CalCount can personalize calories, macros, and hydration for you.
+              {isRequired
+                ? 'A quick setup so CalCount can personalize calories, macros, and hydration for you.'
+                : 'Update the details CalCount uses for your calories, macros, and hydration.'}
             </Text>
             <View style={onboardingStyles.infoCard}>
-              <Text style={onboardingStyles.infoCardTitle}>We&apos;ll handle the math</Text>
+              <Text style={onboardingStyles.infoCardTitle}>
+                {isRequired ? "We'll handle the math" : 'Your plan stays in sync'}
+              </Text>
               <Text style={onboardingStyles.infoCardText}>
-                TDEE, macro targets, weekly pace, and hydration are calculated automatically from
-                your body stats and goals.
+                {isRequired
+                  ? 'TDEE, macro targets, weekly pace, and hydration are calculated automatically from your body stats and goals.'
+                  : 'Lifestyle choices and targets are saved together — reopen this flow anytime and pick up where you left off.'}
               </Text>
             </View>
             <Text style={onboardingStyles.label}>Username</Text>
@@ -757,7 +814,7 @@ export function OnboardingWizard() {
     }
   }
 
-  if (loading || !stepInitialized || (user?.$id && loadingProfile)) {
+  if (loading || !stepInitialized || (user?.$id && (profileLoading || !formHydrated))) {
     return (
       <View style={onboardingStyles.loading}>
         <ActivityIndicator color={onboardingColors.accent} size="large" />
@@ -833,7 +890,9 @@ export function OnboardingWizard() {
                 ? 'Creating account…'
                 : 'Saving…'
               : isLastStep
-                ? 'Finish setup'
+                ? isRequired
+                  ? 'Finish setup'
+                  : 'Save changes'
                 : step === 'password' && !user?.$id
                   ? 'Create account'
                   : 'Continue'}
