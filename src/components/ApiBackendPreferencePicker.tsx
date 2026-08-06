@@ -2,6 +2,7 @@ import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'
 import { useApiBackendPreferences } from '@/lib/ApiBackendPreferencesContext'
 import type { ApiBackendChoice } from '@/lib/apiBackendPreferences'
 import type { ThemeColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
@@ -54,20 +55,19 @@ const makeStyles = (c: ThemeColors) =>
       marginBottom: 4,
     },
     label: {
+      ...typography.body,
       color: c.text,
-      fontSize: 16,
+      fontWeight: '600',
       marginBottom: 6,
     },
     hint: {
+      ...typography.labelSmall,
       color: c.textFaint,
-      fontSize: 12,
       marginBottom: 8,
-      lineHeight: 18,
     },
     warning: {
+      ...typography.labelSmall,
       color: c.warning,
-      fontSize: 12,
       marginTop: 10,
-      lineHeight: 18,
     },
   })

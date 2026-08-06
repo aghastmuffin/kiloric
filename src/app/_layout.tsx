@@ -2,7 +2,7 @@ import { ApiErrorProvider } from '@/lib/ApiErrorContext';
 import { ApiBackendPreferencesProvider } from '@/lib/ApiBackendPreferencesContext';
 import { AuthProvider } from '@/lib/AuthContext';
 import { FontPreferencesProvider, useFontPreferences } from '@/lib/FontPreferencesContext';
-import { fontAssets } from '@/lib/fonts';
+import { FONT_FAMILY, fontAssets } from '@/lib/fonts';
 import { MealTypePreferencesProvider } from '@/lib/MealTypePreferencesContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
@@ -19,7 +19,7 @@ SplashScreen.preventAutoHideAsync();
 function buildNavigationTheme(
   base: Theme,
   colors: ThemeColors,
-  activeFontFamily?: string,
+  activeFontFamily: string,
 ): Theme {
   const themed: Theme = {
     ...base,
@@ -33,10 +33,6 @@ function buildNavigationTheme(
       notification: colors.danger,
     },
   };
-
-  if (!activeFontFamily) {
-    return themed;
-  }
 
   const font = (fontWeight: '400' | '500' | '600' | '700') => ({
     fontFamily: activeFontFamily,
@@ -57,20 +53,19 @@ function buildNavigationTheme(
 function RootNavigation() {
   const { activeFontFamily } = useFontPreferences();
   const { colors, scheme } = useTheme();
+  const resolvedFontFamily = activeFontFamily ?? FONT_FAMILY;
 
   const navigationTheme = useMemo(
     () =>
       buildNavigationTheme(
         scheme === 'light' ? DefaultTheme : DarkTheme,
         colors,
-        activeFontFamily,
+        resolvedFontFamily,
       ),
-    [scheme, colors, activeFontFamily],
+    [scheme, colors, resolvedFontFamily],
   );
 
-  const navigationFontStyle = activeFontFamily
-    ? { fontFamily: activeFontFamily }
-    : undefined;
+  const navigationFontStyle = { fontFamily: resolvedFontFamily };
 
   return (
     <ThemeProvider value={navigationTheme}>

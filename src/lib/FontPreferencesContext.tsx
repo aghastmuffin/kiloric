@@ -5,7 +5,7 @@ import {
   saveFontChoice,
   type AppFontChoice,
 } from '@/lib/fontPreferences'
-import { FONT_FAMILY } from '@/lib/fonts'
+import { FONT_FAMILY, HEADLINE_FONT_FAMILY } from '@/lib/fonts'
 import {
   createContext,
   Fragment,
@@ -44,7 +44,9 @@ export function FontPreferencesProvider({
   }, [])
 
   const activeFontFamily = useMemo(
-    () => (fontChoice === 'custom' && customFontLoaded ? FONT_FAMILY : undefined),
+    () => customFontLoaded
+      ? (fontChoice === 'custom' ? HEADLINE_FONT_FAMILY : FONT_FAMILY)
+      : undefined,
     [fontChoice, customFontLoaded],
   )
 
