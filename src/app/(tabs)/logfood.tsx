@@ -1412,6 +1412,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     ...typography.body,
     color: c.text,
     paddingVertical: 13,
+    // The pill container renders the focus ring; hide the browser default on web.
+    outlineWidth: 0,
   },
   clearButton: {
     width: 24,
