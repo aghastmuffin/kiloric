@@ -1,15 +1,17 @@
 import { authenticatedRequest } from '@/components/apiUtils';
 import BarcodeDetailModal from '@/components/BarcodeDetailModal';
+import { MotionView } from '@/components/MotionView';
 import { useAuth } from '@/lib/AuthContext';
 import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
+import { useTheme } from '@/lib/theme/ThemeContext';
 import { spacing, type ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useTheme } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
@@ -120,77 +122,94 @@ function parseResult(raw: string | undefined): unknown {
   }
 }
 
+function EmptyContributeState({
+  title,
+  subtitle,
+  onContribute,
+}: {
+  title: string
+  subtitle: string
+  onContribute?: () => void
+}) {
+  const styles = useThemedStyles(makeStyles)
+  const { colors } = useTheme()
+  return (
+    <View style={styles.emptyStateContainer}>
+      <MotionView
+        from={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', damping: 15 }}
+        style={styles.emptyIconCircle}
+      >
+        <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
+      </MotionView>
+      <Text style={styles.emptyStateTitle}>{title}</Text>
+      <Text style={styles.emptyStateSubtitle}>{subtitle}</Text>
+      {onContribute ? (
+        <Pressable style={styles.contributeButton} onPress={onContribute} accessibilityRole="button">
+          <Text style={styles.contributeButtonText}>Add this product</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  )
+}
+
 function ResultsBody({
   data,
   onViewMore,
   onAdd,
   addStatuses,
+  onContribute,
 }: {
-  data: unknown;
-  onViewMore?: (barcode: string) => void;
-  onAdd?: (item: Record<string, unknown>, index: number) => void;
-  addStatuses?: Record<number, { state: 'adding' | 'added' | 'error'; message: string }>;
+  data: unknown
+  onViewMore?: (barcode: string) => void
+  onAdd?: (item: Record<string, unknown>, index: number) => void
+  addStatuses?: Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
+  onContribute?: () => void
 }) {
-  const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
-  const TARGET_ERROR = "404: no products found";
+  const styles = useThemedStyles(makeStyles)
+  const TARGET_ERROR = '404: no products found'
 
   if (data === null || data === undefined) {
     return (
-      <View style={styles.emptyStateContainer}>
-        <MotiView
-          from={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 15 }}
-          style={styles.emptyIconCircle}
-        >
-          <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
-        </MotiView>
-        <Text style={styles.emptyStateTitle}>No results to display</Text>
-        <Text style={styles.emptyStateSubtitle}>Try searching for another food or scan a barcode</Text>
-      </View>
-    );
+      <EmptyContributeState
+        title="No results to display"
+        subtitle="Try searching for another food or scan a barcode"
+        onContribute={onContribute}
+      />
+    )
   }
 
-  // 1. Check direct string match
   if (typeof data === 'string') {
     if (data.trim().toLowerCase() === TARGET_ERROR) {
       return (
-        <View style={styles.emptyStateContainer}>
-          <MotiView
-            from={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 15 }}
-            style={styles.emptyIconCircle}
-          >
-            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
-          </MotiView>
-          <Text style={styles.emptyStateTitle}>No matches found</Text>
-          <Text style={styles.emptyStateSubtitle}>We couldn't find any products. You can return home and try again.</Text>
-        </View>
-      );
+        <EmptyContributeState
+          title="No matches found"
+          subtitle="We couldn't find this product. You can contribute it with a photo."
+          onContribute={onContribute}
+        />
+      )
     }
     return (
-      <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={styles.card}>
+      <MotionView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={styles.card}>
         <Text style={styles.messageText}>{data}</Text>
-      </MotiView>
-    );
+      </MotionView>
+    )
   }
 
-  // 2. Check array wrapped string match
   if (Array.isArray(data)) {
     if (
-      data.length === 1 && 
-      typeof data[0] === 'string' && 
+      data.length === 1 &&
+      typeof data[0] === 'string' &&
       data[0].trim().toLowerCase() === TARGET_ERROR
     ) {
       return (
-        <View style={[styles.card, styles.errorCard]}>
-          <Text style={[styles.messageText, styles.errorText]}>
-            No matches found. Would you like to add this product? (UNIMPLEMENTED)
-          </Text>
-        </View>
-      );
+        <EmptyContributeState
+          title="No matches found"
+          subtitle="Would you like to add this product?"
+          onContribute={onContribute}
+        />
+      )
     }
 
     return data.map((item, index) => {
@@ -204,11 +223,11 @@ function ResultsBody({
             onAdd={onAdd}
             addStatus={addStatuses?.[index]}
           />
-        );
+        )
       }
 
       return (
-        <MotiView
+        <MotionView
           key={index}
           from={{ opacity: 0, scale: 0.9, translateY: 30 }}
           animate={{ opacity: 1, scale: 1, translateY: 0 }}
@@ -217,37 +236,28 @@ function ResultsBody({
             type: 'spring',
             damping: 12,
             stiffness: 100,
-            mass: 0.8,
           }}
           style={styles.card}
         >
           <Text style={styles.cardTitle}>Result {index + 1}</Text>
           <Text style={styles.messageText}>{formatValue(item)}</Text>
-        </MotiView>
-      );
-    });
+        </MotionView>
+      )
+    })
   }
 
-  // 3. Check nested object string match
   if (typeof data === 'object') {
-    const obj = data as Record<string, unknown>;
-    const nestedMessage = obj.error || obj.detail || obj.message || obj.result;
+    const obj = data as Record<string, unknown>
+    const nestedMessage = obj.error || obj.detail || obj.message || obj.result
 
     if (typeof nestedMessage === 'string' && nestedMessage.trim().toLowerCase() === TARGET_ERROR) {
       return (
-        <View style={styles.emptyStateContainer}>
-          <MotiView
-            from={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', damping: 15 }}
-            style={styles.emptyIconCircle}
-          >
-            <MaterialIcons name="search-off" size={48} color={colors.textMuted} />
-          </MotiView>
-          <Text style={styles.emptyStateTitle}>No matches found</Text>
-          <Text style={styles.emptyStateSubtitle}>No matching products were found. Try another search!</Text>
-        </View>
-      );
+        <EmptyContributeState
+          title="No matches found"
+          subtitle="No matching products were found. You can contribute this food."
+          onContribute={onContribute}
+        />
+      )
     }
 
     return (
@@ -258,99 +268,104 @@ function ResultsBody({
         onAdd={onAdd}
         addStatus={addStatuses?.[0]}
       />
-    );
+    )
   }
 
   return (
-    <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} style={styles.card}>
+    <MotionView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} style={styles.card}>
       <Text style={styles.messageText}>{formatValue(data)}</Text>
-    </MotiView>
-  );
+    </MotionView>
+  )
 }
 
 export default function MultiResponseScreen() {
-  const { query, result } = useLocalSearchParams<{ query?: string; result?: string }>();
-  const styles = useThemedStyles(makeStyles);
-  const { user } = useAuth();
-  const { selectedMealType } = useMealTypePreferences();
-  const parsedResult = parseResult(result);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null);
-  const [detailData, setDetailData] = useState<Record<string, unknown> | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const { query, result } = useLocalSearchParams<{ query?: string; result?: string }>()
+  const router = useRouter()
+  const styles = useThemedStyles(makeStyles)
+  const { user } = useAuth()
+  const { selectedMealType } = useMealTypePreferences()
+  const parsedResult = parseResult(result)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null)
+  const [detailData, setDetailData] = useState<Record<string, unknown> | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
   const [addStatuses, setAddStatuses] = useState<
     Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
-  >({});
+  >({})
+
+  const openContribute = useCallback(() => {
+    const q = typeof query === 'string' ? query : ''
+    const looksLikeBarcode = /^\d{8,14}$/.test(q.trim())
+    router.push({
+      pathname: '/contribute-food',
+      params: {
+        query: q,
+        ...(looksLikeBarcode ? { code: q.trim() } : {}),
+      },
+    })
+  }, [query, router])
 
   const handleViewMore = useCallback(async (barcode: string) => {
-    setSelectedBarcode(barcode);
-    setModalVisible(true);
-    setDetailLoading(true);
-    setDetailError(null);
-    setDetailData(null);
+    setSelectedBarcode(barcode)
+    setModalVisible(true)
+    setDetailLoading(true)
+    setDetailError(null)
+    setDetailData(null)
 
     try {
-      const data = await authenticatedRequest(`/api/barcode/${barcode}`);
+      const data = await authenticatedRequest(`/api/barcode/${barcode}`)
       if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-        setDetailData(data as Record<string, unknown>);
+        setDetailData(data as Record<string, unknown>)
       } else {
-        setDetailData({ result: data });
+        setDetailData({ result: data })
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      setDetailError(`Request failed: ${message}`);
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      setDetailError(`Request failed: ${message}`)
     } finally {
-      setDetailLoading(false);
+      setDetailLoading(false)
     }
-  }, []);
+  }, [])
 
-  const handleQuickAdd = useCallback(async (
-    item: Record<string, unknown>,
-    index: number,
-  ) => {
-    if (addStatuses[index]?.state === 'adding') return;
+  const handleQuickAdd = useCallback(
+    async (item: Record<string, unknown>, index: number) => {
+      if (addStatuses[index]?.state === 'adding') return
 
-    const barcode = getItemBarcode(item);
-    if (!barcode) return;
-    if (!user?.$id) {
+      const barcode = getItemBarcode(item)
+      if (!barcode) return
+      if (!user?.$id) {
+        setAddStatuses((current) => ({
+          ...current,
+          [index]: { state: 'error', message: 'Sign in to add foods.' },
+        }))
+        return
+      }
+
       setAddStatuses((current) => ({
         ...current,
-        [index]: { state: 'error', message: 'Sign in to add foods.' },
-      }));
-      return;
-    }
-
-    setAddStatuses((current) => ({
-      ...current,
-      [index]: { state: 'adding', message: `Adding to ${selectedMealType}…` },
-    }));
-    try {
-      await addProductToMeal(
-        user.$id,
-        selectedMealType,
-        barcode,
-        getProductData(item),
-      );
-      setAddStatuses((current) => ({
-        ...current,
-        [index]: { state: 'added', message: `Added to ${selectedMealType}.` },
-      }));
-    } catch (error) {
-      console.error('Could not quick-add search result', error);
-      setAddStatuses((current) => ({
-        ...current,
-        [index]: { state: 'error', message: 'Couldn’t add. Try again.' },
-      }));
-    }
-  }, [addStatuses, selectedMealType, user]);
+        [index]: { state: 'adding', message: `Adding to ${selectedMealType}…` },
+      }))
+      try {
+        await addProductToMeal(user.$id, selectedMealType, barcode, getProductData(item))
+        setAddStatuses((current) => ({
+          ...current,
+          [index]: { state: 'added', message: `Added to ${selectedMealType}.` },
+        }))
+      } catch (error) {
+        console.error('Could not quick-add search result', error)
+        setAddStatuses((current) => ({
+          ...current,
+          [index]: { state: 'error', message: 'Couldn’t add. Try again.' },
+        }))
+      }
+    },
+    [addStatuses, selectedMealType, user],
+  )
 
   return (
     <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-      >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {query ? (
           <View style={styles.header}>
             <Text style={styles.headerLabel}>Search query</Text>
@@ -363,6 +378,7 @@ export default function MultiResponseScreen() {
           onViewMore={handleViewMore}
           onAdd={(item, index) => void handleQuickAdd(item, index)}
           addStatuses={addStatuses}
+          onContribute={openContribute}
         />
       </ScrollView>
 
@@ -374,8 +390,8 @@ export default function MultiResponseScreen() {
         error={detailError}
         onClose={() => setModalVisible(false)}
       />
-    </GestureHandlerRootView>
-  );
+    </>
+  )
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
@@ -401,6 +417,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: c.border,
+  },
+  headerLabel: {
+    ...typography.labelSmall,
+    color: c.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
   mealChipText: {
     ...typography.labelSmall,
@@ -505,5 +527,43 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.accent,
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  emptyIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.surfaceAlt,
+    marginBottom: spacing.sm,
+  },
+  emptyStateTitle: {
+    ...typography.headline,
+    color: c.text,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    ...typography.body,
+    color: c.textMuted,
+    textAlign: 'center',
+  },
+  contributeButton: {
+    marginTop: spacing.md,
+    backgroundColor: c.accent,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  contributeButtonText: {
+    ...typography.label,
+    color: c.onAccent,
+    fontWeight: '700',
   },
 });

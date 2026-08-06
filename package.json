@@ -3,32 +3,26 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-<<<<<<< HEAD
-    "@expo/ui": "~56.0.18",
-=======
     "@expo-google-fonts/hanken-grotesk": "^0.4.3",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo-google-fonts/source-serif-4": "^0.4.1",
     "@expo/ui": "~56.0.22",
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-picker/picker": "2.11.4",
     "@react-navigation/native": "^7.3.3",
-<<<<<<< HEAD
     "babel-plugin-module-resolver": "^5.0.3",
-    "expo": "~56.0.12",
-=======
     "expo": "~56.0.16",
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
     "expo-camera": "~56.0.8",
     "expo-constants": "~56.0.18",
     "expo-dev-client": "~56.0.23",
     "expo-device": "~56.0.4",
     "expo-font": "~56.0.7",
     "expo-glass-effect": "~56.0.4",
+    "expo-haptics": "~56.0.3",
     "expo-image": "~56.0.11",
+    "expo-image-picker": "~56.0.22",
     "expo-linking": "~56.0.15",
     "expo-router": "~56.2.15",
     "expo-splash-screen": "~56.0.13",
@@ -55,7 +49,8 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~56.0.4",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.10"
   },
   "scripts": {
     "start": "expo start",
@@ -64,7 +59,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "vitest run"
+    "test": "vitest run",
     "appwrite:push-tables": "appwrite push tables --force --all"
   },
   "private": true
