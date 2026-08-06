@@ -1,6 +1,6 @@
 import styles from 'expo-router/build/modal/web/modalStyles';
 import { Component } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Text } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
