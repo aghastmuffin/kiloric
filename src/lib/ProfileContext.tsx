@@ -63,7 +63,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       setPlan(planPreferencesFromUser(user))
     } catch (err) {
       console.warn('[ProfileContext] refresh failed', err)
-      setProfile(null)
+      // Keep any previously loaded profile on transient network errors.
       setPlan(planPreferencesFromUser(user))
     } finally {
       setLoading(false)
@@ -95,7 +95,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       )) as ProfileDocument
 
       const normalizedPlan = normalizePlanPreferences(input.plan)
-      await savePlanPreferences(normalizedPlan)
+      try {
+        await savePlanPreferences(normalizedPlan)
+      } catch (err) {
+        // Profile document is the completeness gate; keep going so setup isn't blocked
+        // if Auth prefs briefly fail. Lifestyle inputs stay in local state and retry on next save.
+        console.warn('[ProfileContext] savePlanPreferences failed', err)
+      }
 
       const trimmedName = input.authName?.trim()
       if (trimmedName && trimmedName !== user.name) {
@@ -106,7 +112,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      await refreshUser()
+      try {
+        await refreshUser()
+      } catch (err) {
+        console.warn('[ProfileContext] refreshUser after save failed', err)
+      }
+
       setProfile(savedProfile)
       setPlan(normalizedPlan)
       return savedProfile
