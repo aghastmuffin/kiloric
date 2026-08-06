@@ -12,6 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
@@ -364,8 +365,11 @@ export default function MultiResponseScreen() {
   )
 
   return (
-    <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <GestureHandlerRootView style={styles.root}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
         {query ? (
           <View style={styles.header}>
             <Text style={styles.headerLabel}>Search query</Text>
@@ -390,7 +394,7 @@ export default function MultiResponseScreen() {
         error={detailError}
         onClose={() => setModalVisible(false)}
       />
-    </>
+    </GestureHandlerRootView>
   )
 }
 
