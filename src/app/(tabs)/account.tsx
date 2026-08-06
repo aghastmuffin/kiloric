@@ -1,19 +1,19 @@
 import { AccountSignInFlow } from '@/components/auth/AccountSignInFlow';
+import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
-import { getAccessToken } from '@/lib/getAccessToken';
+import { calculateStreak, calculateXP } from '@/lib/gamification';
+import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
+import { getProfile, type ProfileDocument } from '@/lib/profile';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-<<<<<<< HEAD
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-=======
 import {
   formatWeightImperial,
   formatWeightMetric,
@@ -23,10 +23,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,9 +32,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-<<<<<<< HEAD
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
-=======
 import Animated, {
   Easing,
   FadeIn,
@@ -46,7 +41,6 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
 import type { Models } from 'react-native-appwrite';
 
 type AppwriteUser = Models.User<Models.Preferences>;
@@ -78,7 +72,10 @@ export default function AccountScreen() {
   }
 
   return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
         {!user ? (
             <AccountSignInFlow />
         ) : (
@@ -93,43 +90,6 @@ export default function AccountScreen() {
   );
 }
 
-<<<<<<< HEAD
-export function UserCard({ user, tokenPreview }: { user: AppwriteUser; tokenPreview: string }) {
-  const styles = useThemedStyles(makeStyles);
-  const [expanded, setExpanded] = useState(false);
-
-  const toggle = () => setExpanded((prev) => !prev);
-
-  return (
-      <Animated.View style={styles.card} layout={LinearTransition.springify().damping(18)}>
-        <Pressable onPress={toggle} style={styles.header}>
-          <Text style={styles.hint}>
-            {expanded ? '▲ Debug Details' : '▼ Debug Details'}
-          </Text>
-        </Pressable>
-
-        {expanded && (
-            <Animated.View
-                entering={FadeIn.duration(200)}
-                exiting={FadeOut.duration(200)}
-                style={styles.dropdown}
-            >
-              <Text style={styles.cardLabel}>User ID</Text>
-              <Text style={styles.cardValue}>{user.$id}</Text>
-
-              <Text style={styles.cardLabel}>Email</Text>
-              <Text style={styles.cardValue}>{user.email ?? '—'}</Text>
-
-              <Text style={styles.cardLabel}>Access token (preview)</Text>
-              <Text style={styles.mono}>{tokenPreview}</Text>
-
-              <Text style={styles.hint}>
-                Authorization: <Text style={styles.mono}>Bearer &lt;access_token&gt;</Text>
-              </Text>
-            </Animated.View>
-        )}
-      </Animated.View>
-=======
 function XPProgressBar({ progress }: { progress: number }) {
   const styles = useThemedStyles(makeStyles);
   const fill = useSharedValue(0);
@@ -152,7 +112,6 @@ function XPProgressBar({ progress }: { progress: number }) {
     <View style={styles.xpTrack}>
       <Animated.View style={[styles.xpFill, fillStyle]} />
     </View>
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
   );
 }
 
@@ -170,13 +129,8 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
   const toggle = () => setExpanded((prev) => !prev);
 
   return (
-      <Animated.View style={styles.card} layout={LinearTransition.springify().damping(18)}>
+      <Animated.View style={styles.card}>
         <Pressable onPress={toggle} style={styles.header}>
-<<<<<<< HEAD
-          <Text style={styles.hint}>
-            {expanded ? '▲ Compact Settings' : '▼ View Settings'}
-          </Text>
-=======
           <View style={styles.settingsHeader}>
             <View style={styles.settingsHeaderLeft}>
               <View style={styles.settingsIconBadge}>
@@ -193,7 +147,6 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
               style={styles.settingsIcon}
             />
           </View>
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
         </Pressable>
 
         {expanded && (
@@ -202,13 +155,12 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
                 exiting={FadeOut.duration(200)}
                 style={styles.settingsCard}
             >
-              <Text style={styles.sectionTitle}>Settings</Text>
-              <Text style={styles.label}>Default search tab</Text>
+              <Text style={styles.label}>Preferred food search</Text>
               <Text style={styles.hint}>
-                Choose whether the bottom tab opens camera scan or manual text search.
+                Choose the method you prefer when starting a food log.
               </Text>
               <ThemedSegmentedControl
-                  values={['Camera scan', 'Text search']}
+                  values={['Camera', 'Text']}
                   selectedIndex={defaultSearchMode === 'scan' ? 0 : 1}
                   enabled={!savingPreference}
                   onChange={(index) =>
@@ -218,6 +170,7 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
 
               <ThemePreferencePicker />
               <FontPreferencePicker />
+              <ApiBackendPreferencePicker />
             </Animated.View>
         )}
       </Animated.View>
@@ -235,14 +188,72 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
   const { signOut } = useAuth();
   const router = useRouter();
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [signingOut, setSigningOut] = useState(false);
-  const [tokenPreview, setTokenPreview] = useState('Loading…');
+  const [profile, setProfile] = useState<ProfileDocument | null>(null);
+  const [todayMeals, setTodayMeals] = useState<MealDocument[]>([]);
+  const [historicMeals, setHistoricMeals] = useState<MealDocument[]>([]);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
-  useEffect(() => {
-    getAccessToken().then((token) => {
-      setTokenPreview(token ? `${token.slice(0, 24)}…` : '—');
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoadingProfile(true);
+      Promise.all([
+        getProfile(user.$id),
+        getTodayMeals(user.$id),
+        listHistoricMeals(user.$id, 100),
+      ])
+        .then(([nextProfile, today, history]) => {
+          if (!active) return;
+          setProfile(nextProfile);
+          setTodayMeals(today);
+          setHistoricMeals(history);
+        })
+        .catch((error) => console.warn('[Account] profile summary load failed', error))
+        .finally(() => {
+          if (active) setLoadingProfile(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, [user.$id]),
+  );
+
+  const totals = useMemo(
+    () => ({
+      kcal: todayMeals.reduce((sum, meal) => sum + (meal.kcal ?? 0), 0),
+      protein: todayMeals.reduce((sum, meal) => sum + (meal.protein ?? 0), 0),
+      fluid: todayMeals.reduce((sum, meal) => sum + (meal.fluid ?? 0), 0),
+    }),
+    [todayMeals],
+  );
+  const kcalTarget = profile?.target_kcal ?? 2000;
+  const proteinTarget = profile?.target_protein ?? 120;
+  const streak = calculateStreak([...todayMeals, ...historicMeals]);
+  const xp = calculateXP({
+    meals: todayMeals.length,
+    water: Math.floor(totals.fluid / 250),
+    calorieTargetHit: totals.kcal >= kcalTarget * 0.9 && totals.kcal <= kcalTarget * 1.1,
+    proteinTargetHit: totals.protein >= proteinTarget,
+  });
+  const displayName = profile?.username?.trim() || user.name?.trim() || user.email.split('@')[0];
+  const goal = profile?.goal_plain?.replace(/ · units:(metric|imperial)$/, '').trim()
+    || 'Build a consistent, balanced routine';
+  const displayUnits = parseDisplayUnitsPreference(profile?.goal_plain, profile?.country);
+  const targetWeightKg = profile
+    ? normalizeStoredTargetWeightKg(profile.country, profile.target_weight, profile.height)
+    : null;
+  const targetWeight = targetWeightKg == null
+    ? null
+    : (displayUnits === 'imperial'
+      ? formatWeightImperial(targetWeightKg)
+      : formatWeightMetric(targetWeightKg));
+  const targetSummary = [
+    profile?.target_kcal ? `${profile.target_kcal.toLocaleString()} kcal` : null,
+    profile?.target_protein ? `${profile.target_protein}g protein` : null,
+    targetWeight ? `${targetWeight} target` : null,
+  ].filter(Boolean).join(' · ');
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -256,11 +267,6 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
   }
 
   return (
-<<<<<<< HEAD
-      <View>
-        <Text style={styles.title}>Welcome back, {user.email}!</Text>
-        <UserCard user={user} tokenPreview={tokenPreview} />
-=======
       <View style={styles.panel}>
         <Text style={styles.eyebrow}>YOUR VITALITY</Text>
         <Text style={styles.title}>{displayName}</Text>
@@ -329,7 +335,6 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             <Text style={styles.statLabel}>KCAL TODAY</Text>
           </View>
         </View>
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
 
         <SettingsDrop
             defaultSearchMode={defaultSearchMode}
@@ -341,7 +346,8 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             style={[styles.button, signingOut && styles.buttonDisabled]}
             onPress={() => router.push('/config')}
         >
-          <Text style={styles.buttonText}>Edit Information</Text>
+          <Ionicons name="create-outline" size={18} color={colors.onAccent} />
+          <Text style={styles.buttonText}>Edit profile & goals</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -366,42 +372,28 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    padding: 20,
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+    padding: 24,
+    paddingBottom: 48,
     backgroundColor: c.background,
   },
-  errorBox: {
-    backgroundColor: c.dangerSoft,
-    borderColor: c.danger,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
+  panel: {
+    width: '100%',
   },
-  errorTitle: {
-    color: c.danger,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  errorText: {
-    color: c.danger,
-    fontSize: 13,
-    lineHeight: 19,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  eyebrow: {
+    ...typography.labelSmall,
+    color: c.textFaint,
   },
   title: {
+    ...typography.headlineLarge,
     color: c.text,
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
+    marginTop: 4,
   },
   subtitle: {
+    ...typography.body,
     color: c.textMuted,
-<<<<<<< HEAD
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 20,
-=======
     marginTop: 2,
     marginBottom: 24,
   },
@@ -596,46 +588,34 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   settingsIcon: {
     color: c.textMuted,
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
   },
   sectionTitle: {
+    ...typography.headline,
     color: c.text,
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 2,
+  },
+  settingsCard: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
   },
   label: {
+    ...typography.body,
     color: c.text,
-    fontSize: 16,
-    marginBottom: 6,
+    fontWeight: '600',
   },
-  input: {
-    backgroundColor: c.surfaceAlt,
-    color: c.text,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: c.border,
+  hint: {
+    ...typography.labelSmall,
+    color: c.textFaint,
+    marginTop: 4,
+    marginBottom: 10,
   },
   button: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
     backgroundColor: c.accent,
-<<<<<<< HEAD
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonSecondary: {
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: c.accent,
-=======
     borderRadius: 999,
     padding: 16,
     alignItems: 'center',
@@ -644,7 +624,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 10,
     elevation: 3,
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
   },
   buttonDanger: {
     flexDirection: 'row',
@@ -654,108 +633,23 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 999,
     padding: 14,
     alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 32,
+    marginTop: 12,
+    marginBottom: 16,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
+    ...typography.label,
     color: c.onAccent,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  buttonSecondaryText: {
-    color: c.accent,
-    fontWeight: '600',
-    fontSize: 16,
   },
   buttonDangerText: {
+    ...typography.label,
     color: c.onDanger,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  card: {
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: c.border,
-    overflow: 'hidden' // Important for smooth clipping during animation
-  },
-  settingsCard: {
-    marginTop: 10,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  segmentOption: {
-    flex: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.background,
-  },
-  segmentOptionSelected: {
-    borderColor: c.accent,
-    backgroundColor: c.accentSoft,
-  },
-  segmentOptionText: {
-    color: c.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  segmentOptionTextSelected: {
-    color: c.accent,
-  },
-  cardLabel: {
-    color: c.textFaint,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  cardValue: {
-    color: c.text,
-    fontSize: 16,
-  },
-  mono: {
-    color: c.mono,
-    fontFamily: 'Menlo',
-    fontSize: 12,
-  },
-  hint: {
-    color: c.textFaint,
-    fontSize: 12,
-    marginTop: 8,
-    lineHeight: 18,
   },
   mutedText: {
+    ...typography.body,
     color: c.textMuted,
     marginTop: 8,
   },
-<<<<<<< HEAD
-  resultBox: {
-    backgroundColor: c.surface,
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-  },
-  header: {
-    paddingVertical: 4,
-  },
-  dropdown: {
-    marginTop: 10,
-  }
 });
-=======
-});
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0

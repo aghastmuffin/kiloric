@@ -1,35 +1,65 @@
-import { authenticatedRequest } from '@/components/apiUtils';
-import { MealTypePicker } from '@/components/MealTypePicker';
-import { SearchModeSwapButton } from '@/components/SearchModeSwapButton';
-import { useTheme } from '@/lib/theme/ThemeContext';
-import type { ThemeColors } from '@/lib/theme/tokens';
-import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { authenticatedRequest } from '@/components/apiUtils'
+import BarcodeDetailModal from '@/components/BarcodeDetailModal'
+import { MotionView } from '@/components/MotionView'
+import { SwipeableRow } from '@/components/SwipeableRow'
+import { useAuth } from '@/lib/AuthContext'
 import {
+  loadFavoriteFoods,
+  toggleFavoriteFood,
+  type FavoriteFood,
+} from '@/lib/foodFavorites'
+import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview'
+import {
+  addProductToMeal,
+  getTodayMeals,
+  listHistoricMeals,
+  MEAL_TYPE_OPTIONS,
+  removeProductFromMeal,
+  type MealDocument,
+  type MealType,
+} from '@/lib/meals'
+import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
+import { getProfile } from '@/lib/profile'
+import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
+import { useTheme } from '@/lib/theme/ThemeContext'
+import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
+import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as Haptics from 'expo-haptics'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  View
-} from 'react-native';
+  UIManager,
+  View,
+} from 'react-native'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-const PlaceholderImage = require('../../../assets/images/dark.svg');
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true)
+}
 
-type SearchType = 'Text' | 'Barcode';
+type FilterChip = 'Favorites' | 'Recent' | 'My Meals' | 'Recipes'
+type SearchResult = Record<string, unknown>
+type LogItem = MealItemPreview & { mealId: string; sourceType: MealType; loggedAt: string }
+type LogSection = {
+  type: MealType
+  kcal: number
+  items: LogItem[]
+}
 
-<<<<<<< HEAD
-async function fetchQuery(query: string): Promise<string> {
-  try {
-    const data = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(query)}`);
-    return typeof data === 'string' ? data : JSON.stringify(data);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return `Request failed: ${message}`;
-=======
 const FILTERS: FilterChip[] = ['Favorites', 'Recent', 'My Meals', 'Recipes']
 
 const FILTER_ICONS: Record<FilterChip, keyof typeof Ionicons.glyphMap> = {
@@ -59,50 +89,100 @@ function getBrand(item: SearchResult): string {
   for (const key of ['brands', 'brand', 'manufacturer', 'store']) {
     const value = item[key]
     if (typeof value === 'string' && value.trim()) return value.trim()
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
   }
+  const nested = item.product
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    return getBrand(nested as SearchResult)
+  }
+  return 'Food database'
 }
 
-async function fetchBarcodeManual(query: string): Promise<string> {
-  try {
-    const data = await authenticatedRequest(`/api/barcode/${encodeURIComponent(query)}`);
-    return typeof data === 'string' ? data : JSON.stringify(data);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return `Request failed: ${message}`;
+function getCaloriesLabel(item: SearchResult): string {
+  const product =
+    item.product && typeof item.product === 'object' && !Array.isArray(item.product)
+      ? (item.product as SearchResult)
+      : item
+  const nutriments =
+    product.nutriments && typeof product.nutriments === 'object' && !Array.isArray(product.nutriments)
+      ? (product.nutriments as Record<string, unknown>)
+      : null
+
+  const calories =
+    product.calories ??
+    product['energy-kcal'] ??
+    product.energy_kcal ??
+    nutriments?.['energy-kcal_100g'] ??
+    nutriments?.['energy-kcal'] ??
+    nutriments?.energy_kcal
+
+  if (typeof calories === 'number' && Number.isFinite(calories)) {
+    return `${Math.round(calories)} kcal / 100g`
   }
+  if (typeof calories === 'string' && calories.trim()) {
+    return calories.includes('kcal') ? calories : `${calories} kcal`
+  }
+  return 'View details'
 }
 
-function CrossPlatformDropDown({ 
-  selectedType, 
-  onSelectType 
-}: { 
-  selectedType: SearchType; 
-  onSelectType: (type: SearchType) => void; 
+function unwrapProduct(item: SearchResult): SearchResult {
+  for (const key of ['product', 'product_data', 'data']) {
+    const value = item[key]
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as SearchResult
+    }
+  }
+  return item
+}
+
+function servingLabel(facts: { label: string; value: string }[], fallback: string): string {
+  const preferred = facts.find((fact) => {
+    const label = fact.label.toLowerCase()
+    return label.includes('serving') || label.includes('quantity') || label.includes('size')
+  })
+  return preferred?.value ?? fallback
+}
+
+function parseSearchPayload(data: unknown): SearchResult[] {
+  if (typeof data === 'string') {
+    const trimmed = data.trim().toLowerCase()
+    if (!trimmed || trimmed.includes('404') || trimmed.includes('no products')) return []
+    try {
+      return parseSearchPayload(JSON.parse(data))
+    } catch {
+      return []
+    }
+  }
+
+  if (Array.isArray(data)) {
+    return data.filter(
+      (item): item is SearchResult =>
+        !!item && typeof item === 'object' && !Array.isArray(item),
+    )
+  }
+
+  if (data && typeof data === 'object') {
+    const obj = data as SearchResult
+    const nested = obj.results ?? obj.products ?? obj.items ?? obj.data
+    if (Array.isArray(nested)) return parseSearchPayload(nested)
+    return [obj]
+  }
+
+  return []
+}
+
+function MacroPills({
+  protein,
+  fat,
+  carbs,
+  styles,
+  colors,
+}: {
+  protein: number | null
+  fat: number | null
+  carbs: number | null
+  styles: ReturnType<typeof makeStyles>
+  colors: ThemeColors
 }) {
-<<<<<<< HEAD
-  const [isVisible, setIsVisible] = useState(false);
-  const options: SearchType[] = ['Text', 'Barcode'];
-  const styles = useThemedStyles(makeStyles);
-
-  return (
-    <View style={styles.dropdownContainer}>
-      <TouchableOpacity onPress={() => setIsVisible(!isVisible)} style={styles.dropdownTrigger}>
-        <Text style={styles.dropdownTriggerText}>{selectedType} ▼</Text>
-      </TouchableOpacity>
-
-      {isVisible && (
-        <>
-          <Pressable style={styles.blanket} onPress={() => setIsVisible(false)} />
-          
-          <View style={styles.floatingMenu}>
-            {options.map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={[
-                  styles.dropdownItem,
-                  item === selectedType && styles.dropdownItemSelected
-=======
   return (
     <View style={styles.macroRow}>
       <View style={[styles.macroPill, styles.macroProtein]}>
@@ -531,18 +611,8 @@ export default function LogFoodScreen() {
                 style={({ pressed }) => [
                   styles.barcodeButton,
                   pressed && styles.barcodeButtonPressed,
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
                 ]}
-                onPress={() => {
-                  onSelectType(item);
-                  setIsVisible(false);
-                }}
               >
-<<<<<<< HEAD
-                <Text style={styles.dropdownItemText}>{item}</Text>
-              </TouchableOpacity>
-            ))}
-=======
                 <Ionicons name="barcode-outline" size={24} color={colors.onAccent} />
               </Pressable>
             </View>
@@ -731,114 +801,586 @@ function IdleLogPanels({
             <Text style={styles.sectionMeta}>
               {Math.round(dailyKcal).toLocaleString()} / {kcalTarget.toLocaleString()} kcal
             </Text>
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
           </View>
-        </>
-      )}
-    </View>
-  );
+
+          {loadingMeals ? (
+            <View style={styles.emptyCard}>
+              <ActivityIndicator color={colors.accent} />
+              <Text style={styles.emptyText}>Loading today&apos;s meals…</Text>
+            </View>
+          ) : !signedIn ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Sign in to see and organise today&apos;s logs.</Text>
+            </View>
+          ) : sections.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="book-outline" size={28} color={colors.textMuted} />
+              <Text style={styles.emptyText}>No meals yet. Search a food or scan a barcode to begin.</Text>
+            </View>
+          ) : (
+            <View style={styles.mealStack}>
+              {sections.map((section, index) => {
+                const open = expanded[section.type] !== false
+                return (
+                  <MotionView
+                    key={section.type}
+                    from={{ opacity: 0, translateY: 10 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: 'spring', damping: 20, delay: 80 + index * 45 }}
+                    style={styles.mealCard}
+                  >
+                    <Pressable
+                      onPress={() => onToggleSection(section.type)}
+                      style={({ pressed }) => [styles.mealCardHeader, pressed && styles.pressed]}
+                    >
+                      <View style={styles.mealCardHeaderLeft}>
+                        <Ionicons
+                          name={MEAL_ICONS[section.type]}
+                          size={18}
+                          color={colors.success}
+                        />
+                        <Text style={styles.mealCardTitle}>{section.type}</Text>
+                      </View>
+                      <View style={styles.mealCardHeaderRight}>
+                        <Text style={styles.mealCardKcal}>{Math.round(section.kcal)} kcal</Text>
+                        <Ionicons
+                          name={open ? 'chevron-up' : 'chevron-down'}
+                          size={18}
+                          color={colors.textMuted}
+                        />
+                      </View>
+                    </Pressable>
+
+                    {open ? (
+                      <View style={styles.mealItems}>
+                        {section.items.map((item, itemIndex) => {
+                          const row = (
+                            <Pressable
+                              onPress={() => onOpenDetail(item.barcode)}
+                              style={({ pressed }) => [
+                                styles.mealItemRow,
+                                itemIndex > 0 && styles.rowDivider,
+                                pressed && styles.pressed,
+                              ]}
+                            >
+                              <Text style={styles.mealItemTime}>{formatClockSafe(item.loggedAt)}</Text>
+                              <View style={styles.mealItemCopy}>
+                                <Text style={styles.mealItemTitle} numberOfLines={1}>
+                                  {item.title}
+                                </Text>
+                                <Text style={styles.mealItemMeta} numberOfLines={1}>
+                                  {servingLabel(item.facts, item.barcode)}
+                                </Text>
+                              </View>
+                              <Text style={styles.mealItemKcal}>
+                                {item.kcal != null ? Math.round(item.kcal) : '—'}
+                              </Text>
+                            </Pressable>
+                          )
+
+                          return (
+                            <SwipeableRow
+                              key={`${item.mealId}-${item.barcode}-${itemIndex}`}
+                              swipeRight={{
+                                label: 'Delete',
+                                icon: 'trash-outline',
+                                destructive: true,
+                                onPress: () => onDeleteItem(item),
+                              }}
+                            >
+                              {row}
+                            </SwipeableRow>
+                          )
+                        })}
+                      </View>
+                    ) : null}
+                  </MotionView>
+                )
+              })}
+            </View>
+          )}
+
+          <Pressable
+            onPress={onLogNewMeal}
+            style={({ pressed }) => [
+              styles.logNewButton,
+              pressed && styles.logNewButtonPressed,
+            ]}
+          >
+            <Ionicons name="add" size={18} color={colors.textMuted} />
+            <Text style={styles.logNewButtonText}>Log New Meal</Text>
+          </Pressable>
+        </MotionView>
+      ) : null}
+
+      <MotionView
+        from={{ opacity: 0, translateY: 14 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 340, delay: 120 }}
+        style={styles.section}
+      >
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{sideTitle}</Text>
+          {activeFilter === 'Recent' || activeFilter === 'Favorites' ? (
+            <Text style={styles.sectionMeta}>Add to {selectedMealType}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.recentCard}>
+          {activeFilter === 'Favorites' ? (
+            favorites.length === 0 ? (
+              <View style={styles.inlineEmpty}>
+                <Text style={styles.emptyText}>
+                  Star foods from search or recent lists to keep them here.
+                </Text>
+              </View>
+            ) : (
+              favorites.map((food, index) => (
+                <FoodQuickRow
+                  key={food.barcode}
+                  index={index}
+                  title={food.title}
+                  barcode={food.barcode}
+                  protein={food.protein}
+                  fat={food.fat}
+                  carbs={food.carbs}
+                  favorited
+                  styles={styles}
+                  colors={colors}
+                  onOpen={() => onOpenDetail(food.barcode)}
+                  onAdd={() => onAddFood(food)}
+                  onToggleFavorite={() => onToggleFavorite(food)}
+                />
+              ))
+            )
+          ) : activeFilter === 'My Meals' ? (
+            historicMeals.length === 0 ? (
+              <View style={styles.inlineEmpty}>
+                <Text style={styles.emptyText}>
+                  Past meals will show here for quick re-logging.
+                </Text>
+              </View>
+            ) : (
+              historicMeals.map((meal, index) => {
+                const firstBarcode = meal.items?.[0]
+                return (
+                  <MotionView
+                    key={meal.$id}
+                    from={{ opacity: 0, translateX: 8 }}
+                    animate={{ opacity: 1, translateX: 0 }}
+                    transition={{ type: 'timing', duration: 260, delay: 140 + index * 40 }}
+                    style={[styles.recentRow, index > 0 && styles.rowDivider]}
+                  >
+                    <Pressable
+                      style={styles.recentCopy}
+                      onPress={() => firstBarcode && onOpenDetail(firstBarcode)}
+                      disabled={!firstBarcode}
+                    >
+                      <Text style={styles.recentTitle} numberOfLines={1}>
+                        {meal.friendlyname?.trim() || meal.type || 'Saved meal'}
+                      </Text>
+                      <MacroPills
+                        protein={meal.protein ?? null}
+                        fat={meal.fat ?? null}
+                        carbs={meal.carbs ?? null}
+                        styles={styles}
+                        colors={colors}
+                      />
+                      <Text style={styles.mealItemMeta}>
+                        {meal.kcal != null ? `${Math.round(meal.kcal)} kcal` : '—'} · {meal.type}
+                      </Text>
+                    </Pressable>
+                    {firstBarcode ? (
+                      <Pressable
+                        accessibilityLabel="Add first item from meal"
+                        onPress={() =>
+                          onAddFood({
+                            barcode: firstBarcode,
+                            title: meal.friendlyname?.trim() || meal.type || 'Meal item',
+                            kcal: meal.kcal,
+                            protein: meal.protein,
+                            carbs: meal.carbs,
+                            fat: meal.fat,
+                          })
+                        }
+                        style={({ pressed }) => [styles.addCircle, pressed && styles.addCircleActive]}
+                      >
+                        <Ionicons name="add" size={18} color={colors.textMuted} />
+                      </Pressable>
+                    ) : null}
+                  </MotionView>
+                )
+              })
+            )
+          ) : activeFilter === 'Recipes' ? (
+            <View style={styles.inlineEmpty}>
+              <Ionicons name="restaurant-outline" size={26} color={colors.textMuted} />
+              <Text style={styles.emptyText}>
+                Recipes are on the way. Use search or Recent Foods for now.
+              </Text>
+            </View>
+          ) : recentFoods.length === 0 ? (
+            <View style={styles.inlineEmpty}>
+              <Text style={styles.emptyText}>
+                Recent foods from today will appear here for one-tap logging.
+              </Text>
+            </View>
+          ) : (
+            recentFoods.map((food, index) => (
+              <FoodQuickRow
+                key={food.barcode}
+                index={index}
+                title={food.title}
+                barcode={food.barcode}
+                protein={food.protein}
+                fat={food.fat}
+                carbs={food.carbs}
+                favorited={favorites.some((item) => item.barcode === food.barcode)}
+                styles={styles}
+                colors={colors}
+                onOpen={() => onOpenDetail(food.barcode)}
+                onAdd={() => onAddFood(food)}
+                onToggleFavorite={() =>
+                  onToggleFavorite({
+                    barcode: food.barcode,
+                    title: food.title,
+                    protein: food.protein,
+                    carbs: food.carbs,
+                    fat: food.fat,
+                    kcal: food.kcal,
+                  })
+                }
+              />
+            ))
+          )}
+        </View>
+      </MotionView>
+    </>
+  )
 }
 
-export default function Index() {
-  const router = useRouter();
-  const styles = useThemedStyles(makeStyles);
-  const { colors } = useTheme();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [query, setQuery] = useState<string>('');
-  const [searchType, setSearchType] = useState<SearchType>('Text');
-
-  const handleTextResponse = useCallback(
-    (data: string) => {
-      router.push({
-        pathname: '/multiresponse',
-        params: { query, result: data },
-      });
-    },
-    [query, router],
-  );
-
-  const handleScanPress = async () => {
-    if (!query.trim()) return;
-
-    setIsLoading(true);
-    let result = '';
-
-    if (searchType === 'Barcode') {
-      result = await fetchBarcodeManual(query.trim());
-    } else {
-      result = await fetchQuery(query.trim());
-    }
-
-    setIsLoading(false);
-    handleTextResponse(result);
-  };
-
-  const handleCameraPress = () => {
-        router.push('/cameraview');
-  };
+function FoodQuickRow({
+  index,
+  title,
+  barcode,
+  protein,
+  fat,
+  carbs,
+  favorited,
+  styles,
+  colors,
+  onOpen,
+  onAdd,
+  onToggleFavorite,
+}: {
+  index: number
+  title: string
+  barcode: string
+  protein: number | null
+  fat: number | null
+  carbs: number | null
+  favorited: boolean
+  styles: ReturnType<typeof makeStyles>
+  colors: ThemeColors
+  onOpen: () => void
+  onAdd: () => void
+  onToggleFavorite: () => void
+}) {
+  const row = (
+    <View style={[styles.recentRow, index > 0 && styles.rowDivider]}>
+      <Pressable style={styles.recentCopy} onPress={onOpen}>
+        <View style={styles.recentTitleRow}>
+          <Text style={styles.recentTitle} numberOfLines={1}>{title}</Text>
+          <Pressable
+            accessibilityLabel={favorited ? 'Remove favorite' : 'Save favorite'}
+            hitSlop={8}
+            onPress={onToggleFavorite}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Ionicons
+              name={favorited ? 'star' : 'star-outline'}
+              size={16}
+              color={favorited ? colors.accent : colors.textFaint}
+            />
+          </Pressable>
+        </View>
+        <MacroPills
+          protein={protein}
+          fat={fat}
+          carbs={carbs}
+          styles={styles}
+          colors={colors}
+        />
+      </Pressable>
+      <Pressable
+        accessibilityLabel={`Add ${title}`}
+        onPress={onAdd}
+        style={({ pressed }) => [styles.addCircle, pressed && styles.addCircleActive]}
+      >
+        <Ionicons
+          name="add"
+          size={18}
+          color={pressedColor(colors, false)}
+        />
+      </Pressable>
+    </View>
+  )
 
   return (
-    <View style={styles.container}>
-
-      <View style={styles.headerRow}>
-        <Text style={styles.titleText}>Manually Search {searchType === 'Barcode' ? 'for a' : 'for'}</Text>
-        <CrossPlatformDropDown selectedType={searchType} onSelectType={setSearchType} />
-      </View>
-
-      {/* Outer row wrapper acting as the visual input background/border */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder={searchType === 'Barcode' ? "Enter barcode string..." : "Enter query..."}
-          placeholderTextColor={colors.textFaint}
-          style={styles.input}
-          value={query}
-          onChangeText={setQuery}
-        />
-        
-        {/* The interactive camera overlay button positioned cleanly inside the row */}
-        <TouchableOpacity 
-          style={styles.cameraButton} 
-          onPress={handleCameraPress}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.cameraIcon}>Scan <Ionicons name={'barcode'} size={24} /> </Text>
-        </TouchableOpacity>
-      </View>
-      
-      <TouchableOpacity
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={handleScanPress}
-        disabled={isLoading || !query.trim()}
+    <MotionView
+      from={{ opacity: 0, translateX: 8 }}
+      animate={{ opacity: 1, translateX: 0 }}
+      transition={{ type: 'timing', duration: 260, delay: 140 + index * 40 }}
+    >
+      <SwipeableRow
+        swipeLeft={{
+          label: 'Add',
+          icon: 'add-circle-outline',
+          onPress: onAdd,
+        }}
       >
-        <Text style={styles.buttonText}>
-          {isLoading ? 'Please Wait...' : 'Search'}
-        </Text>
-      </TouchableOpacity>
-      
-      <MealTypePicker />
-      <SearchModeSwapButton current="text_query" />
-    </View>
-  );
+        {row}
+      </SwipeableRow>
+    </MotionView>
+  )
+}
+
+function pressedColor(colors: ThemeColors, active: boolean) {
+  return active ? colors.onAccent : colors.textMuted
+}
+
+function SearchResultsPanel({
+  colors,
+  styles,
+  isSearching,
+  results,
+  searchError,
+  selectedMealType,
+  mealPickerOpen,
+  addStatuses,
+  favorites,
+  onToggleMealPicker,
+  onSelectMealType,
+  onAdd,
+  onToggleFavorite,
+  onOpenDetail,
+  onBack,
+}: {
+  colors: ThemeColors
+  styles: ReturnType<typeof makeStyles>
+  isSearching: boolean
+  results: SearchResult[]
+  searchError: string | null
+  selectedMealType: MealType
+  mealPickerOpen: boolean
+  addStatuses: Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
+  favorites: FavoriteFood[]
+  onToggleMealPicker: () => void
+  onSelectMealType: (type: MealType) => void
+  onAdd: (item: SearchResult, index: number) => void
+  onToggleFavorite: (item: SearchResult) => void
+  onOpenDetail: (barcode: string) => void
+  onBack: () => void
+}) {
+  return (
+    <MotionView
+      from={{ opacity: 0, translateY: 16 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', damping: 20 }}
+      style={styles.section}
+    >
+      <View style={styles.sectionHeader}>
+        <View style={styles.resultsHeading}>
+          <Pressable onPress={onBack} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
+            <Ionicons name="arrow-back" size={18} color={colors.accent} />
+          </Pressable>
+          <Text style={styles.sectionTitle}>Search Results</Text>
+        </View>
+        <View style={styles.mealSelectWrap}>
+          <Pressable
+            onPress={onToggleMealPicker}
+            style={({ pressed }) => [styles.mealSelect, pressed && styles.pressed]}
+          >
+            <Text style={styles.mealSelectText}>{selectedMealType}</Text>
+            <Ionicons
+              name={mealPickerOpen ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={colors.textMuted}
+            />
+          </Pressable>
+          {mealPickerOpen ? (
+            <View style={styles.mealMenu}>
+              {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type) => (
+                <Pressable
+                  key={type}
+                  onPress={() => onSelectMealType(type)}
+                  style={({ pressed }) => [
+                    styles.mealMenuItem,
+                    type === selectedMealType && styles.mealMenuItemSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.mealMenuItemText,
+                      type === selectedMealType && styles.mealMenuItemTextSelected,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      <Text style={styles.swipeHint}>Swipe left or tap + to add to {selectedMealType}</Text>
+
+      <View style={styles.resultsCard}>
+        {isSearching ? (
+          <View style={styles.emptyCard}>
+            <ActivityIndicator color={colors.accent} />
+            <Text style={styles.emptyText}>Searching foods…</Text>
+          </View>
+        ) : searchError ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>{searchError}</Text>
+          </View>
+        ) : (
+          results.map((item, index) => {
+            const product = unwrapProduct(item)
+            const title = getProductTitle(product, `Result ${index + 1}`)
+            const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
+            const brand = getBrand(product)
+            const calories = getCaloriesLabel(product)
+            const status = addStatuses[index]
+            const favorited = barcode
+              ? favorites.some((favorite) => favorite.barcode === barcode)
+              : false
+
+            const row = (
+              <Pressable
+                onPress={() => barcode && onOpenDetail(barcode)}
+                disabled={!barcode}
+                style={({ pressed }) => [
+                  styles.resultRow,
+                  index > 0 && styles.rowDivider,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.resultCopy}>
+                  <View style={styles.recentTitleRow}>
+                    <Text style={styles.resultTitle} numberOfLines={2}>{title}</Text>
+                    {barcode ? (
+                      <Pressable
+                        hitSlop={8}
+                        onPress={() => onToggleFavorite(item)}
+                        style={({ pressed }) => pressed && styles.pressed}
+                      >
+                        <Ionicons
+                          name={favorited ? 'star' : 'star-outline'}
+                          size={16}
+                          color={favorited ? colors.accent : colors.textFaint}
+                        />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <Text style={styles.resultBrand} numberOfLines={1}>{brand}</Text>
+                  <View style={styles.resultBadge}>
+                    <Text style={styles.resultBadgeText}>{calories}</Text>
+                  </View>
+                  {status ? (
+                    <Text
+                      style={[
+                        styles.resultFeedback,
+                        status.state === 'error' && styles.resultFeedbackError,
+                      ]}
+                    >
+                      {status.message}
+                    </Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  accessibilityLabel={`Add ${title}`}
+                  disabled={!barcode || status?.state === 'adding'}
+                  onPress={() => onAdd(item, index)}
+                  style={({ pressed }) => [
+                    styles.addCircle,
+                    (pressed || status?.state === 'added') && styles.addCircleActive,
+                  ]}
+                >
+                  {status?.state === 'adding' ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Ionicons
+                      name={status?.state === 'added' ? 'checkmark' : 'add'}
+                      size={18}
+                      color={status?.state === 'added' ? colors.onAccent : colors.textMuted}
+                    />
+                  )}
+                </Pressable>
+              </Pressable>
+            )
+
+            if (!barcode) {
+              return (
+                <MotionView
+                  key={`${title}-${index}`}
+                  from={{ opacity: 0, translateY: 8 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  transition={{ type: 'timing', duration: 240, delay: index * 35 }}
+                >
+                  {row}
+                </MotionView>
+              )
+            }
+
+            return (
+              <MotionView
+                key={`${barcode}-${index}`}
+                from={{ opacity: 0, translateY: 8 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: 'timing', duration: 240, delay: index * 35 }}
+              >
+                <SwipeableRow
+                  swipeLeft={{
+                    label: 'Add',
+                    icon: 'add-circle-outline',
+                    onPress: () => onAdd(item, index),
+                  }}
+                >
+                  {row}
+                </SwipeableRow>
+              </MotionView>
+            )
+          })
+        )}
+      </View>
+    </MotionView>
+  )
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: c.background,
-    alignItems: 'center',
   },
-<<<<<<< HEAD
-  imageContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 24,
+  content: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.md,
+    gap: spacing.lg,
   },
-  image: {
-    width: 260,
-    height: 260,
-    borderRadius: 18,
-    maxWidth: '90%', 
-=======
+  searchBlock: {
+    gap: spacing.md,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   searchField: {
     flex: 1,
     minHeight: 54,
@@ -900,21 +1442,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   barcodeButtonPressed: {
     transform: [{ scale: 0.94 }],
     opacity: 0.92,
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
   },
-  headerRow: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    marginTop: 20, 
-    marginHorizontal: 20,
-    width: '85%',
-    maxWidth: 440,
+  chipRow: {
+    gap: spacing.sm,
+    paddingRight: spacing.md,
   },
-<<<<<<< HEAD
-  // Row layout framing both TextInput and the camera icon together safely
-  inputContainer: {
-=======
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -963,123 +1495,300 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textMuted,
   },
   resultsHeading: {
->>>>>>> 05b5b1a8bf5c3bb3f4899ee6ea0888c032493fa0
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
+  },
+  mealStack: {
+    gap: spacing.md,
+  },
+  mealCard: {
+    backgroundColor: c.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(120,118,114,0.2)',
+    overflow: 'hidden',
+  },
+  mealCardHeader: {
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
     backgroundColor: c.surfaceAlt,
-    borderRadius: 12,
-    width: '85%',
-    maxWidth: 440,
-    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mealCardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  mealCardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  mealCardTitle: {
+    ...typography.label,
+    color: c.accent,
+    fontWeight: '700',
+  },
+  mealCardKcal: {
+    ...typography.label,
+    color: c.text,
+  },
+  mealItems: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
+  },
+  mealItemRow: {
+    minHeight: 64,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: c.surface,
+  },
+  mealItemTime: {
+    ...typography.label,
+    color: c.textMuted,
+    width: 48,
+  },
+  mealItemCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  mealItemTitle: {
+    ...typography.body,
+    color: c.text,
+  },
+  mealItemMeta: {
+    ...typography.labelSmall,
+    color: c.textMuted,
+  },
+  mealItemKcal: {
+    ...typography.label,
+    color: c.accent,
+    fontWeight: '700',
+  },
+  logNewButton: {
+    minHeight: 54,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: c.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  logNewButtonPressed: {
+    borderColor: c.accent,
+    backgroundColor: c.surfaceAlt,
+  },
+  logNewButtonText: {
+    ...typography.label,
+    color: c.textMuted,
+  },
+  recentCard: {
+    backgroundColor: c.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(120,118,114,0.2)',
+    overflow: 'hidden',
+  },
+  recentRow: {
+    minHeight: 78,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: c.surface,
+  },
+  recentCopy: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  recentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  recentTitle: {
+    ...typography.body,
+    color: c.text,
+    flex: 1,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  macroPill: {
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  macroProtein: {
+    backgroundColor: 'rgba(102,113,96,0.1)',
+  },
+  macroFat: {
+    backgroundColor: 'rgba(120,118,114,0.1)',
+  },
+  macroCarbs: {
+    backgroundColor: 'rgba(27,54,93,0.1)',
+  },
+  macroPillText: {
+    ...typography.labelSmall,
+    fontSize: 10,
+  },
+  addCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: c.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addCircleActive: {
+    backgroundColor: c.accent,
+    borderColor: c.accent,
+  },
+  mealSelectWrap: {
+    position: 'relative',
+    zIndex: 5,
+  },
+  mealSelect: {
+    minWidth: 118,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(120,118,114,0.3)',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+  },
+  mealSelectText: {
+    ...typography.label,
+    color: c.accent,
+  },
+  mealMenu: {
+    position: 'absolute',
+    top: 42,
+    right: 0,
+    zIndex: 20,
+    minWidth: 140,
+    backgroundColor: c.surface,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: c.border,
     overflow: 'hidden',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
   },
-  // Allows text layout to take up all empty space up to the camera trigger boundaries
-  input: {
-    flex: 1,
-    color: c.text,
-    paddingLeft: 18,
-    paddingRight: 8,
-    paddingVertical: 14,
-    fontSize: 16,
+  mealMenuItem: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
   },
-  // Hitbox parameters for your overlay action
-  cameraButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraIcon: {
-    fontSize: 18,
-  },
-  button: {
-    backgroundColor: c.accent,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: 20,
-    width: '85%',
-    maxWidth: 440,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: c.onAccent,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  titleText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: c.text,
-    letterSpacing: -0.3,
-  },
-  dropdownContainer: {
-    position: 'relative',
-    zIndex: 50,
-  },
-  dropdownTrigger: {
-    backgroundColor: c.surfaceAlt,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-  },
-  dropdownTriggerText: {
-    color: c.accent, 
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  blanket: {
-    position: 'absolute',
-    top: -1000,
-    left: -1000,
-    right: -1000,
-    bottom: -1000,
-    zIndex: 1,
-  },
-  floatingMenu: {
-    position: 'absolute',
-    top: 48,
-    right: 0,
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    width: 160,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    zIndex: 2,
-    borderWidth: 1,
-    borderColor: c.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 6,
-      },
-      web: {
-        boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.4)',
-      }
-    }),
-  },
-  dropdownItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    marginVertical: 2,
-  },
-  dropdownItemSelected: {
+  mealMenuItemSelected: {
     backgroundColor: c.accentSoft,
   },
-  dropdownItemText: {
+  mealMenuItemText: {
+    ...typography.label,
     color: c.text,
-    fontSize: 16,
-    fontWeight: '500',
   },
-});
+  mealMenuItemTextSelected: {
+    color: c.accent,
+    fontWeight: '700',
+  },
+  swipeHint: {
+    ...typography.labelSmall,
+    color: c.textMuted,
+  },
+  resultsCard: {
+    backgroundColor: c.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(120,118,114,0.2)',
+    overflow: 'hidden',
+  },
+  resultRow: {
+    minHeight: 92,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: c.surface,
+  },
+  resultCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  resultTitle: {
+    ...typography.body,
+    color: c.text,
+    flex: 1,
+  },
+  resultBrand: {
+    ...typography.labelSmall,
+    color: c.textMuted,
+  },
+  resultBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    borderRadius: borderRadius.sm,
+    backgroundColor: 'rgba(27,54,93,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  resultBadgeText: {
+    ...typography.labelSmall,
+    fontSize: 10,
+    color: c.accent,
+  },
+  resultFeedback: {
+    ...typography.labelSmall,
+    color: c.success,
+    marginTop: 4,
+  },
+  resultFeedbackError: {
+    color: c.danger,
+  },
+  rowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(196,198,207,0.35)',
+  },
+  emptyCard: {
+    minHeight: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: c.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(120,118,114,0.2)',
+    padding: spacing.lg,
+  },
+  inlineEmpty: {
+    padding: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyText: {
+    ...typography.body,
+    color: c.textMuted,
+    textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.78,
+  },
+})

@@ -5,9 +5,12 @@ import {
   showApiError,
 } from '@/lib/apiErrors'
 import { getCachedResponse, getCacheTtl, normalizeCacheKey, setCachedResponse } from '@/lib/apiCache'
+import {
+  resolveApiBackendChoice,
+  resolveBackendRequest,
+} from '@/lib/apiBackendPreferences'
 import { getAccessToken } from '@/lib/getAccessToken'
-
-const BACKEND_URL = 'https://calcount.taeson.co'
+import { normalizeOrdsResponse } from '@/lib/ordsNormalize'
 
 type RequestOptions = RequestInit & {
   headers?: Record<string, string>
@@ -15,25 +18,29 @@ type RequestOptions = RequestInit & {
 
 const inflightRequests = new Map<string, Promise<unknown>>()
 
-async function performAuthenticatedRequest(
-  endpoint: string,
+async function performBackendRequest(
+  logicalEndpoint: string,
   options: RequestOptions = {},
 ): Promise<unknown> {
-  const token = await getAccessToken()
+  const choice = await resolveApiBackendChoice()
+  const { url, requiresAuth } = resolveBackendRequest(choice, logicalEndpoint)
 
-  if (!token) {
-    const message = 'No active login session found. Please log in.'
-    showApiError(message, 'oracle')
-    throw new ApiRequestError(message)
-  }
-
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
     ...options.headers,
   }
 
-  const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+  if (requiresAuth) {
+    const token = await getAccessToken()
+    if (!token) {
+      const message = 'No active login session found. Please log in.'
+      showApiError(message, 'oracle')
+      throw new ApiRequestError(message)
+    }
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(url, {
     ...options,
     headers,
   })
@@ -51,12 +58,17 @@ async function performAuthenticatedRequest(
     throw new ApiRequestError(message)
   }
 
+  if (choice === 'ords') {
+    return normalizeOrdsResponse(logicalEndpoint, data)
+  }
+
   return data
 }
 
 /**
- * Authenticated fetch wrapper for the FastAPI backend.
- * GET requests to barcode, product, and fuzzy search endpoints are cached on-device.
+ * Fetch wrapper for food lookup backends (Oracle ORDS or legacy FastAPI).
+ * Call sites keep using logical paths like `/api/barcode/:code` and `/api/fuzzy/:query`.
+ * GET requests to those endpoints are cached on-device, scoped by selected backend.
  */
 export const authenticatedRequest = async (
   endpoint: string,
@@ -66,12 +78,13 @@ export const authenticatedRequest = async (
   const cacheTtl = method === 'GET' ? getCacheTtl(endpoint) : null
 
   if (cacheTtl !== null) {
-    const cached = await getCachedResponse(endpoint)
+    const choice = await resolveApiBackendChoice()
+    const cached = await getCachedResponse(endpoint, choice)
     if (cached !== null) {
       return cached
     }
 
-    const cacheKey = normalizeCacheKey(endpoint)
+    const cacheKey = normalizeCacheKey(endpoint, choice)
     const inflight = inflightRequests.get(cacheKey)
     if (inflight) {
       return inflight
@@ -79,12 +92,11 @@ export const authenticatedRequest = async (
 
     const promise = (async () => {
       try {
-        const data = await performAuthenticatedRequest(endpoint, options)
+        const data = await performBackendRequest(endpoint, options)
         if (data !== null && data !== undefined) {
-          // Optimization: Persistence to AsyncStorage happens in the background
-          // to return data to the caller as soon as the network request completes.
-          void setCachedResponse(endpoint, data, cacheTtl).catch((err) => {
-            console.warn('[apiUtils] background cache persistence failed', err);
+          // Persistence happens in the background so callers get network data immediately.
+          void setCachedResponse(endpoint, data, cacheTtl, choice).catch((err) => {
+            console.warn('[apiUtils] background cache persistence failed', err)
           })
         }
         return data
@@ -105,7 +117,7 @@ export const authenticatedRequest = async (
   }
 
   try {
-    return await performAuthenticatedRequest(endpoint, options)
+    return await performBackendRequest(endpoint, options)
   } catch (err) {
     if (isApiRequestError(err)) throw err
 

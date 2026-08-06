@@ -24,25 +24,28 @@ function decodePathSegment(segment: string): string {
   }
 }
 
-export function normalizeCacheKey(endpoint: string): string {
+export function normalizeCacheKey(endpoint: string, backend?: string): string {
   const [path, query = ''] = endpoint.split('?')
 
+  let base: string
   const barcodeMatch = path.match(/^\/api\/barcode\/(.+)$/i)
   if (barcodeMatch) {
-    return `/api/barcode/${decodePathSegment(barcodeMatch[1])}`
+    base = `/api/barcode/${decodePathSegment(barcodeMatch[1])}`
+  } else {
+    const productMatch = path.match(/^\/api\/product\/(.+)$/i)
+    if (productMatch) {
+      base = `/api/product/${decodePathSegment(productMatch[1])}`
+    } else {
+      const fuzzyMatch = path.match(/^\/api\/fuzzy\/(.+)$/i)
+      if (fuzzyMatch) {
+        base = `/api/fuzzy/${decodePathSegment(fuzzyMatch[1]).toLowerCase()}`
+      } else {
+        base = path + (query ? `?${query}` : '')
+      }
+    }
   }
 
-  const productMatch = path.match(/^\/api\/product\/(.+)$/i)
-  if (productMatch) {
-    return `/api/product/${decodePathSegment(productMatch[1])}`
-  }
-
-  const fuzzyMatch = path.match(/^\/api\/fuzzy\/(.+)$/i)
-  if (fuzzyMatch) {
-    return `/api/fuzzy/${decodePathSegment(fuzzyMatch[1]).toLowerCase()}`
-  }
-
-  return path + (query ? `?${query}` : '')
+  return backend ? `${backend}:${base}` : base
 }
 
 export function getCacheTtl(endpoint: string): number | null {
@@ -67,8 +70,11 @@ function storageKey(cacheKey: string): string {
   return `${STORAGE_PREFIX}${cacheKey}`
 }
 
-export async function getCachedResponse(endpoint: string): Promise<unknown | null> {
-  const cacheKey = normalizeCacheKey(endpoint)
+export async function getCachedResponse(
+  endpoint: string,
+  backend?: string,
+): Promise<unknown | null> {
+  const cacheKey = normalizeCacheKey(endpoint, backend)
   const memoryEntry = memoryCache.get(cacheKey)
   if (memoryEntry) {
     if (isFresh(memoryEntry)) {
@@ -99,8 +105,9 @@ export async function setCachedResponse(
   endpoint: string,
   data: unknown,
   ttlMs: number,
+  backend?: string,
 ): Promise<void> {
-  const cacheKey = normalizeCacheKey(endpoint)
+  const cacheKey = normalizeCacheKey(endpoint, backend)
   const entry: CacheEntry = {
     data,
     expiresAt: Date.now() + ttlMs,

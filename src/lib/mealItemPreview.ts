@@ -1,4 +1,5 @@
 import { authenticatedRequest } from '@/components/apiUtils'
+import { resolveApiBackendChoice } from '@/lib/apiBackendPreferences'
 import { getCachedResponse } from '@/lib/apiCache'
 import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
 import type { MealType } from '@/lib/meals'
@@ -38,7 +39,8 @@ export async function fetchMealItemPreview(
       data = fetched as Record<string, unknown>
     }
   } catch {
-    const cached = await getCachedResponse(endpoint)
+    const choice = await resolveApiBackendChoice()
+    const cached = await getCachedResponse(endpoint, choice)
     if (cached && typeof cached === 'object' && !Array.isArray(cached)) {
       data = cached as Record<string, unknown>
     }
