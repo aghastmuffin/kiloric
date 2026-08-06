@@ -21,7 +21,7 @@ import {
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -31,7 +31,15 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import type { Models } from 'react-native-appwrite';
 
 type AppwriteUser = Models.User<Models.Preferences>;
@@ -81,6 +89,31 @@ export default function AccountScreen() {
   );
 }
 
+function XPProgressBar({ progress }: { progress: number }) {
+  const styles = useThemedStyles(makeStyles);
+  const fill = useSharedValue(0);
+
+  useEffect(() => {
+    fill.value = withDelay(
+      280,
+      withTiming(Math.max(0, Math.min(1, progress)), {
+        duration: 850,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
+  }, [fill, progress]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${fill.value * 100}%`,
+  }));
+
+  return (
+    <View style={styles.xpTrack}>
+      <Animated.View style={[styles.xpFill, fillStyle]} />
+    </View>
+  );
+}
+
 type SettingsDropProps = {
   defaultSearchMode: DefaultSearchMode;
   savingPreference: boolean;
@@ -89,6 +122,7 @@ type SettingsDropProps = {
 
 export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchModeChange }: SettingsDropProps) {
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
   const toggle = () => setExpanded((prev) => !prev);
@@ -97,9 +131,14 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
       <Animated.View style={styles.card}>
         <Pressable onPress={toggle} style={styles.header}>
           <View style={styles.settingsHeader}>
-            <View>
-              <Text style={styles.eyebrow}>PREFERENCES</Text>
-              <Text style={styles.sectionTitle}>Settings</Text>
+            <View style={styles.settingsHeaderLeft}>
+              <View style={styles.settingsIconBadge}>
+                <Ionicons name="options-outline" size={18} color={colors.accent} />
+              </View>
+              <View>
+                <Text style={styles.eyebrow}>PREFERENCES</Text>
+                <Text style={styles.sectionTitle}>Settings</Text>
+              </View>
             </View>
             <Ionicons
               name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -231,30 +270,67 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
         <Text style={styles.title}>{displayName}</Text>
         <Text style={styles.subtitle}>{user.email}</Text>
 
-        <View style={styles.identityCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{displayName.slice(0, 1).toUpperCase()}</Text>
+        <View style={styles.playerCard}>
+          <View style={styles.identityRow}>
+            <View style={styles.avatarWrap}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{displayName.slice(0, 1).toUpperCase()}</Text>
+              </View>
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelBadgeText}>
+                  {loadingProfile ? 'LV —' : `LV ${xp.level}`}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.identityCopy}>
+              <Text style={styles.cardLabel}>CURRENT FOCUS</Text>
+              <Text style={styles.goalText}>{goal}</Text>
+              {targetSummary ? <Text style={styles.goalMeta}>{targetSummary}</Text> : null}
+            </View>
           </View>
-          <View style={styles.identityCopy}>
-            <Text style={styles.cardLabel}>CURRENT FOCUS</Text>
-            <Text style={styles.goalText}>{goal}</Text>
-            {targetSummary ? <Text style={styles.goalMeta}>{targetSummary}</Text> : null}
+
+          <View style={styles.xpSection}>
+            <View style={styles.xpHeader}>
+              <View style={styles.xpHeaderLeft}>
+                <Ionicons name="sparkles" size={13} color={colors.xpAccent} />
+                <Text style={styles.xpLabel}>DAILY XP</Text>
+              </View>
+              <Text style={styles.xpValue}>
+                {loadingProfile ? '…' : `${xp.xpInCurrentLevel} / ${xp.xpNeeded} XP`}
+              </Text>
+            </View>
+            <XPProgressBar
+              progress={loadingProfile ? 0 : xp.xpInCurrentLevel / xp.xpNeeded}
+            />
+            <Text style={styles.xpHint}>
+              Earn XP by logging meals, drinking water and hitting your targets.
+            </Text>
           </View>
         </View>
 
-        <View style={styles.gameStrip}>
-          <View style={styles.gameMetric}>
-            <Ionicons name="flame-outline" size={22} color={colors.streakColor} />
-            <Text style={styles.gameValue}>{loadingProfile ? '—' : streak}</Text>
-            <Text style={styles.gameLabel}>DAY STREAK</Text>
+        <View style={styles.statRow}>
+          <View style={styles.statTile}>
+            <View style={[styles.statIconWrap, styles.statIconStreak]}>
+              <Ionicons name="flame" size={19} color={colors.streakColor} />
+            </View>
+            <Text style={styles.statValue}>{loadingProfile ? '—' : streak}</Text>
+            <Text style={styles.statLabel}>DAY STREAK</Text>
           </View>
-          <View style={styles.gameDivider} />
-          <View style={styles.gameMetric}>
-            <Ionicons name="sparkles-outline" size={22} color={colors.xpAccent} />
-            <Text style={styles.gameValue}>{loadingProfile ? '—' : `LV ${xp.level}`}</Text>
-            <Text style={styles.gameLabel}>
-              {loadingProfile ? 'LOADING' : `${xp.xpInCurrentLevel}/${xp.xpNeeded} XP`}
+          <View style={styles.statTile}>
+            <View style={[styles.statIconWrap, styles.statIconMeals]}>
+              <Ionicons name="restaurant" size={17} color={colors.success} />
+            </View>
+            <Text style={styles.statValue}>{loadingProfile ? '—' : todayMeals.length}</Text>
+            <Text style={styles.statLabel}>MEALS TODAY</Text>
+          </View>
+          <View style={styles.statTile}>
+            <View style={[styles.statIconWrap, styles.statIconKcal]}>
+              <Ionicons name="flash" size={18} color={colors.accent} />
+            </View>
+            <Text style={styles.statValue}>
+              {loadingProfile ? '—' : Math.round(totals.kcal).toLocaleString()}
             </Text>
+            <Text style={styles.statLabel}>KCAL TODAY</Text>
           </View>
         </View>
 
@@ -277,6 +353,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             onPress={handleSignOut}
             disabled={signingOut}
         >
+          <Ionicons name="log-out-outline" size={17} color={colors.onDanger} />
           <Text style={styles.buttonDangerText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
         </TouchableOpacity>
       </View>
@@ -318,28 +395,57 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     marginTop: 2,
     marginBottom: 24,
   },
-  identityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    padding: 20,
+  playerCard: {
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 12,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  avatarWrap: {
+    alignItems: 'center',
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: c.accentSoft,
+    borderWidth: 2,
+    borderColor: c.accent,
   },
   avatarText: {
     ...typography.headline,
     color: c.accent,
+  },
+  levelBadge: {
+    marginTop: -10,
+    backgroundColor: c.accent,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    shadowColor: c.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  levelBadgeText: {
+    ...typography.labelSmall,
+    fontSize: 10,
+    color: c.onAccent,
   },
   identityCopy: {
     flex: 1,
@@ -358,36 +464,99 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textMuted,
     marginTop: 6,
   },
-  gameStrip: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    backgroundColor: c.accent,
-    borderRadius: 12,
-    marginBottom: 20,
-    paddingVertical: 18,
+  xpSection: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
+    gap: 8,
   },
-  gameMetric: {
+  xpHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  xpHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  xpLabel: {
+    ...typography.labelSmall,
+    color: c.textMuted,
+  },
+  xpValue: {
+    ...typography.labelSmall,
+    color: c.text,
+  },
+  xpTrack: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: c.progressTrail,
+    overflow: 'hidden',
+  },
+  xpFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: c.xpAccent,
+    shadowColor: c.xpAccent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+  },
+  xpHint: {
+    ...typography.labelSmall,
+    fontSize: 11,
+    color: c.textFaint,
+  },
+  statRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  statTile: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
   },
-  gameDivider: {
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: c.onAccent,
-    opacity: 0.35,
+  statIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
-  gameValue: {
+  statIconStreak: {
+    backgroundColor: 'rgba(190, 202, 182, 0.22)',
+  },
+  statIconMeals: {
+    backgroundColor: 'rgba(102, 113, 96, 0.14)',
+  },
+  statIconKcal: {
+    backgroundColor: c.accentSoft,
+  },
+  statValue: {
     ...typography.headline,
-    color: c.onAccent,
+    fontSize: 22,
+    lineHeight: 28,
+    color: c.text,
   },
-  gameLabel: {
+  statLabel: {
     ...typography.labelSmall,
-    color: c.onAccent,
-    opacity: 0.78,
+    fontSize: 10,
+    color: c.textMuted,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: c.surface,
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 18,
     marginBottom: 20,
     borderWidth: 1,
@@ -401,6 +570,19 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  settingsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  settingsIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.accentSoft,
   },
   settingsIcon: {
     color: c.textMuted,
@@ -432,13 +614,21 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 8,
     justifyContent: 'center',
     backgroundColor: c.accent,
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 999,
+    padding: 16,
     alignItems: 'center',
+    shadowColor: c.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 3,
   },
   buttonDanger: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
     backgroundColor: c.dangerButtonBg,
-    borderRadius: 8,
+    borderRadius: 999,
     padding: 14,
     alignItems: 'center',
     marginTop: 12,

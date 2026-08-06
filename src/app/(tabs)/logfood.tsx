@@ -62,6 +62,13 @@ type LogSection = {
 
 const FILTERS: FilterChip[] = ['Favorites', 'Recent', 'My Meals', 'Recipes']
 
+const FILTER_ICONS: Record<FilterChip, keyof typeof Ionicons.glyphMap> = {
+  Favorites: 'star',
+  Recent: 'time',
+  'My Meals': 'restaurant',
+  Recipes: 'book',
+}
+
 const MEAL_ICONS: Record<MealType, keyof typeof Ionicons.glyphMap> = {
   Breakfast: 'cafe-outline',
   Lunch: 'restaurant-outline',
@@ -208,6 +215,7 @@ export default function LogFoodScreen() {
   const runSearchRef = useRef<(rawQuery?: string) => Promise<void>>(async () => {})
 
   const [query, setQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const [activeFilter, setActiveFilter] = useState<FilterChip>('Recent')
   const [isSearching, setIsSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
@@ -563,17 +571,23 @@ export default function LogFoodScreen() {
             style={styles.searchBlock}
           >
             <View style={styles.searchRow}>
-              <View style={styles.searchField}>
-                <Ionicons name="search-outline" size={20} color={colors.textMuted} />
+              <View style={[styles.searchField, searchFocused && styles.searchFieldFocused]}>
+                <Ionicons
+                  name="search"
+                  size={19}
+                  color={searchFocused ? colors.accent : colors.textMuted}
+                />
                 <TextInput
                   ref={searchInputRef}
                   accessibilityLabel="Search for food"
                   autoCapitalize="sentences"
-                  placeholder="Search for food..."
-                  placeholderTextColor={colors.textMuted}
+                  placeholder="Search foods, brands, barcodes…"
+                  placeholderTextColor={colors.textFaint}
                   returnKeyType="search"
                   style={styles.searchInput}
                   value={query}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
                   onChangeText={(value) => {
                     setQuery(value)
                     if (!value.trim() && hasSearched) clearSearch()
@@ -585,9 +599,9 @@ export default function LogFoodScreen() {
                     accessibilityLabel="Clear search"
                     hitSlop={8}
                     onPress={clearSearch}
-                    style={({ pressed }) => pressed && styles.pressed}
+                    style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
                   >
-                    <Ionicons name="close-circle" size={18} color={colors.textFaint} />
+                    <Ionicons name="close" size={14} color={colors.textMuted} />
                   </Pressable>
                 ) : null}
               </View>
@@ -622,6 +636,11 @@ export default function LogFoodScreen() {
                       pressed && styles.pressed,
                     ]}
                   >
+                    <Ionicons
+                      name={selected ? FILTER_ICONS[chip] : (`${FILTER_ICONS[chip]}-outline` as keyof typeof Ionicons.glyphMap)}
+                      size={14}
+                      color={selected ? colors.onAccent : colors.textMuted}
+                    />
                     <Text style={[styles.filterChipText, selected && styles.filterChipTextSelected]}>
                       {chip}
                     </Text>
@@ -1364,38 +1383,59 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   searchField: {
     flex: 1,
-    minHeight: 56,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: c.surfaceAlt,
-    borderBottomWidth: 1,
-    borderBottomColor: c.borderStrong,
-    borderTopLeftRadius: borderRadius.lg,
-    borderTopRightRadius: borderRadius.lg,
+    paddingLeft: 18,
+    paddingRight: spacing.md,
+    backgroundColor: c.surface,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    borderRadius: borderRadius.pill,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  searchFieldFocused: {
+    borderColor: c.accent,
+    shadowColor: c.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
     ...typography.body,
     color: c.text,
-    paddingVertical: 14,
+    paddingVertical: 13,
+  },
+  clearButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.surfaceAlt,
   },
   barcodeButton: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: c.accent,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
   barcodeButtonPressed: {
-    transform: [{ scale: 0.96 }],
+    transform: [{ scale: 0.94 }],
     opacity: 0.92,
   },
   chipRow: {
@@ -1403,20 +1443,28 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingRight: spacing.md,
   },
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: borderRadius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(120,118,114,0.3)',
+    borderColor: c.border,
     backgroundColor: c.surface,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
   filterChipSelected: {
     backgroundColor: c.accent,
     borderColor: c.accent,
+    shadowColor: c.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 3,
   },
   filterChipText: {
     ...typography.labelSmall,
-    color: c.text,
+    color: c.textMuted,
   },
   filterChipTextSelected: {
     color: c.onAccent,
