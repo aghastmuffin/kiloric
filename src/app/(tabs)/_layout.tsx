@@ -1,57 +1,49 @@
 import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
-import { SearchPreferencesProvider } from '@/lib/SearchPreferencesContext';
+import { SearchPreferencesProvider, useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
-import { FONT_FAMILY } from '@/lib/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function TabNavigator() {
+  const { defaultSearchMode } = useSearchPreferences();
   const { activeFontFamily } = useFontPreferences();
   const { colors } = useTheme();
+  
+  const showScanTab = defaultSearchMode === 'scan';
   const navigationFontStyle = activeFontFamily
     ? { fontFamily: activeFontFamily }
-    : { fontFamily: FONT_FAMILY };
+    : undefined;
 
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarActiveBackgroundColor: colors.accentSoft,
         headerStyle: {
           backgroundColor: colors.surfaceMuted,
         },
         headerShadowVisible: false,
         headerTintColor: colors.text,
         headerTitleStyle: { ...navigationFontStyle, fontWeight: '600', fontSize: 17 },
-        tabBarIconStyle: { marginBottom: -1 },
-        tabBarLabelStyle: { ...navigationFontStyle, fontSize: 10, fontWeight: '600' },
-        tabBarItemStyle: {
-          borderRadius: 12,
-          marginHorizontal: 4,
-          marginVertical: 5,
-        },
+        tabBarIconStyle: { marginBottom: -2 },
+        tabBarLabelStyle: { ...navigationFontStyle, fontSize: 11, fontWeight: '600' },
         tabBarStyle: {
           backgroundColor: colors.surfaceMuted,
           borderTopColor: colors.border,
-          paddingHorizontal: 8,
-          paddingTop: 2,
-          paddingBottom: 2,
+          paddingTop: 6,
+          paddingBottom: 4,
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: 68,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} color={color} size={22} />
+            <Ionicons name={focused ? 'home-sharp' : 'home-outline'} color={color} size={24} />
           ),
         }}
       />
@@ -59,17 +51,18 @@ function TabNavigator() {
         name="logfood"
         options={{
           title: 'Log',
+          href: showScanTab ? null : undefined,
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'book' : 'book-outline'} color={color} size={22} />
+            <Ionicons name={focused ? 'add-circle' : 'add-circle-outline'} color={color} size={24} />
           ),
         }}
       />
       <Tabs.Screen
-        name="stats"
+        name="meals"
         options={{
-          title: 'Stats',
+          title: 'Meals',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} color={color} size={22}/>
+            <Ionicons name={focused ? 'fast-food' : 'fast-food-outline'} color={color} size={24}/>
           ),
         }}
       />
@@ -81,18 +74,6 @@ function TabNavigator() {
             <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24} />
           ),
         }}
-      />
-      <Tabs.Screen
-        name="meals"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="workouts"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="meds"
-        options={{ href: null }}
       />
       <Tabs.Screen
         name="about"
@@ -116,12 +97,10 @@ function TabNavigator() {
 
 export default function TabLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ProfileGate>
-        <SearchPreferencesProvider>
-          <TabNavigator />
-        </SearchPreferencesProvider>
-      </ProfileGate>
-    </GestureHandlerRootView>
+    <ProfileGate>
+      <SearchPreferencesProvider>
+        <TabNavigator />
+      </SearchPreferencesProvider>
+    </ProfileGate>
   );
 }

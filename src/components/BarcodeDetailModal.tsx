@@ -265,18 +265,11 @@ export default function BarcodeDetailModal({
 
       if (user?.$id) {
         await addProductToMeal(user.$id, selectedMealType, barcode ?? '', data);
+        router.push('/meals');
         Alert.alert(
           'Added & Synced',
           `Added to your ${selectedMealType} meal and synced to Appwrite.`,
-          [
-            {
-              text: 'View dashboard',
-              onPress: () => {
-                handleClose();
-                router.replace('/(tabs)');
-              },
-            },
-          ],
+          [{ text: 'OK', onPress: handleClose }],
         );
       } else {
         Alert.alert(
@@ -406,7 +399,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 16,
   },
   backdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: c.overlay,
   },
   popup: {

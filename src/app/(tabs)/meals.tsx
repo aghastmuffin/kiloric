@@ -1,4 +1,3 @@
-import { SwipeableRow } from '@/components/SwipeableRow';
 import { useAuth } from '@/lib/AuthContext';
 import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview';
 import {
@@ -6,7 +5,6 @@ import {
   listHistoricMeals,
   MEAL_TYPE_OPTIONS,
   moveProductBetweenMeals,
-  removeProductFromMeal,
   type MealDocument,
   type MealType
 } from '@/lib/meals';
@@ -14,23 +12,27 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect } from "expo-router/react-navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   LayoutAnimation,
-  Modal,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const getStartOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
@@ -64,33 +66,135 @@ function formatSectionMacros(kcal: number, protein: number, carbs: number, fat: 
   return `${Math.round(kcal)} kcal · ${Math.round(protein)}g P · ${Math.round(carbs)}g C · ${Math.round(fat)}g F`;
 }
 
-type SwipeableItemCardProps = {
+// ─── DraggableItemCard ────────────────────────────────────────────────────────
+
+type DraggableItemCardProps = {
   item: DisplayMealItem;
   isLoadingItems: boolean;
-  actionsEnabled: boolean;
-  onDelete: (item: DisplayMealItem) => void;
-  onMove: (item: DisplayMealItem) => void;
+  onDragStart: (item: DisplayMealItem) => void;
+  onDragMove: (targetType: MealType | null) => void;
+  onDragEnd: (item: DisplayMealItem, targetType: MealType | null) => void;
+  findDropTarget: (x: number, y: number) => MealType | null;
 };
 
-const SwipeableItemCard = memo(function SwipeableItemCard({
+const DraggableItemCard = memo(function DraggableItemCard({
   item,
   isLoadingItems,
-  actionsEnabled,
-  onDelete,
-  onMove,
-}: SwipeableItemCardProps) {
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  findDropTarget,
+}: DraggableItemCardProps) {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  
+  // Use useState initializers instead of useRef.current to avoid accessing refs during render,
+  // guaranteeing compatibility with React strict mode and the React Compiler.
+  const [pan] = useState(() => new Animated.ValueXY());
+  const [scale] = useState(() => new Animated.Value(1));
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Always-current ref for closures, updated in useEffect to avoid render-phase ref modification
+  const cbRef = useRef({ onDragStart, onDragMove, onDragEnd, findDropTarget, item });
+  useEffect(() => {
+    cbRef.current = { onDragStart, onDragMove, onDragEnd, findDropTarget, item };
+  }, [onDragStart, onDragMove, onDragEnd, findDropTarget, item]);
+
+  // eslint-disable-next-line react-hooks/refs
+  const [panResponder] = useState(() =>
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+
+      onPanResponderGrant: () => {
+        pan.setValue({ x: 0, y: 0 });
+        setIsDragging(true);
+        
+        // Scale up on drag to make it feel tactile
+        Animated.spring(scale, {
+          toValue: 1.05,
+          friction: 5,
+          useNativeDriver: false
+        }).start();
+
+        cbRef.current.onDragStart(cbRef.current.item);
+      },
+
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { 
+          useNativeDriver: false,
+          listener: (e, gs) => {
+             const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
+             cbRef.current.onDragMove(target);
+          }
+        },
+      ),
+
+      onPanResponderRelease: (_e, gs) => {
+        const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
+        const currentItem = cbRef.current.item;
+        const isValidDrop = target !== null && target !== currentItem.sourceType;
+
+        // Snap back scale
+        Animated.spring(scale, {
+          toValue: 1,
+          friction: 5,
+          useNativeDriver: false,
+        }).start();
+
+        if (isValidDrop) {
+          pan.setValue({ x: 0, y: 0 });
+          setIsDragging(false);
+          cbRef.current.onDragEnd(currentItem, target);
+        } else {
+          Animated.spring(pan, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: false,
+            friction: 5,
+            tension: 40,
+          }).start(() => {
+            setIsDragging(false);
+            cbRef.current.onDragEnd(currentItem, null);
+          });
+        }
+      },
+
+      onPanResponderTerminate: () => {
+        Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: false }).start();
+        Animated.spring(pan, {
+          toValue: { x: 0, y: 0 },
+          useNativeDriver: false,
+        }).start(() => setIsDragging(false));
+      },
+
+      onPanResponderTerminationRequest: () => true,
+    })
+  );
 
   const hasFacts = item.facts.length > 0;
 
-  const card = (
-    <View style={styles.itemCard}>
+  return (
+    <Animated.View
+      style={[
+        styles.itemCard,
+        isDragging && {
+          zIndex: 100,
+          elevation: 12,
+          opacity: 0.95,
+          borderColor: colors.accent,
+          shadowColor: colors.accent,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.35,
+          shadowRadius: 10,
+        },
+        { transform: [{ translateX: pan.x }, { translateY: pan.y }, { scale }] },
+      ]}
+    >
       <View style={styles.cardHeader}>
         <Text style={styles.itemTitle} numberOfLines={2} ellipsizeMode="tail">
           {item.title}
         </Text>
-        {actionsEnabled && <Ionicons name="swap-horizontal-outline" size={18} color={colors.textFaint} />}
       </View>
 
       <View style={styles.factsContainer}>
@@ -110,27 +214,15 @@ const SwipeableItemCard = memo(function SwipeableItemCard({
           </View>
         )}
       </View>
-    </View>
-  );
 
-  if (!actionsEnabled) return card;
-
-  return (
-    <SwipeableRow
-      swipeRight={{
-        label: 'Delete',
-        icon: 'trash-outline',
-        destructive: true,
-        onPress: () => onDelete(item),
-      }}
-      swipeLeft={{
-        label: 'Move',
-        icon: 'arrow-forward-circle-outline',
-        onPress: () => onMove(item),
-      }}
-    >
-      {card}
-    </SwipeableRow>
+      <View
+        {...panResponder.panHandlers}
+        style={styles.dragHandle}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
+        <Ionicons name="reorder-two-outline" size={24} color={colors.textMuted} />
+      </View>
+    </Animated.View>
   );
 });
 
@@ -159,14 +251,19 @@ export default function MealsScreen() {
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [moveItem, setMoveItem] = useState<DisplayMealItem | null>(null);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  // Drag State for Visual Previews
+  const [dragState, setDragState] = useState<{ activeItem: DisplayMealItem | null; targetZone: MealType | null }>({
+    activeItem: null,
+    targetZone: null,
+  });
+
+  const dropZones = useRef<Map<MealType, { x: number; y: number; width: number; height: number }>>(new Map()).current;
+  const zoneRefs = useRef<Record<string, View | null>>({});
 
   const fetchMeals = useCallback(async () => {
-    if (!user?.$id) {
-      setAllMeals([]);
-      setIsLoading(false);
-      return;
-    }
+    if (!user?.$id) return;
     setIsLoading(true);
     try {
       const [todayMeals, historicMeals] = await Promise.all([
@@ -186,7 +283,6 @@ export default function MealsScreen() {
 
   const selectedStart = getStartOfDay(selectedDate).getTime();
   const selectedEnd = selectedStart + 24 * 60 * 60 * 1000;
-  const actionsEnabled = selectedStart === getStartOfDay(new Date()).getTime();
 
   const displayedMeals = useMemo(() => allMeals.filter((meal) => {
     const timestamp = new Date(meal.$createdAt).getTime();
@@ -217,7 +313,7 @@ export default function MealsScreen() {
       // Performance Optimization (Cache-First Incremental Loading):
       // Only fetch previews that are not already present in the local component state.
       // This completely avoids redundant API queries and Promise.all micro-tasks
-      // on already-loaded items when the list changes (e.g. after moving an item or date shifts).
+      // on already-loaded items when the list changes (e.g. during drag-and-drop or date shifts).
       const missingEntries = entries.filter((e) => !itemPreviewsRef.current[e.cacheKey]);
 
       if (missingEntries.length === 0) {
@@ -328,17 +424,14 @@ export default function MealsScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
 
     setAllMeals((prev) => {
-      const next: MealDocument[] = prev.map((meal) => ({
-        ...meal,
-        items: [...(meal.items ?? [])],
-      }));
+      const next = prev.map((meal) => ({ ...meal, items: [...(meal.items ?? [])] }));
 
       const sourceMeal = next.find((meal) => meal.$id === item.mealId);
       if (!sourceMeal?.items) return prev;
 
       // Target meal must be on the same day as the source meal. Without this,
       // `next.find` below matches the *first* meal of `targetType` anywhere in
-      // `allMeals` — which also holds up to 100 historic meals — so moving an
+      // `allMeals` — which also holds up to 100 historic meals — so dropping an
       // item into a section that has no meal today (e.g. "Lunch" before you've
       // logged lunch) could silently attach it to some past day's Lunch instead
       // of creating today's, making the item disappear from the current view.
@@ -417,37 +510,56 @@ export default function MealsScreen() {
     }
   }, [user, fetchMeals, showToast]);
 
-  const handleDeleteItem = useCallback((item: DisplayMealItem) => {
-    Alert.alert(
-      'Delete meal item?',
-      `${item.title} will be removed from ${item.sourceType}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              try {
-                await removeProductFromMeal(item.mealId, item.barcode, {
-                  kcal: item.kcal,
-                  protein: item.protein,
-                  carbs: item.carbs,
-                  fat: item.fat,
-                });
-                await fetchMeals();
-                showToast('Meal item deleted');
-              } catch (error) {
-                console.warn('Failed to delete meal item', error);
-                await fetchMeals();
-                Alert.alert('Unable to delete item', 'Please try again.');
-              }
-            })();
-          },
-        },
-      ],
-    );
-  }, [fetchMeals, showToast]);
+  const measureZone = useCallback((type: MealType) => {
+    const ref = zoneRefs.current[type];
+    if (!ref) return;
+    ref.measureInWindow((x, y, width, height) => {
+      if (width > 0 && height > 0) {
+        dropZones.set(type, { x, y, width, height });
+      }
+    });
+  }, []);
+
+  const findDropTarget = useCallback((dropX: number, dropY: number): MealType | null => {
+    for (const [type, zone] of dropZones.entries()) {
+      if (
+        dropX >= zone.x && dropX <= zone.x + zone.width &&
+        dropY >= zone.y && dropY <= zone.y + zone.height
+      ) {
+        return type;
+      }
+    }
+    return null;
+  }, []);
+
+  const handleDragStart = useCallback((item: DisplayMealItem) => {
+    setScrollEnabled(false);
+    setDragState({ activeItem: item, targetZone: null });
+    MEAL_TYPE_OPTIONS.forEach((type) => measureZone(type));
+  }, [measureZone]);
+
+  const handleDragMove = useCallback((target: MealType | null) => {
+    setDragState(prev => {
+      // Only trigger a state update if the target crossed bounds to keep things performant
+      if (prev.targetZone !== target) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+        return { ...prev, targetZone: target };
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((item: DisplayMealItem, target: MealType | null) => {
+    setScrollEnabled(true);
+    
+    // Smooth disappearance of the preview placeholder
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+    setDragState({ activeItem: null, targetZone: null });
+
+    if (target !== null && target !== item.sourceType) {
+      void handleItemDropped(item, target);
+    }
+  }, [handleItemDropped]);
 
   const formatDateLabel = (date: Date) => {
     const today = getStartOfDay(new Date());
@@ -514,6 +626,7 @@ export default function MealsScreen() {
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
+        scrollEnabled={scrollEnabled}
       >
         {isLoading && !isSyncing ? (
           <View style={styles.centered}>
@@ -523,11 +636,19 @@ export default function MealsScreen() {
         ) : !hasItems ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="fast-food-outline" size={48} color={colors.textMuted} style={{ marginBottom: 12 }} />
-            <Text style={styles.emptyText}>No meals logged yet. Log a meal to see it here.</Text>
+            <Text style={styles.emptyText}>No meals logged yet. Drag items to organize them or log a new meal.</Text>
           </View>
         ) : (
-          sections.map((section) => (
-              <View key={section.type} style={styles.section}>
+          sections.map((section) => {
+            const isTargetZone = dragState.targetZone === section.type && dragState.activeItem?.sourceType !== section.type;
+
+            return (
+              <View
+                key={section.type}
+                ref={(el) => { zoneRefs.current[section.type] = el; }}
+                onLayout={() => measureZone(section.type)}
+                style={styles.section}
+              >
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionTitleRow}>
                     <Ionicons name={getSectionIcon(section.type)} size={20} color={colors.accent} />
@@ -539,69 +660,37 @@ export default function MealsScreen() {
                 </View>
 
                 <View style={styles.itemsTray}>
-                  {section.items.length === 0 ? (
-                    <Text style={styles.emptyTrayText}>No items</Text>
+                  {section.items.length === 0 && !isTargetZone ? (
+                    <Text style={styles.emptyTrayText}>Drag items here</Text>
                   ) : (
                     section.items.map((item) => (
-                      <SwipeableItemCard
+                      <DraggableItemCard
                         key={item.key}
                         item={item}
-                        actionsEnabled={actionsEnabled}
+                        // Optimization: Only pass isLoadingItems if this specific card actually needs to show the loader.
+                        // This prevents re-rendering all cards when a single new item is being fetched.
                         isLoadingItems={isLoadingItems && item.facts.length === 0}
-                        onDelete={handleDeleteItem}
-                        onMove={setMoveItem}
+                        onDragStart={handleDragStart}
+                        onDragMove={handleDragMove}
+                        onDragEnd={handleDragEnd}
+                        findDropTarget={findDropTarget}
                       />
                     ))
                   )}
+
+                  {/* Clean Drop Preview Placement Indicator */}
+                  {isTargetZone && (
+                    <View style={styles.dropPlaceholder}>
+                      <Ionicons name="arrow-down-circle-outline" size={24} color={colors.accent} />
+                      <Text style={styles.dropPlaceholderText}>Drop to move to {section.friendlyname}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
-
-      <Modal
-        visible={moveItem !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMoveItem(null)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setMoveItem(null)}>
-          <Pressable style={styles.moveSheet} onPress={(event) => event.stopPropagation()}>
-            <View style={styles.moveSheetHeader}>
-              <View style={styles.moveSheetTitleGroup}>
-                <Text style={styles.moveSheetEyebrow}>MOVE ITEM</Text>
-                <Text style={styles.moveSheetTitle} numberOfLines={1}>{moveItem?.title}</Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close move menu"
-                hitSlop={8}
-                onPress={() => setMoveItem(null)}
-              >
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            <View style={styles.moveOptions}>
-              {MEAL_TYPE_OPTIONS.filter((type) => type !== moveItem?.sourceType).map((type) => (
-                <Pressable
-                  key={type}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    const item = moveItem;
-                    setMoveItem(null);
-                    if (item) void handleItemDropped(item, type);
-                  }}
-                  style={({ pressed }) => [styles.moveOption, pressed && styles.moveOptionPressed]}
-                >
-                  <Ionicons name={getSectionIcon(type)} size={20} color={colors.accent} />
-                  <Text style={styles.moveOptionText}>{type}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-                </Pressable>
-              ))}
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       <Pressable
         accessibilityRole="button"
@@ -691,11 +780,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
 
   itemCard: {
     backgroundColor: c.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: c.borderStrong,
+    borderColor: c.border,
     gap: 12,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
@@ -703,56 +792,35 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
       web: { boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)' }
     }),
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  cardHeader: { gap: 2 },
   itemTitle: { color: c.text, fontSize: 17, fontWeight: '600', lineHeight: 22 },
 
-  factsContainer: { backgroundColor: c.accentSoft, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4 },
+  factsContainer: { backgroundColor: c.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4 },
   factRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
   factLabel: { color: c.textMuted, fontSize: 14, flex: 1 },
   factValue: { color: c.text, fontSize: 14, fontWeight: '600', textAlign: 'right', flex: 1 },
   fallbackBarcodeContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   fallbackBarcodeText: { color: c.textMuted, fontSize: 14 },
+  dragHandle: { alignItems: 'center', marginTop: -4 },
 
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: c.overlay,
-  },
-  moveSheet: {
-    width: '100%',
-    maxWidth: 380,
-    alignSelf: 'center',
-    padding: 18,
+  dropPlaceholder: {
+    minHeight: 74,
+    borderWidth: 2,
+    borderColor: c.accent,
+    borderStyle: 'dashed',
     borderRadius: 16,
-    backgroundColor: c.surface,
-    borderWidth: 1,
-    borderColor: c.borderStrong,
-  },
-  moveSheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 14,
-  },
-  moveSheetTitleGroup: { flex: 1, gap: 3 },
-  moveSheetEyebrow: { color: c.success, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  moveSheetTitle: { color: c.text, fontSize: 18, fontWeight: '700' },
-  moveOptions: { gap: 8 },
-  moveOption: {
-    minHeight: 48,
-    flexDirection: 'row',
+    marginVertical: 4,
+    marginBottom: 12,
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: c.surfaceAlt,
-    borderWidth: 1,
-    borderColor: c.border,
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  moveOptionPressed: { backgroundColor: c.accentSoft },
-  moveOptionText: { flex: 1, color: c.text, fontSize: 15, fontWeight: '600' },
+  dropPlaceholderText: {
+    color: c.accent,
+    fontWeight: '600',
+    fontSize: 14,
+    marginTop: 4,
+  },
 
   floatingSyncButton: {
     position: 'absolute', right: 16, height: 54, borderRadius: 27, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, paddingHorizontal: 20, gap: 8, zIndex: 40,

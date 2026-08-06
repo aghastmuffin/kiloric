@@ -207,7 +207,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 24,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: c.overlay,
   },
   modalCard: {

@@ -2,13 +2,14 @@
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import CommunityDateTimePicker from '@expo/ui/community/datetime-picker';
+import DateTimePicker from '@expo/ui/community/datetime-picker';
 import { Picker } from '@react-native-picker/picker';
-import { createElement, type ReactNode, useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import {
   Platform,
   StyleSheet,
   Text,
+  unstable_createElement,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -23,8 +24,6 @@ const pickerHostStyle: ViewStyle = {
 
 function wrapIosPicker(children: ReactNode, compact = false) {
   if (Platform.OS === 'ios') {
-    // Native-only module: a static import crashes Expo Router's web renderer.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Host } = require('@expo/ui/swift-ui') as typeof import('@expo/ui/swift-ui');
     return (
       <Host
@@ -80,8 +79,11 @@ export function NativeEnumPicker<T extends string>({
   onChange,
   disabled = false,
 }: NativeEnumPickerProps<T>) {
+  const appearance = Platform.OS === 'ios' ? 'wheel' : 'menu';
+
   return wrapIosPicker(
     <Picker
+      appearance={appearance}
       selectedValue={value}
       onValueChange={(next) => onChange(next as T)}
       enabled={!disabled}
@@ -125,7 +127,7 @@ export function NativeDatePicker({
 }: NativeDatePickerProps) {
   const themed = useThemedStyles(makeColoredStyles);
   if (Platform.OS === 'web') {
-    return createElement('input', {
+    return unstable_createElement('input', {
       type: 'date',
       value: formatIsoDate(value),
       min: minimumDate ? formatIsoDate(minimumDate) : undefined,
@@ -161,7 +163,7 @@ function NativeDatePickerControl({
   const { colors } = useTheme();
 
   return (
-    <CommunityDateTimePicker
+    <DateTimePicker
       value={value}
       mode="date"
       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -199,6 +201,7 @@ export function NativeIntPicker({
   formatLabel,
 }: NativeIntPickerProps) {
   const options = useMemo(() => buildIntRange(min, max, step), [min, max, step]);
+  const appearance = Platform.OS === 'ios' ? 'wheel' : 'menu';
   const selectedValue =
     value == null
       ? NOT_SET_VALUE
@@ -208,6 +211,7 @@ export function NativeIntPicker({
 
   return wrapIosPicker(
     <Picker
+      appearance={appearance}
       selectedValue={selectedValue}
       onValueChange={(next) => {
         if (next === NOT_SET_VALUE) {
@@ -277,7 +281,7 @@ export function NativeDecimalPicker({
   }
 
   if (Platform.OS === 'web') {
-    return createElement('input', {
+    return unstable_createElement('input', {
       type: 'number',
       value: clamped,
       min,
@@ -293,12 +297,14 @@ export function NativeDecimalPicker({
     });
   }
 
+  const appearance = Platform.OS === 'ios' ? 'wheel' : 'menu';
 
   return (
     <View style={pickerLayoutStyles.decimalRow}>
       <View style={pickerLayoutStyles.decimalWhole}>
         {wrapIosPicker(
           <Picker
+            appearance={appearance}
             selectedValue={whole}
             onValueChange={(next) => updateWhole(Number(next))}
             enabled={!disabled}
@@ -314,6 +320,7 @@ export function NativeDecimalPicker({
       <View style={pickerLayoutStyles.decimalFraction}>
         {wrapIosPicker(
           <Picker
+            appearance={appearance}
             selectedValue={fraction}
             onValueChange={(next) => updateFraction(Number(next))}
             enabled={!disabled}

@@ -20,8 +20,6 @@ interface RadialGaugeProps {
     strokeWidth?: number;
     color?: string;
     backgroundColor?: string;
-    textColor?: string;
-    mutedColor?: string;
 }
 
 export default function RadialGauge({
@@ -31,8 +29,6 @@ export default function RadialGauge({
                                         strokeWidth = 20,
                                         color = '#3498db',
                                         backgroundColor = '#ecf0f1',
-                                        textColor = '#2c3e50',
-                                        mutedColor = '#7f8c8d',
                                     }: RadialGaugeProps) {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * Math.PI; // Half-circle
@@ -44,7 +40,7 @@ export default function RadialGauge({
             duration: 1000,
             easing: Easing.out(Easing.ease),
         });
-    }, [animatedValue, value]);
+    }, [value]);
 
     const animatedProps = useAnimatedProps(() => {
         const percentage = Math.max(0, Math.min(animatedValue.value, max)) / max;
@@ -99,8 +95,8 @@ export default function RadialGauge({
             </Svg>
             {/* Center Value Text */}
             <View style={styles.textContainer}>
-                <Text style={[styles.valueText, { color: textColor }]}>{Math.round(value)}</Text>
-                <Text style={[styles.maxText, { color: mutedColor }]}>/ {max} kcal</Text>
+                <Text style={styles.valueText}>{Math.round(value)}</Text>
+                <Text style={styles.maxText}>/ {max}</Text>
             </View>
         </View>
     );

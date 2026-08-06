@@ -528,8 +528,8 @@ const countryOptions = Object.entries(countryList).map(([code, name]) => ({
       <Text style={styles.label}>Role</Text>
       <NativeEnumPicker
         value={role}
-        options={[...PROFILE_ROLE_OPTIONS]}
-        onChange={(value) => setRole(value as typeof role)}
+        options={PROFILE_ROLE_OPTIONS}
+        onChange={setRole}
         disabled={saving}
       />
 
