@@ -1,3 +1,7 @@
+/**
+ * @deprecated Prefer swipe actions on Log (`logfood`). This card belonged to
+ * the old Meals organiser screen.
+ */
 import React, { memo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

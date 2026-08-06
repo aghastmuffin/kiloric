@@ -1,3 +1,7 @@
+/**
+ * @deprecated Prefer swipe-to-move on Log (`logfood`). This drag-and-drop
+ * helper belonged to the old Meals organiser screen.
+ */
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { LayoutAnimation, View } from 'react-native';
 import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview';

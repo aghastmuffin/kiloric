@@ -1,58 +1,66 @@
-import { authenticatedRequest } from '@/components/apiUtils'
-import BarcodeDetailModal from '@/components/BarcodeDetailModal'
-import { MotionView } from '@/components/MotionView'
-import { SwipeableRow } from '@/components/SwipeableRow'
-import { useAuth } from '@/lib/AuthContext'
+import { authenticatedRequest } from '@/components/apiUtils';
 import {
-  loadFavoriteFoods,
-  toggleFavoriteFood,
-  type FavoriteFood,
-} from '@/lib/foodFavorites'
-import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview'
+  LogFoodMultiView,
+  macrosFromProduct,
+  type ContributePayload,
+  type SearchResult,
+} from '@/components/LogFoodMultiView';
+import { LogItemDragRow } from '@/components/LogItemDragRow';
+import { MotionView } from '@/components/MotionView';
+import { SwipeableRow } from '@/components/SwipeableRow';
+import { useAuth } from '@/lib/AuthContext';
 import {
-  addProductToMeal,
-  getTodayMeals,
-  listHistoricMeals,
-  MEAL_TYPE_OPTIONS,
-  removeProductFromMeal,
-  type MealDocument,
-  type MealType,
-} from '@/lib/meals'
-import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
-import { getProfile } from '@/lib/profile'
-import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
-import { useTheme } from '@/lib/theme/ThemeContext'
-import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
-import { Ionicons } from '@expo/vector-icons'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import * as Haptics from 'expo-haptics'
-import { useFocusEffect, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+    loadFavoriteFoods,
+    toggleFavoriteFood,
+    type FavoriteFood,
+} from '@/lib/foodFavorites';
+import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  LayoutAnimation,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  UIManager,
-  View,
-} from 'react-native'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+    addProductToMeal,
+    getTodayMeals,
+    listHistoricMeals,
+    MEAL_TYPE_OPTIONS,
+    moveProductBetweenMeals,
+    removeProductFromMeal,
+    type MealDocument,
+    type MealType,
+} from '@/lib/meals';
+import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
+import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay';
+import { getProfile } from '@/lib/profile';
+import { storeSearchResult } from '@/lib/searchResultStore';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    LayoutAnimation,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    UIManager,
+    View,
+} from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
 
 type FilterChip = 'Favorites' | 'Recent' | 'My Meals' | 'Recipes'
-type SearchResult = Record<string, unknown>
 type LogItem = MealItemPreview & { mealId: string; sourceType: MealType; loggedAt: string }
 type LogSection = {
   type: MealType
@@ -77,51 +85,16 @@ const MEAL_ICONS: Record<MealType, keyof typeof Ionicons.glyphMap> = {
   Other: 'ellipse-outline',
 }
 
+function mealTypeIcon(type: MealType): keyof typeof Ionicons.glyphMap {
+  return MEAL_ICONS[type] ?? 'ellipse-outline'
+}
+
 function formatClockSafe(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return '--:--'
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${hours}:${minutes}`
-}
-
-function getBrand(item: SearchResult): string {
-  for (const key of ['brands', 'brand', 'manufacturer', 'store']) {
-    const value = item[key]
-    if (typeof value === 'string' && value.trim()) return value.trim()
-  }
-  const nested = item.product
-  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-    return getBrand(nested as SearchResult)
-  }
-  return 'Food database'
-}
-
-function getCaloriesLabel(item: SearchResult): string {
-  const product =
-    item.product && typeof item.product === 'object' && !Array.isArray(item.product)
-      ? (item.product as SearchResult)
-      : item
-  const nutriments =
-    product.nutriments && typeof product.nutriments === 'object' && !Array.isArray(product.nutriments)
-      ? (product.nutriments as Record<string, unknown>)
-      : null
-
-  const calories =
-    product.calories ??
-    product['energy-kcal'] ??
-    product.energy_kcal ??
-    nutriments?.['energy-kcal_100g'] ??
-    nutriments?.['energy-kcal'] ??
-    nutriments?.energy_kcal
-
-  if (typeof calories === 'number' && Number.isFinite(calories)) {
-    return `${Math.round(calories)} kcal / 100g`
-  }
-  if (typeof calories === 'string' && calories.trim()) {
-    return calories.includes('kcal') ? calories : `${calories} kcal`
-  }
-  return 'View details'
 }
 
 function unwrapProduct(item: SearchResult): SearchResult {
@@ -140,6 +113,76 @@ function servingLabel(facts: { label: string; value: string }[], fallback: strin
     return label.includes('serving') || label.includes('quantity') || label.includes('size')
   })
   return preferred?.value ?? fallback
+}
+
+/** Flatten contribute payload into expo-router string params (snake_case keys). */
+function buildContributeRouteParams(
+  payload: ContributePayload | undefined,
+  fallbackQuery: string,
+  looksLikeBarcode: boolean,
+): Record<string, string> {
+  const params: Record<string, string> = {
+    query: payload?.query ?? fallbackQuery,
+  }
+
+  const code = payload?.code ?? (looksLikeBarcode ? fallbackQuery : undefined)
+  if (code) params.code = code
+
+  const stringMap: [keyof ContributePayload, string][] = [
+    ['product_name', 'product_name'],
+    ['brands', 'brands'],
+    ['categories', 'categories'],
+    ['quantity', 'quantity'],
+    ['serving_size', 'serving_size'],
+    ['serving_quantity', 'serving_quantity'],
+    ['allergens', 'allergens'],
+    ['traces_tags', 'traces_tags'],
+    ['nutriscore_grade', 'nutriscore_grade'],
+    ['ecoscore_grade', 'ecoscore_grade'],
+    ['proteins_100g', 'proteins_100g'],
+    ['carbohydrates_100g', 'carbohydrates_100g'],
+    ['fat_100g', 'fat_100g'],
+    ['fiber_100g', 'fiber_100g'],
+    ['sugars_100g', 'sugars_100g'],
+    ['polyols_100g', 'polyols_100g'],
+    ['sodium_100g', 'sodium_100g'],
+    ['cholesterol_100g', 'cholesterol_100g'],
+    ['calcium_100g', 'calcium_100g'],
+    ['iron_100g', 'iron_100g'],
+    ['potassium_100g', 'potassium_100g'],
+    ['magnesium_100g', 'magnesium_100g'],
+    ['caffeine_100g', 'caffeine_100g'],
+    ['taurine_100g', 'taurine_100g'],
+    ['nova_group', 'nova_group'],
+    ['additives_n', 'additives_n'],
+  ]
+
+  for (const [from, to] of stringMap) {
+    const value = payload?.[from]
+    if (typeof value === 'string' && value.trim()) params[to] = value.trim()
+  }
+
+  const hyphenMap: [keyof ContributePayload, string][] = [
+    ['energy-kcal_100g', 'energy_kcal_100g'],
+    ['energy-kj_100g', 'energy_kj_100g'],
+    ['added-sugars_100g', 'added_sugars_100g'],
+    ['saturated-fat_100g', 'saturated_fat_100g'],
+    ['trans-fat_100g', 'trans_fat_100g'],
+    ['monounsaturated-fat_100g', 'monounsaturated_fat_100g'],
+    ['polyunsaturated-fat_100g', 'polyunsaturated_fat_100g'],
+    ['vitamin-a_100g', 'vitamin_a_100g'],
+    ['vitamin-c_100g', 'vitamin_c_100g'],
+    ['vitamin-d_100g', 'vitamin_d_100g'],
+    ['vitamin-b12_100g', 'vitamin_b12_100g'],
+    ['carbon-footprint_100g', 'carbon_footprint_100g'],
+  ]
+
+  for (const [from, to] of hyphenMap) {
+    const value = payload?.[from]
+    if (typeof value === 'string' && value.trim()) params[to] = value.trim()
+  }
+
+  return params
 }
 
 function parseSearchPayload(data: unknown): SearchResult[] {
@@ -235,11 +278,8 @@ export default function LogFoodScreen() {
   const [addStatuses, setAddStatuses] = useState<
     Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
   >({})
-  const [modalVisible, setModalVisible] = useState(false)
-  const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null)
-  const [detailData, setDetailData] = useState<Record<string, unknown> | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [detailError, setDetailError] = useState<string | null>(null)
+  const [moveItem, setMoveItem] = useState<LogItem | null>(null)
+  const [scrollEnabled, setScrollEnabled] = useState(true)
 
   const loadToday = useCallback(async () => {
     if (!user?.$id) {
@@ -424,26 +464,17 @@ export default function LogFoodScreen() {
     searchInputRef.current?.focus()
   }
 
-  const openDetail = useCallback(async (barcode: string) => {
-    setSelectedBarcode(barcode)
-    setModalVisible(true)
-    setDetailLoading(true)
-    setDetailError(null)
-    setDetailData(null)
-    try {
-      const data = await authenticatedRequest(`/api/barcode/${barcode}`)
-      if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-        setDetailData(data as Record<string, unknown>)
-      } else {
-        setDetailData({ result: data })
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      setDetailError(`Request failed: ${message}`)
-    } finally {
-      setDetailLoading(false)
-    }
-  }, [])
+  const openDetail = useCallback(
+    (barcode: string, item?: SearchResult) => {
+      const product = item ? unwrapProduct(item) : { code: barcode }
+      const id = storeSearchResult(barcode, product)
+      router.push({
+        pathname: '/Additions',
+        params: { id, barcode, query },
+      })
+    },
+    [query, router],
+  )
 
   const quickAddResult = useCallback(async (item: SearchResult, index: number) => {
     if (addStatuses[index]?.state === 'adding') return
@@ -548,6 +579,30 @@ export default function LogFoodScreen() {
     ])
   }, [loadToday])
 
+  const handleMoveItem = useCallback(async (item: LogItem, targetType: MealType) => {
+    if (!user?.$id || item.sourceType === targetType) return
+    try {
+      await moveProductBetweenMeals(
+        user.$id,
+        item.mealId,
+        item.barcode,
+        targetType,
+        {
+          kcal: item.kcal,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+        },
+      )
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      await loadToday()
+    } catch (error) {
+      console.warn('Failed to move meal item', error)
+      Alert.alert('Unable to move', 'Please try again.')
+      await loadToday()
+    }
+  }, [loadToday, user])
+
   const showResults = hasSearched
 
   return (
@@ -563,6 +618,7 @@ export default function LogFoodScreen() {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          scrollEnabled={scrollEnabled}
         >
           <MotionView
             from={{ opacity: 0, translateY: -8 }}
@@ -651,12 +707,11 @@ export default function LogFoodScreen() {
           </MotionView>
 
           {showResults ? (
-            <SearchResultsPanel
-              colors={colors}
-              styles={styles}
+            <LogFoodMultiView
               isSearching={isSearching}
               results={results}
               searchError={searchError}
+              searchQuery={query}
               selectedMealType={selectedMealType}
               mealPickerOpen={mealPickerOpen}
               addStatuses={addStatuses}
@@ -671,26 +726,29 @@ export default function LogFoodScreen() {
                 const product = unwrapProduct(item)
                 const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
                 if (!barcode) return
+                const macros = macrosFromProduct(product)
                 void handleToggleFavorite({
                   barcode,
                   title: getProductTitle(product, barcode),
-                  protein: null,
-                  carbs: null,
-                  fat: null,
-                  kcal: null,
+                  protein: macros.protein,
+                  carbs: macros.carbs,
+                  fat: macros.fat,
+                  kcal: macros.kcal,
                 })
               }}
-              onOpenDetail={(barcode) => void openDetail(barcode)}
+              onOpenDetail={(barcode, item) => openDetail(barcode, item)}
               onBack={clearSearch}
-              onContribute={() => {
+              onContribute={(payload) => {
                 const trimmed = query.trim()
                 const looksLikeBarcode = /^\d{8,14}$/.test(trimmed)
+                const params = buildContributeRouteParams(
+                  payload,
+                  trimmed,
+                  looksLikeBarcode,
+                )
                 router.push({
                   pathname: '/contribute-food',
-                  params: {
-                    query: trimmed,
-                    ...(looksLikeBarcode ? { code: trimmed } : {}),
-                  },
+                  params,
                 })
               }}
             />
@@ -712,7 +770,10 @@ export default function LogFoodScreen() {
               onAddFood={(food) => void quickAddFood(food)}
               onToggleFavorite={(food) => void handleToggleFavorite(food)}
               onDeleteItem={handleDeleteItem}
-              onOpenDetail={(barcode) => void openDetail(barcode)}
+              onMoveItem={setMoveItem}
+              onMoveItemToType={(item, type) => void handleMoveItem(item, type)}
+              onDraggingChange={(dragging) => setScrollEnabled(!dragging)}
+              onOpenDetail={(barcode) => openDetail(barcode)}
               onLogNewMeal={focusSearch}
               signedIn={Boolean(user?.$id)}
             />
@@ -720,15 +781,51 @@ export default function LogFoodScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <BarcodeDetailModal
-        visible={modalVisible}
-        barcode={selectedBarcode}
-        data={detailData}
-        isLoading={detailLoading}
-        error={detailError}
-        onClose={() => setModalVisible(false)}
-        onMealAdded={() => void loadToday()}
-      />
+      <Modal
+        visible={moveItem !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMoveItem(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setMoveItem(null)}>
+          <Pressable style={styles.moveSheet} onPress={(event) => event.stopPropagation()}>
+            <View style={styles.moveSheetHeader}>
+              <View style={styles.moveSheetTitleGroup}>
+                <Text style={styles.moveSheetEyebrow}>MOVE ITEM</Text>
+                <Text style={styles.moveSheetTitle} numberOfLines={1}>
+                  {moveItem?.title}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close move menu"
+                hitSlop={8}
+                onPress={() => setMoveItem(null)}
+              >
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <View style={styles.moveOptions}>
+              {MEAL_TYPE_OPTIONS.filter((type) => type !== moveItem?.sourceType).map((type) => (
+                <Pressable
+                  key={type}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    const item = moveItem
+                    setMoveItem(null)
+                    if (item) void handleMoveItem(item, type)
+                  }}
+                  style={({ pressed }) => [styles.moveOption, pressed && styles.moveOptionPressed]}
+                >
+                  <Ionicons name={mealTypeIcon(type)} size={20} color={colors.accent} />
+                  <Text style={styles.moveOptionText}>{type}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GestureHandlerRootView>
   )
 }
@@ -750,6 +847,9 @@ function IdleLogPanels({
   onAddFood,
   onToggleFavorite,
   onDeleteItem,
+  onMoveItem,
+  onMoveItemToType,
+  onDraggingChange,
   onOpenDetail,
   onLogNewMeal,
   signedIn,
@@ -784,6 +884,9 @@ function IdleLogPanels({
     kcal: number | null
   }) => void
   onDeleteItem: (item: LogItem) => void
+  onMoveItem: (item: LogItem) => void
+  onMoveItemToType: (item: LogItem, type: MealType) => void
+  onDraggingChange: (dragging: boolean) => void
   onOpenDetail: (barcode: string) => void
   onLogNewMeal: () => void
   signedIn: boolean
@@ -797,6 +900,57 @@ function IdleLogPanels({
         : activeFilter === 'Recipes'
           ? 'Recipes'
           : 'Recent Foods'
+
+  const dropZones = useRef(
+    new Map<MealType, { x: number; y: number; width: number; height: number }>(),
+  ).current
+  const zoneNodes = useRef(new Map<MealType, View>()).current
+  const [dropTarget, setDropTarget] = useState<MealType | null>(null)
+  const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null)
+
+  const remasureZones = useCallback(() => {
+    for (const [type, node] of zoneNodes.entries()) {
+      node.measureInWindow((x, y, width, height) => {
+        if (width > 0 && height > 0) {
+          dropZones.set(type, { x, y, width, height })
+        }
+      })
+    }
+  }, [dropZones, zoneNodes])
+
+  const bindZone = useCallback(
+    (type: MealType) => (node: View | null) => {
+      if (!node) {
+        zoneNodes.delete(type)
+        dropZones.delete(type)
+        return
+      }
+      zoneNodes.set(type, node)
+      node.measureInWindow((x, y, width, height) => {
+        if (width > 0 && height > 0) {
+          dropZones.set(type, { x, y, width, height })
+        }
+      })
+    },
+    [dropZones, zoneNodes],
+  )
+
+  const findDropTarget = useCallback(
+    (absoluteX: number, absoluteY: number): MealType | null => {
+      for (const [type, box] of dropZones.entries()) {
+        if (
+          absoluteX >= box.x &&
+          absoluteX <= box.x + box.width &&
+          absoluteY >= box.y &&
+          absoluteY <= box.y + box.height
+        ) {
+          return type
+        }
+      }
+      return null
+    },
+    [dropZones],
+  )
 
   return (
     <>
@@ -813,6 +967,11 @@ function IdleLogPanels({
               {Math.round(dailyKcal).toLocaleString()} / {kcalTarget.toLocaleString()} kcal
             </Text>
           </View>
+          {draggingItemKey ? (
+            <Text style={styles.dragHint}>Drag onto another meal to move · release to drop</Text>
+          ) : (
+            <Text style={styles.dragHint}>Hold an item to rearrange · swipe for Move / Delete</Text>
+          )}
 
           {loadingMeals ? (
             <View style={styles.emptyCard}>
@@ -832,79 +991,115 @@ function IdleLogPanels({
             <View style={styles.mealStack}>
               {sections.map((section, index) => {
                 const open = expanded[section.type] !== false
+                const isDropTarget = dropTarget === section.type
                 return (
                   <MotionView
                     key={section.type}
                     from={{ opacity: 0, translateY: 10 }}
                     animate={{ opacity: 1, translateY: 0 }}
                     transition={{ type: 'spring', damping: 20, delay: 80 + index * 45 }}
-                    style={styles.mealCard}
+                    style={[
+                      styles.mealCard,
+                      isDropTarget && styles.mealCardDropTarget,
+                    ]}
                   >
-                    <Pressable
-                      onPress={() => onToggleSection(section.type)}
-                      style={({ pressed }) => [styles.mealCardHeader, pressed && styles.pressed]}
+                    <View
+                      ref={bindZone(section.type)}
+                      collapsable={false}
+                      onLayout={remasureZones}
                     >
-                      <View style={styles.mealCardHeaderLeft}>
-                        <Ionicons
-                          name={MEAL_ICONS[section.type]}
-                          size={18}
-                          color={colors.success}
-                        />
-                        <Text style={styles.mealCardTitle}>{section.type}</Text>
-                      </View>
-                      <View style={styles.mealCardHeaderRight}>
-                        <Text style={styles.mealCardKcal}>{Math.round(section.kcal)} kcal</Text>
-                        <Ionicons
-                          name={open ? 'chevron-up' : 'chevron-down'}
-                          size={18}
-                          color={colors.textMuted}
-                        />
-                      </View>
-                    </Pressable>
+                      <Pressable
+                        onPress={() => onToggleSection(section.type)}
+                        style={({ pressed }) => [styles.mealCardHeader, pressed && styles.pressed]}
+                      >
+                        <View style={styles.mealCardHeaderLeft}>
+                          <Ionicons
+                            name={MEAL_ICONS[section.type]}
+                            size={18}
+                            color={isDropTarget ? colors.accent : colors.success}
+                          />
+                          <Text style={styles.mealCardTitle}>{section.type}</Text>
+                        </View>
+                        <View style={styles.mealCardHeaderRight}>
+                          <Text style={styles.mealCardKcal}>{Math.round(section.kcal)} kcal</Text>
+                          <Ionicons
+                            name={open ? 'chevron-up' : 'chevron-down'}
+                            size={18}
+                            color={colors.textMuted}
+                          />
+                        </View>
+                      </Pressable>
 
-                    {open ? (
-                      <View style={styles.mealItems}>
-                        {section.items.map((item, itemIndex) => {
-                          const row = (
-                            <Pressable
-                              onPress={() => onOpenDetail(item.barcode)}
-                              style={({ pressed }) => [
-                                styles.mealItemRow,
-                                itemIndex > 0 && styles.rowDivider,
-                                pressed && styles.pressed,
-                              ]}
-                            >
-                              <Text style={styles.mealItemTime}>{formatClockSafe(item.loggedAt)}</Text>
-                              <View style={styles.mealItemCopy}>
-                                <Text style={styles.mealItemTitle} numberOfLines={1}>
-                                  {item.title}
+                      {open ? (
+                        <View style={styles.mealItems}>
+                          {section.items.map((item, itemIndex) => {
+                            const itemKey = `${item.mealId}-${item.barcode}-${itemIndex}`
+                            const isGhost = draggingItemKey === itemKey
+                            const row = (
+                              <Pressable
+                                onPress={() => onOpenDetail(item.barcode)}
+                                style={({ pressed }) => [
+                                  styles.mealItemRow,
+                                  itemIndex > 0 && styles.rowDivider,
+                                  isGhost && styles.mealItemGhost,
+                                  pressed && styles.pressed,
+                                ]}
+                              >
+                                <Text style={styles.mealItemTime}>{formatClockSafe(item.loggedAt)}</Text>
+                                <View style={styles.mealItemCopy}>
+                                  <Text style={styles.mealItemTitle} numberOfLines={1}>
+                                    {item.title}
+                                  </Text>
+                                  <Text style={styles.mealItemMeta} numberOfLines={1}>
+                                    {servingLabel(item.facts, item.barcode)}
+                                  </Text>
+                                </View>
+                                <Text style={styles.mealItemKcal}>
+                                  {item.kcal != null ? Math.round(item.kcal) : '—'}
                                 </Text>
-                                <Text style={styles.mealItemMeta} numberOfLines={1}>
-                                  {servingLabel(item.facts, item.barcode)}
-                                </Text>
-                              </View>
-                              <Text style={styles.mealItemKcal}>
-                                {item.kcal != null ? Math.round(item.kcal) : '—'}
-                              </Text>
-                            </Pressable>
-                          )
+                              </Pressable>
+                            )
 
-                          return (
-                            <SwipeableRow
-                              key={`${item.mealId}-${item.barcode}-${itemIndex}`}
-                              swipeRight={{
-                                label: 'Delete',
-                                icon: 'trash-outline',
-                                destructive: true,
-                                onPress: () => onDeleteItem(item),
-                              }}
-                            >
-                              {row}
-                            </SwipeableRow>
-                          )
-                        })}
-                      </View>
-                    ) : null}
+                            return (
+                              <LogItemDragRow
+                                key={itemKey}
+                                findDropTarget={findDropTarget}
+                                onDragStart={() => {
+                                  remasureZones()
+                                  setDraggingItemKey(itemKey)
+                                  onDraggingChange(true)
+                                }}
+                                onDragHover={setDropTarget}
+                                onDragEnd={(target) => {
+                                  setDraggingItemKey(null)
+                                  setDropTarget(null)
+                                  onDraggingChange(false)
+                                  if (target && target !== item.sourceType) {
+                                    onMoveItemToType(item, target)
+                                  }
+                                }}
+                              >
+                                <SwipeableRow
+                                  swipeLeft={{
+                                    label: 'Move',
+                                    icon: 'arrow-forward-circle-outline',
+                                    onPress: () => onMoveItem(item),
+                                  }}
+                                  swipeRight={{
+                                    label: 'Delete',
+                                    icon: 'trash-outline',
+                                    destructive: true,
+                                    onPress: () => onDeleteItem(item),
+                                  }}
+                                >
+                                  {row}
+                                </SwipeableRow>
+                              </LogItemDragRow>
+                            )
+                          })}
+                        </View>
+                      ) : null}
+                    </View>
                   </MotionView>
                 )
               })}
@@ -1160,227 +1355,6 @@ function pressedColor(colors: ThemeColors, active: boolean) {
   return active ? colors.onAccent : colors.textMuted
 }
 
-function SearchResultsPanel({
-  colors,
-  styles,
-  isSearching,
-  results,
-  searchError,
-  selectedMealType,
-  mealPickerOpen,
-  addStatuses,
-  favorites,
-  onToggleMealPicker,
-  onSelectMealType,
-  onAdd,
-  onToggleFavorite,
-  onOpenDetail,
-  onBack,
-  onContribute,
-}: {
-  colors: ThemeColors
-  styles: ReturnType<typeof makeStyles>
-  isSearching: boolean
-  results: SearchResult[]
-  searchError: string | null
-  selectedMealType: MealType
-  mealPickerOpen: boolean
-  addStatuses: Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
-  favorites: FavoriteFood[]
-  onToggleMealPicker: () => void
-  onSelectMealType: (type: MealType) => void
-  onAdd: (item: SearchResult, index: number) => void
-  onToggleFavorite: (item: SearchResult) => void
-  onOpenDetail: (barcode: string) => void
-  onBack: () => void
-  onContribute: () => void
-}) {
-  return (
-    <MotionView
-      from={{ opacity: 0, translateY: 16 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'spring', damping: 20 }}
-      style={styles.section}
-    >
-      <View style={styles.sectionHeader}>
-        <View style={styles.resultsHeading}>
-          <Pressable onPress={onBack} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
-            <Ionicons name="arrow-back" size={18} color={colors.accent} />
-          </Pressable>
-          <Text style={styles.sectionTitle}>Search Results</Text>
-        </View>
-        <View style={styles.mealSelectWrap}>
-          <Pressable
-            onPress={onToggleMealPicker}
-            style={({ pressed }) => [styles.mealSelect, pressed && styles.pressed]}
-          >
-            <Text style={styles.mealSelectText}>{selectedMealType}</Text>
-            <Ionicons
-              name={mealPickerOpen ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.textMuted}
-            />
-          </Pressable>
-          {mealPickerOpen ? (
-            <View style={styles.mealMenu}>
-              {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type) => (
-                <Pressable
-                  key={type}
-                  onPress={() => onSelectMealType(type)}
-                  style={({ pressed }) => [
-                    styles.mealMenuItem,
-                    type === selectedMealType && styles.mealMenuItemSelected,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.mealMenuItemText,
-                      type === selectedMealType && styles.mealMenuItemTextSelected,
-                    ]}
-                  >
-                    {type}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-        </View>
-      </View>
-
-      <Text style={styles.swipeHint}>Swipe left or tap + to add to {selectedMealType}</Text>
-
-      <View style={styles.resultsCard}>
-        {isSearching ? (
-          <View style={styles.emptyCard}>
-            <ActivityIndicator color={colors.accent} />
-            <Text style={styles.emptyText}>Searching foods…</Text>
-          </View>
-        ) : searchError ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>{searchError}</Text>
-            <Pressable
-              style={styles.contributeLink}
-              onPress={onContribute}
-              accessibilityRole="button"
-            >
-              <Text style={styles.contributeLinkText}>Add this product</Text>
-            </Pressable>
-          </View>
-        ) : (
-          results.map((item, index) => {
-            const product = unwrapProduct(item)
-            const title = getProductTitle(product, `Result ${index + 1}`)
-            const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
-            const brand = getBrand(product)
-            const calories = getCaloriesLabel(product)
-            const status = addStatuses[index]
-            const favorited = barcode
-              ? favorites.some((favorite) => favorite.barcode === barcode)
-              : false
-
-            const row = (
-              <Pressable
-                onPress={() => barcode && onOpenDetail(barcode)}
-                disabled={!barcode}
-                style={({ pressed }) => [
-                  styles.resultRow,
-                  index > 0 && styles.rowDivider,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.resultCopy}>
-                  <View style={styles.recentTitleRow}>
-                    <Text style={styles.resultTitle} numberOfLines={2}>{title}</Text>
-                    {barcode ? (
-                      <Pressable
-                        hitSlop={8}
-                        onPress={() => onToggleFavorite(item)}
-                        style={({ pressed }) => pressed && styles.pressed}
-                      >
-                        <Ionicons
-                          name={favorited ? 'star' : 'star-outline'}
-                          size={16}
-                          color={favorited ? colors.accent : colors.textFaint}
-                        />
-                      </Pressable>
-                    ) : null}
-                  </View>
-                  <Text style={styles.resultBrand} numberOfLines={1}>{brand}</Text>
-                  <View style={styles.resultBadge}>
-                    <Text style={styles.resultBadgeText}>{calories}</Text>
-                  </View>
-                  {status ? (
-                    <Text
-                      style={[
-                        styles.resultFeedback,
-                        status.state === 'error' && styles.resultFeedbackError,
-                      ]}
-                    >
-                      {status.message}
-                    </Text>
-                  ) : null}
-                </View>
-                <Pressable
-                  accessibilityLabel={`Add ${title}`}
-                  disabled={!barcode || status?.state === 'adding'}
-                  onPress={() => onAdd(item, index)}
-                  style={({ pressed }) => [
-                    styles.addCircle,
-                    (pressed || status?.state === 'added') && styles.addCircleActive,
-                  ]}
-                >
-                  {status?.state === 'adding' ? (
-                    <ActivityIndicator size="small" color={colors.accent} />
-                  ) : (
-                    <Ionicons
-                      name={status?.state === 'added' ? 'checkmark' : 'add'}
-                      size={18}
-                      color={status?.state === 'added' ? colors.onAccent : colors.textMuted}
-                    />
-                  )}
-                </Pressable>
-              </Pressable>
-            )
-
-            if (!barcode) {
-              return (
-                <MotionView
-                  key={`${title}-${index}`}
-                  from={{ opacity: 0, translateY: 8 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{ type: 'timing', duration: 240, delay: index * 35 }}
-                >
-                  {row}
-                </MotionView>
-              )
-            }
-
-            return (
-              <MotionView
-                key={`${barcode}-${index}`}
-                from={{ opacity: 0, translateY: 8 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: 'timing', duration: 240, delay: index * 35 }}
-              >
-                <SwipeableRow
-                  swipeLeft={{
-                    label: 'Add',
-                    icon: 'add-circle-outline',
-                    onPress: () => onAdd(item, index),
-                  }}
-                >
-                  {row}
-                </SwipeableRow>
-              </MotionView>
-            )
-          })
-        )}
-      </View>
-    </MotionView>
-  )
-}
-
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   root: {
     flex: 1,
@@ -1514,10 +1488,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     ...typography.label,
     color: c.textMuted,
   },
-  resultsHeading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  dragHint: {
+    ...typography.labelSmall,
+    color: c.textFaint,
+    marginTop: -spacing.sm,
   },
   mealStack: {
     gap: spacing.md,
@@ -1527,7 +1501,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: 'rgba(120,118,114,0.2)',
-    overflow: 'hidden',
+  },
+  mealCardDropTarget: {
+    borderColor: c.accent,
+    backgroundColor: c.accentSoft,
   },
   mealCardHeader: {
     minHeight: 52,
@@ -1567,6 +1544,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: c.surface,
+  },
+  mealItemGhost: {
+    opacity: 0.35,
   },
   mealItemTime: {
     ...typography.label,
@@ -1676,113 +1656,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.accent,
     borderColor: c.accent,
   },
-  mealSelectWrap: {
-    position: 'relative',
-    zIndex: 5,
-  },
-  mealSelect: {
-    minWidth: 118,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    backgroundColor: c.surface,
-    borderWidth: 1,
-    borderColor: 'rgba(120,118,114,0.3)',
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-  },
-  mealSelectText: {
-    ...typography.label,
-    color: c.accent,
-  },
-  mealMenu: {
-    position: 'absolute',
-    top: 42,
-    right: 0,
-    zIndex: 20,
-    minWidth: 140,
-    backgroundColor: c.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: c.border,
-    overflow: 'hidden',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-  },
-  mealMenuItem: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-  },
-  mealMenuItemSelected: {
-    backgroundColor: c.accentSoft,
-  },
-  mealMenuItemText: {
-    ...typography.label,
-    color: c.text,
-  },
-  mealMenuItemTextSelected: {
-    color: c.accent,
-    fontWeight: '700',
-  },
-  swipeHint: {
-    ...typography.labelSmall,
-    color: c.textMuted,
-  },
-  resultsCard: {
-    backgroundColor: c.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(120,118,114,0.2)',
-    overflow: 'hidden',
-  },
-  resultRow: {
-    minHeight: 92,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: c.surface,
-  },
-  resultCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  resultTitle: {
-    ...typography.body,
-    color: c.text,
-    flex: 1,
-  },
-  resultBrand: {
-    ...typography.labelSmall,
-    color: c.textMuted,
-  },
-  resultBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 4,
-    borderRadius: borderRadius.sm,
-    backgroundColor: 'rgba(27,54,93,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  resultBadgeText: {
-    ...typography.labelSmall,
-    fontSize: 10,
-    color: c.accent,
-  },
-  resultFeedback: {
-    ...typography.labelSmall,
-    color: c.success,
-    marginTop: 4,
-  },
-  resultFeedbackError: {
-    color: c.danger,
-  },
   rowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(196,198,207,0.35)',
@@ -1808,15 +1681,59 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textMuted,
     textAlign: 'center',
   },
-  contributeLink: {
-    marginTop: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: c.overlay,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  contributeLinkText: {
-    ...typography.label,
-    color: c.accent,
-    fontWeight: '700',
+  moveSheet: {
+    width: '100%',
+    maxWidth: 380,
+    alignSelf: 'center',
+    padding: 18,
+    borderRadius: borderRadius.lg,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    gap: spacing.sm,
+  },
+  moveSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 6,
+  },
+  moveSheetTitleGroup: { flex: 1, gap: 3 },
+  moveSheetEyebrow: {
+    ...typography.labelSmall,
+    color: c.success,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  moveSheetTitle: {
+    ...typography.headline,
+    color: c.text,
+  },
+  moveOptions: { gap: 8 },
+  moveOption: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    borderRadius: borderRadius.md,
+    backgroundColor: c.surfaceAlt,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  moveOptionPressed: { backgroundColor: c.accentSoft },
+  moveOptionText: {
+    flex: 1,
+    ...typography.body,
+    color: c.text,
+    fontWeight: '600',
   },
   pressed: {
     opacity: 0.78,

@@ -85,6 +85,6 @@ Also ensure the `images_to_check` bucket allows `create("users")` (already in `a
 
 - Module: [`src/lib/foodContributions.ts`](../../src/lib/foodContributions.ts)
 - Screen: [`src/app/contribute-food.tsx`](../../src/app/contribute-food.tsx)
-- Entry points: empty search on Log tab, multiresponse “no products found”, barcode detail error
+- Entry points: empty search on Log tab (`LogFoodMultiView`), barcode detail error, contribute CTA on match cards
 
 Contributions are **not** read back into meal logging or ORDS search. They are a write-only queue until a later pipeline promotes them.

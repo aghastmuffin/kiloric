@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { appendMealBarcode } from '@/lib/mealItemsStorage';
 import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
+import { isOrdsPresent, ORDS_FIELD_PRIORITY } from '@/lib/ordsNormalize';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -27,33 +28,7 @@ import Animated, {
 } from 'react-native-reanimated';
 const PlaceholderImage = require('../../assets/images/dark.svg');
 
-const FIELD_PRIORITY = [
-  'product_name',
-  'name',
-  'brands',
-  'brand',
-  'calories',
-  'energy-kcal',
-  'energy_kcal',
-  'quantity',
-  'serving_size',
-  'proteins',
-  'protein',
-  'carbohydrates',
-  'carbs',
-  'fat',
-  'sugars',
-  'salt',
-  'fiber',
-  'ingredients_text',
-  'ingredients',
-  'code',
-  'barcode',
-  'categories',
-  'labels',
-  'nutriscore_grade',
-  'nova_group',
-];
+const FIELD_PRIORITY = [...ORDS_FIELD_PRIORITY];
 
 type Props = {
   visible: boolean;
@@ -114,7 +89,7 @@ function resolveImageUrl(data: Record<string, unknown>, barcode: string): string
   ];
 
   for (const candidate of candidates) {
-    if (typeof candidate === 'string' && candidate.startsWith('http')) {
+    if (typeof candidate === 'string' && candidate.startsWith('http') && isOrdsPresent(candidate)) {
       return candidate;
     }
   }
@@ -151,7 +126,7 @@ function getPriorityHighlights(data: Record<string, unknown>): { label: string; 
 
   for (const key of FIELD_PRIORITY) {
     const value = getNestedValue(data, key);
-    if (value === null || value === undefined || value === '') continue;
+    if (!isOrdsPresent(value)) continue;
     if (typeof value === 'object') continue;
 
     const label = formatLabel(key);
@@ -206,7 +181,8 @@ export default function BarcodeDetailModal({
     if (!data) return [];
     return sortEntries(
       Object.entries(data).filter(
-        ([, value]) => value !== null && value !== undefined,
+        ([key, value]) =>
+          key !== 'nutriments' && isOrdsPresent(value) && typeof value !== 'object',
       ),
     );
   }, [data]);
@@ -268,7 +244,7 @@ export default function BarcodeDetailModal({
 
       if (user?.$id) {
         await addProductToMeal(user.$id, selectedMealType, barcode ?? '', data);
-        router.push('/meals');
+        router.push('/logfood');
         Alert.alert(
           'Added & Synced',
           `Added to your ${selectedMealType} meal and synced to Appwrite.`,

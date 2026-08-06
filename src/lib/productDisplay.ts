@@ -1,3 +1,5 @@
+import { isOrdsPresent } from '@/lib/ordsNormalize'
+
 const TITLE_KEYS = ['product_name', 'name', 'title', 'food_name', 'brands', 'brand']
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean']
 
@@ -5,11 +7,17 @@ const QUICK_FACT_KEYS = [
   'calories',
   'energy-kcal',
   'energy_kcal',
+  'energy_kcal_100g',
   'protein',
   'proteins',
+  'proteins_100g',
   'carbohydrates',
   'carbs',
+  'carbohydrates_100g',
   'fat',
+  'fat_100g',
+  'fiber_100g',
+  'sugars_100g',
   'quantity',
   'serving_size',
 ]
@@ -18,11 +26,17 @@ const NUMERIC_FACT_KEYS = new Set([
   'calories',
   'energy-kcal',
   'energy_kcal',
+  'energy_kcal_100g',
   'protein',
   'proteins',
+  'proteins_100g',
   'carbohydrates',
   'carbs',
+  'carbohydrates_100g',
   'fat',
+  'fat_100g',
+  'fiber_100g',
+  'sugars_100g',
 ])
 
 function getNestedValue(data: Record<string, unknown>, key: string): unknown {
@@ -78,7 +92,7 @@ function scaleFactValue(value: unknown, key: string, servings: number): unknown 
 export function getProductTitle(data: Record<string, unknown>, fallback: string): string {
   for (const key of TITLE_KEYS) {
     const value = getNestedValue(data, key)
-    if (typeof value === 'string' && value.trim()) return value.trim()
+    if (typeof value === 'string' && isOrdsPresent(value)) return value.trim()
   }
   return fallback
 }
@@ -86,7 +100,7 @@ export function getProductTitle(data: Record<string, unknown>, fallback: string)
 export function getBarcodeFromProduct(data: Record<string, unknown>): string | null {
   for (const key of BARCODE_KEYS) {
     const value = getNestedValue(data, key)
-    if (value !== null && value !== undefined && String(value).trim()) {
+    if (isOrdsPresent(value)) {
       return String(value).trim()
     }
   }
@@ -104,7 +118,7 @@ export function getQuickProductFacts(
 
   for (const key of QUICK_FACT_KEYS) {
     const rawValue = getNestedValue(data, key)
-    if (rawValue === null || rawValue === undefined || rawValue === '') continue
+    if (!isOrdsPresent(rawValue)) continue
     if (typeof rawValue === 'object') continue
 
     const value = scaleFactValue(rawValue, key, servings)

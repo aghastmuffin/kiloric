@@ -1,34 +1,23 @@
-import styles from 'expo-router/build/modal/web/modalStyles';
-import { Component } from 'react';
-import { Animated } from 'react-native';
-import { RectButton } from 'react-native-gesture-handler';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+/**
+ * @deprecated Prefer Log (`logfood`) for search + logging.
+ * Kept as a redirect so old deep links keep working.
+ */
+import { useRouter } from 'expo-router'
+import { useEffect } from 'react'
+import { ActivityIndicator, View } from 'react-native'
+import { useTheme } from '@/lib/theme/ThemeContext'
 
-class AppleStyleSwipeableRow extends Component {
-  renderLeftActions = (progress, dragX) => {
-    const trans = dragX.interpolate({
-      inputRange: [0, 50, 100, 101],
-      outputRange: [-20, 0, 0, 1],
-    });
-    return (
-      <RectButton style={styles.leftAction} onPress={this.close}>
-        <Animated.Text
-          style={[
-            styles.actionText,
-            {
-              transform: [{ translateX: trans }],
-            },
-          ]}>
-          Archive
-        </Animated.Text>
-      </RectButton>
-    );
-  };
-  render() {
-    return (
-      <Swipeable renderLeftActions={this.renderLeftActions}>
-        <Text>"hello"</Text>
-      </Swipeable>
-    );
-  }
+export default function SearchRewriteScreen() {
+  const router = useRouter()
+  const { colors } = useTheme()
+
+  useEffect(() => {
+    router.replace('/logfood')
+  }, [router])
+
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+      <ActivityIndicator color={colors.accent} />
+    </View>
+  )
 }

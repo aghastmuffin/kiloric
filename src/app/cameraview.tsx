@@ -1,4 +1,3 @@
-import { authenticatedRequest } from '@/components/apiUtils';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -91,41 +90,28 @@ export default function CameraScannerScreen() {
     }, [resetScanState]),
   );
 
-  const lookupBarcode = useCallback(async (barcode: string) => {
-    setDetailLoading(true);
-
-    try {
-      const data = await authenticatedRequest(`/api/barcode/${encodeURIComponent(barcode)}`);
-      const stringData = typeof data === 'string' ? data : JSON.stringify(data);
-      router.push({
-        pathname: '/multiresponse',
-        params: { query: barcode, result: stringData },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      router.push({
-        pathname: '/multiresponse',
-        params: { query: barcode, result: JSON.stringify({ error: message }) },
-      });
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [router]);
-
   const handleBarcodeScanned = useCallback(
     async ({ data }: { data: string }) => {
       const barcode = data.trim();
       if (!barcode || scanned) return;
 
       setScanned(true);
+      setDetailLoading(true);
       try {
+        // Log tab picks this up on focus and shows LogFoodMultiView in-place.
         await AsyncStorage.setItem('saved_barcode', barcode);
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(tabs)/logfood');
+        }
       } catch (error) {
         console.error('Storage failed', error);
+        setDetailLoading(false);
+        setScanned(false);
       }
-      await lookupBarcode(barcode);
     },
-    [lookupBarcode, scanned],
+    [router, scanned],
   );
 
   if (Platform.OS === 'ios' && !Device.isDevice) {

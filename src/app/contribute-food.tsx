@@ -59,14 +59,70 @@ const MORE_NUMBERS: { key: OffNumberField; label: string }[] = [
   { key: 'serving_quantity', label: 'Serving quantity' },
   { key: 'energy-kj_100g', label: 'Energy (kJ / 100g)' },
   { key: 'added-sugars_100g', label: 'Added sugars' },
+  { key: 'polyols_100g', label: 'Polyols' },
   { key: 'saturated-fat_100g', label: 'Saturated fat' },
   { key: 'trans-fat_100g', label: 'Trans fat' },
+  { key: 'monounsaturated-fat_100g', label: 'Monounsaturated fat' },
+  { key: 'polyunsaturated-fat_100g', label: 'Polyunsaturated fat' },
   { key: 'cholesterol_100g', label: 'Cholesterol' },
+  { key: 'vitamin-a_100g', label: 'Vitamin A' },
+  { key: 'vitamin-c_100g', label: 'Vitamin C' },
+  { key: 'vitamin-d_100g', label: 'Vitamin D' },
+  { key: 'vitamin-b12_100g', label: 'Vitamin B12' },
   { key: 'calcium_100g', label: 'Calcium' },
   { key: 'iron_100g', label: 'Iron' },
   { key: 'potassium_100g', label: 'Potassium' },
+  { key: 'magnesium_100g', label: 'Magnesium' },
   { key: 'caffeine_100g', label: 'Caffeine' },
+  { key: 'taurine_100g', label: 'Taurine' },
+  { key: 'carbon-footprint_100g', label: 'Carbon footprint' },
+  { key: 'nova_group', label: 'NOVA group' },
+  { key: 'additives_n', label: 'Additives count' },
 ]
+
+/** Route params use snake_case Appwrite column names; map back to OFF keys. */
+const PARAM_TO_OFF_STRING: Record<string, OffStringField> = {
+  brands: 'brands',
+  categories: 'categories',
+  quantity: 'quantity',
+  serving_size: 'serving_size',
+  allergens: 'allergens',
+  traces_tags: 'traces_tags',
+  nutriscore_grade: 'nutriscore_grade',
+  ecoscore_grade: 'ecoscore_grade',
+}
+
+const PARAM_TO_OFF_NUMBER: Record<string, OffNumberField> = {
+  serving_quantity: 'serving_quantity',
+  energy_kcal_100g: 'energy-kcal_100g',
+  energy_kj_100g: 'energy-kj_100g',
+  proteins_100g: 'proteins_100g',
+  carbohydrates_100g: 'carbohydrates_100g',
+  fat_100g: 'fat_100g',
+  fiber_100g: 'fiber_100g',
+  sugars_100g: 'sugars_100g',
+  added_sugars_100g: 'added-sugars_100g',
+  polyols_100g: 'polyols_100g',
+  saturated_fat_100g: 'saturated-fat_100g',
+  trans_fat_100g: 'trans-fat_100g',
+  monounsaturated_fat_100g: 'monounsaturated-fat_100g',
+  polyunsaturated_fat_100g: 'polyunsaturated-fat_100g',
+  sodium_100g: 'sodium_100g',
+  cholesterol_100g: 'cholesterol_100g',
+  vitamin_a_100g: 'vitamin-a_100g',
+  vitamin_c_100g: 'vitamin-c_100g',
+  vitamin_d_100g: 'vitamin-d_100g',
+  vitamin_b12_100g: 'vitamin-b12_100g',
+  calcium_100g: 'calcium_100g',
+  iron_100g: 'iron_100g',
+  potassium_100g: 'potassium_100g',
+  magnesium_100g: 'magnesium_100g',
+  caffeine_100g: 'caffeine_100g',
+  taurine_100g: 'taurine_100g',
+  carbon_footprint_100g: 'carbon-footprint_100g',
+  nova_group: 'nova_group',
+  additives_n: 'additives_n',
+}
 
 function paramString(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? ''
@@ -78,17 +134,43 @@ export default function ContributeFoodScreen() {
   const router = useRouter()
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
-  const params = useLocalSearchParams<{ code?: string; query?: string }>()
+  const params = useLocalSearchParams<Record<string, string | string[] | undefined>>()
 
   const initialCode = useMemo(() => paramString(params.code), [params.code])
   const initialQuery = useMemo(() => paramString(params.query), [params.query])
+  const initialName = useMemo(
+    () => paramString(params.product_name) || (!/^\d{8,14}$/.test(initialQuery) ? initialQuery : ''),
+    [params.product_name, initialQuery],
+  )
 
   const [photo, setPhoto] = useState<PhotoState | null>(null)
-  const [productName, setProductName] = useState('')
+  const [productName, setProductName] = useState(initialName)
   const [code, setCode] = useState(initialCode)
-  const [stringFields, setStringFields] = useState<Partial<Record<OffStringField, string>>>({})
-  const [numberFields, setNumberFields] = useState<Partial<Record<OffNumberField, string>>>({})
-  const [showMore, setShowMore] = useState(false)
+  const [stringFields, setStringFields] = useState<Partial<Record<OffStringField, string>>>(() => {
+    const next: Partial<Record<OffStringField, string>> = {}
+    for (const [paramKey, offKey] of Object.entries(PARAM_TO_OFF_STRING)) {
+      const value = paramString(params[paramKey])
+      if (value) next[offKey] = value
+    }
+    return next
+  })
+  const [numberFields, setNumberFields] = useState<Partial<Record<OffNumberField, string>>>(() => {
+    const next: Partial<Record<OffNumberField, string>> = {}
+    for (const [paramKey, offKey] of Object.entries(PARAM_TO_OFF_NUMBER)) {
+      const value = paramString(params[paramKey])
+      if (value) next[offKey] = value
+    }
+    return next
+  })
+  const [showMore, setShowMore] = useState(
+    () =>
+      Object.keys(PARAM_TO_OFF_STRING).some((key) => Boolean(paramString(params[key]))) ||
+      Object.keys(PARAM_TO_OFF_NUMBER).some(
+        (key) =>
+          !['energy_kcal_100g', 'proteins_100g', 'carbohydrates_100g', 'fat_100g'].includes(key) &&
+          Boolean(paramString(params[key])),
+      ),
+  )
   const [submitting, setSubmitting] = useState(false)
 
   async function ensureLibraryPermission(): Promise<boolean> {
@@ -159,7 +241,10 @@ export default function ContributeFoodScreen() {
       return
     }
     if (!photo) {
-      Alert.alert('Photo required', 'Add a photo of the food before submitting.')
+      Alert.alert(
+        'Photo required',
+        'Snap a clear photo of the nutrition facts and ingredients list before submitting.',
+      )
       return
     }
     if (!productName.trim()) {
@@ -206,23 +291,26 @@ export default function ContributeFoodScreen() {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.lead}>
-          Help fill catalog gaps. A clear photo of the label is required; nutrition details are
-          optional extras for later review / ML.
+          {initialName
+            ? 'Some catalog fields are unknown for this product. Snap a clear photo of the nutrition facts panel and the ingredients list — that photo is required; typed nutrition fields are optional extras for review.'
+            : 'Help fill catalog gaps. Snap a clear photo of the nutrition facts and ingredients list (required). Typed nutrition details are optional extras for later review / ML.'}
         </Text>
 
-        <Text style={styles.sectionLabel}>Photo (required)</Text>
+        <Text style={styles.sectionLabel}>Photo of nutrition facts + ingredients (required)</Text>
         <Pressable
           style={styles.photoBox}
           onPress={choosePhotoSource}
           accessibilityRole="button"
-          accessibilityLabel="Add food photo"
+          accessibilityLabel="Photograph nutrition facts and ingredients"
         >
           {photo ? (
             <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Ionicons name="camera-outline" size={36} color={colors.textMuted} />
-              <Text style={styles.photoHint}>Tap to take or choose a photo</Text>
+              <Text style={styles.photoHint}>
+                Tap to photograph the nutrition facts and ingredients
+              </Text>
             </View>
           )}
         </Pressable>

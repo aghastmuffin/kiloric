@@ -7,11 +7,11 @@ import {
   recentFoodsUserKey,
   type RecentFoodEntry,
 } from '@/lib/recentFoods'
-import { storeSearchResult } from '@/lib/searchResultStore'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import {
@@ -145,12 +145,8 @@ export function RecentFoodsList() {
         }
         if (item.query) {
           setModalVisible(false)
-          const data = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(item.query)}`)
-          const resultId = storeSearchResult(item.query, data)
-          router.push({
-            pathname: '/multiresponse',
-            params: { resultId },
-          })
+          await AsyncStorage.setItem('saved_barcode', item.query)
+          router.push('/(tabs)/logfood')
         }
       } catch (error) {
         showApiError(error, 'oracle')
