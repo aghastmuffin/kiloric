@@ -346,7 +346,7 @@ export default function MultiResponseScreen() {
   }, [addStatuses, selectedMealType, user]);
 
   return (
-    <>
+    <GestureHandlerRootView style={styles.root}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
