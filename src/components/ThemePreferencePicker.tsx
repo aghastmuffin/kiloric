@@ -6,7 +6,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
 
 const THEME_OPTIONS: AppThemeChoice[] = ['ios', 'barebones']
-const THEME_LABELS = ['iOS Clean', 'Barebones']
+const THEME_LABELS = ['Vitality', 'Classic']
 
 export function ThemePreferencePicker() {
   const { themeChoice, setThemeChoice } = useTheme()
@@ -28,7 +28,8 @@ export function ThemePreferencePicker() {
     <View style={styles.section}>
       <Text style={styles.label}>Appearance</Text>
       <Text style={styles.hint}>
-        iOS Clean follows your device light/dark setting. Barebones keeps the original look.
+        Vitality uses the bone, navy and sage palette and follows your device appearance.
+        Classic keeps the original high-contrast look.
       </Text>
       <ThemedSegmentedControl
         values={THEME_LABELS}

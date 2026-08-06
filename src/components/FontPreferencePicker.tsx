@@ -7,7 +7,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
 
 const FONT_OPTIONS: AppFontChoice[] = ['default', 'custom']
-const FONT_LABELS = ['System default', 'Redaction']
+const FONT_LABELS = ['Clean sans', 'Editorial serif']
 
 export function FontPreferencePicker() {
   const { fontChoice, setFontChoice, customFontLoaded } = useFontPreferences()
@@ -30,7 +30,7 @@ export function FontPreferencePicker() {
     <View style={styles.section}>
       <Text style={styles.label}>App font</Text>
       <Text style={styles.hint}>
-        Use the system default or the custom Redaction font across the app.
+        Choose Hanken Grotesk for everyday UI or Source Serif for a more editorial feel.
       </Text>
       <ThemedSegmentedControl
         values={FONT_LABELS}
@@ -40,7 +40,7 @@ export function FontPreferencePicker() {
       />
       {!customFontLoaded ? (
         <Text style={styles.warning}>
-          Custom font file not loaded. Add redaction.otf to assets/fonts/.
+          Vitality fonts could not be loaded.
         </Text>
       ) : null}
     </View>
