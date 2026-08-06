@@ -1413,7 +1413,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.text,
     paddingVertical: 13,
     // The pill container renders the focus ring; hide the browser default on web.
-    outlineWidth: 0,
+    // react-native-web honors outlineStyle 'none' even though RN types omit it.
+    ...(Platform.OS === 'web'
+      ? ({ outlineStyle: 'none' } as unknown as Record<string, never>)
+      : null),
   },
   clearButton: {
     width: 24,
