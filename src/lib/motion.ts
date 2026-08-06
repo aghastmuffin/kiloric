@@ -22,3 +22,9 @@ export const quickTiming = {
   duration: 180,
   easing: Easing.out(Easing.cubic),
 } as const
+
+/** Longer ease used by progress fills (ProgressRing / MacroProgressBar). */
+export const panelTiming = {
+  duration: 420,
+  easing: Easing.out(Easing.cubic),
+} as const
