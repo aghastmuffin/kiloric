@@ -523,7 +523,7 @@ export default function LogFoodScreen() {
     carbs?: number | null
     fat?: number | null
     kcal?: number | null
-  }) => {
+  }, mealTypeOverride?: MealType) => {
     if (!user?.$id) return
     try {
       const data = await authenticatedRequest(`/api/barcode/${encodeURIComponent(food.barcode)}`)
@@ -531,13 +531,14 @@ export default function LogFoodScreen() {
         data && typeof data === 'object' && !Array.isArray(data)
           ? unwrapProduct(data as SearchResult)
           : { code: food.barcode, product_name: food.title }
-      await addProductToMeal(user.$id, selectedMealType, food.barcode, product)
+      await addProductToMeal(user.$id, mealTypeOverride ?? selectedMealType, food.barcode, product)
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       await loadToday()
     } catch (error) {
       console.warn('Could not add food', error)
     }
   }, [loadToday, selectedMealType, user])
+
 
   const handleToggleFavorite = useCallback(async (food: {
     barcode: string
@@ -767,7 +768,7 @@ export default function LogFoodScreen() {
               historicMeals={historicMeals}
               selectedMealType={selectedMealType}
               onToggleSection={toggleSection}
-              onAddFood={(food) => void quickAddFood(food)}
+              onAddFood={(food, mealTypeOverride) => void quickAddFood(food, mealTypeOverride)}
               onToggleFavorite={(food) => void handleToggleFavorite(food)}
               onDeleteItem={handleDeleteItem}
               onMoveItem={setMoveItem}
@@ -874,7 +875,7 @@ function IdleLogPanels({
     carbs?: number | null
     fat?: number | null
     kcal?: number | null
-  }) => void
+  }, mealTypeOverride?: MealType) => void
   onToggleFavorite: (food: {
     barcode: string
     title: string
@@ -891,6 +892,8 @@ function IdleLogPanels({
   onLogNewMeal: () => void
   signedIn: boolean
 }) {
+  // Track which quick-row food is being dragged so we can show hints
+  const [draggingFoodKey, setDraggingFoodKey] = useState<string | null>(null)
   const showTodayLogs = activeFilter === 'Recent' || activeFilter === 'My Meals'
   const sideTitle =
     activeFilter === 'Favorites'
@@ -901,8 +904,10 @@ function IdleLogPanels({
           ? 'Recipes'
           : 'Recent Foods'
 
+  const isDraggingFood = draggingFoodKey !== null
+
   const dropZones = useRef(
-    new Map<MealType, { x: number; y: number; width: number; height: number }>(),
+    new Map<MealType, { x: number; y: number; width: number; height: number }>()
   ).current
   const zoneNodes = useRef(new Map<MealType, View>()).current
   const [dropTarget, setDropTarget] = useState<MealType | null>(null)
@@ -969,6 +974,8 @@ function IdleLogPanels({
           </View>
           {draggingItemKey ? (
             <Text style={styles.dragHint}>Drag onto another meal to move · release to drop</Text>
+          ) : isDraggingFood ? (
+            <Text style={[styles.dragHint, { color: colors.accent }]}>Drop onto a meal below to log it there ↓</Text>
           ) : (
             <Text style={styles.dragHint}>Hold an item to rearrange · swipe for Move / Delete</Text>
           )}
@@ -1128,7 +1135,9 @@ function IdleLogPanels({
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{sideTitle}</Text>
           {activeFilter === 'Recent' || activeFilter === 'Favorites' ? (
-            <Text style={styles.sectionMeta}>Add to {selectedMealType}</Text>
+            <Text style={styles.sectionMeta}>
+              {isDraggingFood ? 'Drag to a meal ↑' : `Add to ${selectedMealType}`}
+            </Text>
           ) : null}
         </View>
 
@@ -1153,6 +1162,20 @@ function IdleLogPanels({
                   favorited
                   styles={styles}
                   colors={colors}
+                  findDropTarget={findDropTarget}
+                  onDragStart={() => {
+                    remasureZones()
+                    setDraggingFoodKey(food.barcode)
+                    setDropTarget(null)
+                    onDraggingChange(true)
+                  }}
+                  onDragHover={setDropTarget}
+                  onDragEnd={(target) => {
+                    setDraggingFoodKey(null)
+                    setDropTarget(null)
+                    onDraggingChange(false)
+                    onAddFood(food, target ?? undefined)
+                  }}
                   onOpen={() => onOpenDetail(food.barcode)}
                   onAdd={() => onAddFood(food)}
                   onToggleFavorite={() => onToggleFavorite(food)}
@@ -1244,6 +1267,20 @@ function IdleLogPanels({
                 favorited={favorites.some((item) => item.barcode === food.barcode)}
                 styles={styles}
                 colors={colors}
+                findDropTarget={findDropTarget}
+                onDragStart={() => {
+                  remasureZones()
+                  setDraggingFoodKey(food.barcode)
+                  setDropTarget(null)
+                  onDraggingChange(true)
+                }}
+                onDragHover={setDropTarget}
+                onDragEnd={(target) => {
+                  setDraggingFoodKey(null)
+                  setDropTarget(null)
+                  onDraggingChange(false)
+                  onAddFood(food, target ?? undefined)
+                }}
                 onOpen={() => onOpenDetail(food.barcode)}
                 onAdd={() => onAddFood(food)}
                 onToggleFavorite={() =>
@@ -1275,6 +1312,10 @@ function FoodQuickRow({
   favorited,
   styles,
   colors,
+  findDropTarget,
+  onDragStart,
+  onDragHover,
+  onDragEnd,
   onOpen,
   onAdd,
   onToggleFavorite,
@@ -1288,6 +1329,10 @@ function FoodQuickRow({
   favorited: boolean
   styles: ReturnType<typeof makeStyles>
   colors: ThemeColors
+  findDropTarget?: (x: number, y: number) => MealType | null
+  onDragStart?: () => void
+  onDragHover?: (target: MealType | null) => void
+  onDragEnd?: (target: MealType | null) => void
   onOpen: () => void
   onAdd: () => void
   onToggleFavorite: () => void
@@ -1332,7 +1377,9 @@ function FoodQuickRow({
     </View>
   )
 
-  return (
+  const dragEnabled = Boolean(findDropTarget && onDragStart && onDragHover && onDragEnd)
+
+  const inner = (
     <MotionView
       from={{ opacity: 0, translateX: 8 }}
       animate={{ opacity: 1, translateX: 0 }}
@@ -1349,6 +1396,21 @@ function FoodQuickRow({
       </SwipeableRow>
     </MotionView>
   )
+
+  if (dragEnabled) {
+    return (
+      <LogItemDragRow
+        findDropTarget={findDropTarget!}
+        onDragStart={onDragStart!}
+        onDragHover={onDragHover!}
+        onDragEnd={onDragEnd!}
+      >
+        {inner}
+      </LogItemDragRow>
+    )
+  }
+
+  return inner
 }
 
 function pressedColor(colors: ThemeColors, active: boolean) {

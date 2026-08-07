@@ -26,6 +26,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 type PhotoState = {
   uri: string
@@ -134,6 +135,7 @@ export default function ContributeFoodScreen() {
   const router = useRouter()
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<Record<string, string | string[] | undefined>>()
 
   const initialCode = useMemo(() => paramString(params.code), [params.code])
@@ -141,6 +143,16 @@ export default function ContributeFoodScreen() {
   const initialName = useMemo(
     () => paramString(params.product_name) || (!/^\d{8,14}$/.test(initialQuery) ? initialQuery : ''),
     [params.product_name, initialQuery],
+  )
+
+  // Detect whether we arrived from a search result with prefilled data
+  const hasPrefill = useMemo(
+    () =>
+      Boolean(initialName) ||
+      Object.keys(PARAM_TO_OFF_STRING).some((key) => Boolean(paramString(params[key]))) ||
+      Object.keys(PARAM_TO_OFF_NUMBER).some((key) => Boolean(paramString(params[key]))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   )
 
   const [photo, setPhoto] = useState<PhotoState | null>(null)
@@ -272,9 +284,9 @@ export default function ContributeFoodScreen() {
       })
 
       Alert.alert(
-        'Thanks!',
-        'Your contribution was submitted for review. It will not appear in search until approved.',
-        [{ text: 'OK', onPress: () => router.back() }],
+        'Thanks for contributing! 🎉',
+        `"${productName.trim()}" has been submitted for review. It will appear in search results once approved.`,
+        [{ text: 'Back to Log Food', onPress: () => router.back() }],
       )
     } catch (error) {
       console.error('Could not submit food contribution', error)
@@ -289,82 +301,146 @@ export default function ContributeFoodScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.lead}>
-          {initialName
-            ? 'Some catalog fields are unknown for this product. Snap a clear photo of the nutrition facts panel and the ingredients list — that photo is required; typed nutrition fields are optional extras for review.'
-            : 'Help fill catalog gaps. Snap a clear photo of the nutrition facts and ingredients list (required). Typed nutrition details are optional extras for later review / ML.'}
-        </Text>
-
-        <Text style={styles.sectionLabel}>Photo of nutrition facts + ingredients (required)</Text>
+      {/* Custom back header matching logfood aesthetic */}
+      <View style={[styles.navBar, { paddingTop: insets.top + 8 }]}>
         <Pressable
-          style={styles.photoBox}
-          onPress={choosePhotoSource}
+          onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Photograph nutrition facts and ingredients"
+          accessibilityLabel="Back"
+          style={({ pressed }) => [styles.navBack, pressed && styles.pressed]}
+          hitSlop={10}
         >
-          {photo ? (
-            <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
-          ) : (
-            <View style={styles.photoPlaceholder}>
-              <Ionicons name="camera-outline" size={36} color={colors.textMuted} />
-              <Text style={styles.photoHint}>
-                Tap to photograph the nutrition facts and ingredients
-              </Text>
-            </View>
-          )}
+          <Ionicons name="chevron-back" size={22} color={colors.accent} />
+          <Text style={styles.navBackText}>Log Food</Text>
         </Pressable>
-        {photo ? (
-          <Pressable onPress={choosePhotoSource}>
-            <Text style={styles.changePhoto}>Change photo</Text>
+        <Text style={styles.navTitle}>Contribute</Text>
+        <View style={styles.navSpacer} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+
+        {/* Context banner — shown when prefilled from a search result */}
+        {hasPrefill ? (
+          <View style={styles.contextBanner}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
+            <Text style={styles.contextBannerText}>
+              Some catalog data was pre-filled from search. Snap a photo of the nutrition facts
+              panel and ingredients list — that&apos;s the essential requirement.
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.lead}>
+            Help fill catalog gaps. Snap a clear photo of the nutrition facts and ingredients list
+            (required). Typed nutrition details are optional extras for later review.
+          </Text>
+        )}
+
+        {/* Photo card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="camera-outline" size={16} color={colors.accent} />
+            <Text style={styles.cardTitle}>Nutrition facts photo</Text>
+            <View style={styles.requiredBadge}>
+              <Text style={styles.requiredBadgeText}>Required</Text>
+            </View>
+          </View>
+          <Pressable
+            style={styles.photoBox}
+            onPress={choosePhotoSource}
+            accessibilityRole="button"
+            accessibilityLabel="Photograph nutrition facts and ingredients"
+          >
+            {photo ? (
+              <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+            ) : (
+              <View style={styles.photoPlaceholder}>
+                <View style={styles.photoIconWrap}>
+                  <Ionicons name="camera" size={32} color={colors.accent} />
+                </View>
+                <Text style={styles.photoHint}>
+                  Tap to photograph nutrition facts &amp; ingredients
+                </Text>
+                <Text style={styles.photoSubHint}>Camera or photo library</Text>
+              </View>
+            )}
           </Pressable>
-        ) : null}
+          {photo ? (
+            <Pressable onPress={choosePhotoSource} style={styles.changePhotoRow}>
+              <Ionicons name="refresh-outline" size={14} color={colors.accent} />
+              <Text style={styles.changePhoto}>Change photo</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
-        <Text style={styles.sectionLabel}>Product name (required)</Text>
-        <TextInput
-          style={styles.input}
-          value={productName}
-          onChangeText={setProductName}
-          placeholder="e.g. Chobani Plain Greek Yogurt"
-          placeholderTextColor={colors.textFaint}
-          autoCapitalize="words"
-        />
+        {/* Product info card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="pricetag-outline" size={16} color={colors.accent} />
+            <Text style={styles.cardTitle}>Product info</Text>
+          </View>
 
-        <Text style={styles.sectionLabel}>Barcode</Text>
-        <TextInput
-          style={styles.input}
-          value={code}
-          onChangeText={setCode}
-          placeholder="Optional — prefilled from scan when available"
-          placeholderTextColor={colors.textFaint}
-          keyboardType="number-pad"
-          autoCapitalize="none"
-        />
-
-        <Text style={styles.sectionLabel}>Nutrition per 100g (optional)</Text>
-        {PRIMARY_MACROS.map((field) => (
-          <View key={field.key} style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>{field.label}</Text>
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>
+              Product name <Text style={styles.requiredStar}>*</Text>
+            </Text>
             <TextInput
               style={styles.input}
-              value={numberFields[field.key] ?? ''}
-              onChangeText={(text) =>
-                setNumberFields((current) => ({ ...current, [field.key]: text }))
-              }
-              placeholder={field.placeholder}
+              value={productName}
+              onChangeText={setProductName}
+              placeholder="e.g. Chobani Plain Greek Yogurt"
               placeholderTextColor={colors.textFaint}
-              keyboardType="decimal-pad"
+              autoCapitalize="words"
             />
           </View>
-        ))}
 
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>Barcode</Text>
+            <TextInput
+              style={styles.input}
+              value={code}
+              onChangeText={setCode}
+              placeholder="Optional — prefilled from scan when available"
+              placeholderTextColor={colors.textFaint}
+              keyboardType="number-pad"
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
+
+        {/* Macros card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="nutrition-outline" size={16} color={colors.accent} />
+            <Text style={styles.cardTitle}>Nutrition per 100g</Text>
+            <View style={styles.optionalBadge}>
+              <Text style={styles.optionalBadgeText}>Optional</Text>
+            </View>
+          </View>
+          {PRIMARY_MACROS.map((field) => (
+            <View key={field.key} style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>{field.label}</Text>
+              <TextInput
+                style={styles.input}
+                value={numberFields[field.key] ?? ''}
+                onChangeText={(text) =>
+                  setNumberFields((current) => ({ ...current, [field.key]: text }))
+                }
+                placeholder={field.placeholder}
+                placeholderTextColor={colors.textFaint}
+                keyboardType="decimal-pad"
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* More details toggle */}
         <Pressable
           style={styles.moreToggle}
           onPress={() => setShowMore((open) => !open)}
           accessibilityRole="button"
         >
           <Text style={styles.moreToggleText}>
-            {showMore ? 'Hide more details' : 'More details (optional)'}
+            {showMore ? 'Hide additional details' : 'More details (optional)'}
           </Text>
           <Ionicons
             name={showMore ? 'chevron-up' : 'chevron-down'}
@@ -374,7 +450,11 @@ export default function ContributeFoodScreen() {
         </Pressable>
 
         {showMore ? (
-          <View style={styles.moreBlock}>
+          <View style={[styles.card, styles.moreBlock]}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="list-outline" size={16} color={colors.accent} />
+              <Text style={styles.cardTitle}>Additional fields</Text>
+            </View>
             {MORE_STRINGS.map((field) => (
               <View key={field.key} style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{field.label}</Text>
@@ -414,9 +494,16 @@ export default function ContributeFoodScreen() {
           {submitting ? (
             <ActivityIndicator color={colors.onAccent} />
           ) : (
-            <Text style={styles.submitText}>Submit contribution</Text>
+            <>
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.onAccent} />
+              <Text style={styles.submitText}>Submit contribution</Text>
+            </>
           )}
         </Pressable>
+
+        <Text style={styles.disclaimer}>
+          Contributions are reviewed before appearing in search. Thank you for helping improve the food catalog.
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   )
@@ -428,10 +515,40 @@ const makeStyles = (c: ThemeColors) =>
       flex: 1,
       backgroundColor: c.background,
     },
+    navBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+      backgroundColor: c.background,
+    },
+    navBack: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      flex: 1,
+    },
+    navBackText: {
+      ...typography.label,
+      color: c.accent,
+    },
+    navTitle: {
+      ...typography.label,
+      color: c.text,
+      fontWeight: '700',
+    },
+    navSpacer: {
+      flex: 1,
+    },
+    pressed: {
+      opacity: 0.75,
+    },
     content: {
       padding: spacing.lg,
-      paddingBottom: 48,
-      gap: spacing.sm,
+      paddingBottom: 60,
+      gap: spacing.md,
       maxWidth: 620,
       width: '100%',
       alignSelf: 'center',
@@ -439,21 +556,73 @@ const makeStyles = (c: ThemeColors) =>
     lead: {
       ...typography.body,
       color: c.textMuted,
-      marginBottom: spacing.sm,
     },
-    sectionLabel: {
+    contextBanner: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      alignItems: 'flex-start',
+      backgroundColor: c.accentSoft,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: c.accent,
+      padding: spacing.md,
+    },
+    contextBannerText: {
+      ...typography.body,
+      color: c.text,
+      flex: 1,
+      lineHeight: 20,
+    },
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: 'rgba(120,118,114,0.2)',
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    cardTitle: {
+      ...typography.label,
+      color: c.text,
+      fontWeight: '700',
+      flex: 1,
+    },
+    requiredBadge: {
+      backgroundColor: c.accent,
+      borderRadius: borderRadius.pill,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    requiredBadgeText: {
       ...typography.labelSmall,
-      color: c.textMuted,
-      textTransform: 'uppercase',
-      marginTop: spacing.md,
+      color: c.onAccent,
+      fontWeight: '700',
     },
-    photoBox: {
+    optionalBadge: {
+      backgroundColor: c.surfaceAlt,
+      borderRadius: borderRadius.pill,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: borderRadius.lg,
-      backgroundColor: c.surface,
+    },
+    optionalBadgeText: {
+      ...typography.labelSmall,
+      color: c.textMuted,
+    },
+    photoBox: {
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: c.border,
+      borderRadius: borderRadius.md,
+      backgroundColor: c.surfaceAlt,
       overflow: 'hidden',
-      minHeight: 180,
+      minHeight: 160,
     },
     photoPreview: {
       width: '100%',
@@ -461,21 +630,50 @@ const makeStyles = (c: ThemeColors) =>
       resizeMode: 'cover',
     },
     photoPlaceholder: {
-      minHeight: 180,
+      minHeight: 160,
       alignItems: 'center',
       justifyContent: 'center',
       gap: spacing.sm,
       padding: spacing.lg,
     },
+    photoIconWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: c.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     photoHint: {
       ...typography.body,
+      color: c.text,
+      textAlign: 'center',
+      fontWeight: '600',
+    },
+    photoSubHint: {
+      ...typography.labelSmall,
       color: c.textMuted,
       textAlign: 'center',
+    },
+    changePhotoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      alignSelf: 'flex-start',
     },
     changePhoto: {
       ...typography.label,
       color: c.accent,
-      marginTop: 4,
+    },
+    fieldBlock: {
+      gap: 6,
+    },
+    fieldLabel: {
+      ...typography.labelSmall,
+      color: c.textMuted,
+    },
+    requiredStar: {
+      color: c.accent,
     },
     input: {
       ...typography.body,
@@ -487,33 +685,33 @@ const makeStyles = (c: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingVertical: Platform.OS === 'ios' ? 12 : 10,
     },
-    fieldBlock: {
-      gap: 4,
-    },
-    fieldLabel: {
-      ...typography.labelSmall,
-      color: c.textMuted,
-    },
     moreToggle: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingVertical: spacing.sm,
-      marginTop: spacing.sm,
     },
     moreToggleText: {
       ...typography.label,
       color: c.accent,
     },
     moreBlock: {
-      gap: spacing.sm,
+      gap: spacing.md,
     },
     submit: {
-      marginTop: spacing.lg,
+      marginTop: spacing.sm,
       backgroundColor: c.accent,
       borderRadius: borderRadius.md,
-      paddingVertical: 14,
+      paddingVertical: 15,
       alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      shadowColor: c.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      elevation: 4,
     },
     submitDisabled: {
       opacity: 0.7,
@@ -522,5 +720,12 @@ const makeStyles = (c: ThemeColors) =>
       ...typography.label,
       color: c.onAccent,
       fontWeight: '700',
+      fontSize: 16,
+    },
+    disclaimer: {
+      ...typography.labelSmall,
+      color: c.textFaint,
+      textAlign: 'center',
+      paddingHorizontal: spacing.md,
     },
   })
