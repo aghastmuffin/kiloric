@@ -170,3 +170,63 @@ describe('meals caching & deduplication', () => {
     expect(mockListDocuments).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('meals BOLA/IDOR security checks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('updateMeal throws error if meal does not exist', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+    mockGetDocument.mockRejectedValue(new (await import('react-native-appwrite')).AppwriteException('Not found', 404, 'document_not_found'))
+
+    await expect(mealsModule.updateMeal('meal-not-exist', { kcal: 200 })).rejects.toThrow('Meal not found.')
+  })
+
+  it('updateMeal throws error if current user is not the owner', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValue({ $id: 'meal-789', owner: 'user-456', kcal: 500 })
+
+    await expect(mealsModule.updateMeal('meal-789', { kcal: 600 })).rejects.toThrow(
+      'Unauthorized: You are not permitted to modify this meal.'
+    )
+    expect(mockUpdateDocument).not.toHaveBeenCalled()
+  })
+
+  it('updateMeal succeeds if current user is the owner', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValue({ $id: 'meal-789', owner: 'user-123', kcal: 500 })
+    mockUpdateDocument.mockResolvedValue({ $id: 'meal-789', owner: 'user-123', kcal: 600 })
+
+    const result = await mealsModule.updateMeal('meal-789', { kcal: 600 })
+    expect(result.kcal).toBe(600)
+    expect(mockUpdateDocument).toHaveBeenCalledTimes(1)
+  })
+
+  it('moveProductBetweenMeals throws error if ownerId does not match current user', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+    await expect(
+      mealsModule.moveProductBetweenMeals('user-456', 'meal-789', 'barcode123', 'Breakfast', {
+        kcal: 100,
+        protein: 10,
+        carbs: 20,
+        fat: 5,
+      })
+    ).rejects.toThrow('You can only move products within your own profile.')
+  })
+
+  it('moveProductBetweenMeals throws error if source meal owner is not current user', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValue({ $id: 'meal-789', owner: 'user-456', items: ['barcode123'] })
+
+    await expect(
+      mealsModule.moveProductBetweenMeals('user-123', 'meal-789', 'barcode123', 'Breakfast', {
+        kcal: 100,
+        protein: 10,
+        carbs: 20,
+        fat: 5,
+      })
+    ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+  })
+})
