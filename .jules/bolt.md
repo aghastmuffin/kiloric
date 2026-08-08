@@ -19,3 +19,8 @@
 **Learning:** Concurrent focus triggers in multi-tab navigation (Dial, meals logger, account stats) cause excessive duplicate database hits to `getTodayMeals`. Declaring the fetching wrapper as a synchronous function returning a Promise avoids V8's promise-wrapping microtask overhead. Safely chaining `.then()` and `.finally()` outside of the async block closure prevents Temporal Dead Zone warnings (TS2454) during compiler checks, and verifying background promise identity (`inflightPromise === currentPromise`) guards against out-of-order state overwrites.
 
 **Action:** Always wrap async service fetchers in a synchronous wrapper that returns a Promise for strict identity checks, chain background-caching callbacks outside the async closure, and append `.catch(() => {})` on background side-chains to prevent unhandled promise rejections.
+
+## 2025-05-19 - Safe React.memo with Callback Stabilization
+**Learning:** List item components in high-density lists (e.g. `ResultCard` and `FoodQuickRow`) can cause heavy render cascades when parent state updates. Standard memoization fails because of recreation of inline callbacks. Ignoring callback props in custom `areEqual` comparators leads to stale closures. This is fully resolved by storing parent component state triggers (`query`, `selectedMealType`, `addStatuses`) in React `useRef` hooks kept fresh via `useEffect`, allowing callbacks to have stable dependency arrays.
+
+**Action:** Always combine custom `React.memo` callback exclusion with parent callback stabilization using `useRef` and `useEffect` to avoid stale state bugs while completely eliminating list render cascades.
