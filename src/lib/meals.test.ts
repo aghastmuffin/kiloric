@@ -170,3 +170,77 @@ describe('meals caching & deduplication', () => {
     expect(mockListDocuments).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('meals authorization (BOLA/IDOR protection)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('updateMeal', () => {
+    it('succeeds if the meal exists and is owned by the logged-in user', async () => {
+      const mockMeal = { $id: 'meal-123', owner: 'user-123', kcal: 500 }
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue(mockMeal)
+      mockUpdateDocument.mockResolvedValue({ ...mockMeal, kcal: 600 })
+
+      const result = await mealsModule.updateMeal('meal-123', { kcal: 600 })
+      expect(result.kcal).toBe(600)
+      expect(mockGetDocument).toHaveBeenCalledWith({
+        databaseId: 'test-db',
+        collectionId: 'test-col',
+        documentId: 'meal-123',
+      })
+      expect(mockUpdateDocument).toHaveBeenCalledTimes(1)
+    })
+
+    it('throws if the meal is not found', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      const { AppwriteException } = await import('react-native-appwrite')
+      mockGetDocument.mockRejectedValue(new AppwriteException('Not Found', 404, 'document_not_found'))
+
+      await expect(mealsModule.updateMeal('meal-123', { kcal: 600 })).rejects.toThrow('Meal not found.')
+      expect(mockUpdateDocument).not.toHaveBeenCalled()
+    })
+
+    it('throws an unauthorized error if the meal is owned by another user', async () => {
+      const mockMeal = { $id: 'meal-123', owner: 'user-456', kcal: 500 }
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue(mockMeal)
+
+      await expect(mealsModule.updateMeal('meal-123', { kcal: 600 })).rejects.toThrow(
+        'Unauthorized: You are not permitted to modify this meal.'
+      )
+      expect(mockUpdateDocument).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('moveProductBetweenMeals', () => {
+    it('throws if ownerId does not match the active session user', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.moveProductBetweenMeals('user-456', 'meal-123', '12345', 'Lunch', {
+          kcal: 100,
+          protein: 10,
+          carbs: 20,
+          fat: 5,
+        })
+      ).rejects.toThrow('Unauthorized: You can only move products for your own meals.')
+    })
+
+    it('throws if the source meal is owned by another user', async () => {
+      const mockMeal = { $id: 'meal-123', owner: 'user-456', items: ['12345'], kcal: 500 }
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue(mockMeal)
+
+      await expect(
+        mealsModule.moveProductBetweenMeals('user-123', 'meal-123', '12345', 'Lunch', {
+          kcal: 100,
+          protein: 10,
+          carbs: 20,
+          fat: 5,
+        })
+      ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+    })
+  })
+})
