@@ -13,6 +13,7 @@ import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
   formatWeightImperial,
@@ -126,11 +127,20 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
-  const toggle = () => setExpanded((prev) => !prev);
+  const toggle = () => {
+    triggerSelectionHaptic();
+    setExpanded((prev) => !prev);
+  };
 
   return (
       <Animated.View style={styles.card}>
-        <Pressable onPress={toggle} style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityHint="Toggles preferences and settings visibility"
+          onPress={toggle}
+          style={({ pressed }) => [styles.header, pressed && styles.headerPressed]}
+        >
           <View style={styles.settingsHeader}>
             <View style={styles.settingsHeaderLeft}>
               <View style={styles.settingsIconBadge}>
@@ -567,6 +577,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   header: {
     paddingVertical: 2,
+    borderRadius: 8,
+  },
+  headerPressed: {
+    opacity: 0.7,
   },
   settingsHeader: {
     flexDirection: 'row',

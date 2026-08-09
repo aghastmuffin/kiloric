@@ -236,7 +236,7 @@ export default function AdditionsScreen() {
     [barcodeParam, product],
   )
   const barcode = useMemo(
-    () => (product ? getBarcodeFromProduct(product) : null) ?? barcodeParam || null,
+    () => ((product ? getBarcodeFromProduct(product) : null) ?? barcodeParam) || null,
     [barcodeParam, product],
   )
   const macros = useMemo(() => (product ? macrosFromProduct(product) : null), [product])
