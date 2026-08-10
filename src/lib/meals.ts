@@ -206,9 +206,15 @@ export async function moveProductBetweenMeals(
   }
 
   const sessionUserId = await assertActiveSession()
+  if (ownerId !== sessionUserId) {
+    throw new Error('Unauthorized: You can only move products within your own meals.')
+  }
 
   const sourceMeal = await getMeal(sourceMealId)
   if (!sourceMeal) throw new Error('Source meal not found.')
+  if (sourceMeal.owner !== sessionUserId) {
+    throw new Error('Unauthorized: You can only move products from your own meals.')
+  }
 
   const trimmedBarcode = barcode.trim()
   const items = [...(sourceMeal.items ?? [])]
@@ -327,6 +333,15 @@ export async function updateMeal(
   }
 
   const sessionUserId = await assertActiveSession()
+
+  const existingMeal = await getMeal(mealId)
+  if (!existingMeal) {
+    throw new Error('Meal not found.')
+  }
+  if (existingMeal.owner !== sessionUserId) {
+    throw new Error('Unauthorized: You can only update your own meals.')
+  }
+
   const normalized = normalizeMealWritePayload(data)
   const validationError = validateMealPatchPayload(normalized)
   if (validationError) throw new Error(validationError)
