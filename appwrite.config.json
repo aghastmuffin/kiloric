@@ -115,6 +115,11 @@
             "$id": "6a4577f00008c718d204",
             "name": "foods",
             "enabled": true
+        },
+        {
+            "$id": "tasks",
+            "name": "tasks",
+            "enabled": true
         }
     ],
     "tables": [
@@ -450,15 +455,6 @@
             "rowSecurity": true,
             "columns": [
                 {
-                    "key": "owner",
-                    "type": "varchar",
-                    "required": true,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
                     "key": "amount_ml",
                     "type": "integer",
                     "required": true,
@@ -474,6 +470,15 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -643,8 +648,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "nova_group",
@@ -652,8 +657,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "additives_n",
@@ -661,8 +666,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "carbon_footprint_100g",
@@ -670,8 +675,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "energy_kcal_100g",
@@ -679,8 +684,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "energy_kj_100g",
@@ -688,8 +693,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "proteins_100g",
@@ -697,8 +702,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "carbohydrates_100g",
@@ -706,8 +711,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "fat_100g",
@@ -715,8 +720,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "fiber_100g",
@@ -724,8 +729,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "sugars_100g",
@@ -733,8 +738,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "added_sugars_100g",
@@ -742,8 +747,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "polyols_100g",
@@ -751,8 +756,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "saturated_fat_100g",
@@ -760,8 +765,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "trans_fat_100g",
@@ -769,8 +774,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "monounsaturated_fat_100g",
@@ -778,8 +783,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "polyunsaturated_fat_100g",
@@ -787,8 +792,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "sodium_100g",
@@ -796,8 +801,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "cholesterol_100g",
@@ -805,8 +810,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "vitamin_a_100g",
@@ -814,8 +819,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "vitamin_c_100g",
@@ -823,8 +828,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "vitamin_d_100g",
@@ -832,8 +837,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "vitamin_b12_100g",
@@ -841,8 +846,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "calcium_100g",
@@ -850,8 +855,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "iron_100g",
@@ -859,8 +864,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "potassium_100g",
@@ -868,8 +873,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "magnesium_100g",
@@ -877,8 +882,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "caffeine_100g",
@@ -886,8 +891,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 },
                 {
                     "key": "taurine_100g",
@@ -895,8 +900,8 @@
                     "required": false,
                     "array": false,
                     "default": null,
-                    "min": -1000000000000.0,
-                    "max": 1000000000000.0
+                    "min": -1000000000000,
+                    "max": 1000000000000
                 }
             ],
             "indexes": [
@@ -919,6 +924,65 @@
                     "status": "available",
                     "columns": [
                         "code"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "tasks",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "tasks",
+            "name": "tasks",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "done",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "by_userId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
                     ],
                     "orders": [
                         "ASC"

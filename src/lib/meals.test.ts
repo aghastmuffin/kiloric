@@ -169,6 +169,31 @@ describe('meals caching & deduplication', () => {
     await mealsModule.getTodayMeals('user-123')
     expect(mockListDocuments).toHaveBeenCalledTimes(2)
   })
+
+  describe('BOLA/IDOR defense-in-depth checks', () => {
+    it('updateMeal fails if user is not the owner', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-7', owner: 'user-456', kcal: 500 }) // different owner!
+
+      await expect(
+        mealsModule.updateMeal('meal-7', { kcal: 600 })
+      ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+
+      expect(mockUpdateDocument).not.toHaveBeenCalled()
+    })
+
+    it('moveProductBetweenMeals fails if user is not the owner of source meal', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-8', owner: 'user-456', items: ['1234'] }) // different owner!
+
+      await expect(
+        mealsModule.moveProductBetweenMeals('user-123', 'meal-8', '1234', 'Lunch', { kcal: 100, protein: 10, carbs: 20, fat: 5 })
+      ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+
+      expect(mockUpdateDocument).not.toHaveBeenCalled()
+      expect(mockDeleteDocument).not.toHaveBeenCalled()
+    })
+  })
 })
 
 describe('meals authorization checks', () => {

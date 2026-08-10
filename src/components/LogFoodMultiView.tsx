@@ -9,7 +9,7 @@ import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   LayoutAnimation,
@@ -564,34 +564,35 @@ export function LogFoodMultiView({
   )
 }
 
-function ResultCard({
-  item,
-  index,
-  expanded,
-  status,
-  favorited,
-  colors,
-  styles,
-  onToggleExpand,
-  onAdd,
-  onToggleFavorite,
-  onOpenDetail,
-  onImprove,
-}: {
-  item: SearchResult
-  index: number
-  expanded: boolean
-  status?: AddStatus
-  favorited: boolean
-  colors: ThemeColors
-  styles: ReturnType<typeof makeStyles>
-  onToggleExpand: () => void
-  onAdd: () => void
-  onToggleFavorite: () => void
-  onOpenDetail: (barcode: string) => void
-  onImprove: () => void
-}) {
-  const product = useMemo(() => unwrapProduct(item), [item])
+const ResultCard = memo(
+  function ResultCard({
+    item,
+    index,
+    expanded,
+    status,
+    favorited,
+    colors,
+    styles,
+    onToggleExpand,
+    onAdd,
+    onToggleFavorite,
+    onOpenDetail,
+    onImprove,
+  }: {
+    item: SearchResult
+    index: number
+    expanded: boolean
+    status?: AddStatus
+    favorited: boolean
+    colors: ThemeColors
+    styles: ReturnType<typeof makeStyles>
+    onToggleExpand: () => void
+    onAdd: () => void
+    onToggleFavorite: () => void
+    onOpenDetail: (barcode: string) => void
+    onImprove: () => void
+  }) {
+    const product = useMemo(() => unwrapProduct(item), [item])
   const title = getProductTitle(product, `Result ${index + 1}`)
   const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
   const brand = getBrand(product)
@@ -752,7 +753,20 @@ function ResultCard({
       )}
     </MotionView>
   )
-}
+},
+  (prevProps, nextProps) => {
+    return (
+      prevProps.index === nextProps.index &&
+      prevProps.expanded === nextProps.expanded &&
+      prevProps.favorited === nextProps.favorited &&
+      prevProps.colors === nextProps.colors &&
+      prevProps.styles === nextProps.styles &&
+      prevProps.status?.state === nextProps.status?.state &&
+      prevProps.status?.message === nextProps.status?.message &&
+      prevProps.item === nextProps.item
+    )
+  }
+)
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
