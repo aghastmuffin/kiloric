@@ -195,3 +195,57 @@ describe('meals caching & deduplication', () => {
     })
   })
 })
+
+describe('meals authorization checks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('updateMeal throws error if current user is not the owner', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValue({ $id: 'meal-1', owner: 'user-456', kcal: 500 })
+
+    await expect(
+      mealsModule.updateMeal('meal-1', { kcal: 600 })
+    ).rejects.toThrow('Unauthorized: You can only update your own meals.')
+  })
+
+  it('updateMeal allows updating if current user is the owner', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValue({ $id: 'meal-1', owner: 'user-123', kcal: 500 })
+    mockUpdateDocument.mockResolvedValue({ $id: 'meal-1', owner: 'user-123', kcal: 600 })
+
+    const res = await mealsModule.updateMeal('meal-1', { kcal: 600 })
+    expect(res.kcal).toBe(600)
+    expect(mockUpdateDocument).toHaveBeenCalledTimes(1)
+  })
+
+  it('moveProductBetweenMeals throws error if requested ownerId is not current user', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+    await expect(
+      mealsModule.moveProductBetweenMeals(
+        'user-456',
+        'meal-1',
+        '123456789',
+        'Lunch',
+        { kcal: 100, protein: 5, carbs: 10, fat: 2 }
+      )
+    ).rejects.toThrow('Unauthorized: You can only move products within your own meals.')
+  })
+
+  it('moveProductBetweenMeals throws error if source meal owner is not current user', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValue({ $id: 'meal-1', owner: 'user-456', items: ['123456789'] })
+
+    await expect(
+      mealsModule.moveProductBetweenMeals(
+        'user-123',
+        'meal-1',
+        '123456789',
+        'Lunch',
+        { kcal: 100, protein: 5, carbs: 10, fat: 2 }
+      )
+    ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
+  })
+})
