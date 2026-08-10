@@ -9,7 +9,7 @@ import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   LayoutAnimation,
@@ -564,195 +564,209 @@ export function LogFoodMultiView({
   )
 }
 
-function ResultCard({
-  item,
-  index,
-  expanded,
-  status,
-  favorited,
-  colors,
-  styles,
-  onToggleExpand,
-  onAdd,
-  onToggleFavorite,
-  onOpenDetail,
-  onImprove,
-}: {
-  item: SearchResult
-  index: number
-  expanded: boolean
-  status?: AddStatus
-  favorited: boolean
-  colors: ThemeColors
-  styles: ReturnType<typeof makeStyles>
-  onToggleExpand: () => void
-  onAdd: () => void
-  onToggleFavorite: () => void
-  onOpenDetail: (barcode: string) => void
-  onImprove: () => void
-}) {
-  const product = useMemo(() => unwrapProduct(item), [item])
-  const title = getProductTitle(product, `Result ${index + 1}`)
-  const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
-  const brand = getBrand(product)
-  const calories = getCaloriesLabel(product)
-  const columns = useMemo(() => scalarEntries(product), [product])
-  const previewColumns = columns.slice(0, expanded ? columns.length : 4)
-  const needsLabelPhoto = useMemo(() => productHasUnknownDetails(product), [product])
+const ResultCard = memo(
+  function ResultCard({
+    item,
+    index,
+    expanded,
+    status,
+    favorited,
+    colors,
+    styles,
+    onToggleExpand,
+    onAdd,
+    onToggleFavorite,
+    onOpenDetail,
+    onImprove,
+  }: {
+    item: SearchResult
+    index: number
+    expanded: boolean
+    status?: AddStatus
+    favorited: boolean
+    colors: ThemeColors
+    styles: ReturnType<typeof makeStyles>
+    onToggleExpand: () => void
+    onAdd: () => void
+    onToggleFavorite: () => void
+    onOpenDetail: (barcode: string) => void
+    onImprove: () => void
+  }) {
+    const product = useMemo(() => unwrapProduct(item), [item])
+    const title = getProductTitle(product, `Result ${index + 1}`)
+    const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
+    const brand = getBrand(product)
+    const calories = getCaloriesLabel(product)
+    const columns = useMemo(() => scalarEntries(product), [product])
+    const previewColumns = columns.slice(0, expanded ? columns.length : 4)
+    const needsLabelPhoto = useMemo(() => productHasUnknownDetails(product), [product])
 
-  const header = (
-    <Pressable
-      onPress={onToggleExpand}
-      style={({ pressed }) => [styles.cardHeader, pressed && styles.pressed]}
-    >
-      <View style={styles.cardHeaderCopy}>
-        <View style={styles.titleRow}>
-          <Text style={styles.resultTitle} numberOfLines={expanded ? 3 : 2}>
-            {title}
-          </Text>
-          {barcode ? (
-            <Pressable
-              hitSlop={8}
-              onPress={onToggleFavorite}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Ionicons
-                name={favorited ? 'star' : 'star-outline'}
-                size={16}
-                color={favorited ? colors.accent : colors.textFaint}
-              />
-            </Pressable>
-          ) : null}
-        </View>
-        <Text style={styles.resultBrand} numberOfLines={1}>
-          {brand}
-          {barcode ? ` · ${barcode}` : ''}
-        </Text>
-        <View style={styles.badgeRow}>
-          <View style={styles.resultBadge}>
-            <Text style={styles.resultBadgeText}>{calories}</Text>
-          </View>
-          <Text style={styles.expandHint}>
-            {expanded ? 'Hide columns' : `${columns.length} columns`}
-          </Text>
-        </View>
-        {status ? (
-          <Text
-            style={[
-              styles.resultFeedback,
-              status.state === 'error' && styles.resultFeedbackError,
-            ]}
-          >
-            {status.message}
-          </Text>
-        ) : null}
-      </View>
+    const header = (
       <Pressable
-        accessibilityLabel={`Add ${title}`}
-        disabled={!barcode || status?.state === 'adding'}
-        onPress={onAdd}
-        style={({ pressed }) => [
-          styles.addCircle,
-          (pressed || status?.state === 'added') && styles.addCircleActive,
-        ]}
+        onPress={onToggleExpand}
+        style={({ pressed }) => [styles.cardHeader, pressed && styles.pressed]}
       >
-        {status?.state === 'adding' ? (
-          <ActivityIndicator size="small" color={colors.accent} />
-        ) : (
-          <Ionicons
-            name={status?.state === 'added' ? 'checkmark' : 'add'}
-            size={18}
-            color={status?.state === 'added' ? colors.onAccent : colors.textMuted}
-          />
-        )}
-      </Pressable>
-    </Pressable>
-  )
-
-  const body = (
-    <View style={styles.card}>
-      {header}
-      {previewColumns.length > 0 ? (
-        <View style={styles.columnsBlock}>
-          {previewColumns.map(([key, value]) => (
-            <View key={key} style={styles.columnRow}>
-              <Text style={styles.columnLabel}>{formatLabel(key)}</Text>
-              <Text style={styles.columnValue} numberOfLines={expanded ? 6 : 2}>
-                {formatValue(value)}
-              </Text>
+        <View style={styles.cardHeaderCopy}>
+          <View style={styles.titleRow}>
+            <Text style={styles.resultTitle} numberOfLines={expanded ? 3 : 2}>
+              {title}
+            </Text>
+            {barcode ? (
+              <Pressable
+                hitSlop={8}
+                onPress={onToggleFavorite}
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <Ionicons
+                  name={favorited ? 'star' : 'star-outline'}
+                  size={16}
+                  color={favorited ? colors.accent : colors.textFaint}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+          <Text style={styles.resultBrand} numberOfLines={1}>
+            {brand}
+            {barcode ? ` · ${barcode}` : ''}
+          </Text>
+          <View style={styles.badgeRow}>
+            <View style={styles.resultBadge}>
+              <Text style={styles.resultBadgeText}>{calories}</Text>
             </View>
-          ))}
-          {!expanded && columns.length > 4 ? (
-            <Pressable onPress={onToggleExpand} style={styles.moreColumns}>
-              <Text style={styles.moreColumnsText}>
-                +{columns.length - 4} more columns
-              </Text>
-              <Ionicons name="chevron-down" size={14} color={colors.accent} />
-            </Pressable>
+            <Text style={styles.expandHint}>
+              {expanded ? 'Hide columns' : `${columns.length} columns`}
+            </Text>
+          </View>
+          {status ? (
+            <Text
+              style={[
+                styles.resultFeedback,
+                status.state === 'error' && styles.resultFeedbackError,
+              ]}
+            >
+              {status.message}
+            </Text>
           ) : null}
         </View>
-      ) : (
-        <Text style={styles.mutedInline}>No additional columns on this match.</Text>
-      )}
-
-      <View style={styles.cardActions}>
-        {barcode ? (
-          <Pressable
-            onPress={() => onOpenDetail(barcode)}
-            style={({ pressed }) => [styles.actionChip, pressed && styles.pressed]}
-          >
-            <Ionicons name="eye-outline" size={15} color={colors.accent} />
-            <Text style={styles.actionChipText}>Full detail</Text>
-          </Pressable>
-        ) : null}
         <Pressable
-          onPress={onImprove}
+          accessibilityLabel={`Add ${title}`}
+          disabled={!barcode || status?.state === 'adding'}
+          onPress={onAdd}
           style={({ pressed }) => [
-            styles.actionChip,
-            needsLabelPhoto && styles.actionChipPhoto,
-            pressed && styles.pressed,
+            styles.addCircle,
+            (pressed || status?.state === 'added') && styles.addCircleActive,
           ]}
         >
-          <Ionicons
-            name={needsLabelPhoto ? 'camera-outline' : 'create-outline'}
-            size={15}
-            color={colors.accent}
-          />
-          <Text style={styles.actionChipText}>
-            {needsLabelPhoto ? 'Snap label photo' : 'Add / change details'}
-          </Text>
+          {status?.state === 'adding' ? (
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <Ionicons
+              name={status?.state === 'added' ? 'checkmark' : 'add'}
+              size={18}
+              color={status?.state === 'added' ? colors.onAccent : colors.textMuted}
+            />
+          )}
         </Pressable>
-      </View>
-      {needsLabelPhoto ? (
-        <Text style={styles.photoHint}>
-          Unknown details — photograph the nutrition facts and ingredients list.
-        </Text>
-      ) : null}
-    </View>
-  )
+      </Pressable>
+    )
 
-  return (
-    <MotionView
-      from={{ opacity: 0, translateY: 8 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 240, delay: index * 35 }}
-    >
-      {barcode ? (
-        <SwipeableRow
-          swipeLeft={{
-            label: 'Add',
-            icon: 'add-circle-outline',
-            onPress: onAdd,
-          }}
-        >
-          {body}
-        </SwipeableRow>
-      ) : (
-        body
-      )}
-    </MotionView>
-  )
-}
+    const body = (
+      <View style={styles.card}>
+        {header}
+        {previewColumns.length > 0 ? (
+          <View style={styles.columnsBlock}>
+            {previewColumns.map(([key, value]) => (
+              <View key={key} style={styles.columnRow}>
+                <Text style={styles.columnLabel}>{formatLabel(key)}</Text>
+                <Text style={styles.columnValue} numberOfLines={expanded ? 6 : 2}>
+                  {formatValue(value)}
+                </Text>
+              </View>
+            ))}
+            {!expanded && columns.length > 4 ? (
+              <Pressable onPress={onToggleExpand} style={styles.moreColumns}>
+                <Text style={styles.moreColumnsText}>
+                  +{columns.length - 4} more columns
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={colors.accent} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
+          <Text style={styles.mutedInline}>No additional columns on this match.</Text>
+        )}
+
+        <View style={styles.cardActions}>
+          {barcode ? (
+            <Pressable
+              onPress={() => onOpenDetail(barcode)}
+              style={({ pressed }) => [styles.actionChip, pressed && styles.pressed]}
+            >
+              <Ionicons name="eye-outline" size={15} color={colors.accent} />
+              <Text style={styles.actionChipText}>Full detail</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            onPress={onImprove}
+            style={({ pressed }) => [
+              styles.actionChip,
+              needsLabelPhoto && styles.actionChipPhoto,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              name={needsLabelPhoto ? 'camera-outline' : 'create-outline'}
+              size={15}
+              color={colors.accent}
+            />
+            <Text style={styles.actionChipText}>
+              {needsLabelPhoto ? 'Snap label photo' : 'Add / change details'}
+            </Text>
+          </Pressable>
+        </View>
+        {needsLabelPhoto ? (
+          <Text style={styles.photoHint}>
+            Unknown details — photograph the nutrition facts and ingredients list.
+          </Text>
+        ) : null}
+      </View>
+    )
+
+    return (
+      <MotionView
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: index * 35 }}
+      >
+        {barcode ? (
+          <SwipeableRow
+            swipeLeft={{
+              label: 'Add',
+              icon: 'add-circle-outline',
+              onPress: onAdd,
+            }}
+          >
+            {body}
+          </SwipeableRow>
+        ) : (
+          body
+        )}
+      </MotionView>
+    )
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.index === nextProps.index &&
+      prevProps.expanded === nextProps.expanded &&
+      prevProps.favorited === nextProps.favorited &&
+      prevProps.status?.state === nextProps.status?.state &&
+      prevProps.status?.message === nextProps.status?.message &&
+      prevProps.item === nextProps.item &&
+      prevProps.colors === nextProps.colors &&
+      prevProps.styles === nextProps.styles
+    )
+  }
+)
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
