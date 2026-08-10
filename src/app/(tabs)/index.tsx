@@ -1,10 +1,12 @@
 import RadialGauge from '@/components/Gague'
 import { MotionView } from '@/components/MotionView'
+import { SwipeableRow } from '@/components/SwipeableRow'
 import { useAuth } from '@/lib/AuthContext'
 import { calculateStreak, calculateXP } from '@/lib/gamification'
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals'
 import { panelSpring, quickTiming } from '@/lib/motion'
 import { getProfile, type ProfileDocument } from '@/lib/profile'
+import { createTask, deleteTask, listTasks, setTaskDone } from '@/lib/tasks'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
@@ -78,6 +80,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true)
   const [fabOpen, setFabOpen] = useState(false)
   const [personalQuests, setPersonalQuests] = useState<PersonalQuest[]>([])
+  const [dismissedQuestKeys, setDismissedQuestKeys] = useState<string[]>([])
   const [taskModalVisible, setTaskModalVisible] = useState(false)
   const [taskDraft, setTaskDraft] = useState('')
 
@@ -93,9 +96,18 @@ export default function DashboardScreen() {
         getTodayMeals(user.$id),
         listHistoricMeals(user.$id, 100),
         getProfile(user.$id),
+        listTasks(user.$id),
       ])
-        .then(([today, history, profile]) => {
-          if (active) setData({ today, history, profile })
+        .then(([today, history, profile, tasks]) => {
+          if (!active) return
+          setData({ today, history, profile })
+          setPersonalQuests(
+            tasks.map((task) => ({
+              id: task.$id,
+              label: task.title,
+              done: Boolean(task.done),
+            })),
+          )
         })
         .catch((error) => console.warn('[Dashboard] load failed', error))
         .finally(() => active && setLoading(false))
@@ -127,16 +139,17 @@ export default function DashboardScreen() {
     proteinTargetHit: totals.protein >= targets.protein,
   })
   const quests = [
-    { label: 'Log three meal moments', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
-    { label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
-    { label: 'Hydrate with intention', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
+    { key: 'meals', label: 'Log three meal moments', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
+    { key: 'protein', label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
+    { key: 'hydrate', label: 'Hydrate with intention', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
     ...personalQuests.map((q) => ({
+      key: q.id,
       label: q.label,
       done: q.done,
       progress: q.done ? 'Done' : 'Open',
       id: q.id,
     })),
-  ]
+  ].filter((quest) => !dismissedQuestKeys.includes(quest.key))
 
   const closeFab = useCallback(() => setFabOpen(false), [])
   const toggleFab = useCallback(() => {
@@ -157,15 +170,23 @@ export default function DashboardScreen() {
 
   const submitTask = useCallback(() => {
     const label = taskDraft.trim()
-    if (!label) return
-    setPersonalQuests((prev) => [
-      ...prev,
-      { id: `${Date.now()}`, label, done: false },
-    ])
+    if (!label || !user?.$id) return
+    const optimisticId = `temp-${Date.now()}`
+    setPersonalQuests((prev) => [...prev, { id: optimisticId, label, done: false }])
     setTaskModalVisible(false)
     setTaskDraft('')
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-  }, [taskDraft])
+    void createTask(user.$id, { title: label })
+      .then((task) => {
+        setPersonalQuests((prev) =>
+          prev.map((q) => (q.id === optimisticId ? { id: task.$id, label: task.title, done: Boolean(task.done) } : q)),
+        )
+      })
+      .catch((error) => {
+        console.warn('[Dashboard] create task failed', error)
+        setPersonalQuests((prev) => prev.filter((q) => q.id !== optimisticId))
+      })
+  }, [taskDraft, user?.$id])
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>
@@ -230,35 +251,68 @@ export default function DashboardScreen() {
           <Text style={styles.sectionMeta}>{quests.filter((q) => q.done).length}/{quests.length}</Text>
         </View>
         <View style={styles.card}>
-          {quests.map((quest, index) => {
-            const personalId = 'id' in quest ? quest.id : null
-            return (
-              <MotionView
-                key={personalId ?? quest.label}
-                animate={{ opacity: 1, translateY: 0, scale: quest.done ? 1 : 0.99 }}
-                from={{ opacity: 0, translateY: 8 }}
-                transition={{ delay: index * 55, type: 'spring', damping: 22 }}
-                style={[styles.quest, index > 0 && styles.divider]}
-              >
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={quest.done ? `Mark ${quest.label} incomplete` : `Mark ${quest.label} complete`}
-                  disabled={!personalId}
-                  onPress={() => {
-                    if (!personalId) return
-                    setPersonalQuests((prev) =>
-                      prev.map((q) => (q.id === personalId ? { ...q, done: !q.done } : q)),
-                    )
+          {quests.length === 0 ? (
+            <Text style={styles.empty}>No quests for today.</Text>
+          ) : (
+            quests.map((quest, index) => {
+              const personalId = 'id' in quest ? quest.id : null
+              return (
+                <SwipeableRow
+                  key={quest.key}
+                  swipeRight={{
+                    label: 'Remove',
+                    icon: 'trash-outline',
+                    destructive: true,
+                    onPress: () => {
+                      if (personalId) {
+                        setPersonalQuests((prev) => prev.filter((q) => q.id !== personalId))
+                        if (user?.$id && !personalId.startsWith('temp-')) {
+                          void deleteTask(user.$id, personalId).catch((error) => {
+                            console.warn('[Dashboard] delete task failed', error)
+                          })
+                        }
+                      }
+                      setDismissedQuestKeys((prev) =>
+                        prev.includes(quest.key) ? prev : [...prev, quest.key],
+                      )
+                    },
                   }}
-                  style={[styles.check, quest.done && styles.checkDone]}
                 >
-                  {quest.done && <Ionicons name="checkmark" size={15} color={colors.onAccent} />}
-                </Pressable>
-                <Text style={[styles.questText, quest.done && styles.questDone]}>{quest.label}</Text>
-                <Text style={styles.questProgress}>{quest.progress}</Text>
-              </MotionView>
-            )
-          })}
+                  <MotionView
+                    animate={{ opacity: 1, translateY: 0, scale: quest.done ? 1 : 0.99 }}
+                    from={{ opacity: 0, translateY: 8 }}
+                    transition={{ delay: index * 55, type: 'spring', damping: 22 }}
+                    style={[styles.quest, index > 0 && styles.divider]}
+                  >
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={quest.done ? `Mark ${quest.label} incomplete` : `Mark ${quest.label} complete`}
+                      disabled={!personalId}
+                      onPress={() => {
+                        if (!personalId || !user?.$id) return
+                        const nextDone = !quest.done
+                        setPersonalQuests((prev) =>
+                          prev.map((q) => (q.id === personalId ? { ...q, done: nextDone } : q)),
+                        )
+                        if (personalId.startsWith('temp-')) return
+                        void setTaskDone(user.$id, personalId, nextDone).catch((error) => {
+                          console.warn('[Dashboard] update task failed', error)
+                          setPersonalQuests((prev) =>
+                            prev.map((q) => (q.id === personalId ? { ...q, done: !nextDone } : q)),
+                          )
+                        })
+                      }}
+                      style={[styles.check, quest.done && styles.checkDone]}
+                    >
+                      {quest.done && <Ionicons name="checkmark" size={15} color={colors.onAccent} />}
+                    </Pressable>
+                    <Text style={[styles.questText, quest.done && styles.questDone]}>{quest.label}</Text>
+                    <Text style={styles.questProgress}>{quest.progress}</Text>
+                  </MotionView>
+                </SwipeableRow>
+              )
+            })
+          )}
         </View>
 
         <View style={styles.sectionHeader}>
@@ -447,16 +501,19 @@ function DashboardFab({
       </Animated.View>
 
       <View pointerEvents="box-none" style={styles.fabAnchor}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={open ? 'Quick add menu' : 'Open actions'}
-          onPress={open ? undefined : onToggle}
-          style={styles.fabPressWrap}
-        >
+        <View style={styles.fabPressWrap}>
           <Animated.View style={[styles.fabShell, shellStyle]}>
-            <Animated.View pointerEvents="none" style={[styles.fabPlusLayer, plusStyle]}>
-              <Ionicons name="add" size={28} color={colors.onAccent} />
-            </Animated.View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open actions"
+              onPress={onToggle}
+              pointerEvents={open ? 'none' : 'auto'}
+              style={styles.fabPlusLayer}
+            >
+              <Animated.View pointerEvents="none" style={plusStyle}>
+                <Ionicons name="add" size={28} color={colors.onAccent} />
+              </Animated.View>
+            </Pressable>
             <Animated.View
               pointerEvents={open ? 'auto' : 'none'}
               style={[styles.fabMenu, menuStyle]}
@@ -497,7 +554,7 @@ function DashboardFab({
               </Pressable>
             </Animated.View>
           </Animated.View>
-        </Pressable>
+        </View>
       </View>
     </>
   )

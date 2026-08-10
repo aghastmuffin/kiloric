@@ -19,3 +19,8 @@
 **Learning:** Concurrent focus triggers in multi-tab navigation (Dial, meals logger, account stats) cause excessive duplicate database hits to `getTodayMeals`. Declaring the fetching wrapper as a synchronous function returning a Promise avoids V8's promise-wrapping microtask overhead. Safely chaining `.then()` and `.finally()` outside of the async block closure prevents Temporal Dead Zone warnings (TS2454) during compiler checks, and verifying background promise identity (`inflightPromise === currentPromise`) guards against out-of-order state overwrites.
 
 **Action:** Always wrap async service fetchers in a synchronous wrapper that returns a Promise for strict identity checks, chain background-caching callbacks outside the async closure, and append `.catch(() => {})` on background side-chains to prevent unhandled promise rejections.
+
+## 2025-05-19 - Custom Memoization for List Rows with Inline Callbacks
+**Learning:** High-density list views (such as search matches and quick logging cards) frequently trigger list-wide re-renders when parent states change (e.g. typing in search, toggling active tabs, or loading states). Traditional `React.memo` is completely bypassed if these rows accept inline arrow function callbacks. Implementing a custom comparator that explicitly verifies only layout-relevant and visual state-affecting props (ignoring unstable callbacks) successfully prevents redundant re-renders and drastically reduces V8 memory allocations and CPU cycles.
+
+**Action:** For lists/rows utilizing inline callback handlers from the parent component, use `React.memo` combined with custom comparator functions to ensure maximum rendering efficiency.
