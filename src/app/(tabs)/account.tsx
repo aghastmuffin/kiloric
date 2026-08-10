@@ -4,6 +4,7 @@ import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
 import { showApiError } from '@/lib/apiErrors';
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
@@ -580,7 +581,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 8,
   },
   headerPressed: {
-    opacity: 0.65,
+    backgroundColor: c.accentSoft,
+    opacity: 0.8,
   },
   settingsHeader: {
     flexDirection: 'row',

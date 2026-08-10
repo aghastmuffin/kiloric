@@ -22,3 +22,8 @@
 **Vulnerability:** Potential Broken Object Level Authorization (BOLA) or Insecure Direct Object Reference (IDOR) on database operations, allowing an authenticated session to create, patch, or overwrite another user's profile documents if they knew or guessed the target `userId`.
 **Learning:** Relying purely on client-side application state routing or query parameters without confirming that the requested target identifier matches the authenticated session's token identity introduces severe horizontal privilege escalation risks.
 **Prevention:** Strictly enforce a central ownership assertion (`assertAuthenticatedUserId`) at the service layer boundaries for all state-mutating requests to guarantee users can only affect their own records.
+
+## 2026-08-07 - [Broken Object Level Authorization / IDOR on Meal Mutations]
+**Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on meal updates and transfers, permitting any authenticated user to potentially modify or steal meals belonging to other users if they know the document ID.
+**Learning:** Even if the database layer has security policies, client-side/API transport layers must enforce strict ownership checks as a key defense-in-depth layer to prevent invalid network requests from reaching the server or abusing permissive security configurations.
+**Prevention:** Always assert and verify that the owner ID of a fetched resource document matches the active authenticated session user ID prior to performing any mutating database queries (such as updates or deletes).

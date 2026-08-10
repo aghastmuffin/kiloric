@@ -37,7 +37,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -1302,116 +1302,131 @@ function IdleLogPanels({
   )
 }
 
-function FoodQuickRow({
-  index,
-  title,
-  barcode,
-  protein,
-  fat,
-  carbs,
-  favorited,
-  styles,
-  colors,
-  findDropTarget,
-  onDragStart,
-  onDragHover,
-  onDragEnd,
-  onOpen,
-  onAdd,
-  onToggleFavorite,
-}: {
-  index: number
-  title: string
-  barcode: string
-  protein: number | null
-  fat: number | null
-  carbs: number | null
-  favorited: boolean
-  styles: ReturnType<typeof makeStyles>
-  colors: ThemeColors
-  findDropTarget?: (x: number, y: number) => MealType | null
-  onDragStart?: () => void
-  onDragHover?: (target: MealType | null) => void
-  onDragEnd?: (target: MealType | null) => void
-  onOpen: () => void
-  onAdd: () => void
-  onToggleFavorite: () => void
-}) {
-  const row = (
-    <View style={[styles.recentRow, index > 0 && styles.rowDivider]}>
-      <Pressable style={styles.recentCopy} onPress={onOpen}>
-        <View style={styles.recentTitleRow}>
-          <Text style={styles.recentTitle} numberOfLines={1}>{title}</Text>
-          <Pressable
-            accessibilityLabel={favorited ? 'Remove favorite' : 'Save favorite'}
-            hitSlop={8}
-            onPress={onToggleFavorite}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Ionicons
-              name={favorited ? 'star' : 'star-outline'}
-              size={16}
-              color={favorited ? colors.accent : colors.textFaint}
-            />
-          </Pressable>
-        </View>
-        <MacroPills
-          protein={protein}
-          fat={fat}
-          carbs={carbs}
-          styles={styles}
-          colors={colors}
-        />
-      </Pressable>
-      <Pressable
-        accessibilityLabel={`Add ${title}`}
-        onPress={onAdd}
-        style={({ pressed }) => [styles.addCircle, pressed && styles.addCircleActive]}
+const FoodQuickRow = memo(
+  function FoodQuickRow({
+    index,
+    title,
+    barcode,
+    protein,
+    fat,
+    carbs,
+    favorited,
+    styles,
+    colors,
+    findDropTarget,
+    onDragStart,
+    onDragHover,
+    onDragEnd,
+    onOpen,
+    onAdd,
+    onToggleFavorite,
+  }: {
+    index: number
+    title: string
+    barcode: string
+    protein: number | null
+    fat: number | null
+    carbs: number | null
+    favorited: boolean
+    styles: ReturnType<typeof makeStyles>
+    colors: ThemeColors
+    findDropTarget?: (x: number, y: number) => MealType | null
+    onDragStart?: () => void
+    onDragHover?: (target: MealType | null) => void
+    onDragEnd?: (target: MealType | null) => void
+    onOpen: () => void
+    onAdd: () => void
+    onToggleFavorite: () => void
+  }) {
+    const row = (
+      <View style={[styles.recentRow, index > 0 && styles.rowDivider]}>
+        <Pressable style={styles.recentCopy} onPress={onOpen}>
+          <View style={styles.recentTitleRow}>
+            <Text style={styles.recentTitle} numberOfLines={1}>{title}</Text>
+            <Pressable
+              accessibilityLabel={favorited ? 'Remove favorite' : 'Save favorite'}
+              hitSlop={8}
+              onPress={onToggleFavorite}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Ionicons
+                name={favorited ? 'star' : 'star-outline'}
+                size={16}
+                color={favorited ? colors.accent : colors.textFaint}
+              />
+            </Pressable>
+          </View>
+          <MacroPills
+            protein={protein}
+            fat={fat}
+            carbs={carbs}
+            styles={styles}
+            colors={colors}
+          />
+        </Pressable>
+        <Pressable
+          accessibilityLabel={`Add ${title}`}
+          onPress={onAdd}
+          style={({ pressed }) => [styles.addCircle, pressed && styles.addCircleActive]}
+        >
+          <Ionicons
+            name="add"
+            size={18}
+            color={pressedColor(colors, false)}
+          />
+        </Pressable>
+      </View>
+    )
+
+    const dragEnabled = Boolean(findDropTarget && onDragStart && onDragHover && onDragEnd)
+
+    const inner = (
+      <MotionView
+        from={{ opacity: 0, translateX: 8 }}
+        animate={{ opacity: 1, translateX: 0 }}
+        transition={{ type: 'timing', duration: 260, delay: 140 + index * 40 }}
       >
-        <Ionicons
-          name="add"
-          size={18}
-          color={pressedColor(colors, false)}
-        />
-      </Pressable>
-    </View>
-  )
+        <SwipeableRow
+          swipeLeft={{
+            label: 'Add',
+            icon: 'add-circle-outline',
+            onPress: onAdd,
+          }}
+        >
+          {row}
+        </SwipeableRow>
+      </MotionView>
+    )
 
-  const dragEnabled = Boolean(findDropTarget && onDragStart && onDragHover && onDragEnd)
+    if (dragEnabled) {
+      return (
+        <LogItemDragRow
+          findDropTarget={findDropTarget!}
+          onDragStart={onDragStart!}
+          onDragHover={onDragHover!}
+          onDragEnd={onDragEnd!}
+        >
+          {inner}
+        </LogItemDragRow>
+      )
+    }
 
-  const inner = (
-    <MotionView
-      from={{ opacity: 0, translateX: 8 }}
-      animate={{ opacity: 1, translateX: 0 }}
-      transition={{ type: 'timing', duration: 260, delay: 140 + index * 40 }}
-    >
-      <SwipeableRow
-        swipeLeft={{
-          label: 'Add',
-          icon: 'add-circle-outline',
-          onPress: onAdd,
-        }}
-      >
-        {row}
-      </SwipeableRow>
-    </MotionView>
-  )
-
-  if (dragEnabled) {
+    return inner
+  },
+  (prevProps, nextProps) => {
     return (
-      <LogItemDragRow
-        findDropTarget={findDropTarget!}
-        onDragStart={onDragStart!}
-        onDragHover={onDragHover!}
-        onDragEnd={onDragEnd!}
-      >
-        {inner}
-      </LogItemDragRow>
+      prevProps.index === nextProps.index &&
+      prevProps.title === nextProps.title &&
+      prevProps.barcode === nextProps.barcode &&
+      prevProps.protein === nextProps.protein &&
+      prevProps.fat === nextProps.fat &&
+      prevProps.carbs === nextProps.carbs &&
+      prevProps.favorited === nextProps.favorited &&
+      prevProps.styles === nextProps.styles &&
+      prevProps.colors === nextProps.colors
     )
   }
-
-  return inner
-}
+)
 
 function pressedColor(colors: ThemeColors, active: boolean) {
   return active ? colors.onAccent : colors.textMuted
