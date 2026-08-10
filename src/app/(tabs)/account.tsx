@@ -20,6 +20,7 @@ import {
   normalizeStoredTargetWeightKg,
   parseDisplayUnitsPreference,
 } from '@/lib/units';
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -126,11 +127,20 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
-  const toggle = () => setExpanded((prev) => !prev);
+  const toggle = () => {
+    triggerSelectionHaptic();
+    setExpanded((prev) => !prev);
+  };
 
   return (
       <Animated.View style={styles.card}>
-        <Pressable onPress={toggle} style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityHint="Toggles setting preferences expansion"
+          onPress={toggle}
+          style={({ pressed }) => [styles.header, pressed && styles.headerPressed]}
+        >
           <View style={styles.settingsHeader}>
             <View style={styles.settingsHeaderLeft}>
               <View style={styles.settingsIconBadge}>
@@ -567,6 +577,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   header: {
     paddingVertical: 2,
+    borderRadius: 8,
+  },
+  headerPressed: {
+    opacity: 0.65,
   },
   settingsHeader: {
     flexDirection: 'row',

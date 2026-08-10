@@ -5,3 +5,7 @@
 ## 2025-03-01 - [ESLint Flat Config Global Ignores Configuration]
 **Learning:** In ESLint flat configuration (e.g., `eslint.config.js`), defining global ignores requires placing an object with *only* the `ignores` key as an element in the config array. Mixing ignores inside other objects or not separating them can cause the glob matching to fail, which allows deprecated directories (e.g. `src/dep/*`) to continue throwing errors during validation.
 **Action:** Define a separate, standalone object with only the `ignores` property inside `defineConfig` to declare global flat ignores correctly.
+
+## 2026-08-07 - [Acoustic and Visual Affordance for Custom Collapsible Accordions]
+**Learning:** Custom interactive structures like collapsibles and accordion menus (e.g., `SettingsDrop` in `src/app/(tabs)/account.tsx`) require explicit semantic styling and feedback to match the platform's native equivalents. Adding standard ARIA properties such as `accessibilityRole="button"`, `accessibilityState={{ expanded }}`, and an instructive `accessibilityHint` ensures the screen reader states clearly how to toggle the element. Combining this with tactile haptic feedback (`triggerSelectionHaptic()`) and physical pressed styles delivers a cohesive physical response.
+**Action:** Apply button roles, expanded states, informative instructions, haptic triggers, and pressed styles to all custom interactive collapsible containers.
