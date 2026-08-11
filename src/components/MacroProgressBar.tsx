@@ -10,8 +10,6 @@ type MacroProgressBarProps = {
   gradientColors: [string, string];
 }
 
-const AnimatedRect = Animated.createAnimatedComponent(Rect);
-
 export function MacroProgressBar({ progress, gradientColors }: MacroProgressBarProps) {
   const { colors } = useTheme();
   const gradId = `grad-${gradientColors[0].replace('#', '')}-${gradientColors[1].replace('#', '')}`;
