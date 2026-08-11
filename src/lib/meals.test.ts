@@ -207,7 +207,7 @@ describe('meals authorization checks', () => {
 
     await expect(
       mealsModule.updateMeal('meal-1', { kcal: 600 })
-    ).rejects.toThrow('Unauthorized: You can only update your own meals.')
+    ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
   })
 
   it('updateMeal allows updating if current user is the owner', async () => {
@@ -246,6 +246,6 @@ describe('meals authorization checks', () => {
         'Lunch',
         { kcal: 100, protein: 5, carbs: 10, fat: 2 }
       )
-    ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
+    ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
   })
 })

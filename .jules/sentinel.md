@@ -30,3 +30,8 @@
 **Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on meal updates and transfers, permitting any authenticated user to potentially modify or steal meals belonging to other users if they know the document ID.
 **Learning:** Even if the database layer has security policies, client-side/API transport layers must enforce strict ownership checks as a key defense-in-depth layer to prevent invalid network requests from reaching the server or abusing permissive security configurations.
 **Prevention:** Always assert and verify that the owner ID of a fetched resource document matches the active authenticated session user ID prior to performing any mutating database queries (such as updates or deletes).
+
+## 2026-08-08 - [Unreachable Security Checks & Test Mismatch Alignment]
+**Vulnerability:** Dead/unreachable Broken Object Level Authorization (BOLA) validation blocks and inconsistent security exception message schemas, causing discrepancies between test assertions and actual service-layer behaviors.
+**Learning:** Sequential authorization checks throwing different error strings can result in unreachable dead code and lead to developer confusion, test suite maintenance overhead, and misaligned security boundaries.
+**Prevention:** Unify and standardize all BOLA/IDOR error message schemas across related services, and eliminate redundant sequential database queries or validation blocks while keeping robust guards at the exact entry-point of mutations.
