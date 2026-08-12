@@ -72,6 +72,7 @@ type PersonalQuest = { id: string; label: string; done: boolean }
 
 export default function DashboardScreen() {
   const { user } = useAuth()
+  const userId = user?.$id
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const router = useRouter()
@@ -170,13 +171,13 @@ export default function DashboardScreen() {
 
   const submitTask = useCallback(() => {
     const label = taskDraft.trim()
-    if (!label || !user?.$id) return
+    if (!label || !userId) return
     const optimisticId = `temp-${Date.now()}`
     setPersonalQuests((prev) => [...prev, { id: optimisticId, label, done: false }])
     setTaskModalVisible(false)
     setTaskDraft('')
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    void createTask(user.$id, { title: label })
+    void createTask(userId, { title: label })
       .then((task) => {
         setPersonalQuests((prev) =>
           prev.map((q) => (q.id === optimisticId ? { id: task.$id, label: task.title, done: Boolean(task.done) } : q)),
@@ -186,7 +187,7 @@ export default function DashboardScreen() {
         console.warn('[Dashboard] create task failed', error)
         setPersonalQuests((prev) => prev.filter((q) => q.id !== optimisticId))
       })
-  }, [taskDraft, user?.$id])
+  }, [taskDraft, userId])
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>

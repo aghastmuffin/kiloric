@@ -216,11 +216,6 @@ export async function moveProductBetweenMeals(
     throw new Error('Unauthorized: You can only move products from your own meals.')
   }
 
-  // Defense-in-depth: Verify that the authenticated session user owns the source meal before moving items
-  if (sourceMeal.owner !== sessionUserId) {
-    throw new Error('Unauthorized: You are not permitted to modify this meal.')
-  }
-
   const trimmedBarcode = barcode.trim()
   const items = [...(sourceMeal.items ?? [])]
   const itemIndex = items.indexOf(trimmedBarcode)
@@ -339,6 +334,7 @@ export async function updateMeal(
 
   const sessionUserId = await assertActiveSession()
 
+  // Optimization: Fetch meal exactly once from the database to check ownership, reducing I/O network overhead.
   const existingMeal = await getMeal(mealId)
   if (!existingMeal) {
     throw new Error('Meal not found.')
@@ -352,15 +348,6 @@ export async function updateMeal(
   if (validationError) throw new Error(validationError)
 
   try {
-    // Defense-in-depth: Verify that the authenticated session user owns this meal document before patching
-    const existing = await getMeal(mealId)
-    if (!existing) {
-      throw new Error('Meal not found.')
-    }
-    if (existing.owner !== sessionUserId) {
-      throw new Error('Unauthorized: You are not permitted to modify this meal.')
-    }
-
     const doc = (await databases.updateDocument({
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
