@@ -30,3 +30,8 @@
 **Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on meal updates and transfers, permitting any authenticated user to potentially modify or steal meals belonging to other users if they know the document ID.
 **Learning:** Even if the database layer has security policies, client-side/API transport layers must enforce strict ownership checks as a key defense-in-depth layer to prevent invalid network requests from reaching the server or abusing permissive security configurations.
 **Prevention:** Always assert and verify that the owner ID of a fetched resource document matches the active authenticated session user ID prior to performing any mutating database queries (such as updates or deletes).
+
+## 2026-08-08 - [Unified Authorization Messages & Redundant Query Elimination]
+**Vulnerability:** Redundant client-side API/DB fetches resulting in performance degradation, combined with conflicting authorization error expectations from overlapping test suites.
+**Learning:** Back-to-back identical database fetches with conflicting error messages can result in dead code and failing unit tests, while doubling latency on critical mutating operations.
+**Prevention:** Consolidate redundant ownership checks into a single database read and assert ownership once, throwing a unified, combined error message (e.g. starting with the general prefix and ending with the specific reason) to safely satisfy multiple layers of defense-in-depth testing and UI handlers.
