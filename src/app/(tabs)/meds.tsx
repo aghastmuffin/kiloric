@@ -2,6 +2,7 @@ import { MotionView } from '@/components/MotionView'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
 import { useMemo, useState } from 'react'
@@ -82,7 +83,7 @@ export default function MedsScreen() {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
-  const [selectedDay, setSelectedDay] = useState('mon')
+  const [selectedDay, setSelectedDay] = useState(DAYS[0].key)
   const [completed, setCompleted] = useState<Record<string, boolean>>({})
   const [mood, setMood] = useState<string | null>(null)
 
@@ -95,6 +96,7 @@ export default function MedsScreen() {
   )
 
   const toggleItem = (id: string) => {
+    triggerSelectionHaptic()
     const key = `${selectedDay}-${id}`
     setCompleted((current) => ({ ...current, [key]: !current[key] }))
   }
@@ -146,7 +148,10 @@ export default function MedsScreen() {
                 key={day.key}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                onPress={() => setSelectedDay(day.key)}
+                onPress={() => {
+                  triggerSelectionHaptic()
+                  setSelectedDay(day.key)
+                }}
                 style={({ pressed }) => [
                   styles.day,
                   selected && styles.daySelected,
@@ -280,7 +285,10 @@ export default function MedsScreen() {
                   key={option.id}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  onPress={() => setMood(selected ? null : option.id)}
+                  onPress={() => {
+                    triggerSelectionHaptic()
+                    setMood(selected ? null : option.id)
+                  }}
                   style={({ pressed }) => [
                     styles.moodOption,
                     selected && styles.moodOptionSelected,
