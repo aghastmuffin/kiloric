@@ -397,10 +397,27 @@ type MealsCacheEntry = {
 const cachedTodayMeals: { [userId: string]: MealsCacheEntry } = {}
 const inflightTodayMealsPromises: { [userId: string]: Promise<MealDocument[]> } = {}
 
+// Cache and inflight map for listHistoricMeals keyed by "userId:limit:offset"
+const cachedHistoricMeals: { [key: string]: MealsCacheEntry } = {}
+const inflightHistoricMealsPromises: { [key: string]: Promise<MealDocument[]> } = {}
+
 /** Clear any cached today's meals and any inflight fetching promise to ensure safe mutations/logout. */
 export function clearTodayMealsCache(userId: string): void {
   delete cachedTodayMeals[userId]
   delete inflightTodayMealsPromises[userId]
+
+  // Invalidate any historic meals cache containing this userId
+  const prefix = `${userId}:`
+  for (const key of Object.keys(cachedHistoricMeals)) {
+    if (key.startsWith(prefix)) {
+      delete cachedHistoricMeals[key]
+    }
+  }
+  for (const key of Object.keys(inflightHistoricMealsPromises)) {
+    if (key.startsWith(prefix)) {
+      delete inflightHistoricMealsPromises[key]
+    }
+  }
 }
 
 /** Fetch today's meals (Mirrors the fallback logic in listHistoricMeals to bypass missing index errors) */
@@ -482,46 +499,87 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
   return currentPromise
 }
 
-export async function listHistoricMeals(userId: string, limit = 20, offset = 0): Promise<MealDocument[]> {
-  if (isMealsConfigMissing()) return []
+export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promise<MealDocument[]> {
+  if (isMealsConfigMissing()) return Promise.resolve([])
+
+  const cacheKey = `${userId}:${limit}:${offset}`
+
+  // 1. Check if we have a valid, unexpired cached historic meals
+  const cached = cachedHistoricMeals[cacheKey]
+  if (cached && cached.expiresAt > Date.now()) {
+    return Promise.resolve(cached.meals)
+  }
+
+  // 2. Check if a fetch is already in progress for this query (Deduplication)
+  const inflight = inflightHistoricMealsPromises[cacheKey]
+  if (inflight) {
+    return inflight
+  }
 
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
   const todayStartISO = todayStart.toISOString()
 
-  try {
-    const response = await databases.listDocuments(
-        DATABASE_ID,
-        MEALS_COLLECTION_ID,
-        [
-          Query.equal('owner', userId),
-          Query.lessThan('$createdAt', todayStartISO),
-          Query.orderDesc('$createdAt'),
-          Query.limit(limit),
-          Query.offset(offset),
-        ]
-    )
-    return response.documents as MealDocument[]
-  } catch (err) {
-    console.warn('[listHistoricMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
-
+  // 3. Create the fetch promise
+  const currentPromise = (async () => {
     try {
       const response = await databases.listDocuments(
           DATABASE_ID,
           MEALS_COLLECTION_ID,
           [
             Query.equal('owner', userId),
+            Query.lessThan('$createdAt', todayStartISO),
             Query.orderDesc('$createdAt'),
-            Query.limit(100),
+            Query.limit(limit),
+            Query.offset(offset),
           ]
       )
-      const filtered = response.documents.filter((doc) => new Date(doc.$createdAt) < todayStart)
-      return filtered.slice(offset, offset + limit) as MealDocument[]
-    } catch (fallbackErr) {
-      logAppwriteError('listHistoricMeals fallback', fallbackErr)
-      throw new Error(formatMealError(fallbackErr))
+      return response.documents as MealDocument[]
+    } catch (err) {
+      console.warn('[listHistoricMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
+
+      try {
+        const response = await databases.listDocuments(
+            DATABASE_ID,
+            MEALS_COLLECTION_ID,
+            [
+              Query.equal('owner', userId),
+              Query.orderDesc('$createdAt'),
+              Query.limit(100),
+            ]
+        )
+        const filtered = response.documents.filter((doc) => new Date(doc.$createdAt) < todayStart)
+        return filtered.slice(offset, offset + limit) as MealDocument[]
+      } catch (fallbackErr) {
+        logAppwriteError('listHistoricMeals fallback', fallbackErr)
+        throw new Error(formatMealError(fallbackErr))
+      }
     }
-  }
+  })()
+
+  // Store the inflight promise
+  inflightHistoricMealsPromises[cacheKey] = currentPromise
+
+  // Chain promise outside of the async block to avoid Temporal Dead Zone (TS2454) compilation errors/warnings.
+  // We append a `.catch(() => {})` on the side-chain to consume potential errors and avoid unhandled rejections.
+  currentPromise
+    .then((meals) => {
+      // Ensure background resolving promise verifies identity to prevent out-of-order response state issues
+      if (inflightHistoricMealsPromises[cacheKey] === currentPromise) {
+        cachedHistoricMeals[cacheKey] = {
+          meals,
+          expiresAt: Date.now() + 15000, // 15 seconds TTL
+        }
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (inflightHistoricMealsPromises[cacheKey] === currentPromise) {
+        delete inflightHistoricMealsPromises[cacheKey]
+      }
+    })
+
+  return currentPromise;
 }
 
 export { MEALS_COLLECTION_ID }

@@ -73,8 +73,10 @@ vi.mock('react-native-appwrite', () => {
     Query: {
       equal: (key: string, val: any) => `equal:${key}:${val}`,
       greaterThanEqual: (key: string, val: any) => `gte:${key}:${val}`,
+      lessThan: (key: string, val: any) => `lt:${key}:${val}`,
       orderDesc: (key: string) => `orderDesc:${key}`,
       limit: (val: number) => `limit:${val}`,
+      offset: (val: number) => `offset:${val}`,
     },
   }
 })
@@ -137,6 +139,47 @@ describe('meals caching & deduplication', () => {
     expect(mockListDocuments).toHaveBeenCalledTimes(1)
   })
 
+  it('listHistoricMeals returns meals and caches them', async () => {
+    const mockMeals = [{ $id: 'meal-historic-1', owner: 'user-123', kcal: 500, $createdAt: '2026-01-01T00:00:00.000Z' }]
+    mockListDocuments.mockResolvedValueOnce({ documents: mockMeals })
+
+    // First call: hits databases.listDocuments
+    const result1 = await mealsModule.listHistoricMeals('user-123', 20, 0)
+    expect(result1).toEqual(mockMeals)
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+
+    // Second call (immediate): should hit cache, NOT databases.listDocuments
+    const result2 = await mealsModule.listHistoricMeals('user-123', 20, 0)
+    expect(result2).toEqual(mockMeals)
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+  })
+
+  it('listHistoricMeals deduplicates concurrent parallel requests', async () => {
+    const mockMeals = [{ $id: 'meal-historic-2', owner: 'user-123', kcal: 600, $createdAt: '2026-01-01T00:00:00.000Z' }]
+
+    // We mock listDocuments to return after a brief delay
+    let resolvePromise: any
+    const delayPromise = new Promise((resolve) => {
+      resolvePromise = resolve
+    })
+    mockListDocuments.mockImplementation(() => delayPromise)
+
+    // Fire off both requests in parallel
+    const p1 = mealsModule.listHistoricMeals('user-123', 20, 0)
+    const p2 = mealsModule.listHistoricMeals('user-123', 20, 0)
+
+    // They must be exact same promise reference
+    expect(p1).toBe(p2)
+
+    resolvePromise({ documents: mockMeals })
+
+    const res1 = await p1
+    const res2 = await p2
+    expect(res1).toEqual(mockMeals)
+    expect(res2).toEqual(mockMeals)
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+  })
+
   it('clearTodayMealsCache invalidates cached entries', async () => {
     const mockMeals = [{ $id: 'meal-3', owner: 'user-123', kcal: 700 }]
     mockListDocuments.mockResolvedValue({ documents: mockMeals })
@@ -149,6 +192,21 @@ describe('meals caching & deduplication', () => {
 
     // Next call should query DB again
     await mealsModule.getTodayMeals('user-123')
+    expect(mockListDocuments).toHaveBeenCalledTimes(2)
+  })
+
+  it('clearTodayMealsCache invalidates cached historic entries', async () => {
+    const mockMeals = [{ $id: 'meal-historic-3', owner: 'user-123', kcal: 700, $createdAt: '2026-01-01T00:00:00.000Z' }]
+    mockListDocuments.mockResolvedValue({ documents: mockMeals })
+
+    await mealsModule.listHistoricMeals('user-123', 20, 0)
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+
+    // Clear cache
+    mealsModule.clearTodayMealsCache('user-123')
+
+    // Next call should query DB again
+    await mealsModule.listHistoricMeals('user-123', 20, 0)
     expect(mockListDocuments).toHaveBeenCalledTimes(2)
   })
 
@@ -177,7 +235,7 @@ describe('meals caching & deduplication', () => {
 
       await expect(
         mealsModule.updateMeal('meal-7', { kcal: 600 })
-      ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+      ).rejects.toThrow('Unauthorized: You can only update your own meals.')
 
       expect(mockUpdateDocument).not.toHaveBeenCalled()
     })
@@ -188,7 +246,7 @@ describe('meals caching & deduplication', () => {
 
       await expect(
         mealsModule.moveProductBetweenMeals('user-123', 'meal-8', '1234', 'Lunch', { kcal: 100, protein: 10, carbs: 20, fat: 5 })
-      ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+      ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
 
       expect(mockUpdateDocument).not.toHaveBeenCalled()
       expect(mockDeleteDocument).not.toHaveBeenCalled()
