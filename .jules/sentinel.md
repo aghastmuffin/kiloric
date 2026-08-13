@@ -30,3 +30,8 @@
 **Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on meal updates and transfers, permitting any authenticated user to potentially modify or steal meals belonging to other users if they know the document ID.
 **Learning:** Even if the database layer has security policies, client-side/API transport layers must enforce strict ownership checks as a key defense-in-depth layer to prevent invalid network requests from reaching the server or abusing permissive security configurations.
 **Prevention:** Always assert and verify that the owner ID of a fetched resource document matches the active authenticated session user ID prior to performing any mutating database queries (such as updates or deletes).
+
+## 2026-08-08 - [Broken Object Level Authorization / IDOR on Water Log Deletions]
+**Vulnerability:** Missing owner validation on deleting water logs (`deleteWaterEntry`), allowing any authenticated user to delete another user's water log documents if they supplied the target water log document ID.
+**Learning:** Checking only the authenticated status of the requested user parameter is insufficient when manipulating individual database document resources. Without fetching and validating the resource owner against the active user ID, malicious or horizontal actors can execute direct resource mutations on behalf of others.
+**Prevention:** Always retrieve the target database document resource and perform an ownership assertion (`existing.owner === sessionUserId`) at the service layer prior to applying destructive or mutating database operations.
