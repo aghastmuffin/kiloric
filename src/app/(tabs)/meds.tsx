@@ -1,4 +1,5 @@
 import { MotionView } from '@/components/MotionView'
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
@@ -82,7 +83,7 @@ export default function MedsScreen() {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
-  const [selectedDay, setSelectedDay] = useState('mon')
+  const [selectedDay, setSelectedDay] = useState(DAYS[0].key)
   const [completed, setCompleted] = useState<Record<string, boolean>>({})
   const [mood, setMood] = useState<string | null>(null)
 
@@ -146,7 +147,10 @@ export default function MedsScreen() {
                 key={day.key}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                onPress={() => setSelectedDay(day.key)}
+                onPress={() => {
+                  triggerSelectionHaptic()
+                  setSelectedDay(day.key)
+                }}
                 style={({ pressed }) => [
                   styles.day,
                   selected && styles.daySelected,
@@ -228,7 +232,10 @@ export default function MedsScreen() {
                   accessibilityRole="checkbox"
                   accessibilityLabel={`Mark ${item.title} complete`}
                   accessibilityState={{ checked: done }}
-                  onPress={() => toggleItem(item.id)}
+                  onPress={() => {
+                    triggerSelectionHaptic()
+                    toggleItem(item.id)
+                  }}
                   style={({ pressed }) => [styles.scheduleBody, pressed && styles.pressed]}
                 >
                   <View style={[styles.itemIcon, isWellbeing && styles.itemIconWellbeing, done && styles.itemIconDone]}>
@@ -280,7 +287,10 @@ export default function MedsScreen() {
                   key={option.id}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  onPress={() => setMood(selected ? null : option.id)}
+                  onPress={() => {
+                    triggerSelectionHaptic()
+                    setMood(selected ? null : option.id)
+                  }}
                   style={({ pressed }) => [
                     styles.moodOption,
                     selected && styles.moodOptionSelected,
