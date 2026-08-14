@@ -24,3 +24,8 @@
 **Learning:** High-density list views (such as search matches and quick logging cards) frequently trigger list-wide re-renders when parent states change (e.g. typing in search, toggling active tabs, or loading states). Traditional `React.memo` is completely bypassed if these rows accept inline arrow function callbacks. Implementing a custom comparator that explicitly verifies only layout-relevant and visual state-affecting props (ignoring unstable callbacks) successfully prevents redundant re-renders and drastically reduces V8 memory allocations and CPU cycles.
 
 **Action:** For lists/rows utilizing inline callback handlers from the parent component, use `React.memo` combined with custom comparator functions to ensure maximum rendering efficiency.
+
+## 2025-05-20 - Consolidated Database Fetching for Mutations
+**Learning:** A redundant database query was introduced inside `updateMeal` because the security agent's BOLA/IDOR fix kept both the top-level and inner-try block checks, each independently requesting `getMeal(mealId)` sequentially. Consolidating the check to a single `getMeal` read cuts network query roundtrips in half per transaction, significantly reducing overall latency, while keeping security checks 100% robust.
+
+**Action:** Avoid redundant, sequential database gets inside mutating methods. Fetch the document exactly once, and run both primary and defensive validation checks on the retrieved local reference.

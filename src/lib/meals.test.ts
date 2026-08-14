@@ -177,7 +177,7 @@ describe('meals caching & deduplication', () => {
 
       await expect(
         mealsModule.updateMeal('meal-7', { kcal: 600 })
-      ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+      ).rejects.toThrow('Unauthorized: You can only update your own meals.')
 
       expect(mockUpdateDocument).not.toHaveBeenCalled()
     })
@@ -188,7 +188,7 @@ describe('meals caching & deduplication', () => {
 
       await expect(
         mealsModule.moveProductBetweenMeals('user-123', 'meal-8', '1234', 'Lunch', { kcal: 100, protein: 10, carbs: 20, fat: 5 })
-      ).rejects.toThrow('Unauthorized: You are not permitted to modify this meal.')
+      ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
 
       expect(mockUpdateDocument).not.toHaveBeenCalled()
       expect(mockDeleteDocument).not.toHaveBeenCalled()
