@@ -24,9 +24,11 @@
 **Prevention:** Strictly enforce a central ownership assertion (`assertAuthenticatedUserId`) at the service layer boundaries for all state-mutating requests to guarantee users can only affect their own records.
 
 ## 2026-08-07 - [Broken Object Level Authorization / IDOR on Meal Mutations]
-**Vulnerability:** Missing authorization validation on meal document updates (`updateMeal`) and product relocations (`moveProductBetweenMeals`), permitting an authenticated user to overwrite or mutate meals belonging to other users if they supplied the target meal resource ID.
-**Learning:** Failing to confirm database document resource ownership at the service layer before executing updates can lead to horizontal privilege escalation, enabling malicious or unauthorized users to tamper with or mutate other users' meal data.
-**Prevention:** Assert that the active session's user ID matches the owner ID of the fetched meal document (`existingMeal.owner === sessionUserId`) prior to applying mutations or relocations.
 **Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on meal updates and transfers, permitting any authenticated user to potentially modify or steal meals belonging to other users if they know the document ID.
 **Learning:** Even if the database layer has security policies, client-side/API transport layers must enforce strict ownership checks as a key defense-in-depth layer to prevent invalid network requests from reaching the server or abusing permissive security configurations.
 **Prevention:** Always assert and verify that the owner ID of a fetched resource document matches the active authenticated session user ID prior to performing any mutating database queries (such as updates or deletes).
+
+## 2026-08-08 - [Broken Object Level Authorization / IDOR on Water Log Deletion]
+**Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on water log deletions, allowing any authenticated user to delete other users' water entry records if they knew the target document ID.
+**Learning:** Relying solely on checking that the logged-in user session matches the requested user ID param is not enough. We must always fetch the target resource first and explicitly verify that the resource's owner ID matches the authenticated user ID before executing destructive database mutations.
+**Prevention:** Fetch the document first via `databases.getDocument` and strictly check that the retrieved document owner matches the session user ID (`existing.owner === userId`).
