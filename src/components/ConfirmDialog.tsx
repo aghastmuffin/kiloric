@@ -1,7 +1,8 @@
+import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { OnboardingColors } from '@/lib/theme/tokens'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import {
   ActivityIndicator,
   Modal,
@@ -67,15 +68,25 @@ export function ConfirmDialog({
     transform: [{ scale: cardScale.value }],
   }))
 
+  const handleCancel = useCallback(() => {
+    triggerSelectionHaptic()
+    onCancel()
+  }, [onCancel])
+
+  const handleConfirm = useCallback(() => {
+    triggerImpactHaptic()
+    onConfirm()
+  }, [onConfirm])
+
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onCancel}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleCancel}>
       <View style={styles.root}>
         <Animated.View style={[styles.backdrop, backdropStyle]}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Dismiss dialog"
             style={StyleSheet.absoluteFill}
-            onPress={loading ? undefined : onCancel}
+            onPress={loading ? undefined : handleCancel}
           />
         </Animated.View>
 
@@ -87,7 +98,7 @@ export function ConfirmDialog({
             <Pressable
               accessibilityRole="button"
               disabled={loading}
-              onPress={onCancel}
+              onPress={handleCancel}
               style={({ pressed }) => [
                 styles.button,
                 styles.cancelButton,
@@ -101,7 +112,7 @@ export function ConfirmDialog({
             <Pressable
               accessibilityRole="button"
               disabled={loading}
-              onPress={onConfirm}
+              onPress={handleConfirm}
               style={({ pressed }) => [
                 styles.button,
                 destructive ? styles.destructiveButton : styles.confirmButton,

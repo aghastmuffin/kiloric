@@ -1,4 +1,5 @@
 import type { ApiErrorSource } from '@/lib/apiErrors'
+import { triggerNotificationHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -80,6 +81,7 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
   useEffect(() => {
     if (!error) return
 
+    triggerNotificationHaptic('error')
     setVisible(error)
     animateIn()
     clearTimer()
