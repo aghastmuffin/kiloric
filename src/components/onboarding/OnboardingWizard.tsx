@@ -22,15 +22,14 @@ import { UnitToggle } from '@/components/onboarding/UnitToggle'
 import { showApiError } from '@/lib/apiErrors'
 import { isValidEmail, isValidPassword } from '@/lib/authValidation'
 import { useAuth } from '@/lib/AuthContext'
+import { buildGoalStateFromPlan } from '@/lib/goals'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import { COUNTRY_OPTIONS } from '@/lib/countries'
 import {
   ACTIVITY_OPTIONS,
   buildNutritionPlan,
-  calculateWeeklyDeficit,
   DIET_OPTIONS,
-  estimateWeeklyWeightChangeKg,
   GOAL_OPTIONS,
   PACE_OPTIONS,
   type NutritionPlan,

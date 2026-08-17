@@ -1,43 +1,43 @@
-import RadialGauge from '@/components/Gague'
-import { MotionView } from '@/components/MotionView'
-import { NoiseOverlay } from '@/components/ui/NoiseOverlay'
-import { Ticker } from '@/components/ui/Ticker'
-import { SwipeableRow } from '@/components/SwipeableRow'
-import { useAuth } from '@/lib/AuthContext'
-import { calculateStreak, calculateXP } from '@/lib/gamification'
-import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals'
-import { panelSpring, quickTiming } from '@/lib/motion'
-import { getProfile, type ProfileDocument } from '@/lib/profile'
-import { createTask, deleteTask, listTasks, setTaskDone } from '@/lib/tasks'
-import { useTheme } from '@/lib/theme/ThemeContext'
-import type { ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
-import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
-import { useFocusEffect, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import RadialGauge from '@/components/Gague';
+import { MotionView } from '@/components/MotionView';
+import { SwipeableRow } from '@/components/SwipeableRow';
+import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
+import { Ticker } from '@/components/ui/Ticker';
+import { useAuth } from '@/lib/AuthContext';
+import { calculateStreak, calculateXP } from '@/lib/gamification';
+import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
+import { panelSpring, quickTiming } from '@/lib/motion';
+import { getProfile, type ProfileDocument } from '@/lib/profile';
+import { createTask, deleteTask, listTasks, setTaskDone } from '@/lib/tasks';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
+    ActivityIndicator,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
 import Animated, {
-  Extrapolation,
-  interpolate,
-  interpolateColor,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+    Extrapolation,
+    interpolate,
+    interpolateColor,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FAB_SIZE = 56
 const MENU_WIDTH = 208
@@ -141,7 +141,7 @@ export default function DashboardScreen() {
     proteinTargetHit: totals.protein >= targets.protein,
   })
   const quests = [
-    { key: 'meals', label: 'Log three meal moments', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
+    { key: 'meals', label: 'Log three meals', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
     { key: 'protein', label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
     { key: 'hydrate', label: 'Hydrate with intention', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
     ...personalQuests.map((q) => ({

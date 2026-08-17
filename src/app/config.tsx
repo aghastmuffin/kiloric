@@ -79,7 +79,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15);
 
 const CONFIG_TABS = ['Profile', 'Body & Goals', 'Targets', 'Preferences'] as const;
-type ConfigTab = (typeof CONFIG_TABS)[number];
 
 function parseProfileDate(value?: string): Date {
   if (!value) return DEFAULT_DATE_OF_BIRTH;

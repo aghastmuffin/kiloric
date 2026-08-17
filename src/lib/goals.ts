@@ -37,6 +37,8 @@ export type GoalProgress = {
   currentWeightKg: number
   startWeightKg: number
   targetWeightKg: number
+  /** Signed weekly body-mass change rate from the goal. */
+  paceKgPerWeek: number
   /** Whole weeks elapsed since goal_start_date. */
   elapsedWeeks: number
   estimatedWeeks: number
@@ -143,12 +145,7 @@ export function resolveGoalState(profile: ProfileDocument | null | undefined): G
     resolveNumber(profile.target_weight) ??
     weight
 
-  const startWeight =
-    resolveNumber(profile.goal_start_weight_kg) ??
-    resolveNumber(profile.target_weight && profile.weight
-      ? profile.weight + (profile.target_weight - profile.weight)
-      : null) ??
-    weight
+  const startWeight = resolveNumber(profile.goal_start_weight_kg) ?? weight
 
   let type: FitnessGoal | null = profile.goal_type ?? null
   if (!type && profile.target_weight != null && profile.weight != null) {
@@ -218,6 +215,7 @@ export function calculateGoalProgress(
     currentWeightKg,
     startWeightKg: goal.startWeightKg,
     targetWeightKg: goal.targetWeightKg,
+    paceKgPerWeek: goal.paceKgPerWeek,
     elapsedWeeks,
     estimatedWeeks: goal.estimatedWeeks,
     weeksRemaining,
@@ -253,8 +251,8 @@ export function formatGoalProgress(
   }
 
   const losing = progress.targetWeightKg < progress.startWeightKg
-  const paceKg = progress.weeksRemaining == null ? 0 : Math.abs(progress.targetWeightKg - progress.currentWeightKg) / Math.max(1, progress.weeksRemaining)
-  const paceDisplay = paceKg > 0 ? `~${paceKg.toFixed(2)} kg/week` : 'On maintenance pace'
+  const absPace = Math.abs(progress.paceKgPerWeek)
+  const paceDisplay = absPace > 0 ? `~${absPace.toFixed(2)} kg/week` : 'On maintenance pace'
   const weeksDisplay = progress.weeksRemaining == null ? null : `${progress.weeksRemaining} week${progress.weeksRemaining === 1 ? '' : 's'} left`
 
   return {

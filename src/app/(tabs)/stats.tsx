@@ -1,29 +1,29 @@
-import { useAuth } from '@/lib/AuthContext'
-import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals'
-import { getProfile, type ProfileDocument } from '@/lib/profile'
-import { useTheme } from '@/lib/theme/ThemeContext'
-import type { ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { useAuth } from '@/lib/AuthContext';
+import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
+import { getProfile, type ProfileDocument } from '@/lib/profile';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
-  formatWeightImperial,
-  formatWeightMetric,
-  normalizeStoredMetricsToMetric,
-  normalizeStoredTargetWeightKg,
-  parseDisplayUnitsPreference,
-} from '@/lib/units'
-import { Ionicons } from '@expo/vector-icons'
-import { useFocusEffect } from 'expo-router'
-import { useCallback, useMemo, useState } from 'react'
+    formatWeightImperial,
+    formatWeightMetric,
+    normalizeStoredMetricsToMetric,
+    normalizeStoredTargetWeightKg,
+    parseDisplayUnitsPreference,
+} from '@/lib/units';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Period = 'week' | 'month'
 type StatsData = {
@@ -97,7 +97,7 @@ function getInsight(days: DayTotal[], goal: number | null): { title: string; bod
   if (average > goal * 1.15) {
     return {
       title: 'Logged days are trending above goal',
-      body: `Your logged-day average is ${Math.round(average - goal)} kcal above goal. Look for the meal moments driving the gap.`,
+      body: `Your logged-day average is ${Math.round(average - goal)} kcal above goal. Look for the meals driving the gap.`,
     }
   }
   if (average < goal * 0.85) {
