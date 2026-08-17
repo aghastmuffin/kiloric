@@ -1,5 +1,5 @@
-import { account, databases } from '@/lib/appwrite'
-import { localDayBounds, totalWaterMl as sumWaterMl } from '@/lib/waterUtils'
+import { account, databases } from './appwrite'
+import { localDayBounds, totalWaterMl as sumWaterMl } from './waterUtils'
 import { AppwriteException, ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -80,8 +80,23 @@ export async function addWaterEntry(
 }
 
 export async function deleteWaterEntry(userId: string, documentId: string): Promise<void> {
-  await authenticatedUserId(userId)
+  if (!DATABASE_ID || !WATER_COLLECTION_ID) {
+    throw new Error('Missing database configuration.')
+  }
+  const sessionUserId = await authenticatedUserId(userId)
   if (!/^[a-zA-Z0-9._-]{1,64}$/.test(documentId)) throw new Error('Invalid water entry.')
+
+  const doc = (await databases.getDocument({
+    databaseId: DATABASE_ID,
+    collectionId: WATER_COLLECTION_ID,
+    documentId,
+  })) as unknown as WaterDocument
+
+  if (!doc) throw new Error('Water entry not found.')
+  if (doc.owner !== sessionUserId) {
+    throw new Error('Unauthorized: You can only delete your own water logs.')
+  }
+
   await databases.deleteDocument({
     databaseId: DATABASE_ID,
     collectionId: WATER_COLLECTION_ID,
