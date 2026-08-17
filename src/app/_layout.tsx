@@ -94,6 +94,10 @@ function RootNavigation() {
                   />
                   <Stack.Screen name="fooddetail" options={{ headerShown: true, headerTitle: "Food Details" }} />
                   <Stack.Screen name="present_n_save" options={{ headerShown: true, headerTitle: "Confirm Selection" }} />
+                  <Stack.Screen
+                    name="privacy-policy"
+                    options={{ headerShown: true, headerTitle: "Privacy Policy" }}
+                  />
                 </Stack>
               </SearchPreferencesProvider>
             </MealTypePreferencesProvider>
