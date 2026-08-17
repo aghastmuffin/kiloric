@@ -4,6 +4,7 @@ import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
 import { showApiError } from '@/lib/apiErrors';
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
@@ -126,11 +127,20 @@ export function SettingsDrop({ defaultSearchMode, savingPreference, onSearchMode
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
-  const toggle = () => setExpanded((prev) => !prev);
+  const toggle = () => {
+    triggerSelectionHaptic();
+    setExpanded((prev) => !prev);
+  };
 
   return (
       <Animated.View style={styles.card}>
-        <Pressable onPress={toggle} style={styles.header}>
+        <Pressable
+          onPress={toggle}
+          style={({ pressed }) => [styles.header, pressed && styles.headerPressed]}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityHint="Toggles preference and theme settings menu"
+        >
           <View style={styles.settingsHeader}>
             <View style={styles.settingsHeaderLeft}>
               <View style={styles.settingsIconBadge}>
@@ -567,6 +577,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   header: {
     paddingVertical: 2,
+    borderRadius: 8,
+  },
+  headerPressed: {
+    backgroundColor: c.accentSoft,
+    opacity: 0.8,
   },
   settingsHeader: {
     flexDirection: 'row',

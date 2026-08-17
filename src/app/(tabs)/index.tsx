@@ -188,7 +188,7 @@ export default function DashboardScreen() {
         console.warn('[Dashboard] create task failed', error)
         setPersonalQuests((prev) => prev.filter((q) => q.id !== optimisticId))
       })
-  }, [taskDraft, user?.$id])
+  }, [taskDraft, user])
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>
