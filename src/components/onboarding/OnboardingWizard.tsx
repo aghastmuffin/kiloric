@@ -29,7 +29,9 @@ import { COUNTRY_OPTIONS } from '@/lib/countries'
 import {
   ACTIVITY_OPTIONS,
   buildNutritionPlan,
+  calculateWeeklyDeficit,
   DIET_OPTIONS,
+  estimateWeeklyWeightChangeKg,
   GOAL_OPTIONS,
   PACE_OPTIONS,
   type NutritionPlan,
@@ -372,7 +374,11 @@ export function OnboardingWizard() {
 
     const targetKg = roundMetric(form.targetWeight ?? plan.targetWeight)
     const goalPlain = appendDisplayUnitsToGoalPlain(plan.goalPlain, form.displayUnits)
-    const weeklyDeficitToSave = calculateWeeklyDeficit(plan.tdee, macros.targetKcal)
+    const goalState = buildGoalStateFromPlan(plan, {
+      goal: form.goal,
+      pace: form.pace,
+      startWeightKg: roundMetric(form.weight),
+    })
 
     setSaving(true)
     setSaveError(null)
@@ -395,7 +401,13 @@ export function OnboardingWizard() {
         TDEE: plan.tdee,
         goal_plain: goalPlain,
         target_weight: targetKg,
-        weekly_deficit: weeklyDeficitToSave,
+        weekly_deficit: plan.weeklyDeficit,
+        goal_type: goalState.type,
+        goal_pace_kg_per_week: goalState.paceKgPerWeek,
+        goal_start_weight_kg: goalState.startWeightKg,
+        goal_target_weight_kg: goalState.targetWeightKg,
+        goal_start_date: goalState.startDate,
+        goal_estimated_weeks: goalState.estimatedWeeks,
       })
 
       allowLeaveRef.current = true

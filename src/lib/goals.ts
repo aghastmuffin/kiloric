@@ -9,6 +9,8 @@ import {
 } from './nutrition'
 import type { ProfileDocument } from './profile'
 
+export type { FitnessGoal, GoalPace } from './nutrition'
+
 /**
  * Machine-readable weight/energy goal state.
  *

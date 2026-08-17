@@ -31,6 +31,7 @@ import {
   type NutritionPlan,
   type Sex,
 } from '@/lib/nutrition';
+import { buildGoalState } from '@/lib/goals';
 import {
   dateToIso,
   DEFAULT_PROFILE_ROLE,
@@ -118,6 +119,10 @@ export default function ConfigScreen() {
   const [goal, setGoal] = useState<FitnessGoal>('maintain');
   const [pace, setPace] = useState<GoalPace>('moderate');
   const [diet, setDiet] = useState<DietStyle>('balanced');
+
+  // Machine-readable goal state (preserved across saves)
+  const [goalStartWeightKg, setGoalStartWeightKg] = useState<number | null>(null);
+  const [goalStartDate, setGoalStartDate] = useState<string | null>(null);
 
   // Daily target overrides
   const [targetKcal, setTargetKcal] = useState<number | null>(null);
@@ -235,6 +240,9 @@ export default function ConfigScreen() {
         setTargetFat(profile.target_fat ?? null);
         setDailyFluid(profile.daily_fluid ?? null);
 
+        setGoalStartWeightKg(profile.goal_start_weight_kg ?? null);
+        setGoalStartDate(profile.goal_start_date ?? null);
+
         const cleanGoalText = profile.goal_plain
           ? profile.goal_plain.replace(/ · units:(metric|imperial)$/, '').trim()
           : '';
@@ -317,6 +325,15 @@ export default function ConfigScreen() {
           });
 
       const goalPlainWithUnits = appendDisplayUnitsToGoalPlain(finalGoalBase, displayUnits);
+      const finalTargetWeight = roundMetric(targetWeight ?? computedPlan.targetWeight);
+
+      const goalState = buildGoalState({
+        goal,
+        pace,
+        startWeightKg: goalStartWeightKg ?? roundMetric(weight),
+        targetWeightKg: finalTargetWeight,
+        startDate: goalStartDate ? new Date(goalStartDate) : new Date(),
+      });
 
       await saveProfileFields(user.$id, {
         username: username.trim(),
@@ -335,8 +352,14 @@ export default function ConfigScreen() {
         daily_fluid: activeDailyFluid,
         TDEE: computedPlan.tdee,
         goal_plain: goalPlainWithUnits,
-        target_weight: roundMetric(targetWeight ?? computedPlan.targetWeight),
+        target_weight: finalTargetWeight,
         weekly_deficit: currentWeeklyDeficit,
+        goal_type: goalState.type,
+        goal_pace_kg_per_week: goalState.paceKgPerWeek,
+        goal_start_weight_kg: goalState.startWeightKg,
+        goal_target_weight_kg: goalState.targetWeightKg,
+        goal_start_date: goalState.startDate,
+        goal_estimated_weeks: goalState.estimatedWeeks,
       });
 
       allowLeaveRef.current = true;

@@ -1,6 +1,5 @@
 import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
-import { SearchPreferencesProvider } from '@/lib/SearchPreferencesContext';
 import { FONT_FAMILY } from '@/lib/fonts';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,9 +96,7 @@ export default function TabLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ProfileGate>
-        <SearchPreferencesProvider>
-          <TabNavigator />
-        </SearchPreferencesProvider>
+        <TabNavigator />
       </ProfileGate>
     </GestureHandlerRootView>
   );

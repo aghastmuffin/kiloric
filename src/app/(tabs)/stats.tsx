@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/AuthContext';
+import { resolveGoalState } from '@/lib/goals';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import { useTheme } from '@/lib/theme/ThemeContext';
@@ -8,8 +9,6 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
     formatWeightImperial,
     formatWeightMetric,
-    normalizeStoredMetricsToMetric,
-    normalizeStoredTargetWeightKg,
     parseDisplayUnitsPreference,
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
@@ -280,13 +279,13 @@ export default function StatsScreen() {
   const weightSnapshot = useMemo(() => {
     const profile = data.profile
     if (!profile || typeof profile.weight !== 'number') return null
+    const goal = resolveGoalState(profile)
+    if (!goal) return null
     const units = parseDisplayUnitsPreference(profile.goal_plain, profile.country)
-    const { weightKg } = normalizeStoredMetricsToMetric(profile.country, profile.height, profile.weight)
-    const targetKg = normalizeStoredTargetWeightKg(profile.country, profile.target_weight, profile.height)
     const format = units === 'imperial' ? formatWeightImperial : formatWeightMetric
     return {
-      current: format(weightKg),
-      target: targetKg == null ? null : format(targetKg),
+      current: format(profile.weight),
+      target: format(goal.targetWeightKg),
     }
   }, [data.profile])
 

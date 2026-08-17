@@ -4,6 +4,7 @@ import { AuthProvider } from '@/lib/AuthContext';
 import { FontPreferencesProvider, useFontPreferences } from '@/lib/FontPreferencesContext';
 import { FONT_FAMILY, fontAssets } from '@/lib/fonts';
 import { MealTypePreferencesProvider } from '@/lib/MealTypePreferencesContext';
+import { SearchPreferencesProvider } from '@/lib/SearchPreferencesContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useFonts } from 'expo-font';
@@ -74,25 +75,27 @@ function RootNavigation() {
         <ApiBackendPreferencesProvider>
           <AuthProvider>
             <MealTypePreferencesProvider>
-              <Stack screenOptions={{ headerTitleStyle: navigationFontStyle }}>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="cameraview"
-                  options={{ headerShown: true, headerTitle: "Scan Barcode", unmountOnBlur: true }}
-                />
-                <Stack.Screen name="signin" options={{ headerShown: false }} />
-                <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-                <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
-                <Stack.Screen name="Additions" options={{ headerShown: false }} />
-                <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
-                <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Results" }} />
-                <Stack.Screen
-                  name="contribute-food"
-                  options={{ headerShown: true, headerTitle: "Add missing food" }}
-                />
-                <Stack.Screen name="fooddetail" options={{ headerShown: true, headerTitle: "Food Details" }} />
-                <Stack.Screen name="present_n_save" options={{ headerShown: true, headerTitle: "Confirm Selection" }} />
-              </Stack>
+              <SearchPreferencesProvider>
+                <Stack screenOptions={{ headerTitleStyle: navigationFontStyle }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="cameraview"
+                    options={{ headerShown: true, headerTitle: "Scan Barcode", unmountOnBlur: true }}
+                  />
+                  <Stack.Screen name="signin" options={{ headerShown: false }} />
+                  <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+                  <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
+                  <Stack.Screen name="Additions" options={{ headerShown: false }} />
+                  <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
+                  <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Results" }} />
+                  <Stack.Screen
+                    name="contribute-food"
+                    options={{ headerShown: true, headerTitle: "Add missing food" }}
+                  />
+                  <Stack.Screen name="fooddetail" options={{ headerShown: true, headerTitle: "Food Details" }} />
+                  <Stack.Screen name="present_n_save" options={{ headerShown: true, headerTitle: "Confirm Selection" }} />
+                </Stack>
+              </SearchPreferencesProvider>
             </MealTypePreferencesProvider>
           </AuthProvider>
         </ApiBackendPreferencesProvider>

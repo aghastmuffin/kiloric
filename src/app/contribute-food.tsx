@@ -496,7 +496,7 @@ export default function ContributeFoodScreen() {
           ) : (
             <>
               <Ionicons name="checkmark-circle-outline" size={20} color={colors.onAccent} />
-              <Text style={styles.submitText}>Submit contribution</Text>
+              <Text style={styles.submitText}>Submit new foodstuff</Text>
             </>
           )}
         </Pressable>

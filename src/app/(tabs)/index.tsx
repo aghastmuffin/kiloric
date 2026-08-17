@@ -4,6 +4,7 @@ import { SwipeableRow } from '@/components/SwipeableRow';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { Ticker } from '@/components/ui/Ticker';
 import { useAuth } from '@/lib/AuthContext';
+import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
 import { panelSpring, quickTiming } from '@/lib/motion';
@@ -13,6 +14,11 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import {
+  formatWeightImperial,
+  formatWeightMetric,
+  parseDisplayUnitsPreference,
+} from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -132,6 +138,21 @@ export default function DashboardScreen() {
     fat: data.profile?.target_fat ?? 70,
     fluid: data.profile?.daily_fluid ?? 2000,
   }
+
+  const displayUnits = useMemo(
+    () => parseDisplayUnitsPreference(data.profile?.goal_plain, data.profile?.country),
+    [data.profile?.goal_plain, data.profile?.country],
+  )
+  const formatWeight = useMemo(
+    () => (displayUnits === 'imperial' ? formatWeightImperial : formatWeightMetric),
+    [displayUnits],
+  )
+  const goalProgress = useMemo(() => calculateGoalProgress(data.profile), [data.profile])
+  const goalSummary = useMemo(
+    () => formatGoalProgress(goalProgress, formatWeight),
+    [goalProgress, formatWeight],
+  )
+
   const allMeals = [...data.today, ...data.history]
   const streak = calculateStreak(allMeals)
   const xp = calculateXP({
@@ -257,6 +278,28 @@ export default function DashboardScreen() {
             ))}
           </View>
         </View>
+
+        {goalProgress ? (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.eyebrow}>GOAL</Text>
+                <Text style={styles.sectionTitle}>{goalSummary.label}</Text>
+              </View>
+              <Text style={styles.sectionMeta}>{goalSummary.progressDisplay}</Text>
+            </View>
+            <View style={styles.goalProgressBody}>
+              <View style={styles.goalProgressRow}>
+                <Text style={styles.goalProgressValue}>{goalSummary.targetWeightDisplay}</Text>
+                <Text style={styles.goalProgressValue}>{goalSummary.paceDisplay}</Text>
+              </View>
+              <ProgressBar value={goalProgress.progress * 100} max={100} />
+              {goalSummary.weeksDisplay ? (
+                <Text style={styles.goalProgressMeta}>{goalSummary.weeksDisplay}</Text>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Daily quests</Text>
@@ -597,6 +640,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 7 },
   sectionMeta: { ...typography.labelSmall, color: c.textMuted },
   card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 8, paddingHorizontal: 16 },
+  goalProgressBody: { paddingVertical: 16, gap: 10 },
+  goalProgressRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  goalProgressValue: { ...typography.body, color: c.text, fontWeight: '600' },
+  goalProgressMeta: { ...typography.labelSmall, color: c.textMuted, textAlign: 'right' },
   quest: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center' },

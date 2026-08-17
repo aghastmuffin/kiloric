@@ -8,6 +8,7 @@ import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
+import { resolveGoalState } from '@/lib/goals';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
@@ -18,7 +19,6 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
   formatWeightImperial,
   formatWeightMetric,
-  normalizeStoredTargetWeightKg,
   parseDisplayUnitsPreference,
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
@@ -251,9 +251,8 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
   const goal = profile?.goal_plain?.replace(/ · units:(metric|imperial)$/, '').trim()
     || 'Build a consistent, balanced routine';
   const displayUnits = parseDisplayUnitsPreference(profile?.goal_plain, profile?.country);
-  const targetWeightKg = profile
-    ? normalizeStoredTargetWeightKg(profile.country, profile.target_weight, profile.height)
-    : null;
+  const goalState = profile ? resolveGoalState(profile) : null;
+  const targetWeightKg = goalState?.targetWeightKg ?? null;
   const targetWeight = targetWeightKg == null
     ? null
     : (displayUnits === 'imperial'
