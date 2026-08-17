@@ -1,5 +1,5 @@
 import type { ThemeColors } from '@/lib/theme/tokens'
-import { Platform, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
 
 export const makeAppStyles = (c: ThemeColors) =>
   StyleSheet.create({
@@ -27,60 +27,38 @@ export const makeAppStyles = (c: ThemeColors) =>
     input: {
       backgroundColor: c.surfaceAlt,
       color: c.text,
-      borderRadius: 16,
-      paddingVertical: 16,
-      paddingHorizontal: 20,
+      borderRadius: 4,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
       fontSize: 16,
-      borderWidth: 1,
-      borderColor: c.border,
+      borderWidth: 0,
     },
     inputDisabled: {
       opacity: 0.6,
     },
     button: {
       backgroundColor: c.accent,
-      borderRadius: 24,
-      paddingVertical: 16,
+      borderRadius: 8,
+      paddingVertical: 14,
       paddingHorizontal: 20,
       alignItems: 'center',
-      ...Platform.select({
-        ios: {
-          shadowColor: c.accent,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: 4,
-        },
-      }),
     },
     buttonDisabled: {
-      opacity: 0.5,
+      opacity: 0.4,
     },
     buttonText: {
       color: c.onAccent,
-      fontWeight: '700',
-      fontSize: 16,
-      letterSpacing: 0.3,
+      fontWeight: '600',
+      fontSize: 14,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
     },
     card: {
       backgroundColor: c.surface,
-      borderRadius: 24,
+      borderRadius: 4,
       padding: 20,
       borderWidth: 1,
       borderColor: c.border,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.05,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 2,
-        },
-      }),
     },
     cardTitle: {
       color: c.text,
@@ -102,11 +80,12 @@ export const makeAppStyles = (c: ThemeColors) =>
       backgroundColor: c.accentSoft,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 12,
+      borderRadius: 4,
     },
     badgeText: {
       color: c.accent,
       fontSize: 12,
       fontWeight: '700',
+      textTransform: 'uppercase',
     },
   })

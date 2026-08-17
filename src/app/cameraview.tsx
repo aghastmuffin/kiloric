@@ -288,7 +288,7 @@ const makeStyles = (c: ThemeColors) =>
       borderColor: c.border,
       padding: 12,
       maxWidth: 200,
-      borderRadius: 12,
+      borderRadius: 8,
       marginLeft: 'auto',
       marginRight: 'auto',
     },

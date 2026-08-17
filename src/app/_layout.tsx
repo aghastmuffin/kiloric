@@ -80,6 +80,7 @@ function RootNavigation() {
                   name="cameraview"
                   options={{ headerShown: true, headerTitle: "Scan Barcode", unmountOnBlur: true }}
                 />
+                <Stack.Screen name="signin" options={{ headerShown: false }} />
                 <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
                 <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
                 <Stack.Screen name="Additions" options={{ headerShown: false }} />

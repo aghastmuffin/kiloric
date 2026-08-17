@@ -7,18 +7,24 @@ import { useRouter } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+export let hasSkippedSignIn = false;
+export const setHasSkippedSignIn = (val: boolean) => { hasSkippedSignIn = val; };
+
 export function ProfileGate({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
-  const [checkingProfile, setCheckingProfile] = useState(Boolean(user?.$id));
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
 
     if (!user?.$id) {
       setCheckingProfile(false);
+      if (!hasSkippedSignIn) {
+        router.replace('/signin');
+      }
       return;
     }
 

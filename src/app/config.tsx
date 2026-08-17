@@ -1,14 +1,36 @@
+import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
+import { FontPreferencePicker } from '@/components/FontPreferencePicker';
+import { MotionView } from '@/components/MotionView';
 import {
   NativeDatePicker,
-  NativeDecimalPicker,
   NativeEnumPicker,
   NativeIntPicker,
 } from '@/components/NativePickers';
+import { HeightPicker, WeightPicker } from '@/components/onboarding/BodyMetricPickers';
+import { SelectionCard } from '@/components/onboarding/SelectionCard';
+import { UnitToggle } from '@/components/onboarding/UnitToggle';
+import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
+import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
+import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
-import { useTheme } from '@/lib/theme/ThemeContext';
-import type { ThemeColors } from '@/lib/theme/tokens';
-import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries';
+import {
+  ACTIVITY_OPTIONS,
+  buildGoalPlainText,
+  buildNutritionPlan,
+  calculateWeeklyDeficit,
+  DIET_OPTIONS,
+  estimateWeeklyWeightChangeKg,
+  GOAL_OPTIONS,
+  PACE_OPTIONS,
+  type ActivityLevel,
+  type DietStyle,
+  type FitnessGoal,
+  type GoalPace,
+  type NutritionPlan,
+  type Sex,
+} from '@/lib/nutrition';
 import {
   dateToIso,
   DEFAULT_PROFILE_ROLE,
@@ -19,13 +41,31 @@ import {
   saveProfileFields,
   type ProfileRole,
 } from '@/lib/profile';
+import type { DefaultSearchMode } from '@/lib/searchPreferences';
+import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import {
+  appendDisplayUnitsToGoalPlain,
+  defaultDisplayUnits,
+  formatFluid,
+  formatPaceRate,
+  normalizeStoredMetricsToMetric,
+  normalizeStoredTargetWeightKg,
+  parseDisplayUnitsPreference,
+  prefersImperialDisplay,
+  roundMetric,
+  type DisplayUnits,
+} from '@/lib/units';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   BackHandler,
-  Button,
   Platform,
   Pressable,
   ScrollView,
@@ -34,7 +74,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15);
+
+const CONFIG_TABS = ['Profile', 'Body & Goals', 'Targets', 'Preferences'] as const;
+type ConfigTab = (typeof CONFIG_TABS)[number];
 
 function parseProfileDate(value?: string): Date {
   if (!value) return DEFAULT_DATE_OF_BIRTH;
@@ -42,289 +87,75 @@ function parseProfileDate(value?: string): Date {
   return Number.isNaN(parsed.getTime()) ? DEFAULT_DATE_OF_BIRTH : parsed;
 }
 
-export default function OnboardingScreen() {
+export default function ConfigScreen() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const navigation = useNavigation();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences();
+
   const allowLeaveRef = useRef(false);
+  const [selectedTabIndex, setSelectedTabIndex] = useState(0);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Profile fields
   const [username, setUsername] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState(DEFAULT_DATE_OF_BIRTH);
   const [bio, setBio] = useState('');
-  const [country, setCountry] = useState('');
+  const [country, setCountry] = useState('US');
+  const [role, setRole] = useState<ProfileRole>(DEFAULT_PROFILE_ROLE);
+
+  // Body & Goal fields
+  const [displayUnits, setDisplayUnits] = useState<DisplayUnits>('metric');
+  const [sex, setSex] = useState<Sex>('female');
   const [height, setHeight] = useState(170);
   const [weight, setWeight] = useState(75);
-  const [role, setRole] = useState<ProfileRole>(DEFAULT_PROFILE_ROLE);
-  const [meals, setMeals] = useState('');
+  const [targetWeight, setTargetWeight] = useState<number | null>(null);
+  const [activity, setActivity] = useState<ActivityLevel>('moderate');
+  const [goal, setGoal] = useState<FitnessGoal>('maintain');
+  const [pace, setPace] = useState<GoalPace>('moderate');
+  const [diet, setDiet] = useState<DietStyle>('balanced');
+
+  // Daily target overrides
   const [targetKcal, setTargetKcal] = useState<number | null>(null);
   const [targetProtein, setTargetProtein] = useState<number | null>(null);
   const [targetCarbs, setTargetCarbs] = useState<number | null>(null);
   const [targetFat, setTargetFat] = useState<number | null>(null);
   const [dailyFluid, setDailyFluid] = useState<number | null>(null);
-  const [tdee, setTdee] = useState<number | null>(null);
-  const [goalPlain, setGoalPlain] = useState('');
-  const [targetWeight, setTargetWeight] = useState<number | null>(null);
-  const [weeklyDeficit, setWeeklyDeficit] = useState<number | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [customGoalText, setCustomGoalText] = useState('');
+
+  // Preference fields
+  const [savingSearchPref, setSavingSearchPref] = useState(false);
+
   const isRequired = !profileComplete;
-const countryList = {
-    "AF": "Afghanistan",
-    "AL": "Albania",
-    "DZ": "Algeria",
-    "AS": "American Samoa",
-    "AD": "Andorra",
-    "AO": "Angola",
-    "AI": "Anguilla",
-    "AQ": "Antarctica",
-    "AG": "Antigua and Barbuda",
-    "AR": "Argentina",
-    "AM": "Armenia",
-    "AW": "Aruba",
-    "AU": "Australia",
-    "AT": "Austria",
-    "AZ": "Azerbaijan",
-    "BS": "Bahamas (the)",
-    "BH": "Bahrain",
-    "BD": "Bangladesh",
-    "BB": "Barbados",
-    "BY": "Belarus",
-    "BE": "Belgium",
-    "BZ": "Belize",
-    "BJ": "Benin",
-    "BM": "Bermuda",
-    "BT": "Bhutan",
-    "BO": "Bolivia (Plurinational State of)",
-    "BQ": "Bonaire, Sint Eustatius and Saba",
-    "BA": "Bosnia and Herzegovina",
-    "BW": "Botswana",
-    "BV": "Bouvet Island",
-    "BR": "Brazil",
-    "IO": "British Indian Ocean Territory (the)",
-    "BN": "Brunei Darussalam",
-    "BG": "Bulgaria",
-    "BF": "Burkina Faso",
-    "BI": "Burundi",
-    "CV": "Cabo Verde",
-    "KH": "Cambodia",
-    "CM": "Cameroon",
-    "CA": "Canada",
-    "KY": "Cayman Islands (the)",
-    "CF": "Central African Republic (the)",
-    "TD": "Chad",
-    "CL": "Chile",
-    "CN": "China",
-    "CX": "Christmas Island",
-    "CC": "Cocos (Keeling) Islands (the)",
-    "CO": "Colombia",
-    "KM": "Comoros (the)",
-    "CD": "Congo (the Democratic Republic of the)",
-    "CG": "Congo (the)",
-    "CK": "Cook Islands (the)",
-    "CR": "Costa Rica",
-    "HR": "Croatia",
-    "CU": "Cuba",
-    "CW": "Curaçao",
-    "CY": "Cyprus",
-    "CZ": "Czechia",
-    "CI": "Côte d'Ivoire",
-    "DK": "Denmark",
-    "DJ": "Djibouti",
-    "DM": "Dominica",
-    "DO": "Dominican Republic (the)",
-    "EC": "Ecuador",
-    "EG": "Egypt",
-    "SV": "El Salvador",
-    "GQ": "Equatorial Guinea",
-    "ER": "Eritrea",
-    "EE": "Estonia",
-    "SZ": "Eswatini",
-    "ET": "Ethiopia",
-    "FK": "Falkland Islands (the) [Malvinas]",
-    "FO": "Faroe Islands (the)",
-    "FJ": "Fiji",
-    "FI": "Finland",
-    "FR": "France",
-    "GF": "French Guiana",
-    "PF": "French Polynesia",
-    "TF": "French Southern Territories (the)",
-    "GA": "Gabon",
-    "GM": "Gambia (the)",
-    "GE": "Georgia",
-    "DE": "Germany",
-    "GH": "Ghana",
-    "GI": "Gibraltar",
-    "GR": "Greece",
-    "GL": "Greenland",
-    "GD": "Grenada",
-    "GP": "Guadeloupe",
-    "GU": "Guam",
-    "GT": "Guatemala",
-    "GG": "Guernsey",
-    "GN": "Guinea",
-    "GW": "Guinea-Bissau",
-    "GY": "Guyana",
-    "HT": "Haiti",
-    "HM": "Heard Island and McDonald Islands",
-    "VA": "Holy See (the)",
-    "HN": "Honduras",
-    "HK": "Hong Kong",
-    "HU": "Hungary",
-    "IS": "Iceland",
-    "IN": "India",
-    "ID": "Indonesia",
-    "IR": "Iran (Islamic Republic of)",
-    "IQ": "Iraq",
-    "IE": "Ireland",
-    "IM": "Isle of Man",
-    "IL": "Israel",
-    "IT": "Italy",
-    "JM": "Jamaica",
-    "JP": "Japan",
-    "JE": "Jersey",
-    "JO": "Jordan",
-    "KZ": "Kazakhstan",
-    "KE": "Kenya",
-    "KI": "Kiribati",
-    "KP": "Korea (the Democratic People's Republic of)",
-    "KR": "Korea (the Republic of)",
-    "KW": "Kuwait",
-    "KG": "Kyrgyzstan",
-    "LA": "Lao People's Democratic Republic (the)",
-    "LV": "Latvia",
-    "LB": "Lebanon",
-    "LS": "Lesotho",
-    "LR": "Liberia",
-    "LY": "Libya",
-    "LI": "Liechtenstein",
-    "LT": "Lithuania",
-    "LU": "Luxembourg",
-    "MO": "Macao",
-    "MG": "Madagascar",
-    "MW": "Malawi",
-    "MY": "Malaysia",
-    "MV": "Maldives",
-    "ML": "Mali",
-    "MT": "Malta",
-    "MH": "Marshall Islands (the)",
-    "MQ": "Martinique",
-    "MR": "Mauritania",
-    "MU": "Mauritius",
-    "YT": "Mayotte",
-    "MX": "Mexico",
-    "FM": "Micronesia (Federated States of)",
-    "MD": "Moldova (the Republic of)",
-    "MC": "Monaco",
-    "MN": "Mongolia",
-    "ME": "Montenegro",
-    "MS": "Montserrat",
-    "MA": "Morocco",
-    "MZ": "Mozambique",
-    "MM": "Myanmar",
-    "NA": "Namibia",
-    "NR": "Nauru",
-    "NP": "Nepal",
-    "NL": "Netherlands (the)",
-    "NC": "New Caledonia",
-    "NZ": "New Zealand",
-    "NI": "Nicaragua",
-    "NE": "Niger (the)",
-    "NG": "Nigeria",
-    "NU": "Niue",
-    "NF": "Norfolk Island",
-    "MP": "Northern Mariana Islands (the)",
-    "NO": "Norway",
-    "OM": "Oman",
-    "PK": "Pakistan",
-    "PW": "Palau",
-    "PS": "Palestine, State of",
-    "PA": "Panama",
-    "PG": "Papua New Guinea",
-    "PY": "Paraguay",
-    "PE": "Peru",
-    "PH": "Philippines (the)",
-    "PN": "Pitcairn",
-    "PL": "Poland",
-    "PT": "Portugal",
-    "PR": "Puerto Rico",
-    "QA": "Qatar",
-    "MK": "Republic of North Macedonia",
-    "RO": "Romania",
-    "RU": "Russian Federation (the)",
-    "RW": "Rwanda",
-    "RE": "Réunion",
-    "BL": "Saint Barthélemy",
-    "SH": "Saint Helena, Ascension and Tristan da Cunha",
-    "KN": "Saint Kitts and Nevis",
-    "LC": "Saint Lucia",
-    "MF": "Saint Martin (French part)",
-    "PM": "Saint Pierre and Miquelon",
-    "VC": "Saint Vincent and the Grenadines",
-    "WS": "Samoa",
-    "SM": "San Marino",
-    "ST": "Sao Tome and Principe",
-    "SA": "Saudi Arabia",
-    "SN": "Senegal",
-    "RS": "Serbia",
-    "SC": "Seychelles",
-    "SL": "Sierra Leone",
-    "SG": "Singapore",
-    "SX": "Sint Maarten (Dutch part)",
-    "SK": "Slovakia",
-    "SI": "Slovenia",
-    "SB": "Solomon Islands",
-    "SO": "Somalia",
-    "ZA": "South Africa",
-    "GS": "South Georgia and the South Sandwich Islands",
-    "SS": "South Sudan",
-    "ES": "Spain",
-    "LK": "Sri Lanka",
-    "SD": "Sudan (the)",
-    "SR": "Suriname",
-    "SJ": "Svalbard and Jan Mayen",
-    "SE": "Sweden",
-    "CH": "Switzerland",
-    "SY": "Syrian Arab Republic",
-    "TW": "Taiwan",
-    "TJ": "Tajikistan",
-    "TZ": "Tanzania, United Republic of",
-    "TH": "Thailand",
-    "TL": "Timor-Leste",
-    "TG": "Togo",
-    "TK": "Tokelau",
-    "TO": "Tonga",
-    "TT": "Trinidad and Tobago",
-    "TN": "Tunisia",
-    "TR": "Turkey",
-    "TM": "Turkmenistan",
-    "TC": "Turks and Caicos Islands (the)",
-    "TV": "Tuvalu",
-    "UG": "Uganda",
-    "UA": "Ukraine",
-    "AE": "United Arab Emirates (the)",
-    "GB": "United Kingdom of Great Britain and Northern Ireland (the)",
-    "UM": "United States Minor Outlying Islands (the)",
-    "US": "United States of America (the)",
-    "UY": "Uruguay",
-    "UZ": "Uzbekistan",
-    "VU": "Vanuatu",
-    "VE": "Venezuela (Bolivarian Republic of)",
-    "VN": "Viet Nam",
-    "VG": "Virgin Islands (British)",
-    "VI": "Virgin Islands (U.S.)",
-    "WF": "Wallis and Futuna",
-    "EH": "Western Sahara",
-    "YE": "Yemen",
-    "ZM": "Zambia",
-    "ZW": "Zimbabwe",
-    "AX": "Åland Islands"
-};
-const countryOptions = Object.entries(countryList).map(([code, name]) => ({
-  label: name,
-  value: code,
-}));
+
+  // Real-time suggested nutrition plan based on current body & goal selections
+  const computedPlan: NutritionPlan = useMemo(() => {
+    return buildNutritionPlan({
+      dateOfBirth,
+      sex,
+      heightCm: height,
+      weightKg: weight,
+      activity,
+      goal,
+      pace,
+      diet,
+      targetWeight,
+    });
+  }, [dateOfBirth, sex, height, weight, activity, goal, pace, diet, targetWeight]);
+
+  const activeTargetKcal = targetKcal ?? computedPlan.targetKcal;
+  const activeTargetProtein = targetProtein ?? computedPlan.targetProtein;
+  const activeTargetCarbs = targetCarbs ?? computedPlan.targetCarbs;
+  const activeTargetFat = targetFat ?? computedPlan.targetFat;
+  const activeDailyFluid = dailyFluid ?? computedPlan.dailyFluid;
+
+  const currentWeeklyDeficit = calculateWeeklyDeficit(computedPlan.tdee, activeTargetKcal);
+  const currentWeeklyChangeKg = estimateWeeklyWeightChangeKg(currentWeeklyDeficit);
 
   useEffect(() => {
     if (!user && !loading) {
@@ -336,6 +167,7 @@ const countryOptions = Object.entries(countryList).map(([code, name]) => ({
     navigation.setOptions({
       gestureEnabled: !isRequired,
       headerBackVisible: !isRequired,
+      headerTitle: 'Configuration',
     });
   }, [isRequired, navigation]);
 
@@ -373,28 +205,48 @@ const countryOptions = Object.entries(countryList).map(([code, name]) => ({
       .then((profile) => {
         if (!active) return;
 
-        setProfileComplete(isProfileComplete(profile));
+        const complete = isProfileComplete(profile);
+        setProfileComplete(complete);
+
         if (!profile) return;
+
+        const userCountry = profile.country ?? 'US';
+        const parsedUnits = parseDisplayUnitsPreference(profile.goal_plain, userCountry);
+        const body = normalizeStoredMetricsToMetric(
+          userCountry,
+          profile.height ?? 170,
+          profile.weight ?? 75,
+        );
 
         setUsername(profile.username ?? '');
         setDateOfBirth(parseProfileDate(profile.dateOfBirth));
         setBio(profile.bio ?? '');
-        setCountry(profile.country ?? '');
-        setHeight(profile.height ?? 170);
-        setWeight(profile.weight ?? 75);
+        setCountry(userCountry);
+        setDisplayUnits(parsedUnits);
+        setHeight(body.heightCm);
+        setWeight(body.weightKg);
+
         if (profile.role && PROFILE_ROLE_OPTIONS.includes(profile.role)) {
           setRole(profile.role);
         }
-        setMeals(profile.meals ?? '');
+
         setTargetKcal(profile.target_kcal ?? null);
         setTargetProtein(profile.target_protein ?? null);
         setTargetCarbs(profile.target_carbs ?? null);
         setTargetFat(profile.target_fat ?? null);
         setDailyFluid(profile.daily_fluid ?? null);
-        setTdee(profile.TDEE ?? null);
-        setGoalPlain(profile.goal_plain ?? '');
-        setTargetWeight(profile.target_weight ?? null);
-        setWeeklyDeficit(profile.weekly_deficit ?? null);
+
+        const cleanGoalText = profile.goal_plain
+          ? profile.goal_plain.replace(/ · units:(metric|imperial)$/, '').trim()
+          : '';
+        setCustomGoalText(cleanGoalText);
+
+        const parsedTargetWeight = normalizeStoredTargetWeightKg(
+          userCountry,
+          profile.target_weight,
+          profile.height ?? 170,
+        );
+        setTargetWeight(parsedTargetWeight);
       })
       .finally(() => {
         if (active) setLoadingProfile(false);
@@ -404,6 +256,28 @@ const countryOptions = Object.entries(countryList).map(([code, name]) => ({
       active = false;
     };
   }, [user?.$id]);
+
+  function handleResetTargetsToSuggested() {
+    setTargetKcal(null);
+    setTargetProtein(null);
+    setTargetCarbs(null);
+    setTargetFat(null);
+    setDailyFluid(null);
+    Alert.alert(
+      'Reset to Recommended',
+      'Daily calories, macros, and hydration have been refreshed to match your body and goals.',
+    );
+  }
+
+  async function handleSearchModeChange(mode: DefaultSearchMode) {
+    if (mode === defaultSearchMode || savingSearchPref) return;
+    setSavingSearchPref(true);
+    try {
+      await setDefaultSearchMode(mode);
+    } finally {
+      setSavingSearchPref(false);
+    }
+  }
 
   async function handleSave() {
     if (!user?.$id || !user.email) {
@@ -433,27 +307,39 @@ const countryOptions = Object.entries(countryList).map(([code, name]) => ({
 
     setSaving(true);
     try {
+      const finalGoalBase = customGoalText.trim()
+        ? customGoalText.trim()
+        : buildGoalPlainText({
+            goal,
+            diet,
+            targetWeight: roundMetric(targetWeight ?? computedPlan.targetWeight),
+            currentWeight: roundMetric(weight),
+            estimatedWeeklyChangeKg: currentWeeklyChangeKg,
+          });
+
+      const goalPlainWithUnits = appendDisplayUnitsToGoalPlain(finalGoalBase, displayUnits);
+
       await saveProfileFields(user.$id, {
         username: username.trim(),
         email: user.email,
         dateOfBirth: dateToIso(dateOfBirth),
-        height,
-        weight,
+        height: roundMetric(height),
+        weight: roundMetric(weight),
         role,
         lastLogin: new Date().toISOString(),
         bio: bio.trim() || null,
         country: country.trim().toUpperCase() || null,
-        meals: meals.trim() || null,
-        target_kcal: targetKcal,
-        target_protein: targetProtein,
-        target_carbs: targetCarbs,
-        target_fat: targetFat,
-        daily_fluid: dailyFluid,
-        TDEE: tdee,
-        goal_plain: goalPlain.trim() || null,
-        target_weight: targetWeight,
-        weekly_deficit: weeklyDeficit,
+        target_kcal: activeTargetKcal,
+        target_protein: activeTargetProtein,
+        target_carbs: activeTargetCarbs,
+        target_fat: activeTargetFat,
+        daily_fluid: activeDailyFluid,
+        TDEE: computedPlan.tdee,
+        goal_plain: goalPlainWithUnits,
+        target_weight: roundMetric(targetWeight ?? computedPlan.targetWeight),
+        weekly_deficit: currentWeeklyDeficit,
       });
+
       allowLeaveRef.current = true;
       if (isRequired) {
         router.replace('/(tabs)/account');
@@ -469,8 +355,8 @@ const countryOptions = Object.entries(countryList).map(([code, name]) => ({
 
   if (loading || loadingProfile) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator color={colors.accent} />
+      <View style={styles.screen}>
+        <ActivityIndicator color={colors.accent} style={{ flex: 1 }} />
       </View>
     );
   }
@@ -479,324 +365,847 @@ const countryOptions = Object.entries(countryList).map(([code, name]) => ({
     return null;
   }
 
+  const activeTab = CONFIG_TABS[selectedTabIndex];
+
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-      <Button
-        color={colors.accent}
-        onPress={() => router.replace('/onboarding')}
-        title="View the New & Improved Account Update Page"
-        disabled={saving}
-      />
-      <Text style={styles.title}>Let's Learn More About You! (LEGACY VIEW)</Text>
-      <Text style={styles.hint}>
-        {isRequired
-          ? 'Complete your profile to start using the app. All required fields must be saved.'
-          : 'Email comes from your account. Timestamps and document id are managed by Appwrite.'}
-      </Text>
-      <Text style={styles.hint}>
-        This page is kept around for legacy purposes. The new account update page is more user-friendly and has a better design. If you'd like to use this page, it's currently slated for removal in 3 major version releases.
-      </Text>
+    <View style={styles.screen}>
+      <NoiseOverlay />
 
-      <Text style={styles.sectionTitle}>Account</Text>
-      <Text style={styles.label}>Username</Text>
-      <TextInput
-        value={username}
-        onChangeText={setUsername}
-        placeholder="johndoe"
-        placeholderTextColor={colors.textFaint}
-        autoCapitalize="none"
-        maxLength={64}
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        value={user.email ?? ''}
-        editable={false}
-        style={[styles.input, styles.inputDisabled]}
-      />
-
-      <Text style={styles.label}>Date of birth</Text>
-      <NativeDatePicker
-        value={dateOfBirth}
-        onChange={setDateOfBirth}
-        disabled={saving}
-        minimumDate={new Date(1900, 0, 1)}
-        maximumDate={new Date()}
-      />
-
-      <Text style={styles.label}>Role</Text>
-      <NativeEnumPicker
-        value={role}
-        options={PROFILE_ROLE_OPTIONS}
-        onChange={setRole}
-        disabled={saving}
-      />
-
-      <Text style={styles.label}>Bio</Text>
-      <TextInput
-        value={bio}
-        onChangeText={setBio}
-        placeholder="A short bio"
-        placeholderTextColor={colors.textFaint}
-        multiline
-        maxLength={512}
-        style={[styles.input, styles.multilineInput]}
-      />
-
-      <Text style={styles.label}>Country (2-letter code)</Text>
-      <TextInput
-        value={country}
-        onChangeText={setCountry}
-        placeholder="US"
-        placeholderTextColor={colors.textFaint}
-        autoCapitalize="characters"
-        maxLength={2}
-        style={styles.input}
-      />
-      <Text style={styles.label}>Country</Text>
-      <NativeEnumPicker
-        value={country}
-        options={countryOptions} // Pass the mapped array here
-        onChange={setCountry}
-        disabled={saving}
-      />
-      <Text style={styles.sectionTitle}>Body</Text>
-      <Text style={styles.label}>Height (cm)</Text>
-      <NativeDecimalPicker
-        value={height}
-        onChange={setHeight}
-        min={0}
-        max={300}
-        disabled={saving}
-        unit="cm"
-      />
-
-      <Text style={styles.label}>Weight (kg)</Text>
-      <NativeDecimalPicker
-        value={weight}
-        onChange={setWeight}
-        min={0}
-        max={1000}
-        disabled={saving}
-        unit="kg"
-      />
-
-      <Text style={styles.label}>Target weight (kg)</Text>
-      <NativeIntPicker
-        value={targetWeight}
-        onChange={setTargetWeight}
-        min={0}
-        max={1000}
-        optional
-        disabled={saving}
-        formatLabel={(value) => `${value} kg`}
-      />
-
-      <Text style={styles.sectionTitle}>Goals</Text>
-      <Text style={styles.label}>Goal</Text>
-      <TextInput
-        value={goalPlain}
-        onChangeText={setGoalPlain}
-        placeholder="Lose 5 kg by summer"
-        placeholderTextColor={colors.textFaint}
-        multiline
-        style={[styles.input, styles.multilineInput]}
-      />
-
-      <Text style={styles.label}>TDEE</Text>
-      <NativeIntPicker
-        value={tdee}
-        onChange={setTdee}
-        min={800}
-        max={6000}
-        step={10}
-        optional
-        disabled={saving}
-      />
-
-      <Text style={styles.label}>Weekly deficit</Text>
-      <NativeIntPicker
-        value={weeklyDeficit}
-        onChange={setWeeklyDeficit}
-        min={-10000}
-        max={10000}
-        step={50}
-        optional
-        disabled={saving}
-        formatLabel={(value) => (value > 0 ? `+${value}` : String(value))}
-      />
-
-      <Text style={styles.sectionTitle}>Daily targets</Text>
-      <Text style={styles.label}>Target kcal</Text>
-      <NativeIntPicker
-        value={targetKcal}
-        onChange={setTargetKcal}
-        min={800}
-        max={6000}
-        step={10}
-        optional
-        disabled={saving}
-        formatLabel={(value) => `${value} kcal`}
-      />
-
-      <Text style={styles.label}>Target protein (g)</Text>
-      <NativeIntPicker
-        value={targetProtein}
-        onChange={setTargetProtein}
-        min={0}
-        max={500}
-        optional
-        disabled={saving}
-        formatLabel={(value) => `${value} g`}
-      />
-
-      <Text style={styles.label}>Target carbs (g)</Text>
-      <NativeIntPicker
-        value={targetCarbs}
-        onChange={setTargetCarbs}
-        min={0}
-        max={1000}
-        optional
-        disabled={saving}
-        formatLabel={(value) => `${value} g`}
-      />
-
-      <Text style={styles.label}>Target fat (g)</Text>
-      <NativeIntPicker
-        value={targetFat}
-        onChange={setTargetFat}
-        min={0}
-        max={500}
-        optional
-        disabled={saving}
-        formatLabel={(value) => `${value} g`}
-      />
-
-      <Text style={styles.label}>Daily fluid (ml)</Text>
-      <NativeIntPicker
-        value={dailyFluid}
-        onChange={setDailyFluid}
-        min={0}
-        max={10000}
-        step={50}
-        optional
-        disabled={saving}
-        formatLabel={(value) => `${value} ml`}
-      />
-
-      <View style={styles.btnowner}>
-        {!isRequired ? (
-          <Pressable
-            onPress={() => router.back()}
-            disabled={saving}
-            style={({ pressed }) => [styles.discardbtn, pressed && styles.discardbtnPressed]}
-          >
-            <Text style={styles.btnText}>Discard Details!</Text>
-          </Pressable>
-        ) : null}
-        <Pressable
-          onPress={handleSave}
-          disabled={saving}
-          style={({ pressed }) => [
-            styles.btn,
-            pressed && styles.btnPressed,
-            saving && styles.btnDisabled,
-          ]}
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: Math.max(insets.top, 16) },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <MotionView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ delay: 0, type: 'spring', damping: 22 }}
+          style={styles.header}
         >
-          <Text style={styles.btnText}>{saving ? 'Saving…' : 'Save Details!'}</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+          <View style={styles.eyebrowRow}>
+            <View style={styles.badge}>
+              <Ionicons name="settings-sharp" size={12} color={colors.accent} />
+              <Text style={styles.badgeText}>CONFIGURATION</Text>
+            </View>
+            <Text style={styles.emailSubhead}>{user.email}</Text>
+          </View>
+          <Text style={styles.heading}>App & Profile Settings</Text>
+          <Text style={styles.lede}>
+            {isRequired
+              ? 'Complete your profile setup to personalize your targets and use the app.'
+              : 'Customize your identity, physical stats, nutrition targets, and app preferences.'}
+          </Text>
+        </MotionView>
+
+        {/* Tabs Control */}
+        <MotionView
+          from={{ opacity: 0, translateY: 6 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ delay: 40, type: 'spring', damping: 22 }}
+          style={styles.tabsWrapper}
+        >
+          <ThemedSegmentedControl
+            values={CONFIG_TABS as unknown as string[]}
+            selectedIndex={selectedTabIndex}
+            onChange={(idx) => setSelectedTabIndex(idx)}
+            enabled={!saving}
+          />
+        </MotionView>
+
+        {/* Tab 0: Profile / Account */}
+        {activeTab === 'Profile' && (
+          <MotionView
+            key="profile-tab"
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ delay: 60, type: 'spring', damping: 22 }}
+            style={styles.section}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderIcon}>
+                <Ionicons name="person-circle-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>Account & Identity</Text>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Username</Text>
+                <TextInput
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="johndoe"
+                  placeholderTextColor={colors.textFaint}
+                  autoCapitalize="none"
+                  maxLength={64}
+                  style={styles.input}
+                />
+                <Text style={styles.fieldHint}>Used for your vitality card and public profile.</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <TextInput
+                  value={user.email ?? ''}
+                  editable={false}
+                  style={[styles.input, styles.inputDisabled]}
+                />
+                <Text style={styles.fieldHint}>Connected Appwrite auth account.</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Date of birth</Text>
+                  <Text style={styles.fieldHint}>Used to calculate age and BMR</Text>
+                </View>
+                <NativeDatePicker
+                  value={dateOfBirth}
+                  onChange={setDateOfBirth}
+                  disabled={saving}
+                  minimumDate={new Date(1900, 0, 1)}
+                  maximumDate={new Date()}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Country</Text>
+                  <Text style={styles.fieldHint}>
+                    {getCountryName(country)} ({country})
+                  </Text>
+                </View>
+                <NativeEnumPicker
+                  value={country}
+                  options={COUNTRY_OPTIONS}
+                  onChange={(val) => {
+                    setCountry(val);
+                    if (!prefersImperialDisplay(val) && displayUnits === 'imperial') {
+                      setDisplayUnits(defaultDisplayUnits(val));
+                    }
+                  }}
+                  disabled={saving}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Account Role</Text>
+                  <Text style={styles.fieldHint}>Permissions tier</Text>
+                </View>
+                <Text style={styles.fieldValueBadge}>{role.toUpperCase()}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.fieldLabel}>Bio</Text>
+                  <Text style={styles.charCount}>{bio.length}/512</Text>
+                </View>
+                <TextInput
+                  value={bio}
+                  onChangeText={setBio}
+                  placeholder="Tell us a little bit about your wellness journey…"
+                  placeholderTextColor={colors.textFaint}
+                  multiline
+                  maxLength={512}
+                  style={[styles.input, styles.multilineInput]}
+                />
+              </View>
+            </View>
+          </MotionView>
+        )}
+
+        {/* Tab 1: Body & Goals */}
+        {activeTab === 'Body & Goals' && (
+          <MotionView
+            key="body-tab"
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ delay: 60, type: 'spring', damping: 22 }}
+            style={styles.section}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderIcon}>
+                <Ionicons name="body-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>Body Stats & Units</Text>
+            </View>
+
+            <View style={styles.card}>
+              <UnitToggle
+                value={displayUnits}
+                onChange={setDisplayUnits}
+                disabled={saving}
+                country={getCountryName(country)}
+              />
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Biological sex</Text>
+                <Text style={styles.fieldHint}>
+                  Used for the Mifflin–St Jeor metabolic rate formula.
+                </Text>
+                <View style={styles.selectionGrid}>
+                  {(['female', 'male'] as Sex[]).map((s) => (
+                    <SelectionCard
+                      key={s}
+                      value={s}
+                      label={s === 'female' ? 'Female' : 'Male'}
+                      description={s === 'female' ? 'Standard baseline formula' : 'Standard baseline formula'}
+                      selected={sex === s}
+                      onPress={(val) => setSex(val)}
+                      disabled={saving}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <HeightPicker
+                  valueCm={height}
+                  displayUnits={displayUnits}
+                  onChange={setHeight}
+                  disabled={saving}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <WeightPicker
+                  valueKg={weight}
+                  displayUnits={displayUnits}
+                  onChange={setWeight}
+                  disabled={saving}
+                  label="Current weight"
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <WeightPicker
+                  valueKg={targetWeight ?? computedPlan.targetWeight}
+                  displayUnits={displayUnits}
+                  onChange={(val) => setTargetWeight(val)}
+                  disabled={saving}
+                  label="Target weight"
+                />
+              </View>
+            </View>
+
+            <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+              <View style={styles.sectionHeaderIcon}>
+                <Ionicons name="fitness-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>Activity & Goal Strategy</Text>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Activity level</Text>
+                {ACTIVITY_OPTIONS.map((opt) => (
+                  <SelectionCard
+                    key={opt.value}
+                    value={opt.value}
+                    label={opt.label}
+                    description={opt.description}
+                    selected={activity === opt.value}
+                    onPress={(val) => setActivity(val)}
+                    disabled={saving}
+                  />
+                ))}
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Primary goal</Text>
+                {GOAL_OPTIONS.map((opt) => (
+                  <SelectionCard
+                    key={opt.value}
+                    value={opt.value}
+                    label={opt.label}
+                    description={opt.description}
+                    selected={goal === opt.value}
+                    onPress={(val) => setGoal(val)}
+                    disabled={saving}
+                  />
+                ))}
+              </View>
+
+              {goal !== 'maintain' && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.verticalRow}>
+                    <Text style={styles.fieldLabel}>Preferred pace</Text>
+                    {PACE_OPTIONS.map((opt) => (
+                      <SelectionCard
+                        key={opt.value}
+                        value={opt.value}
+                        label={opt.label}
+                        description={formatPaceRate(displayUnits, {
+                          gentle: 0.25,
+                          moderate: 0.5,
+                          aggressive: 0.75,
+                        }[opt.value])}
+                        selected={pace === opt.value}
+                        onPress={(val) => setPace(val)}
+                        disabled={saving}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Dietary preference</Text>
+                {DIET_OPTIONS.map((opt) => (
+                  <SelectionCard
+                    key={opt.value}
+                    value={opt.value}
+                    label={opt.label}
+                    description={opt.description}
+                    selected={diet === opt.value}
+                    onPress={(val) => setDiet(val)}
+                    disabled={saving}
+                  />
+                ))}
+              </View>
+            </View>
+          </MotionView>
+        )}
+
+        {/* Tab 2: Targets */}
+        {activeTab === 'Targets' && (
+          <MotionView
+            key="targets-tab"
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ delay: 60, type: 'spring', damping: 22 }}
+            style={styles.section}
+          >
+            {/* Live Science Card */}
+            <View style={styles.infoBanner}>
+              <View style={styles.infoBannerHeader}>
+                <Ionicons name="sparkles" size={16} color={colors.accent} />
+                <Text style={styles.infoBannerTitle}>Calculated Nutrition Plan</Text>
+              </View>
+              <Text style={styles.infoBannerText}>
+                Based on your stats: BMR is {computedPlan.bmr} kcal/day · TDEE (maintenance) is {computedPlan.tdee} kcal/day.
+                {goal !== 'maintain'
+                  ? ` Projected energy balance: ${currentWeeklyDeficit > 0 ? '+' : ''}${currentWeeklyDeficit} kcal/week (${formatPaceRate(displayUnits, currentWeeklyChangeKg)}).`
+                  : ''}
+              </Text>
+              <Pressable
+                onPress={handleResetTargetsToSuggested}
+                disabled={saving}
+                style={({ pressed }) => [
+                  styles.resetPill,
+                  pressed && { opacity: 0.75 },
+                ]}
+              >
+                <Ionicons name="refresh" size={14} color={colors.accent} />
+                <Text style={styles.resetPillText}>Sync with body & goals</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderIcon}>
+                <Ionicons name="flame-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>Daily Targets & Macros</Text>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Daily Calories</Text>
+                  <Text style={styles.fieldHint}>Recommended: {computedPlan.targetKcal} kcal</Text>
+                </View>
+                <Text style={styles.fieldValue}>{activeTargetKcal} kcal</Text>
+                <NativeIntPicker
+                  value={activeTargetKcal}
+                  onChange={(val) => setTargetKcal(val)}
+                  min={800}
+                  max={6000}
+                  step={10}
+                  disabled={saving}
+                  formatLabel={(value) => `${value} kcal`}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Protein</Text>
+                  <Text style={styles.fieldHint}>Recommended: {computedPlan.targetProtein} g</Text>
+                </View>
+                <Text style={styles.fieldValue}>{activeTargetProtein} g</Text>
+                <NativeIntPicker
+                  value={activeTargetProtein}
+                  onChange={(val) => setTargetProtein(val)}
+                  min={0}
+                  max={500}
+                  disabled={saving}
+                  formatLabel={(value) => `${value} g`}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Carbohydrates</Text>
+                  <Text style={styles.fieldHint}>Recommended: {computedPlan.targetCarbs} g</Text>
+                </View>
+                <Text style={styles.fieldValue}>{activeTargetCarbs} g</Text>
+                <NativeIntPicker
+                  value={activeTargetCarbs}
+                  onChange={(val) => setTargetCarbs(val)}
+                  min={0}
+                  max={1000}
+                  disabled={saving}
+                  formatLabel={(value) => `${value} g`}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Fat</Text>
+                  <Text style={styles.fieldHint}>Recommended: {computedPlan.targetFat} g</Text>
+                </View>
+                <Text style={styles.fieldValue}>{activeTargetFat} g</Text>
+                <NativeIntPicker
+                  value={activeTargetFat}
+                  onChange={(val) => setTargetFat(val)}
+                  min={0}
+                  max={500}
+                  disabled={saving}
+                  formatLabel={(value) => `${value} g`}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.row}>
+                <View style={styles.rowTextCol}>
+                  <Text style={styles.fieldLabel}>Daily Hydration</Text>
+                  <Text style={styles.fieldHint}>
+                    {formatFluid(displayUnits, activeDailyFluid)}
+                  </Text>
+                </View>
+                <Text style={styles.fieldValue}>{activeDailyFluid} ml</Text>
+                <NativeIntPicker
+                  value={activeDailyFluid}
+                  onChange={(val) => setDailyFluid(val)}
+                  min={500}
+                  max={10000}
+                  step={50}
+                  disabled={saving}
+                  formatLabel={(value) => `${value} ml`}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+              <View style={styles.sectionHeaderIcon}>
+                <Ionicons name="flag-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>Goal Description</Text>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Custom Goal Statement</Text>
+                <TextInput
+                  value={customGoalText}
+                  onChangeText={setCustomGoalText}
+                  placeholder={computedPlan.goalPlain}
+                  placeholderTextColor={colors.textFaint}
+                  multiline
+                  style={[styles.input, styles.multilineInput]}
+                />
+                <Text style={styles.fieldHint}>
+                  Leave blank to auto-generate from your goal pace and target weight.
+                </Text>
+              </View>
+            </View>
+          </MotionView>
+        )}
+
+        {/* Tab 3: Preferences */}
+        {activeTab === 'Preferences' && (
+          <MotionView
+            key="preferences-tab"
+            from={{ opacity: 0, translateY: 8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ delay: 60, type: 'spring', damping: 22 }}
+            style={styles.section}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderIcon}>
+                <Ionicons name="options-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={styles.sectionTitle}>App Preferences & Style</Text>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Default Food Log Search Mode</Text>
+                <Text style={styles.fieldHint}>
+                  Choose your starting screen when logging new meals.
+                </Text>
+                <ThemedSegmentedControl
+                  values={['Camera Scanner', 'Text Search']}
+                  selectedIndex={defaultSearchMode === 'scan' ? 0 : 1}
+                  enabled={!savingSearchPref}
+                  onChange={(index) =>
+                    handleSearchModeChange(index === 0 ? 'scan' : 'text_query')
+                  }
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <ThemePreferencePicker />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <FontPreferencePicker />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <ApiBackendPreferencePicker />
+              </View>
+            </View>
+          </MotionView>
+        )}
+
+        {/* Action Buttons */}
+        <MotionView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ delay: 100, type: 'spring', damping: 22 }}
+          style={styles.actions}
+        >
+          <Pressable
+            onPress={handleSave}
+            disabled={saving}
+            style={({ pressed }) => [
+              styles.btn,
+              pressed && styles.btnPressed,
+              saving && styles.btnDisabled,
+            ]}
+          >
+            {saving ? (
+              <ActivityIndicator color={colors.onAccent} size="small" />
+            ) : (
+              <View style={styles.btnContent}>
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.onAccent} />
+                <Text style={styles.btnText}>Save Changes</Text>
+              </View>
+            )}
+          </Pressable>
+
+          {!isRequired && (
+            <Pressable
+              onPress={() => router.back()}
+              disabled={saving}
+              style={({ pressed }) => [
+                styles.discardBtn,
+                pressed && styles.discardBtnPressed,
+              ]}
+            >
+              <Text style={styles.discardBtnText}>Discard & Return</Text>
+            </Pressable>
+          )}
+        </MotionView>
+      </ScrollView>
+    </View>
   );
 }
 
-const makeStyles = (c: ThemeColors) => StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    backgroundColor: c.background,
-    padding: 20,
-    paddingBottom: 100,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: c.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    color: c.text,
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  hint: {
-    color: c.textFaint,
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    color: c.accent,
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  label: {
-    color: c.text,
-    fontSize: 16,
-    marginBottom: 6,
-    width: '100%',
-  },
-  input: {
-    backgroundColor: c.surfaceAlt,
-    color: c.text,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  inputDisabled: {
-    opacity: 0.7,
-  },
-  multilineInput: {
-    minHeight: 88,
-    textAlignVertical: 'top',
-  },
-  btnowner: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  btn: {
-    backgroundColor: c.accent,
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  btnPressed: {
-    opacity: 0.85,
-  },
-  btnDisabled: {
-    opacity: 0.5,
-  },
-  btnText: {
-    textAlign: 'center',
-    color: c.onAccent,
-  },
-  discardbtn: {
-    backgroundColor: c.danger,
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  discardbtnPressed: {
-    opacity: 0.85,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingBottom: 130,
+      gap: 18,
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: 720,
+    },
+    header: {
+      marginBottom: 4,
+    },
+    eyebrowRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      backgroundColor: c.accentSoft,
+    },
+    badgeText: {
+      ...typography.labelSmall,
+      color: c.accent,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    emailSubhead: {
+      ...typography.labelSmall,
+      color: c.textFaint,
+    },
+    heading: {
+      ...typography.headlineLarge,
+      color: c.text,
+      marginTop: 2,
+      marginBottom: 4,
+    },
+    lede: {
+      ...typography.body,
+      color: c.textMuted,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    tabsWrapper: {
+      marginVertical: 4,
+    },
+    section: {
+      gap: 12,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 4,
+      marginBottom: 2,
+    },
+    sectionHeaderIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: c.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sectionTitle: {
+      ...typography.headline,
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.text,
+    },
+    card: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 16,
+      paddingHorizontal: 18,
+      paddingVertical: 6,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 1,
+    },
+    row: {
+      minHeight: 56,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingVertical: 8,
+    },
+    rowBetween: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    rowTextCol: {
+      flex: 1,
+      gap: 2,
+    },
+    verticalRow: {
+      paddingVertical: 12,
+      gap: 8,
+    },
+    selectionGrid: {
+      marginTop: 4,
+    },
+    divider: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border,
+    },
+    fieldLabel: {
+      ...typography.body,
+      fontWeight: '600',
+      color: c.text,
+    },
+    fieldHint: {
+      ...typography.labelSmall,
+      fontSize: 12,
+      color: c.textFaint,
+    },
+    fieldValue: {
+      ...typography.body,
+      fontWeight: '500',
+      color: c.textMuted,
+    },
+    fieldValueBadge: {
+      ...typography.labelSmall,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: c.accentSoft,
+      color: c.accent,
+      fontWeight: '600',
+    },
+    charCount: {
+      ...typography.labelSmall,
+      fontSize: 11,
+      color: c.textFaint,
+    },
+    input: {
+      ...typography.body,
+      color: c.text,
+      backgroundColor: c.surfaceAlt,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+    inputDisabled: {
+      opacity: 0.65,
+    },
+    multilineInput: {
+      minHeight: 84,
+      textAlignVertical: 'top',
+    },
+    infoBanner: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 16,
+      padding: 16,
+      gap: 8,
+    },
+    infoBannerHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    infoBannerTitle: {
+      ...typography.label,
+      fontWeight: '700',
+      color: c.text,
+    },
+    infoBannerText: {
+      ...typography.body,
+      fontSize: 13,
+      lineHeight: 18,
+      color: c.textMuted,
+    },
+    resetPill: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: c.accentSoft,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      marginTop: 4,
+    },
+    resetPillText: {
+      ...typography.labelSmall,
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.accent,
+    },
+    actions: {
+      gap: 10,
+      marginTop: 12,
+    },
+    btn: {
+      backgroundColor: c.accent,
+      borderRadius: 12,
+      paddingVertical: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: c.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.22,
+      shadowRadius: 10,
+      elevation: 3,
+    },
+    btnContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    btnPressed: {
+      opacity: 0.85,
+    },
+    btnDisabled: {
+      opacity: 0.5,
+    },
+    btnText: {
+      ...typography.body,
+      fontWeight: '700',
+      color: c.onAccent,
+    },
+    discardBtn: {
+      backgroundColor: c.dangerButtonBg,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    discardBtnPressed: {
+      opacity: 0.85,
+    },
+    discardBtnText: {
+      ...typography.body,
+      fontWeight: '600',
+      color: c.danger,
+    },
+  });

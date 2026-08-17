@@ -1,21 +1,19 @@
 import {
-  HankenGrotesk_400Regular,
-  HankenGrotesk_500Medium,
-  HankenGrotesk_600SemiBold,
-  HankenGrotesk_700Bold,
-} from '@expo-google-fonts/hanken-grotesk'
+  InterTight_300Light,
+  InterTight_400Regular,
+  InterTight_500Medium,
+  InterTight_600SemiBold,
+} from '@expo-google-fonts/inter-tight'
+import {
+  InstrumentSerif_400Regular,
+} from '@expo-google-fonts/instrument-serif'
 import {
   JetBrainsMono_400Regular,
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono'
-import {
-  SourceSerif4_400Regular,
-  SourceSerif4_600SemiBold,
-  SourceSerif4_700Bold,
-} from '@expo-google-fonts/source-serif-4'
 
-export const FONT_FAMILY = 'HankenGrotesk'
-export const HEADLINE_FONT_FAMILY = 'SourceSerif4'
+export const FONT_FAMILY = 'InterTight'
+export const HEADLINE_FONT_FAMILY = 'InstrumentSerif'
 export const MONO_FONT_FAMILY = 'JetBrainsMono'
 
 export const textFont = { fontFamily: FONT_FAMILY } as const
@@ -23,13 +21,11 @@ export const headlineFont = { fontFamily: HEADLINE_FONT_FAMILY } as const
 export const monoFont = { fontFamily: MONO_FONT_FAMILY } as const
 
 export const fontAssets = {
-  HankenGrotesk: HankenGrotesk_400Regular,
-  HankenGroteskMedium: HankenGrotesk_500Medium,
-  HankenGroteskSemiBold: HankenGrotesk_600SemiBold,
-  HankenGroteskBold: HankenGrotesk_700Bold,
-  SourceSerif4: SourceSerif4_400Regular,
-  SourceSerif4SemiBold: SourceSerif4_600SemiBold,
-  SourceSerif4Bold: SourceSerif4_700Bold,
+  InterTight: InterTight_400Regular,
+  InterTightLight: InterTight_300Light,
+  InterTightMedium: InterTight_500Medium,
+  InterTightSemiBold: InterTight_600SemiBold,
+  InstrumentSerif: InstrumentSerif_400Regular,
   JetBrainsMono: JetBrainsMono_400Regular,
   JetBrainsMonoMedium: JetBrainsMono_500Medium,
 } as const

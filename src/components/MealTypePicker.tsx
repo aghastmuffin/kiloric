@@ -142,7 +142,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 26,
+    borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 14,
     zIndex: 3,

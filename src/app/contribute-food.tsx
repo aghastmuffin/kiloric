@@ -1,32 +1,32 @@
-import { showApiError } from '@/lib/apiErrors'
-import { useAuth } from '@/lib/AuthContext'
+import { showApiError } from '@/lib/apiErrors';
+import { useAuth } from '@/lib/AuthContext';
 import {
-  submitFoodContribution,
-  type OffNumberField,
-  type OffStringField,
-} from '@/lib/foodContributions'
-import { useTheme } from '@/lib/theme/ThemeContext'
-import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
-import { Ionicons } from '@expo/vector-icons'
-import * as ImagePicker from 'expo-image-picker'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useMemo, useState } from 'react'
+    submitFoodContribution,
+    type OffNumberField,
+    type OffStringField,
+} from '@/lib/foodContributions';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type PhotoState = {
   uri: string
@@ -502,7 +502,7 @@ export default function ContributeFoodScreen() {
         </Pressable>
 
         <Text style={styles.disclaimer}>
-          Contributions are reviewed before appearing in search. Thank you for helping improve the food catalog.
+          Contributions are reviewed before appearing in general search, however this will be available to you instantly.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>

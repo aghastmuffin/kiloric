@@ -1,9 +1,9 @@
 import { authenticatedRequest } from '@/components/apiUtils';
 import {
-  LogFoodMultiView,
-  macrosFromProduct,
-  type ContributePayload,
-  type SearchResult,
+    LogFoodMultiView,
+    macrosFromProduct,
+    type ContributePayload,
+    type SearchResult,
 } from '@/components/LogFoodMultiView';
 import { LogItemDragRow } from '@/components/LogItemDragRow';
 import { MotionView } from '@/components/MotionView';
@@ -1245,7 +1245,7 @@ function IdleLogPanels({
             <View style={styles.inlineEmpty}>
               <Ionicons name="restaurant-outline" size={26} color={colors.textMuted} />
               <Text style={styles.emptyText}>
-                Recipes are on the way. Use search or Recent Foods for now.
+                Recipes are on the way. (UNADDED FEATURE)
               </Text>
             </View>
           ) : recentFoods.length === 0 ? (
@@ -1500,7 +1500,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   barcodeButton: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 8,
     backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',

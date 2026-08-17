@@ -182,7 +182,7 @@ const makeStyles = (c: OnboardingColors) => StyleSheet.create({
   },
   button: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',

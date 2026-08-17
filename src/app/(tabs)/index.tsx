@@ -1,5 +1,7 @@
 import RadialGauge from '@/components/Gague'
 import { MotionView } from '@/components/MotionView'
+import { NoiseOverlay } from '@/components/ui/NoiseOverlay'
+import { Ticker } from '@/components/ui/Ticker'
 import { SwipeableRow } from '@/components/SwipeableRow'
 import { useAuth } from '@/lib/AuthContext'
 import { calculateStreak, calculateXP } from '@/lib/gamification'
@@ -194,10 +196,20 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.screen}>
+      <NoiseOverlay />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
+        <Ticker
+          items={[
+            { text: `Streak: ${streak} days`, icon: 'flame', color: colors.streakColor },
+            { text: `XP: ${xp.xpInCurrentLevel}/${xp.xpNeeded}`, icon: 'sparkles', color: colors.xpAccent },
+            { text: `Protein: ${Math.round(totals.protein)}g / ${targets.protein}g`, icon: 'nutrition', color: colors.success },
+          ]}
+          style={{ marginBottom: 4 }}
+        />
+
         <View>
           <Text style={styles.eyebrow}>TODAY</Text>
           <Text style={styles.date}>
