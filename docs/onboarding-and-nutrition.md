@@ -49,7 +49,10 @@ On confirm, wizard calls `saveProfileFields(user.$id, { ... })` with:
 - Nutrition targets from `buildNutritionPlan()`:
   - `target_kcal`, `target_protein`, `target_carbs`, `target_fat`
   - `daily_fluid`, `TDEE`, `weekly_deficit`, `target_weight`
-  - `goal_plain` (human-readable goal + diet + units)
+  - `goal_plain` (legacy human-readable goal + diet + units)
+- Machine-readable goal state from `buildGoalState()` / `buildGoalStateFromPlan()`:
+  - `goal_type`, `goal_pace_kg_per_week`, `goal_start_weight_kg`, `goal_target_weight_kg`
+  - `goal_start_date`, `goal_estimated_weeks`
 
 The `meals` relationship field is **never** written as plain text.
 
@@ -68,11 +71,13 @@ The `meals` relationship field is **never** written as plain text.
 1. **Age** from DOB
 2. **BMR** — Mifflin–St Jeor
 3. **TDEE** — BMR × activity multiplier (1.2–1.9)
-4. **Target calories** — TDEE ± deficit/surplus by goal and pace; floored at 1200 (F) / 1500 (M)
-5. **Macros** — protein by kg and diet style; fat %; remaining carbs
-6. **Fluid** — ~35 ml/kg (rounded)
-7. **Weekly deficit** — `(TDEE - targetKcal) × 7`
-8. **Estimated weight change** — deficit / 7700 kcal per kg
+4. **Goal pace** — preset maps directly to kg/week: gentle `0.25`, moderate `0.5`, aggressive `0.75`; signed negative for loss and positive for gain
+5. **Target calories** — `TDEE + (paceKgPerWeek × 7700) / 7`; floored at 1200 (F) / 1500 (M)
+6. **Macros** — protein by kg and diet style; fat %; remaining carbs
+7. **Fluid** — ~35 ml/kg (rounded)
+8. **Weekly deficit** — `(TDEE - targetKcal) × 7`
+9. **Estimated weight change** — `weeklyDeficit / 7700` kcal per kg of fat
+10. **Estimated weeks to goal** — `|targetWeight - startWeight| / |paceKgPerWeek|`
 
 ### Option presets
 
@@ -89,7 +94,18 @@ Exported arrays drive UI labels and descriptions:
 
 ## Config screen vs wizard
 
-`config.tsx` exposes raw field editors (pickers + text inputs) for power users. Same `saveProfileFields` helper. Blocks back navigation until saved when profile was incomplete (mirrors onboarding guard).
+`config.tsx` exposes raw field editors (pickers + text inputs) for power users. Same `saveProfileFields` helper. Blocks back navigation until saved when profile was incomplete (mirrors onboarding guard). On save it also writes the machine-readable `goal_*` fields so edits stay in sync with the progress card.
+
+## Goal progress on the home screen
+
+`src/app/(tabs)/index.tsx` uses `calculateGoalProgress(profile)` from `src/lib/goals.ts` to render a **Goal** card:
+
+- Current weight → target weight
+- Percentage complete
+- Selected pace (kg/week)
+- Estimated weeks remaining
+
+The progress math reads the new `goal_*` columns and falls back to legacy `target_weight` / `weekly_deficit` for profiles that have not been re-saved yet.
 
 ## Error UX
 
