@@ -1,9 +1,10 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { client } from '@/lib/appwrite'
+import { client } from './appwrite'
 import { clearCachedToken } from './getAccessToken'
 import { clearProfileCache } from './profile'
+import { clearRecentFoodsCache } from './recentFoods'
 import { clearAppwriteSession, persistAppwriteSession } from './appwriteSession'
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -14,7 +15,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   },
 }))
 
-vi.mock('@/lib/appwrite', () => ({
+vi.mock('./appwrite', () => ({
   client: {
     setSession: vi.fn(),
   },
@@ -28,6 +29,10 @@ vi.mock('./getAccessToken', () => ({
 vi.mock('./profile', () => ({
   clearProfileCache: vi.fn(),
   getProfile: vi.fn(),
+}))
+
+vi.mock('./recentFoods', () => ({
+  clearRecentFoodsCache: vi.fn(),
 }))
 
 describe('appwriteSession cache clearing', () => {
@@ -70,6 +75,7 @@ describe('appwriteSession cache clearing', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
+    expect(clearRecentFoodsCache).toHaveBeenCalled()
   })
 
   it('clearAppwriteSession should clear client session, remove from storage, and clear caches', async () => {
@@ -79,5 +85,6 @@ describe('appwriteSession cache clearing', () => {
     expect(AsyncStorage.removeItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
+    expect(clearRecentFoodsCache).toHaveBeenCalled()
   })
 })

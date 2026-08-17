@@ -1,5 +1,5 @@
-import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
-import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
+import { buildMealInputFromProduct } from './mealFromProduct'
+import { getBarcodeFromProduct, getProductTitle } from './productDisplay'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const STORAGE_PREFIX = '@calcount/recent_foods:'
@@ -12,6 +12,21 @@ export type RecentFoodEntry = {
   title: string
   kcal: number | null
   usedAt: string
+}
+
+/** In-memory cache to prevent repeated AsyncStorage reads & JSON parsing on focus/renders. */
+const recentFoodsCache = new Map<string, RecentFoodEntry[]>()
+/** In-flight request deduplication map for concurrent list calls. */
+const inflightRequests = new Map<string, Promise<RecentFoodEntry[]>>()
+
+export function clearRecentFoodsCache(userKey?: string): void {
+  if (userKey) {
+    recentFoodsCache.delete(userKey)
+    inflightRequests.delete(userKey)
+  } else {
+    recentFoodsCache.clear()
+    inflightRequests.clear()
+  }
 }
 
 export function recentFoodsUserKey(userId: string | undefined): string {
@@ -45,18 +60,48 @@ function isRecentFoodEntry(value: unknown): value is RecentFoodEntry {
   )
 }
 
-export async function listRecentFoods(userKey: string): Promise<RecentFoodEntry[]> {
-  try {
-    const raw = await AsyncStorage.getItem(storageKey(userKey))
-    if (!raw) return []
-    const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .filter(isRecentFoodEntry)
-      .sort((a, b) => b.usedAt.localeCompare(a.usedAt))
-  } catch {
-    return []
-  }
+/**
+ * Fetch recent foods with in-memory caching and request deduplication.
+ * Eliminates redundant disk reads and JSON deserialization on focus.
+ */
+export function listRecentFoods(userKey: string): Promise<RecentFoodEntry[]> {
+  const cached = recentFoodsCache.get(userKey)
+  if (cached) return Promise.resolve(cached)
+
+  const inflight = inflightRequests.get(userKey)
+  if (inflight) return inflight
+
+  const promise = (async () => {
+    try {
+      const raw = await AsyncStorage.getItem(storageKey(userKey))
+      if (!raw) {
+        recentFoodsCache.set(userKey, [])
+        return []
+      }
+      const parsed: unknown = JSON.parse(raw)
+      if (!Array.isArray(parsed)) {
+        recentFoodsCache.set(userKey, [])
+        return []
+      }
+      const entries = parsed
+        .filter(isRecentFoodEntry)
+        .sort((a, b) => b.usedAt.localeCompare(a.usedAt))
+      recentFoodsCache.set(userKey, entries)
+      return entries
+    } catch {
+      recentFoodsCache.set(userKey, [])
+      return []
+    }
+  })()
+
+  inflightRequests.set(userKey, promise)
+  promise.finally(() => {
+    if (inflightRequests.get(userKey) === promise) {
+      inflightRequests.delete(userKey)
+    }
+  }).catch(() => {})
+
+  return promise
 }
 
 export async function recordRecentFood(
@@ -77,6 +122,8 @@ export async function recordRecentFood(
   }
 
   const updated = [next, ...existing.filter((item) => item.id !== id)].slice(0, MAX_RECENTS)
+
+  recentFoodsCache.set(userKey, updated)
 
   try {
     await AsyncStorage.setItem(storageKey(userKey), JSON.stringify(updated))
@@ -119,6 +166,7 @@ export async function recordRecentQuery(userKey: string, query: string): Promise
 }
 
 export async function clearRecentFoods(userKey?: string): Promise<void> {
+  clearRecentFoodsCache(userKey)
   if (!userKey) return
   try {
     await AsyncStorage.removeItem(storageKey(userKey))
