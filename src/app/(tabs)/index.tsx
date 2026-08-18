@@ -2,7 +2,6 @@ import RadialGauge from '@/components/Gague';
 import { MotionView } from '@/components/MotionView';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
-import { Ticker } from '@/components/ui/Ticker';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
@@ -11,7 +10,7 @@ import { panelSpring, quickTiming } from '@/lib/motion';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import { createTask, deleteTask, listTasks, setTaskDone } from '@/lib/tasks';
 import { useTheme } from '@/lib/theme/ThemeContext';
-import type { ThemeColors } from '@/lib/theme/tokens';
+import { borderRadius, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
@@ -222,15 +221,6 @@ export default function DashboardScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Ticker
-          items={[
-            { text: `Streak: ${streak} days`, icon: 'flame', color: colors.streakColor },
-            { text: `XP: ${xp.xpInCurrentLevel}/${xp.xpNeeded}`, icon: 'sparkles', color: colors.xpAccent },
-            { text: `Protein: ${Math.round(totals.protein)}g / ${targets.protein}g`, icon: 'nutrition', color: colors.success },
-          ]}
-          style={{ marginBottom: 4 }}
-        />
-
         <View>
           <Text style={styles.eyebrow}>TODAY</Text>
           <Text style={styles.date}>
@@ -257,7 +247,7 @@ export default function DashboardScreen() {
           <RadialGauge
             value={totals.kcal}
             max={targets.kcal}
-            size={220}
+            size={192}
             strokeWidth={10}
             color={colors.accent}
             backgroundColor={colors.progressTrail}
@@ -482,7 +472,6 @@ function GoalCard({
       <View style={styles.goalIcon}><Ionicons name={icon} size={22} color={colors.success} /></View>
       <Text style={styles.goalTitle}>{title}</Text>
       <Text style={styles.goalSubtitle}>{subtitle}</Text>
-      <ProgressBar value={65} max={100} />
     </Pressable>
   )
 }
@@ -517,11 +506,11 @@ function DashboardFab({
   const shellStyle = useAnimatedStyle(() => {
     const width = interpolate(progress.value, [0, 1], [FAB_SIZE, MENU_WIDTH], Extrapolation.CLAMP)
     const height = interpolate(progress.value, [0, 1], [FAB_SIZE, MENU_HEIGHT], Extrapolation.CLAMP)
-    const borderRadius = interpolate(progress.value, [0, 1], [FAB_SIZE / 2, 16], Extrapolation.CLAMP)
+    const radius = interpolate(progress.value, [0, 1], [FAB_SIZE / 2, 12], Extrapolation.CLAMP)
     return {
       width,
       height,
-      borderRadius,
+      borderRadius: radius,
       borderColor: interpolateColor(progress.value, [0, 1], [colors.accent, colors.border]),
       backgroundColor: interpolateColor(progress.value, [0, 1], [colors.accent, colors.surface]),
     }
@@ -628,10 +617,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   date: { ...typography.headlineLarge, color: c.accent, marginTop: 2 },
   lede: { ...typography.body, color: c.textMuted },
   gameStrip: { flexDirection: 'row', gap: 10 },
-  gameMetric: { flex: 1, padding: 14, backgroundColor: c.accentSoft, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  gameMetric: { flex: 1, padding: 12, backgroundColor: c.accentSoft, borderRadius: borderRadius.lg, flexDirection: 'row', alignItems: 'center', gap: 7 },
   gameValue: { ...typography.label, color: c.accent, fontWeight: '700' },
   gameLabel: { ...typography.labelSmall, color: c.textMuted, marginLeft: 'auto' },
-  heroCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 8, padding: 20, alignItems: 'center', gap: 14 },
+  heroCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.lg, padding: 16, alignItems: 'center', gap: 14 },
   sectionTitle: { ...typography.headline, color: c.accent },
   macroStrip: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 14, width: '100%', gap: 16 },
   macroCell: { flex: 1, alignItems: 'center', gap: 5 },
@@ -639,7 +628,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   macroLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 7 },
   sectionMeta: { ...typography.labelSmall, color: c.textMuted },
-  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 8, paddingHorizontal: 16 },
+  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.lg, paddingHorizontal: 16 },
   goalProgressBody: { paddingVertical: 16, gap: 10 },
   goalProgressRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   goalProgressValue: { ...typography.body, color: c.text, fontWeight: '600' },
@@ -652,7 +641,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   questDone: { color: c.textMuted, textDecorationLine: 'line-through' },
   questProgress: { ...typography.labelSmall, color: c.success },
   goalGrid: { flexDirection: 'row', gap: 12 },
-  goalCard: { flex: 1, minHeight: 150, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 8, padding: 14, gap: 8 },
+  goalCard: { flex: 1, minHeight: 120, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.lg, padding: 14, gap: 8 },
   goalIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
   goalTitle: { ...typography.body, color: c.accent, fontWeight: '700' },
   goalSubtitle: { ...typography.labelSmall, color: c.textMuted, flex: 1 },
@@ -758,7 +747,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     backgroundColor: c.surface,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: c.border,
     padding: 20,

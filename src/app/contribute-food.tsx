@@ -577,7 +577,7 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.surface,
       borderRadius: borderRadius.lg,
       borderWidth: 1,
-      borderColor: 'rgba(120,118,114,0.2)',
+      borderColor: c.border,
       padding: spacing.md,
       gap: spacing.md,
     },

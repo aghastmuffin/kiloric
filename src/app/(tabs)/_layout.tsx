@@ -77,7 +77,7 @@ function TabNavigator() {
         options={{
           title: 'Account',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24} />
+            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22} />
           ),
         }}
       />

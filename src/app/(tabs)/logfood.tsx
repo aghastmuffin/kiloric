@@ -1454,29 +1454,19 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   searchField: {
     flex: 1,
-    minHeight: 54,
+    minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingLeft: 18,
     paddingRight: spacing.md,
     backgroundColor: c.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: c.border,
     borderRadius: borderRadius.pill,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
   },
   searchFieldFocused: {
     borderColor: c.accent,
-    shadowColor: c.accent,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 3,
   },
   searchInput: {
     flex: 1,
@@ -1500,15 +1490,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   barcodeButton: {
     width: 54,
     height: 54,
-    borderRadius: 8,
+    borderRadius: borderRadius.pill,
     backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: c.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
   },
   barcodeButtonPressed: {
     transform: [{ scale: 0.94 }],
@@ -1532,11 +1517,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   filterChipSelected: {
     backgroundColor: c.accent,
     borderColor: c.accent,
-    shadowColor: c.accent,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 3,
   },
   filterChipText: {
     ...typography.labelSmall,
@@ -1577,7 +1557,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(120,118,114,0.2)',
+    borderColor: c.border,
+    overflow: 'hidden',
   },
   mealCardDropTarget: {
     borderColor: c.accent,
@@ -1670,13 +1651,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(120,118,114,0.2)',
+    borderColor: c.border,
     overflow: 'hidden',
   },
   recentRow: {
-    minHeight: 78,
+    minHeight: 64,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -1708,13 +1689,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingVertical: 3,
   },
   macroProtein: {
-    backgroundColor: 'rgba(102,113,96,0.1)',
+    backgroundColor: c.surfaceAlt,
   },
   macroFat: {
-    backgroundColor: 'rgba(120,118,114,0.1)',
+    backgroundColor: c.surfaceAlt,
   },
   macroCarbs: {
-    backgroundColor: 'rgba(27,54,93,0.1)',
+    backgroundColor: c.surfaceAlt,
   },
   macroPillText: {
     ...typography.labelSmall,
@@ -1735,7 +1716,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   rowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(196,198,207,0.35)',
+    borderTopColor: c.border,
   },
   emptyCard: {
     minHeight: 120,
@@ -1745,7 +1726,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(120,118,114,0.2)',
+    borderColor: c.border,
     padding: spacing.lg,
   },
   inlineEmpty: {
