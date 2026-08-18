@@ -11,6 +11,12 @@ importers:
       '@expo-google-fonts/hanken-grotesk':
         specifier: ^0.4.3
         version: 0.4.3
+      '@expo-google-fonts/instrument-serif':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@expo-google-fonts/inter-tight':
+        specifier: ^0.4.2
+        version: 0.4.2
       '@expo-google-fonts/jetbrains-mono':
         specifier: ^0.4.1
         version: 0.4.1
@@ -597,6 +603,12 @@ packages:
 
   '@expo-google-fonts/hanken-grotesk@0.4.3':
     resolution: {integrity: sha512-TZn/Ux+nCxEjG/zAenCFbEhOAPxSXN3lo2YU2jHcPsNBPFeicm8feQStL81igJuAwJLCn62VvEOdTtmVEBDl0g==}
+
+  '@expo-google-fonts/instrument-serif@0.4.1':
+    resolution: {integrity: sha512-1CgCrLbTSgE7RV8ZrTT7i06UAyNQDBrhxQuxkReNnfq5yvUhTmvpOK17grlEsXG5p04lJ1ZXGiIjPeHo6X0sXg==}
+
+  '@expo-google-fonts/inter-tight@0.4.2':
+    resolution: {integrity: sha512-/b4YLh8v145nMfrtw0FF2EB8eRhw/SVt/LdhzN1+Faz/uSFvZkF7EtxfipV8iacDSb1PUqyssHd0tZjlzhhf2g==}
 
   '@expo-google-fonts/jetbrains-mono@0.4.1':
     resolution: {integrity: sha512-CslACrtMOcRwoWXCO7OMEI+9w3fukWSoBtvNz46OqPoogEuuoY0tkDY1O8sFumk8t0pC6Cx0Xr95O0TOQhpkug==}
@@ -5110,6 +5122,10 @@ snapshots:
       levn: 0.4.1
 
   '@expo-google-fonts/hanken-grotesk@0.4.3': {}
+
+  '@expo-google-fonts/instrument-serif@0.4.1': {}
+
+  '@expo-google-fonts/inter-tight@0.4.2': {}
 
   '@expo-google-fonts/jetbrains-mono@0.4.1': {}
 

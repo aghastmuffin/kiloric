@@ -24,3 +24,8 @@
 **Learning:** High-density list views (such as search matches and quick logging cards) frequently trigger list-wide re-renders when parent states change (e.g. typing in search, toggling active tabs, or loading states). Traditional `React.memo` is completely bypassed if these rows accept inline arrow function callbacks. Implementing a custom comparator that explicitly verifies only layout-relevant and visual state-affecting props (ignoring unstable callbacks) successfully prevents redundant re-renders and drastically reduces V8 memory allocations and CPU cycles.
 
 **Action:** For lists/rows utilizing inline callback handlers from the parent component, use `React.memo` combined with custom comparator functions to ensure maximum rendering efficiency.
+
+## 2025-05-20 - In-Memory Caching & Request Deduplication for Local Storage Services
+**Learning:** Local storage access via `AsyncStorage.getItem` and `JSON.parse` in repeatedly accessed utilities like `foodFavorites` creates noticeable bridge I/O latency and CPU parsing overhead when components re-render or tab focus shifts. Adding an in-memory cache (`favoritesCache`) alongside in-flight promise deduplication (`inflightLoadFavorites`) turns subsequent reads into instant 0ms sync/promise resolves, while updating the cache synchronously on mutations (`saveFavoriteFoods`, `toggleFavoriteFood`) maintains strict consistency.
+
+**Action:** For frequently read local storage data structures, use in-memory caching and in-flight request deduplication with synchronous cache updates on mutation methods.
