@@ -3,13 +3,11 @@ import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
-/** Typical tab bar height above the home-indicator safe area. */
-const TAB_BAR_HEIGHT = Platform.select({ ios: 49, android: 56, default: 56 }) ?? 56
 
 /** Permanently affixed meal-type selector (scan tab). */
 export function MealTypePicker() {
@@ -27,7 +25,10 @@ export function MealTypePicker() {
           accessibilityRole="button"
           accessibilityLabel="Close meal type menu"
           style={styles.backdrop}
-          onPress={() => setOpen(false)}
+          onPress={() => {
+            triggerSelectionHaptic()
+            setOpen(false)
+          }}
         />
       ) : null}
 
@@ -41,6 +42,7 @@ export function MealTypePicker() {
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 onPress={() => {
+                  triggerSelectionHaptic()
                   void setSelectedMealType(type)
                   setOpen(false)
                 }}
@@ -62,7 +64,11 @@ export function MealTypePicker() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Meal type: ${selectedMealType}. Tap to change.`}
-        onPress={() => setOpen((value) => !value)}
+        accessibilityState={{ expanded: open }}
+        onPress={() => {
+          triggerSelectionHaptic()
+          setOpen((value) => !value)
+        }}
         style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
       >
         <Ionicons name="restaurant-outline" size={18} color={colors.accent} />
