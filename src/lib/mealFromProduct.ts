@@ -1,5 +1,5 @@
-import type { CreateMealInput, MealType } from '@/lib/meals'
-import { scaleNutrient } from '@/lib/servings'
+import type { CreateMealInput, MealType } from './meals'
+import { scaleNutrient } from './servings'
 
 function getNestedValue(data: Record<string, unknown>, key: string): unknown {
   if (key in data) return data[key]
