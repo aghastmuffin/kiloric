@@ -47,7 +47,7 @@ export function SelectionCard<T extends string>({
 const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
   card: {
     backgroundColor: onboardingColors.card,
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1.5,
