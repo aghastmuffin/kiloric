@@ -30,3 +30,8 @@
 **Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on meal updates and transfers, permitting any authenticated user to potentially modify or steal meals belonging to other users if they know the document ID.
 **Learning:** Even if the database layer has security policies, client-side/API transport layers must enforce strict ownership checks as a key defense-in-depth layer to prevent invalid network requests from reaching the server or abusing permissive security configurations.
 **Prevention:** Always assert and verify that the owner ID of a fetched resource document matches the active authenticated session user ID prior to performing any mutating database queries (such as updates or deletes).
+
+## 2026-08-08 - [Broken Object Level Authorization / IDOR on Task Mutations]
+**Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on task status updates (`setTaskDone`) and deletions (`deleteTask`), allowing any authenticated user to modify or delete tasks belonging to other users by providing target document IDs.
+**Learning:** Checking that the input `userId` parameter matches the session identity (`account.get()`) is insufficient if the code does not verify that the target resource document itself actually belongs to that `userId`.
+**Prevention:** Always fetch the existing resource document and verify that its resource owner property (`task.userId`) matches the authenticated `sessionUserId` before performing updates or deletions.
