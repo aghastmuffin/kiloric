@@ -1,4 +1,4 @@
-import { account, databases } from '@/lib/appwrite'
+import { account, databases } from './appwrite'
 import { AppwriteException, ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
 
 const TASKS_DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_TASKS_DATABASE_ID ?? 'tasks'
@@ -88,13 +88,34 @@ export async function createTask(
   })) as TaskDocument
 }
 
+export async function getTask(taskId: string): Promise<TaskDocument | null> {
+  if (!TASKS_DATABASE_ID || !TASKS_COLLECTION_ID) return null
+  try {
+    return (await databases.getDocument({
+      databaseId: TASKS_DATABASE_ID,
+      collectionId: TASKS_COLLECTION_ID,
+      documentId: taskId,
+    })) as TaskDocument
+  } catch (err) {
+    if (err instanceof AppwriteException && err.code === 404) return null
+    throw err
+  }
+}
+
 export async function setTaskDone(
   userId: string,
   taskId: string,
   done: boolean,
 ): Promise<TaskDocument> {
-  await authenticatedUserId(userId)
+  const sessionUserId = await authenticatedUserId(userId)
   if (!/^[a-zA-Z0-9._-]{1,64}$/.test(taskId)) throw new Error('Invalid task.')
+
+  const existingTask = await getTask(taskId)
+  if (!existingTask) throw new Error('Task not found.')
+  if (existingTask.userId !== sessionUserId) {
+    throw new Error('Unauthorized: You can only update your own tasks.')
+  }
+
   return (await databases.updateDocument({
     databaseId: TASKS_DATABASE_ID,
     collectionId: TASKS_COLLECTION_ID,
@@ -104,8 +125,15 @@ export async function setTaskDone(
 }
 
 export async function deleteTask(userId: string, taskId: string): Promise<void> {
-  await authenticatedUserId(userId)
+  const sessionUserId = await authenticatedUserId(userId)
   if (!/^[a-zA-Z0-9._-]{1,64}$/.test(taskId)) throw new Error('Invalid task.')
+
+  const existingTask = await getTask(taskId)
+  if (!existingTask) throw new Error('Task not found.')
+  if (existingTask.userId !== sessionUserId) {
+    throw new Error('Unauthorized: You can only delete your own tasks.')
+  }
+
   await databases.deleteDocument({
     databaseId: TASKS_DATABASE_ID,
     collectionId: TASKS_COLLECTION_ID,
