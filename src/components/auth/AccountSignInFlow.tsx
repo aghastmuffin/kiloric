@@ -1,4 +1,5 @@
 import { FontPreferencePicker } from '@/components/FontPreferencePicker'
+import { setHasSkippedSignIn } from '@/components/ProfileGate'
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker'
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl' // Added to handle search tab picker
 import { showApiError } from '@/lib/apiErrors'
@@ -129,6 +130,16 @@ export function AccountSignInFlow() {
                             onPress={() => router.replace('/onboarding')}
                         >
                             <Text style={styles.buttonSecondaryText}>Create account</Text>
+                        </Pressable>
+
+                        <Pressable
+                            style={({ pressed }) => [styles.buttonSkip, pressed && styles.buttonPressed]}
+                            onPress={() => {
+                                setHasSkippedSignIn(true)
+                                router.replace('/')
+                            }}
+                        >
+                            <Text style={styles.buttonSkipText}>Skip for now</Text>
                         </Pressable>
 
                         {/* Collapsible Local Card component wrapper */}
@@ -387,7 +398,7 @@ const makeStyles = (c: ThemeColors) =>
             justifyContent: 'center',
             gap: 8,
             backgroundColor: c.accent,
-            borderRadius: 999,
+            borderRadius: 8,
             padding: 16,
             alignItems: 'center',
             marginTop: 8,
@@ -398,7 +409,7 @@ const makeStyles = (c: ThemeColors) =>
             elevation: 3,
         },
         buttonSecondary: {
-            borderRadius: 999,
+            borderRadius: 8,
             padding: 15,
             alignItems: 'center',
             marginTop: 12,
@@ -412,6 +423,15 @@ const makeStyles = (c: ThemeColors) =>
         buttonSecondaryText: {
             ...typography.label,
             color: c.accent,
+        },
+        buttonSkip: {
+            padding: 12,
+            alignItems: 'center',
+            marginTop: 4,
+        },
+        buttonSkipText: {
+            ...typography.bodySmall,
+            color: c.textMuted,
         },
         buttonPressed: {
             opacity: 0.85,
@@ -435,7 +455,7 @@ const makeStyles = (c: ThemeColors) =>
         },
         footerSecondary: {
             flex: 1,
-            borderRadius: 999,
+            borderRadius: 8,
             paddingVertical: 14,
             alignItems: 'center',
             borderWidth: 1.5,
@@ -448,7 +468,7 @@ const makeStyles = (c: ThemeColors) =>
         footerPrimary: {
             flex: 2,
             backgroundColor: c.accent,
-            borderRadius: 999,
+            borderRadius: 8,
             paddingVertical: 14,
             alignItems: 'center',
         },

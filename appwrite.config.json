@@ -307,6 +307,63 @@
                     "default": null,
                     "min": -9223372036854775808,
                     "max": 9223372036854775807
+                },
+                {
+                    "key": "goal_type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "lose",
+                        "maintain",
+                        "gain"
+                    ]
+                },
+                {
+                    "key": "goal_pace_kg_per_week",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -10,
+                    "max": 10
+                },
+                {
+                    "key": "goal_start_weight_kg",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "goal_target_weight_kg",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "goal_start_date",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "goal_estimated_weeks",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
                 }
             ],
             "indexes": [

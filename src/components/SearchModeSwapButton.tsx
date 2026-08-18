@@ -61,7 +61,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     right: 18,
     width: 52,
     height: 52,
-    borderRadius: 26,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: c.surface,

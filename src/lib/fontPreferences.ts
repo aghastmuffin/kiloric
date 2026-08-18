@@ -1,15 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-export type AppFontChoice = 'default' | 'custom'
+export type AppFontChoice = 'default' | 'custom' | 'mono'
 
 const STORAGE_KEY = '@calcount/app_font_choice'
+const VALID_CHOICES: AppFontChoice[] = ['default', 'custom', 'mono']
 
 export const DEFAULT_FONT_CHOICE: AppFontChoice = 'default'
 
 export async function loadFontChoice(): Promise<AppFontChoice> {
   try {
     const value = await AsyncStorage.getItem(STORAGE_KEY)
-    if (value === 'default' || value === 'custom') return value
+    if (VALID_CHOICES.includes(value as AppFontChoice)) return value as AppFontChoice
   } catch (err) {
     console.error('[fontPreferences] load failed', err)
   }

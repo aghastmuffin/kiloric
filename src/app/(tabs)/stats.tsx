@@ -1,29 +1,28 @@
-import { useAuth } from '@/lib/AuthContext'
-import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals'
-import { getProfile, type ProfileDocument } from '@/lib/profile'
-import { useTheme } from '@/lib/theme/ThemeContext'
-import type { ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { useAuth } from '@/lib/AuthContext';
+import { resolveGoalState } from '@/lib/goals';
+import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
+import { getProfile, type ProfileDocument } from '@/lib/profile';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
-  formatWeightImperial,
-  formatWeightMetric,
-  normalizeStoredMetricsToMetric,
-  normalizeStoredTargetWeightKg,
-  parseDisplayUnitsPreference,
-} from '@/lib/units'
-import { Ionicons } from '@expo/vector-icons'
-import { useFocusEffect } from 'expo-router'
-import { useCallback, useMemo, useState } from 'react'
+    formatWeightImperial,
+    formatWeightMetric,
+    parseDisplayUnitsPreference,
+} from '@/lib/units';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Period = 'week' | 'month'
 type StatsData = {
@@ -97,7 +96,7 @@ function getInsight(days: DayTotal[], goal: number | null): { title: string; bod
   if (average > goal * 1.15) {
     return {
       title: 'Logged days are trending above goal',
-      body: `Your logged-day average is ${Math.round(average - goal)} kcal above goal. Look for the meal moments driving the gap.`,
+      body: `Your logged-day average is ${Math.round(average - goal)} kcal above goal. Look for the meals driving the gap.`,
     }
   }
   if (average < goal * 0.85) {
@@ -280,13 +279,13 @@ export default function StatsScreen() {
   const weightSnapshot = useMemo(() => {
     const profile = data.profile
     if (!profile || typeof profile.weight !== 'number') return null
+    const goal = resolveGoalState(profile)
+    if (!goal) return null
     const units = parseDisplayUnitsPreference(profile.goal_plain, profile.country)
-    const { weightKg } = normalizeStoredMetricsToMetric(profile.country, profile.height, profile.weight)
-    const targetKg = normalizeStoredTargetWeightKg(profile.country, profile.target_weight, profile.height)
     const format = units === 'imperial' ? formatWeightImperial : formatWeightMetric
     return {
-      current: format(weightKg),
-      target: targetKg == null ? null : format(targetKg),
+      current: format(profile.weight),
+      target: format(goal.targetWeightKg),
     }
   }, [data.profile])
 
@@ -440,10 +439,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     padding: 4,
     gap: 4,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: c.surfaceAlt,
   },
-  toggleButton: { flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 7 },
+  toggleButton: { flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   toggleButtonSelected: { backgroundColor: c.accent },
   toggleText: { ...typography.labelSmall, color: c.textMuted },
   toggleTextSelected: { color: c.onAccent },
@@ -452,7 +451,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 16,
     gap: 16,
     overflow: 'hidden',
@@ -510,7 +509,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   axisLabel: { ...typography.labelSmall, color: c.textMuted, height: 24, paddingTop: 6, fontSize: 9 },
   scoreCard: {
     backgroundColor: c.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
@@ -526,7 +525,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.accentSoft,
     borderWidth: 1,
     borderColor: c.borderStrong,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
     gap: 12,
@@ -566,10 +565,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   stateText: { ...typography.body, color: c.textMuted, textAlign: 'center' },
   emptyCard: {
     minHeight: 210,
-    padding: 28,
+    padding: 24,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: c.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -580,7 +579,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: c.danger,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: c.dangerSoft,
     flexDirection: 'row',
     alignItems: 'center',

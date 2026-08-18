@@ -8,6 +8,7 @@ import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
+import { resolveGoalState } from '@/lib/goals';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
@@ -18,7 +19,6 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
   formatWeightImperial,
   formatWeightMetric,
-  normalizeStoredTargetWeightKg,
   parseDisplayUnitsPreference,
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +43,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { Models } from 'react-native-appwrite';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type AppwriteUser = Models.User<Models.Preferences>;
 
@@ -50,6 +51,7 @@ export default function AccountScreen() {
   const { user, loading } = useAuth();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences();
   const [savingPreference, setSavingPreference] = useState(false);
 
@@ -74,7 +76,7 @@ export default function AccountScreen() {
 
   return (
       <ScrollView
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
         {!user ? (
@@ -251,9 +253,8 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
   const goal = profile?.goal_plain?.replace(/ · units:(metric|imperial)$/, '').trim()
     || 'Build a consistent, balanced routine';
   const displayUnits = parseDisplayUnitsPreference(profile?.goal_plain, profile?.country);
-  const targetWeightKg = profile
-    ? normalizeStoredTargetWeightKg(profile.country, profile.target_weight, profile.height)
-    : null;
+  const goalState = profile ? resolveGoalState(profile) : null;
+  const targetWeightKg = goalState?.targetWeightKg ?? null;
   const targetWeight = targetWeightKg == null
     ? null
     : (displayUnits === 'imperial'
@@ -383,9 +384,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flexGrow: 1,
     width: '100%',
-    maxWidth: 640,
+    maxWidth: 760,
     alignSelf: 'center',
-    padding: 24,
+    paddingHorizontal: 16,
     paddingBottom: 48,
     backgroundColor: c.background,
   },
@@ -411,14 +412,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    elevation: 2,
   },
   identityRow: {
     flexDirection: 'row',
@@ -443,16 +439,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.accent,
   },
   levelBadge: {
-    marginTop: -10,
+    marginTop: -8,
     backgroundColor: c.accent,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    shadowColor: c.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
   },
   levelBadgeText: {
     ...typography.labelSmall,
@@ -502,7 +493,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.text,
   },
   xpTrack: {
-    height: 10,
+    height: 8,
     borderRadius: 999,
     backgroundColor: c.progressTrail,
     overflow: 'hidden',
@@ -511,10 +502,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     height: '100%',
     borderRadius: 999,
     backgroundColor: c.xpAccent,
-    shadowColor: c.xpAccent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
   },
   xpHint: {
     ...typography.labelSmall,
@@ -533,8 +520,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
   },
   statIconWrap: {
@@ -546,10 +533,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     marginBottom: 2,
   },
   statIconStreak: {
-    backgroundColor: 'rgba(190, 202, 182, 0.22)',
+    backgroundColor: c.accentSoft,
   },
   statIconMeals: {
-    backgroundColor: 'rgba(102, 113, 96, 0.14)',
+    backgroundColor: c.accentSoft,
   },
   statIconKcal: {
     backgroundColor: c.accentSoft,
@@ -568,8 +555,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   card: {
     backgroundColor: c.surface,
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: c.border,
@@ -631,21 +618,16 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 8,
     justifyContent: 'center',
     backgroundColor: c.accent,
-    borderRadius: 999,
-    padding: 16,
+    borderRadius: 8,
+    padding: 14,
     alignItems: 'center',
-    shadowColor: c.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    elevation: 3,
   },
   buttonDanger: {
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
     backgroundColor: c.dangerButtonBg,
-    borderRadius: 999,
+    borderRadius: 8,
     padding: 14,
     alignItems: 'center',
     marginTop: 12,

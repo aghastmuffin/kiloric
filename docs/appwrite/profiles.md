@@ -23,9 +23,21 @@ Collection ID: **`users`** (set `EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID=use
 | `target_fat` | integer | no | yes |
 | `daily_fluid` | integer | no | yes |
 | `TDEE` | integer | no | yes |
-| `goal_plain` | text | no | yes (includes diet + `· units:metric/imperial`) |
-| `target_weight` | integer | no | yes (metric kg, rounded) |
-| `weekly_deficit` | integer | no | yes |
+| `goal_plain` | text | no | yes — **legacy/human-readable only** |
+| `target_weight` | integer | no | yes — **legacy**, metric kg, rounded |
+| `weekly_deficit` | integer | no | yes — **legacy**, kcal/week |
+| `goal_type` | enum (`lose` / `maintain` / `gain`) | no | yes |
+| `goal_pace_kg_per_week` | double | no | yes — signed; negative = loss, positive = gain |
+| `goal_start_weight_kg` | double | no | yes — body weight when goal was created |
+| `goal_target_weight_kg` | double | no | yes — desired body weight |
+| `goal_start_date` | datetime | no | yes — ISO 8601 goal creation timestamp |
+| `goal_estimated_weeks` | integer | no | yes — estimated weeks to reach target at pace |
+
+## Goal state
+
+`src/lib/goals.ts` defines the canonical `GoalState` type and progress math. New profiles should populate the `goal_*` columns. The app still reads legacy `target_weight` and `weekly_deficit` rows through `resolveGoalState()`, so old data keeps working until the user re-saves their profile.
+
+The schema in `appwrite.config.json` already includes the new `goal_*` columns. Apply it to Appwrite Console (or re-deploy your project config) so the app can write them. If you see `400 attribute_not_found` on save, the columns have not been applied yet.
 
 ## Permissions
 

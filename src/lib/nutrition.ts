@@ -13,7 +13,10 @@ export type DietStyle =
   | 'mediterranean'
   | 'plant_forward'
 
-export const NUTRITION_FORMULA_VERSION = 2
+export const NUTRITION_FORMULA_VERSION = 3
+
+/** Energy density of adipose tissue — widely used clinical approximation (kcal/kg). */
+export const CALORIES_PER_KG_FAT = 7700
 
 export type MacroPercentages = {
   protein: number
@@ -53,6 +56,13 @@ export const PACE_OPTIONS: { value: GoalPace; label: string; description: string
   { value: 'aggressive', label: 'Focused', description: '~0.75 kg / week' },
 ]
 
+/** Industry-standard weekly body-mass change rate per pace setting (kg/week). */
+export const GOAL_PACE_KG_PER_WEEK: Record<GoalPace, number> = {
+  gentle: 0.25,
+  moderate: 0.5,
+  aggressive: 0.75,
+}
+
 export const DIET_OPTIONS: { value: DietStyle; label: string; description: string }[] = [
   { value: 'balanced', label: 'Balanced', description: 'Flexible mix of protein, carbs, and fats' },
   { value: 'high_protein', label: 'High protein', description: 'Extra protein for satiety and muscle' },
@@ -69,18 +79,6 @@ const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
   very_active: 1.9,
 }
 
-const PACE_DEFICIT: Record<GoalPace, number> = {
-  gentle: 250,
-  moderate: 550,
-  aggressive: 750,
-}
-
-const PACE_SURPLUS: Record<GoalPace, number> = {
-  gentle: 250,
-  moderate: 350,
-  aggressive: 500,
-}
-
 export type NutritionPlan = {
   age: number
   bmr: number
@@ -95,6 +93,10 @@ export type NutritionPlan = {
   goalPlain: string
   mealsLabel: string
   estimatedWeeklyChangeKg: number
+  /** Signed weekly body-mass change: negative for loss, positive for gain, zero for maintenance. */
+  goalPaceKgPerWeek: number
+  /** Estimated whole weeks to reach the target weight at the selected pace. */
+  estimatedWeeks: number
 }
 
 export function calculateAge(dateOfBirth: Date, referenceDate = new Date()): number {
@@ -141,19 +143,26 @@ export function suggestTargetWeight(
   return Math.round(Math.max(weightKg + 2, fromBmi) * 10) / 10
 }
 
+export function goalPaceKgPerWeek(goal: FitnessGoal, pace: GoalPace): number {
+  const magnitude = GOAL_PACE_KG_PER_WEEK[pace]
+  if (goal === 'lose') return -magnitude
+  if (goal === 'gain') return magnitude
+  return 0
+}
+
+/** Convert a signed weekly body-mass change rate into a daily energy adjustment (kcal/day). */
+export function calculateDailyCalorieAdjustmentFromPace(paceKgPerWeek: number): number {
+  return Math.round((paceKgPerWeek * CALORIES_PER_KG_FAT) / 7)
+}
+
 export function calculateDailyCalories(
   tdee: number,
   goal: FitnessGoal,
-  pace: GoalPace,
+  pace: GoalPace | number,
   sex: Sex,
 ): number {
-  let target = tdee
-  if (goal === 'lose') {
-    target = tdee - PACE_DEFICIT[pace]
-  } else if (goal === 'gain') {
-    target = tdee + PACE_SURPLUS[pace]
-  }
-
+  const paceKg = typeof pace === 'string' ? goalPaceKgPerWeek(goal, pace) : pace
+  const target = tdee + calculateDailyCalorieAdjustmentFromPace(paceKg)
   const floor = sex === 'female' ? 1200 : 1500
   return Math.round(Math.max(target, floor) / 10) * 10
 }
@@ -163,7 +172,18 @@ export function calculateWeeklyDeficit(tdee: number, targetKcal: number): number
 }
 
 export function estimateWeeklyWeightChangeKg(weeklyDeficit: number): number {
-  return Math.round((weeklyDeficit / 7700) * 100) / 100
+  return Math.round((weeklyDeficit / CALORIES_PER_KG_FAT) * 100) / 100
+}
+
+export function estimateWeeksToGoal(
+  startWeightKg: number,
+  targetWeightKg: number,
+  paceKgPerWeek: number,
+): number {
+  const diffKg = Math.abs(targetWeightKg - startWeightKg)
+  const absPace = Math.abs(paceKgPerWeek)
+  if (absPace === 0) return 0
+  return Math.max(0, Math.round(diffKg / absPace))
 }
 
 export function calculateMacros(
@@ -311,7 +331,8 @@ export function buildNutritionPlan(input: {
   const tdee = calculateTdee(bmr, input.activity)
   const targetWeight =
     input.targetWeight ?? suggestTargetWeight(input.weightKg, input.heightCm, input.goal)
-  const targetKcal = calculateDailyCalories(tdee, input.goal, input.pace, input.sex)
+  const paceKgPerWeek = goalPaceKgPerWeek(input.goal, input.pace)
+  const targetKcal = calculateDailyCalories(tdee, input.goal, paceKgPerWeek, input.sex)
   const weeklyDeficit = calculateWeeklyDeficit(tdee, targetKcal)
   const estimatedWeeklyChangeKg = estimateWeeklyWeightChangeKg(weeklyDeficit)
   const macros = calculateMacros(targetKcal, input.weightKg, input.diet)
@@ -329,6 +350,8 @@ export function buildNutritionPlan(input: {
     targetWeight,
     mealsLabel: buildMealsLabel(input.diet),
     estimatedWeeklyChangeKg,
+    goalPaceKgPerWeek: paceKgPerWeek,
+    estimatedWeeks: estimateWeeksToGoal(input.weightKg, targetWeight, paceKgPerWeek),
     goalPlain: buildGoalPlainText({
       goal: input.goal,
       diet: input.diet,

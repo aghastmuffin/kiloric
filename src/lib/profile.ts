@@ -1,4 +1,5 @@
 import { account, databases } from '@/lib/appwrite'
+import type { FitnessGoal } from '@/lib/nutrition'
 import { AppwriteException, Permission, Role, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -33,9 +34,20 @@ export type ProfileFields = {
   target_fat?: number | null // integer
   daily_fluid?: number | null // integer
   TDEE?: number | null // integer
+  /** @deprecated Human-readable only. Use goal_type + goal_pace_kg_per_week for logic. */
   goal_plain?: string | null // text
+  /** @deprecated Prefer goal_target_weight_kg. Kept for legacy rows. */
   target_weight?: number | null // integer
+  /** @deprecated Prefer goal_pace_kg_per_week. Kept for legacy rows. */
   weekly_deficit?: number | null // integer
+
+  // Machine-readable weight/energy goal state (see src/lib/goals.ts).
+  goal_type?: FitnessGoal | null // enum: lose | maintain | gain
+  goal_pace_kg_per_week?: number | null // double
+  goal_start_weight_kg?: number | null // double
+  goal_target_weight_kg?: number | null // double
+  goal_start_date?: string | null // datetime
+  goal_estimated_weeks?: number | null // integer
 }
 
 /** Required when creating the first profile document. */
@@ -162,6 +174,16 @@ const INTEGER_FIELD_KEYS = new Set<keyof ProfileFields>([
   'TDEE',
   'target_weight',
   'weekly_deficit',
+  'goal_estimated_weeks',
+])
+
+/** Appwrite double columns — keep one decimal place. */
+const DOUBLE_FIELD_KEYS = new Set<keyof ProfileFields>([
+  'weight',
+  'height',
+  'goal_pace_kg_per_week',
+  'goal_start_weight_kg',
+  'goal_target_weight_kg',
 ])
 
 function roundDouble(value: number): number {
@@ -189,7 +211,7 @@ export function normalizeProfileWritePayload(data: Partial<ProfileFields>): Part
       continue
     }
 
-    if ((key === 'weight' || key === 'height') && typeof value === 'number') {
+    if (DOUBLE_FIELD_KEYS.has(key) && typeof value === 'number') {
       normalized[key] = roundDouble(value) as never
       continue
     }

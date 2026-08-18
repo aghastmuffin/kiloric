@@ -1,6 +1,5 @@
 import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
-import { SearchPreferencesProvider } from '@/lib/SearchPreferencesContext';
 import { FONT_FAMILY } from '@/lib/fonts';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,7 +77,7 @@ function TabNavigator() {
         options={{
           title: 'Account',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24} />
+            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22} />
           ),
         }}
       />
@@ -97,9 +96,7 @@ export default function TabLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ProfileGate>
-        <SearchPreferencesProvider>
-          <TabNavigator />
-        </SearchPreferencesProvider>
+        <TabNavigator />
       </ProfileGate>
     </GestureHandlerRootView>
   );

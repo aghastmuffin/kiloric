@@ -6,6 +6,7 @@ import {
   calculateDailyFluid,
   calculateMacros,
   calculateTdee,
+  goalPaceKgPerWeek,
   macroReferenceWarnings,
   validateMacroPercentages,
 } from './nutrition'
@@ -22,9 +23,9 @@ describe('nutrition calculations', () => {
   })
 
   it('derives pace from weekly energy and retains safety floors', () => {
-    expect(calculateDailyCalories(2200, 'lose', 'moderate', 'female')).toBe(1650)
-    expect(calculateDailyCalories(1600, 'lose', 'aggressive', 'female')).toBe(1200)
-    expect(calculateDailyCalories(2200, 'maintain', 'gentle', 'male')).toBe(2200)
+    expect(calculateDailyCalories(2200, 'lose', goalPaceKgPerWeek('lose', 'moderate'), 'female')).toBe(1650)
+    expect(calculateDailyCalories(1600, 'lose', goalPaceKgPerWeek('lose', 'aggressive'), 'female')).toBe(1200)
+    expect(calculateDailyCalories(2200, 'maintain', goalPaceKgPerWeek('maintain', 'gentle'), 'male')).toBe(2200)
   })
 
   it('converts AMDR percentages to macro grams', () => {

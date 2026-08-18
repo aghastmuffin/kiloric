@@ -62,7 +62,68 @@ export type OnboardingColors = {
   danger: string
 }
 
-// Barebones === the app's original styling, preserved verbatim.
+// Paper & Ink === the signature taeson.co aesthetic.
+// Light mode: warm paper background, pure white cards, rich charcoal text.
+export const paperLightColors: ThemeColors = {
+  background: '#F7F6F2',
+  surface: '#FFFFFF',
+  surfaceAlt: '#EBEAE4',
+  surfaceMuted: '#F7F6F2',
+  border: '#D0CEC5',
+  borderStrong: '#A3A196',
+  text: '#1A1A1A',
+  textMuted: '#6B6966',
+  textFaint: '#92908B',
+  accent: '#1A1A1A',
+  onAccent: '#F7F6F2',
+  accentSoft: '#EBEAE4',
+  danger: '#8B3A3A',
+  onDanger: '#FFFFFF',
+  dangerButtonBg: '#F5E8E8',
+  dangerSoft: 'rgba(139, 58, 58, 0.08)',
+  warning: '#A67C00',
+  success: '#4A6741',
+  mono: '#1A1A1A',
+  overlay: 'rgba(26, 26, 26, 0.4)',
+  pickerVariant: 'light',
+  pickerAccent: '#1A1A1A',
+  xpAccent: '#4A6741',
+  streakColor: '#A67C00',
+  levelGlow: 'rgba(74, 103, 65, 0.12)',
+  progressTrail: '#EBEAE4',
+}
+
+// Dark mode: deep charcoal, off-white text, same editorial restraint.
+export const paperDarkColors: ThemeColors = {
+  background: '#1A1A1A',
+  surface: '#242424',
+  surfaceAlt: '#2E2E2E',
+  surfaceMuted: '#1A1A1A',
+  border: '#3A3A3A',
+  borderStrong: '#4A4A4A',
+  text: '#F7F6F2',
+  textMuted: '#92908B',
+  textFaint: '#6B6966',
+  accent: '#F7F6F2',
+  onAccent: '#1A1A1A',
+  accentSoft: '#2E2E2E',
+  danger: '#D4706E',
+  onDanger: '#1A1A1A',
+  dangerButtonBg: 'rgba(212, 112, 110, 0.15)',
+  dangerSoft: 'rgba(212, 112, 110, 0.1)',
+  warning: '#D4A030',
+  success: '#6B9B5E',
+  mono: '#EBEAE4',
+  overlay: 'rgba(0, 0, 0, 0.6)',
+  pickerVariant: 'dark',
+  pickerAccent: '#F7F6F2',
+  xpAccent: '#6B9B5E',
+  streakColor: '#D4A030',
+  levelGlow: 'rgba(107, 155, 94, 0.2)',
+  progressTrail: '#2E2E2E',
+}
+
+// Legacy barebones preserved for theme preference switchers.
 export const barebonesColors: ThemeColors = {
   background: '#25292e',
   surface: '#1e2126',
@@ -92,6 +153,7 @@ export const barebonesColors: ThemeColors = {
   progressTrail: '#3a3f47',
 }
 
+// Legacy iOS palette preserved for theme preference switchers.
 export const iosLightColors: ThemeColors = {
   background: '#F8F8F4',
   surface: '#ffffff',
@@ -127,7 +189,7 @@ export const iosDarkColors: ThemeColors = {
   surfaceAlt: '#2c2c2e',
   surfaceMuted: '#1c1c1e',
   border: '#38383a',
-  borderStrong: '#48484a',
+  borderStrong: '#48384a',
   text: '#ffffff',
   textMuted: '#aeaeb2',
   textFaint: '#8e8e93',
@@ -150,7 +212,37 @@ export const iosDarkColors: ThemeColors = {
   progressTrail: '#373633',
 }
 
-// Onboarding keeps its own slightly richer palette (green accent in barebones).
+// Onboarding keeps its own slightly richer palette.
+const paperLightOnboardingColors: OnboardingColors = {
+  background: '#F7F6F2',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
+  cardSelected: '#EBEAE4',
+  border: '#D0CEC5',
+  borderSelected: '#1A1A1A',
+  accent: '#1A1A1A',
+  accentMuted: '#6B6966',
+  text: '#1A1A1A',
+  textMuted: '#6B6966',
+  textSoft: '#92908B',
+  danger: '#8B3A3A',
+}
+
+const paperDarkOnboardingColors: OnboardingColors = {
+  background: '#1A1A1A',
+  surface: '#242424',
+  card: '#242424',
+  cardSelected: '#2E2E2E',
+  border: '#3A3A3A',
+  borderSelected: '#F7F6F2',
+  accent: '#F7F6F2',
+  accentMuted: '#92908B',
+  text: '#F7F6F2',
+  textMuted: '#92908B',
+  textSoft: '#6B6966',
+  danger: '#D4706E',
+}
+
 const barebonesOnboardingColors: OnboardingColors = {
   background: '#1a1d22',
   surface: '#25292e',
@@ -196,7 +288,7 @@ const iosDarkOnboardingColors: OnboardingColors = {
   danger: '#ff453a',
 }
 
-export type AppThemeChoice = 'ios' | 'barebones'
+export type AppThemeChoice = 'paper' | 'barebones' | 'ios'
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const
 export const borderRadius = { sm: 4, md: 8, lg: 12, pill: 999 } as const
@@ -205,6 +297,7 @@ export function resolveThemeColors(
   choice: AppThemeChoice,
   scheme: ColorSchemeName,
 ): ThemeColors {
+  if (choice === 'paper') return scheme === 'light' ? paperLightColors : paperDarkColors
   if (choice === 'barebones') return barebonesColors
   return scheme === 'light' ? iosLightColors : iosDarkColors
 }
@@ -213,6 +306,7 @@ export function resolveOnboardingColors(
   choice: AppThemeChoice,
   scheme: ColorSchemeName,
 ): OnboardingColors {
+  if (choice === 'paper') return scheme === 'light' ? paperLightOnboardingColors : paperDarkOnboardingColors
   if (choice === 'barebones') return barebonesOnboardingColors
   return scheme === 'light' ? iosLightOnboardingColors : iosDarkOnboardingColors
 }

@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   continueButton: {
-    borderRadius: 12,
+    borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 28,
     shadowColor: '#25c946',

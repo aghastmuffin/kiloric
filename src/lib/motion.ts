@@ -2,14 +2,14 @@ import { Easing, type WithSpringConfig } from 'react-native-reanimated'
 
 export const tapSpring: WithSpringConfig = {
   damping: 24,
-  stiffness: 310,
-  mass: 0.65,
+  stiffness: 350,
+  mass: 0.5,
 }
 
 export const panelSpring: WithSpringConfig = {
   damping: 24,
-  stiffness: 180,
-  mass: 0.85,
+  stiffness: 200,
+  mass: 0.75,
 }
 
 export const celebrationSpring: WithSpringConfig = {
@@ -19,12 +19,17 @@ export const celebrationSpring: WithSpringConfig = {
 }
 
 export const quickTiming = {
-  duration: 180,
+  duration: 120,
+  easing: Easing.out(Easing.cubic),
+} as const
+
+export const revealTiming = {
+  duration: 200,
   easing: Easing.out(Easing.cubic),
 } as const
 
 /** Longer ease used by progress fills (ProgressRing / MacroProgressBar). */
 export const panelTiming = {
-  duration: 420,
+  duration: 360,
   easing: Easing.out(Easing.cubic),
 } as const
