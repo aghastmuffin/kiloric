@@ -291,7 +291,7 @@ const iosDarkOnboardingColors: OnboardingColors = {
 export type AppThemeChoice = 'paper' | 'barebones' | 'ios'
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const
-export const borderRadius = { sm: 4, md: 8, lg: 12, pill: 8 } as const
+export const borderRadius = { sm: 4, md: 8, lg: 12, pill: 999 } as const
 
 export function resolveThemeColors(
   choice: AppThemeChoice,

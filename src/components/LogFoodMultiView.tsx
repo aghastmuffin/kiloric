@@ -812,7 +812,7 @@ const makeStyles = (c: ThemeColors) =>
       gap: spacing.sm,
       backgroundColor: c.surface,
       borderWidth: 1,
-      borderColor: 'rgba(120,118,114,0.3)',
+      borderColor: c.border,
       borderRadius: borderRadius.lg,
       paddingHorizontal: spacing.md,
       paddingVertical: 8,
@@ -864,7 +864,7 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.surface,
       borderRadius: borderRadius.lg,
       borderWidth: 1,
-      borderColor: 'rgba(120,118,114,0.2)',
+      borderColor: c.border,
       overflow: 'hidden',
     },
     cardHeader: {
@@ -905,7 +905,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     resultBadge: {
       borderRadius: borderRadius.sm,
-      backgroundColor: 'rgba(27,54,93,0.1)',
+      backgroundColor: c.accentSoft,
       paddingHorizontal: 8,
       paddingVertical: 3,
     },
@@ -953,7 +953,7 @@ const makeStyles = (c: ThemeColors) =>
       gap: 12,
       paddingVertical: 8,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: 'rgba(196,198,207,0.28)',
+      borderBottomColor: c.border,
     },
     columnLabel: {
       ...typography.labelSmall,
@@ -1029,7 +1029,7 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.surface,
       borderRadius: borderRadius.lg,
       borderWidth: 1,
-      borderColor: 'rgba(120,118,114,0.2)',
+      borderColor: c.border,
       padding: spacing.lg,
     },
     emptyText: {

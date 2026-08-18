@@ -1,4 +1,4 @@
-import { isOrdsPresent } from '@/lib/ordsNormalize'
+import { isOrdsPresent } from './ordsNormalize'
 
 const TITLE_KEYS = ['product_name', 'name', 'title', 'food_name', 'brands', 'brand']
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean']

@@ -6,8 +6,8 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
 
-const FONT_OPTIONS: AppFontChoice[] = ['default', 'custom']
-const FONT_LABELS = ['Clean sans', 'Editorial serif']
+const FONT_OPTIONS: AppFontChoice[] = ['default', 'custom', 'mono']
+const FONT_LABELS = ['Clean sans', 'Editorial serif', 'Mono code']
 
 export function FontPreferencePicker() {
   const { fontChoice, setFontChoice, customFontLoaded } = useFontPreferences()
@@ -17,7 +17,7 @@ export function FontPreferencePicker() {
   async function handleIndexChange(index: number) {
     const choice = FONT_OPTIONS[index]
     if (!choice || choice === fontChoice || saving) return
-    if (choice === 'custom' && !customFontLoaded) return
+    if (!customFontLoaded && choice !== 'default') return
     setSaving(true)
     try {
       await setFontChoice(choice)
@@ -30,7 +30,7 @@ export function FontPreferencePicker() {
     <View style={styles.section}>
       <Text style={styles.label}>App font</Text>
       <Text style={styles.hint}>
-        Choose Hanken Grotesk for everyday UI or Source Serif for a more editorial feel.
+        Choose Inter Tight for everyday UI, Instrument Serif for an editorial feel, or JetBrains Mono for a code/editor aesthetic.
       </Text>
       <ThemedSegmentedControl
         values={FONT_LABELS}

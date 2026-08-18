@@ -19,6 +19,7 @@ const recentFoodsCache = new Map<string, RecentFoodEntry[]>()
 /** In-flight request deduplication map for concurrent list calls. */
 const inflightRequests = new Map<string, Promise<RecentFoodEntry[]>>()
 
+/** Purge in-memory recent foods cache to prevent memory leaks or stale state across user sessions. */
 export function clearRecentFoodsCache(userKey?: string): void {
   if (userKey) {
     recentFoodsCache.delete(userKey)
@@ -64,14 +65,16 @@ function isRecentFoodEntry(value: unknown): value is RecentFoodEntry {
  * Fetch recent foods with in-memory caching and request deduplication.
  * Eliminates redundant disk reads and JSON deserialization on focus.
  */
-export function listRecentFoods(userKey: string): Promise<RecentFoodEntry[]> {
+export async function listRecentFoods(userKey: string): Promise<RecentFoodEntry[]> {
+  // 1. Check in-memory cache
   const cached = recentFoodsCache.get(userKey)
-  if (cached) return Promise.resolve(cached)
+  if (cached) return cached
 
+  // 2. Deduplicate in-flight AsyncStorage requests
   const inflight = inflightRequests.get(userKey)
   if (inflight) return inflight
 
-  const promise = (async () => {
+  const request = (async () => {
     try {
       const raw = await AsyncStorage.getItem(storageKey(userKey))
       if (!raw) {
@@ -91,17 +94,13 @@ export function listRecentFoods(userKey: string): Promise<RecentFoodEntry[]> {
     } catch {
       recentFoodsCache.set(userKey, [])
       return []
+    } finally {
+      inflightRequests.delete(userKey)
     }
   })()
 
-  inflightRequests.set(userKey, promise)
-  promise.finally(() => {
-    if (inflightRequests.get(userKey) === promise) {
-      inflightRequests.delete(userKey)
-    }
-  }).catch(() => {})
-
-  return promise
+  inflightRequests.set(userKey, request)
+  return request
 }
 
 export async function recordRecentFood(
@@ -123,6 +122,7 @@ export async function recordRecentFood(
 
   const updated = [next, ...existing.filter((item) => item.id !== id)].slice(0, MAX_RECENTS)
 
+  // Synchronously update memory cache to serve subsequent reads instantly
   recentFoodsCache.set(userKey, updated)
 
   try {
@@ -166,8 +166,11 @@ export async function recordRecentQuery(userKey: string, query: string): Promise
 }
 
 export async function clearRecentFoods(userKey?: string): Promise<void> {
+  if (!userKey) {
+    clearRecentFoodsCache()
+    return
+  }
   clearRecentFoodsCache(userKey)
-  if (!userKey) return
   try {
     await AsyncStorage.removeItem(storageKey(userKey))
   } catch (err) {

@@ -13,7 +13,7 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -37,48 +37,59 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString()
 }
 
-function RecentRow({
-  item,
-  onPress,
-}: {
-  item: RecentFoodEntry
-  onPress: (item: RecentFoodEntry) => void
-}) {
-  const styles = useThemedStyles(makeStyles)
-  const { colors } = useTheme()
+// Memoized to prevent re-rendering list rows when parent modal or loading state changes in RecentFoodsList.
+const RecentRow = memo(
+  function RecentRow({
+    item,
+    onPress,
+  }: {
+    item: RecentFoodEntry
+    onPress: (item: RecentFoodEntry) => void
+  }) {
+    const styles = useThemedStyles(makeStyles)
+    const { colors } = useTheme()
 
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-      onPress={() => onPress(item)}
-      accessibilityRole="button"
-      accessibilityLabel={`Re-open ${item.title}`}
-    >
-      <View style={styles.rowIcon}>
-        <Ionicons
-          name={item.barcode ? 'barcode-outline' : 'search-outline'}
-          size={22}
-          color={colors.accent}
-        />
-      </View>
-      <View style={styles.rowBody}>
-        <Text style={styles.rowTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.rowMeta}>
-          {item.kcal != null
-            ? `${Math.round(item.kcal)} kcal`
-            : item.barcode
-              ? 'Scanned item'
-              : 'Text search'}
-          {' · '}
-          {formatRelativeTime(item.usedAt)}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-    </Pressable>
-  )
-}
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onPress={() => onPress(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`Re-open ${item.title}`}
+      >
+        <View style={styles.rowIcon}>
+          <Ionicons
+            name={item.barcode ? 'barcode-outline' : 'search-outline'}
+            size={22}
+            color={colors.accent}
+          />
+        </View>
+        <View style={styles.rowBody}>
+          <Text style={styles.rowTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <Text style={styles.rowMeta}>
+            {item.kcal != null
+              ? `${Math.round(item.kcal)} kcal`
+              : item.barcode
+                ? 'Scanned item'
+                : 'Text search'}
+            {' · '}
+            {formatRelativeTime(item.usedAt)}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
+    )
+  },
+  (prev, next) =>
+    prev.onPress === next.onPress &&
+    prev.item.id === next.item.id &&
+    prev.item.usedAt === next.item.usedAt &&
+    prev.item.title === next.item.title &&
+    prev.item.kcal === next.item.kcal &&
+    prev.item.barcode === next.item.barcode &&
+    prev.item.query === next.item.query,
+)
 
 /** Recent searches/foods list with re-open behavior. Embedded in the Log screen. */
 export function RecentFoodsList() {

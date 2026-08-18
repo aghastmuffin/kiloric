@@ -47,7 +47,7 @@ export const makeOnboardingStyles = (onboardingColors: OnboardingColors) => Styl
   input: {
     backgroundColor: onboardingColors.card,
     color: onboardingColors.text,
-    borderRadius: 4,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
@@ -111,7 +111,7 @@ export const makeOnboardingStyles = (onboardingColors: OnboardingColors) => Styl
   },
   infoCard: {
     backgroundColor: onboardingColors.surface,
-    borderRadius: 4,
+    borderRadius: 8,
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
@@ -121,7 +121,7 @@ export const makeOnboardingStyles = (onboardingColors: OnboardingColors) => Styl
     backgroundColor: onboardingColors.dangerSoft ?? 'rgba(139, 58, 58, 0.08)',
     borderColor: onboardingColors.danger,
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 8,
     padding: 14,
     marginTop: 8,
     marginBottom: 16,
@@ -187,7 +187,7 @@ export const makeOnboardingStyles = (onboardingColors: OnboardingColors) => Styl
   metricCard: {
     width: '48%',
     backgroundColor: onboardingColors.surface,
-    borderRadius: 4,
+    borderRadius: 8,
     padding: 14,
     borderWidth: 1,
     borderColor: onboardingColors.border,

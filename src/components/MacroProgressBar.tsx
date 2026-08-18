@@ -25,8 +25,16 @@ export function MacroProgressBar({ progress, gradientColors }: MacroProgressBarP
     };
   });
 
+  const nowPercentage = Math.round(Math.min(1, Math.max(0, progress)) * 100);
+
   return (
-    <View style={[styles.track, { backgroundColor: colors.progressTrail }]}>
+    <View
+      style={[styles.track, { backgroundColor: colors.progressTrail }]}
+      accessible={true}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: nowPercentage }}
+      accessibilityLabel={`${nowPercentage}% progress`}
+    >
       <Animated.View style={[styles.fill, animatedStyle]}>
         <Svg width="100%" height={8}>
           <Defs>
