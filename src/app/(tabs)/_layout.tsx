@@ -2,14 +2,18 @@ import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
 import { FONT_FAMILY, MONO_FONT_FAMILY } from '@/lib/fonts';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useAppLayout } from '@/lib/theme/layout';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function TabNavigator() {
   const { activeFontFamily } = useFontPreferences();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { compact } = useAppLayout();
   const navigationFontStyle = {
     fontFamily: activeFontFamily ?? FONT_FAMILY,
   };
@@ -27,18 +31,22 @@ function TabNavigator() {
         headerShadowVisible: false,
         headerTintColor: colors.text,
         headerTitleStyle: { ...navigationFontStyle, fontWeight: '600', fontSize: 17 },
-        tabBarIconStyle: { marginBottom: -2 },
+        tabBarHideOnKeyboard: true,
+        tabBarAllowFontScaling: true,
+        tabBarIconStyle: { marginBottom: -1 },
         tabBarLabelStyle: {
           fontFamily: MONO_FONT_FAMILY,
-          fontSize: 9,
-          fontWeight: '400',
-          letterSpacing: 0.6,
+          fontSize: compact ? 10 : 11,
+          lineHeight: 14,
+          fontWeight: '500',
+          letterSpacing: 0.4,
           textTransform: 'uppercase',
         },
         tabBarItemStyle: {
-          borderRadius: 17,
-          marginHorizontal: 3,
-          marginVertical: 6,
+          minHeight: 52,
+          borderRadius: 16,
+          marginHorizontal: 2,
+          marginVertical: 5,
         },
         tabBarStyle: {
           position: 'absolute',
@@ -54,7 +62,7 @@ function TabNavigator() {
               right: '4%',
             },
           }),
-          bottom: 10,
+          bottom: Math.max(insets.bottom, 8),
           backgroundColor: colors.surface,
           borderColor: colors.border,
           paddingHorizontal: 6,
@@ -62,8 +70,8 @@ function TabNavigator() {
           paddingBottom: 1,
           borderWidth: StyleSheet.hairlineWidth,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderRadius: 22,
-          height: 66,
+          borderRadius: 20,
+          height: 64,
           shadowColor: colors.text,
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.10,
@@ -76,6 +84,7 @@ function TabNavigator() {
         name="index"
         options={{
           title: 'Today',
+          tabBarAccessibilityLabel: 'Today, dashboard',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'grid' : 'grid-outline'} color={color} size={22} />
           ),
@@ -85,6 +94,7 @@ function TabNavigator() {
         name="logfood"
         options={{
           title: 'Log',
+          tabBarAccessibilityLabel: 'Log food and meals',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'book' : 'book-outline'} color={color} size={22} />
           ),
@@ -94,6 +104,7 @@ function TabNavigator() {
         name="stats"
         options={{
           title: 'Stats',
+          tabBarAccessibilityLabel: 'Stats and progress',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} color={color} size={22} />
           ),
@@ -103,6 +114,7 @@ function TabNavigator() {
         name="account"
         options={{
           title: 'You',
+          tabBarAccessibilityLabel: 'Your account and settings',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22} />
           ),

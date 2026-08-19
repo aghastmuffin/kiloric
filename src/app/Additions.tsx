@@ -12,6 +12,7 @@ import { isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/
 import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
 import { takeSearchResult } from '@/lib/searchResultStore'
 import { useTheme } from '@/lib/theme/ThemeContext'
+import { useAppLayout } from '@/lib/theme/layout'
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -147,6 +148,7 @@ function buildContributeParams(payload: ReturnType<typeof contributeParamsFromPr
 export default function AdditionsScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { gutter } = useAppLayout()
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const { user } = useAuth()
@@ -258,16 +260,14 @@ export default function AdditionsScreen() {
       await addProductToMeal(user.$id, selectedMealType, barcode, product)
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setAdded(true)
-      Alert.alert('Added', `${title} added to ${selectedMealType}.`, [
-        { text: 'OK', onPress: () => router.back() },
-      ])
+      setTimeout(() => router.back(), 650)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not add food.'
       Alert.alert('Could not add', message)
     } finally {
       setAdding(false)
     }
-  }, [added, adding, barcode, product, router, selectedMealType, title, user])
+  }, [added, adding, barcode, product, router, selectedMealType, user])
 
   const handleContribute = useCallback(() => {
     if (!product) {
@@ -289,7 +289,7 @@ export default function AdditionsScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingHorizontal: gutter }]}>
         <Pressable
           onPress={() => router.back()}
           hitSlop={10}
@@ -306,6 +306,9 @@ export default function AdditionsScreen() {
         <View style={styles.mealSelectWrap}>
           <Pressable
             onPress={() => setMealPickerOpen((open) => !open)}
+            accessibilityRole="button"
+            accessibilityLabel={`Choose meal. Currently ${selectedMealType}`}
+            accessibilityState={{ expanded: mealPickerOpen }}
             style={({ pressed }) => [styles.mealSelect, pressed && styles.pressed]}
           >
             <Text style={styles.mealSelectText}>{selectedMealType}</Text>
@@ -316,11 +319,19 @@ export default function AdditionsScreen() {
             />
           </Pressable>
           {mealPickerOpen ? (
-            <View style={styles.mealMenu}>
+            <MotionView
+              from={{ opacity: 0, translateY: -6, scale: 0.98 }}
+              animate={{ opacity: 1, translateY: 0, scale: 1 }}
+              transition={{ type: 'timing', duration: 140 }}
+              style={styles.mealMenu}
+            >
               {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type: MealType) => (
                 <Pressable
                   key={type}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ selected: type === selectedMealType }}
                   onPress={() => {
+                    void Haptics.selectionAsync()
                     void setSelectedMealType(type)
                     setMealPickerOpen(false)
                   }}
@@ -340,13 +351,13 @@ export default function AdditionsScreen() {
                   </Text>
                 </Pressable>
               ))}
-            </View>
+            </MotionView>
           ) : null}
         </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100, paddingHorizontal: gutter }]}
         keyboardShouldPersistTaps="handled"
       >
         {loading ? (
@@ -372,30 +383,30 @@ export default function AdditionsScreen() {
             {barcode ? <Text style={styles.barcode}>Code · {barcode}</Text> : null}
 
             <View style={styles.macroRow}>
-              <View style={styles.macroCard}>
+              <MotionView from={{ opacity: 0, translateY: 8 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 30, type: 'timing', duration: 180 }} style={styles.macroCard}>
                 <Text style={styles.macroLabel}>kcal</Text>
                 <Text style={styles.macroValue}>
                   {macros?.kcal != null ? Math.round(macros.kcal) : '—'}
                 </Text>
-              </View>
-              <View style={styles.macroCard}>
+              </MotionView>
+              <MotionView from={{ opacity: 0, translateY: 8 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 60, type: 'timing', duration: 180 }} style={styles.macroCard}>
                 <Text style={styles.macroLabel}>Protein</Text>
                 <Text style={styles.macroValue}>
                   {macros?.protein != null ? `${macros.protein}g` : '—'}
                 </Text>
-              </View>
-              <View style={styles.macroCard}>
+              </MotionView>
+              <MotionView from={{ opacity: 0, translateY: 8 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 90, type: 'timing', duration: 180 }} style={styles.macroCard}>
                 <Text style={styles.macroLabel}>Carbs</Text>
                 <Text style={styles.macroValue}>
                   {macros?.carbs != null ? `${macros.carbs}g` : '—'}
                 </Text>
-              </View>
-              <View style={styles.macroCard}>
+              </MotionView>
+              <MotionView from={{ opacity: 0, translateY: 8 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 120, type: 'timing', duration: 180 }} style={styles.macroCard}>
                 <Text style={styles.macroLabel}>Fat</Text>
                 <Text style={styles.macroValue}>
                   {macros?.fat != null ? `${macros.fat}g` : '—'}
                 </Text>
-              </View>
+              </MotionView>
             </View>
 
             <Text style={styles.sectionLabel}>
@@ -419,17 +430,18 @@ export default function AdditionsScreen() {
                 onPress={handleContribute}
                 style={({ pressed }) => [styles.photoNudge, pressed && styles.pressed]}
                 accessibilityRole="button"
+                accessibilityLabel="Help complete this product's missing details"
               >
                 <View style={styles.photoNudgeIcon}>
                   <Ionicons name="camera-outline" size={22} color={colors.accent} />
                 </View>
                 <View style={styles.photoNudgeCopy}>
-                  <Text style={styles.photoNudgeTitle}>Some details are unknown</Text>
+                  <Text style={styles.photoNudgeTitle}>We need your help!</Text>
                   <Text style={styles.photoNudgeBody}>
-                    Snap a clear photo of the nutrition facts and ingredients list so we can fill
-                    the gaps.
+                    This product is missing a few useful details. Share a clear label photo and
+                    we&apos;ll use it to complete the nutrition information.
                   </Text>
-                  <Text style={styles.photoNudgeCta}>Take photo →</Text>
+                  <Text style={styles.photoNudgeCta}>Help complete this product →</Text>
                 </View>
               </Pressable>
             ) : (
@@ -446,9 +458,16 @@ export default function AdditionsScreen() {
       </ScrollView>
 
       {!loading && product ? (
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        <MotionView
+          from={{ opacity: 0, translateY: 18 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'spring', damping: 20 }}
+          style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md), paddingHorizontal: gutter }]}
+        >
           <Pressable
             disabled={!barcode || adding || added}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !barcode || adding || added }}
             onPress={() => void handleAdd()}
             style={({ pressed }) => [
               styles.primaryButton,
@@ -471,7 +490,7 @@ export default function AdditionsScreen() {
               </>
             )}
           </Pressable>
-        </View>
+        </MotionView>
       ) : null}
     </View>
   )
@@ -487,15 +506,14 @@ const makeStyles = (c: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: spacing.sm,
-      paddingHorizontal: spacing.lg,
       paddingBottom: spacing.md,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.borderStrong,
       zIndex: 5,
     },
     iconButton: {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: borderRadius.md,
@@ -569,7 +587,6 @@ const makeStyles = (c: ThemeColors) =>
       fontWeight: '700',
     },
     content: {
-      paddingHorizontal: spacing.lg,
       paddingTop: spacing.lg,
       gap: spacing.md,
     },
@@ -599,10 +616,12 @@ const makeStyles = (c: ThemeColors) =>
     },
     macroRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: spacing.sm,
     },
     macroCard: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: 72,
       backgroundColor: c.surface,
       borderRadius: borderRadius.md,
       borderWidth: 1,

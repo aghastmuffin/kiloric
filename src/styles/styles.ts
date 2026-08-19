@@ -27,7 +27,8 @@ export const makeAppStyles = (c: ThemeColors) =>
     input: {
       backgroundColor: c.surface,
       color: c.text,
-      borderRadius: 6,
+      borderRadius: 10,
+      minHeight: 48,
       paddingVertical: 14,
       paddingHorizontal: 16,
       fontSize: 16,
@@ -42,6 +43,7 @@ export const makeAppStyles = (c: ThemeColors) =>
       borderRadius: 999,
       paddingVertical: 14,
       paddingHorizontal: 20,
+      minHeight: 48,
       alignItems: 'center',
     },
     buttonDisabled: {
@@ -56,7 +58,7 @@ export const makeAppStyles = (c: ThemeColors) =>
     },
     card: {
       backgroundColor: c.surface,
-      borderRadius: 8,
+      borderRadius: 12,
       padding: 18,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
