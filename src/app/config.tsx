@@ -18,6 +18,7 @@ import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries';
 import { buildGoalState } from '@/lib/goals';
 import {
     ACTIVITY_OPTIONS,
+    auditNutritionTargets,
     buildGoalPlainText,
     buildNutritionPlan,
     calculateWeeklyDeficit,
@@ -31,7 +32,9 @@ import {
     type GoalPace,
     type NutritionPlan,
     type Sex,
+    NUTRITION_FORMULA_VERSION,
 } from '@/lib/nutrition';
+import { planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences';
 import {
     dateToIso,
     DEFAULT_PROFILE_ROLE,
@@ -160,6 +163,14 @@ export default function ConfigScreen() {
 
   const currentWeeklyDeficit = calculateWeeklyDeficit(computedPlan.tdee, activeTargetKcal);
   const currentWeeklyChangeKg = estimateWeeklyWeightChangeKg(currentWeeklyDeficit);
+  const targetAudit = auditNutritionTargets({
+    targetKcal: activeTargetKcal,
+    protein: activeTargetProtein,
+    carbs: activeTargetCarbs,
+    fat: activeTargetFat,
+    tdee: computedPlan.tdee,
+    sex,
+  });
 
   useEffect(() => {
     if (!user && !loading) {
@@ -204,6 +215,13 @@ export default function ConfigScreen() {
     }
 
     let active = true;
+    const savedPlan = planPreferencesFromUser(user);
+    setSex(savedPlan.sex);
+    setActivity(savedPlan.activity);
+    setGoal(savedPlan.goal);
+    setPace(savedPlan.pace);
+    setDiet(savedPlan.diet);
+    setDisplayUnits(savedPlan.displayUnits);
 
     getProfile(user.$id)
       .then((profile) => {
@@ -262,7 +280,7 @@ export default function ConfigScreen() {
     return () => {
       active = false;
     };
-  }, [user?.$id]);
+  }, [user]);
 
   function handleResetTargetsToSuggested() {
     setTargetKcal(null);
@@ -363,6 +381,21 @@ export default function ConfigScreen() {
         goal_target_weight_kg: goalState.targetWeightKg,
         goal_start_date: goalState.startDate,
         goal_estimated_weeks: goalState.estimatedWeeks,
+      });
+      await savePlanPreferences({
+        ...planPreferencesFromUser(user),
+        sex,
+        activity,
+        goal,
+        pace,
+        diet,
+        targetWeightKg: finalTargetWeight,
+        displayUnits,
+        overrides: {
+          targetKcal: activeTargetKcal,
+          macroGrams: { protein: activeTargetProtein, carbs: activeTargetCarbs, fat: activeTargetFat },
+          dailyFluid: activeDailyFluid,
+        },
       });
 
       allowLeaveRef.current = true;
@@ -740,6 +773,12 @@ export default function ConfigScreen() {
                   ? ` Projected energy balance: ${currentWeeklyDeficit > 0 ? '+' : ''}${currentWeeklyDeficit} kcal/week (${formatPaceRate(displayUnits, currentWeeklyChangeKg)}).`
                   : ''}
               </Text>
+              <Text style={styles.fieldHint}>
+                Formula v{NUTRITION_FORMULA_VERSION} · Mifflin–St Jeor BMR · activity-factor TDEE · macros account for {targetAudit.macroCalories} kcal/day.
+              </Text>
+              {targetAudit.warnings.map((warning) => (
+                <Text key={warning} style={[styles.fieldHint, { color: colors.danger }]}>⚠ {warning}</Text>
+              ))}
               <Pressable
                 onPress={handleResetTargetsToSuggested}
                 disabled={saving}

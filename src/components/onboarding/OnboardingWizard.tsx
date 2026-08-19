@@ -45,6 +45,7 @@ import {
   isProfileComplete,
   saveProfileFields,
 } from '@/lib/profile'
+import { planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences'
 import {
   appendDisplayUnitsToGoalPlain,
   defaultDisplayUnits,
@@ -408,6 +409,25 @@ export function OnboardingWizard() {
         goal_target_weight_kg: goalState.targetWeightKg,
         goal_start_date: goalState.startDate,
         goal_estimated_weeks: goalState.estimatedWeeks,
+      })
+      await savePlanPreferences({
+        ...planPreferencesFromUser(user),
+        sex: form.sex,
+        activity: form.activity,
+        goal: form.goal,
+        pace: form.pace,
+        diet: form.diet,
+        targetWeightKg: targetKg,
+        displayUnits: form.displayUnits,
+        overrides: {
+          targetKcal: macros.targetKcal,
+          macroGrams: {
+            protein: macros.targetProtein,
+            carbs: macros.targetCarbs,
+            fat: macros.targetFat,
+          },
+          dailyFluid: plan.dailyFluid,
+        },
       })
 
       allowLeaveRef.current = true

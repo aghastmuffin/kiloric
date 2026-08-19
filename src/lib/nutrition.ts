@@ -12,8 +12,9 @@ export type DietStyle =
   | 'low_carb'
   | 'mediterranean'
   | 'plant_forward'
+  | 'custom'
 
-export const NUTRITION_FORMULA_VERSION = 3
+export const NUTRITION_FORMULA_VERSION = 4
 
 /** Energy density of adipose tissue — widely used clinical approximation (kcal/kg). */
 export const CALORIES_PER_KG_FAT = 7700
@@ -30,6 +31,7 @@ export const DIET_MACRO_PERCENTAGES: Record<DietStyle, MacroPercentages> = {
   low_carb: { protein: 30, carbs: 20, fat: 50 },
   mediterranean: { protein: 20, carbs: 40, fat: 40 },
   plant_forward: { protein: 20, carbs: 50, fat: 30 },
+  custom: { protein: 25, carbs: 45, fat: 30 },
 }
 
 export const ACTIVITY_OPTIONS: {
@@ -69,6 +71,7 @@ export const DIET_OPTIONS: { value: DietStyle; label: string; description: strin
   { value: 'low_carb', label: 'Lower carb', description: 'Fewer carbs, more fat and protein' },
   { value: 'mediterranean', label: 'Mediterranean', description: 'Whole foods, olive oil, lean protein' },
   { value: 'plant_forward', label: 'Plant-forward', description: 'Vegetables, legumes, and whole grains' },
+  { value: 'custom', label: 'Custom plan', description: 'Start balanced, then set every target yourself' },
 ]
 
 const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
@@ -242,6 +245,38 @@ export function calculateMacros(
   }
 
   return { protein, carbs, fat }
+}
+
+export function calculateMacroCalories(macros: { protein: number; carbs: number; fat: number }): number {
+  return macros.protein * 4 + macros.carbs * 4 + macros.fat * 9
+}
+
+export type NutritionPlanAudit = {
+  formulaVersion: number
+  macroCalories: number
+  macroDifferenceKcal: number
+  warnings: string[]
+}
+
+/** Checks the final targets users actually see, including custom overrides. */
+export function auditNutritionTargets(input: {
+  targetKcal: number
+  protein: number
+  carbs: number
+  fat: number
+  tdee: number
+  sex: Sex
+}): NutritionPlanAudit {
+  const macroCalories = calculateMacroCalories(input)
+  const macroDifferenceKcal = macroCalories - input.targetKcal
+  const warnings: string[] = []
+  const floor = input.sex === 'female' ? 1200 : 1500
+  if (input.targetKcal < floor) warnings.push(`Energy is below the ${floor} kcal planning floor.`)
+  if (Math.abs(macroDifferenceKcal) > Math.max(50, input.targetKcal * 0.05)) {
+    warnings.push(`Macros account for ${macroCalories} kcal, ${Math.abs(macroDifferenceKcal)} kcal ${macroDifferenceKcal > 0 ? 'above' : 'below'} the energy target.`)
+  }
+  if (input.targetKcal > input.tdee * 1.5) warnings.push('Energy is more than 50% above estimated maintenance.')
+  return { formulaVersion: NUTRITION_FORMULA_VERSION, macroCalories, macroDifferenceKcal, warnings }
 }
 
 export function calculateDailyFluid(
