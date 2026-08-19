@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   calculateAge,
+  auditNutritionTargets,
   calculateBmr,
   calculateDailyCalories,
   calculateDailyFluid,
@@ -53,5 +54,16 @@ describe('nutrition calculations', () => {
   it('calculates age without silently forcing a minimum', () => {
     expect(calculateAge(new Date(2000, 6, 10), new Date(2026, 6, 9))).toBe(25)
     expect(calculateAge(new Date(2030, 0, 1), new Date(2026, 0, 1))).toBe(0)
+  })
+
+  it('audits custom targets against their calories and planning floor', () => {
+    const audit = auditNutritionTargets({
+      targetKcal: 1000, protein: 200, carbs: 200, fat: 100, tdee: 2000, sex: 'female',
+    })
+    expect(audit.macroCalories).toBe(2500)
+    expect(audit.warnings).toEqual(expect.arrayContaining([
+      expect.stringContaining('1200 kcal'),
+      expect.stringContaining('1500 kcal above'),
+    ]))
   })
 })

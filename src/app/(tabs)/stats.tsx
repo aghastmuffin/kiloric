@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/AuthContext';
 import { resolveGoalState } from '@/lib/goals';
+import { calculateEnergyTrend } from '@/lib/nutritionTrends';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import { useTheme } from '@/lib/theme/ThemeContext';
@@ -275,6 +276,7 @@ export default function StatsScreen() {
     ? Math.round(((loggedDays + onTargetDays) / (days.length * 2)) * 100)
     : Math.round((loggedDays / days.length) * 100)
   const insight = getInsight(days, goal)
+  const energyTrend = useMemo(() => calculateEnergyTrend(days), [days])
 
   const weightSnapshot = useMemo(() => {
     const profile = data.profile
@@ -382,6 +384,34 @@ export default function StatsScreen() {
                 <Text style={styles.insightTitle}>{insight.title}</Text>
                 <Text style={styles.insightBody}>{insight.body}</Text>
               </View>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionKicker}>LOGGED-DAY TREND</Text>
+                  <Text style={styles.sectionTitle}>
+                    {energyTrend.direction === 'insufficient'
+                      ? 'More complete days needed'
+                      : energyTrend.direction === 'steady'
+                        ? 'Energy is holding steady'
+                        : `Energy is trending ${energyTrend.direction}`}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={energyTrend.direction === 'up' ? 'trending-up' : energyTrend.direction === 'down' ? 'trending-down' : 'remove'}
+                  size={24}
+                  color={colors.accent}
+                />
+              </View>
+              <Text style={styles.stateText}>
+                {energyTrend.changeKcal == null
+                  ? `Log at least 4 complete days to compare equal time windows. ${energyTrend.loggedDays}/${days.length} days are currently logged.`
+                  : `${Math.abs(Math.round(energyTrend.changeKcal))} kcal/day ${energyTrend.direction === 'down' ? 'lower' : energyTrend.direction === 'up' ? 'higher' : 'difference'} between adjacent logged-day windows · ${energyTrend.confidence} confidence from ${energyTrend.loggedDays}/${days.length} logged days.`}
+              </Text>
+              <Text style={styles.snapshotNote}>
+                Missing days are excluded—not counted as zero. This describes recorded intake, not weight change or metabolic adaptation.
+              </Text>
             </View>
           </>
         )}
