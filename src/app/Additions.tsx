@@ -430,17 +430,18 @@ export default function AdditionsScreen() {
                 onPress={handleContribute}
                 style={({ pressed }) => [styles.photoNudge, pressed && styles.pressed]}
                 accessibilityRole="button"
+                accessibilityLabel="Help complete this product's missing details"
               >
                 <View style={styles.photoNudgeIcon}>
                   <Ionicons name="camera-outline" size={22} color={colors.accent} />
                 </View>
                 <View style={styles.photoNudgeCopy}>
-                  <Text style={styles.photoNudgeTitle}>Some details are unknown</Text>
+                  <Text style={styles.photoNudgeTitle}>We need your help!</Text>
                   <Text style={styles.photoNudgeBody}>
-                    Snap a clear photo of the nutrition facts and ingredients list so we can fill
-                    the gaps.
+                    This product is missing a few useful details. Share a clear label photo and
+                    we&apos;ll use it to complete the nutrition information.
                   </Text>
-                  <Text style={styles.photoNudgeCta}>Take photo →</Text>
+                  <Text style={styles.photoNudgeCta}>Help complete this product →</Text>
                 </View>
               </Pressable>
             ) : (

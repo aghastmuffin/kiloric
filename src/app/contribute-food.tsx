@@ -352,16 +352,22 @@ export default function ContributeFoodScreen() {
         {hasPrefill ? (
           <View style={styles.contextBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
-            <Text style={styles.contextBannerText}>
-              Some catalog data was pre-filled from search. Snap a photo of the nutrition facts
-              panel and ingredients list — that&apos;s the essential requirement.
-            </Text>
+            <View style={styles.contextBannerCopy}>
+              <Text style={styles.contextBannerTitle}>Thanks for helping!</Text>
+              <Text style={styles.contextBannerText}>
+                We filled in everything already available. Add a clear photo showing the nutrition
+                panel and ingredients so the missing details can be reviewed.
+              </Text>
+            </View>
           </View>
         ) : (
-          <Text style={styles.lead}>
-            Help fill catalog gaps. Snap a clear photo of the nutrition facts and ingredients list
-            (required). Typed nutrition details are optional extras for later review.
-          </Text>
+          <View style={styles.welcomeCopy}>
+            <Text style={styles.welcomeTitle}>We need your help!</Text>
+            <Text style={styles.lead}>
+              Add a clear photo showing the nutrition panel and ingredients, then tell us the
+              product name. Everything else is optional and can be filled in if it is easy to read.
+            </Text>
+          </View>
         )}
 
         {/* Photo card */}
@@ -617,6 +623,8 @@ const makeStyles = (c: ThemeColors) =>
       ...typography.body,
       color: c.textMuted,
     },
+    welcomeCopy: { gap: spacing.xs },
+    welcomeTitle: { ...typography.headline, color: c.text },
     contextBanner: {
       flexDirection: 'row',
       gap: spacing.sm,
@@ -630,9 +638,10 @@ const makeStyles = (c: ThemeColors) =>
     contextBannerText: {
       ...typography.body,
       color: c.text,
-      flex: 1,
       lineHeight: 20,
     },
+    contextBannerCopy: { flex: 1, gap: 3 },
+    contextBannerTitle: { ...typography.label, color: c.brand, fontWeight: '700' },
     card: {
       backgroundColor: c.surface,
       borderRadius: borderRadius.lg,
