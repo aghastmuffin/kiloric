@@ -2,7 +2,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { client } from '@/lib/appwrite'
+import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
+import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearAppwriteSession, persistAppwriteSession } from './appwriteSession'
 
@@ -28,6 +30,14 @@ vi.mock('./getAccessToken', () => ({
 vi.mock('./profile', () => ({
   clearProfileCache: vi.fn(),
   getProfile: vi.fn(),
+}))
+
+vi.mock('./foodFavorites', () => ({
+  clearFavoriteFoodsCache: vi.fn(),
+}))
+
+vi.mock('./meals', () => ({
+  clearTodayMealsCache: vi.fn(),
 }))
 
 describe('appwriteSession cache clearing', () => {
@@ -70,6 +80,8 @@ describe('appwriteSession cache clearing', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
+    expect(clearFavoriteFoodsCache).toHaveBeenCalled()
+    expect(clearTodayMealsCache).toHaveBeenCalledWith('user-123')
   })
 
   it('clearAppwriteSession should clear client session, remove from storage, and clear caches', async () => {
@@ -79,5 +91,6 @@ describe('appwriteSession cache clearing', () => {
     expect(AsyncStorage.removeItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
+    expect(clearFavoriteFoodsCache).toHaveBeenCalled()
   })
 })
