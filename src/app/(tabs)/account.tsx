@@ -13,6 +13,7 @@ import { getProfile, type ProfileDocument } from '@/lib/profile';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useAppLayout } from '@/lib/theme/layout';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -52,6 +53,7 @@ export default function AccountScreen() {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { gutter } = useAppLayout();
   const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences();
   const [savingPreference, setSavingPreference] = useState(false);
 
@@ -76,7 +78,7 @@ export default function AccountScreen() {
 
   return (
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingHorizontal: gutter }]}
         showsVerticalScrollIndicator={false}
       >
         {!user ? (
@@ -405,8 +407,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 48,
+    paddingBottom: 112,
     backgroundColor: c.background,
   },
   panel: {

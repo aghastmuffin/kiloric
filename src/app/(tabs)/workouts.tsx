@@ -1,5 +1,6 @@
 import { MotionView } from '@/components/MotionView'
 import { useTheme } from '@/lib/theme/ThemeContext'
+import { useAppLayout } from '@/lib/theme/layout'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -63,6 +64,7 @@ export default function WorkoutsScreen() {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
+  const { gutter } = useAppLayout()
   const [selectedPillar, setSelectedPillar] = useState<Pillar['id']>('push')
   const [completed, setCompleted] = useState<Record<string, boolean>>({})
   const exercises = EXERCISES[selectedPillar]
@@ -91,7 +93,7 @@ export default function WorkoutsScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 104 },
+          { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 112, paddingHorizontal: gutter },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -305,7 +307,7 @@ export default function WorkoutsScreen() {
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
-  content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20, gap: 22 },
+  content: { width: '100%', maxWidth: 760, alignSelf: 'center', gap: 22 },
   hero: { gap: 6, paddingTop: 2 },
   mockPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
   mockText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9, letterSpacing: 0.8 },

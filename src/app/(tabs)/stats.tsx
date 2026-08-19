@@ -3,6 +3,7 @@ import { resolveGoalState } from '@/lib/goals';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useAppLayout } from '@/lib/theme/layout';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -220,6 +221,7 @@ export default function StatsScreen() {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
+  const { gutter } = useAppLayout()
   const [period, setPeriod] = useState<Period>('week')
   const [data, setData] = useState<StatsData>(EMPTY_DATA)
   const [loading, setLoading] = useState(false)
@@ -312,7 +314,7 @@ export default function StatsScreen() {
     <View style={styles.screen}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 18 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingHorizontal: gutter }]}
       >
         <View style={styles.header}>
           <Text style={styles.eyebrow}>PROGRESS, NOT PERFECTION</Text>
@@ -426,7 +428,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
-    paddingHorizontal: 16,
     paddingBottom: 112,
     gap: 16,
   },
@@ -442,7 +443,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 8,
     backgroundColor: c.surfaceAlt,
   },
-  toggleButton: { flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  toggleButton: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   toggleButtonSelected: { backgroundColor: c.brand },
   toggleText: { ...typography.labelSmall, color: c.textMuted },
   toggleTextSelected: { color: c.onBrand },
@@ -587,6 +588,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   errorCopy: { flex: 1, gap: 2 },
   errorTitle: { ...typography.body, color: c.danger, fontWeight: '700' },
-  retryButton: { paddingHorizontal: 10, paddingVertical: 8 },
+  retryButton: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
   retryText: { ...typography.labelSmall, color: c.accent },
 })

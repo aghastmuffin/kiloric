@@ -10,6 +10,7 @@ import { panelSpring, quickTiming } from '@/lib/motion';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import { createTask, deleteTask, listTasks, setTaskDone } from '@/lib/tasks';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -64,7 +65,11 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   const { colors } = useTheme()
   const pct = Math.min(100, Math.max(0, (value / Math.max(1, max)) * 100))
   return (
-    <View style={[stylesStatic.track, { backgroundColor: colors.progressTrail }]}>
+    <View
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max, now: Math.min(max, Math.max(0, value)) }}
+      style={[stylesStatic.track, { backgroundColor: colors.progressTrail }]}
+    >
       <MotionView
         from={{ width: '0%' }}
         animate={{ width: `${pct}%` }}
@@ -83,6 +88,7 @@ export default function DashboardScreen() {
   const styles = useThemedStyles(makeStyles)
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { compact, gutter } = useAppLayout()
   const [data, setData] = useState<DashboardData>(emptyData)
   const [loading, setLoading] = useState(true)
   const [fabOpen, setFabOpen] = useState(false)
@@ -218,18 +224,18 @@ export default function DashboardScreen() {
     <View style={styles.screen}>
       <NoiseOverlay />
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingHorizontal: gutter }]}
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <Text style={styles.eyebrow}>TODAY</Text>
-          <Text style={styles.date}>
+          <Text accessibilityRole="header" style={styles.eyebrow}>TODAY</Text>
+          <Text accessibilityRole="header" style={styles.date}>
             {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
           </Text>
           <Text style={styles.lede}>A calm view of what matters now.</Text>
         </View>
 
-        <View style={styles.gameStrip}>
+        <View accessibilityLabel={`${streak} day streak. Level ${xp.level}, ${xp.xpInCurrentLevel} of ${xp.xpNeeded} experience points.`} style={styles.gameStrip}>
           <View style={styles.gameMetric}>
             <Ionicons name="flame-outline" size={20} color={colors.streakColor} />
             <Text style={styles.gameValue}>{streak}</Text>
@@ -255,7 +261,7 @@ export default function DashboardScreen() {
             textColor={colors.accent}
             mutedColor={colors.textMuted}
           />
-          <View style={styles.macroStrip}>
+          <View style={[styles.macroStrip, compact && styles.macroStripCompact]}>
             {([
               ['Protein', totals.protein, targets.protein],
               ['Carbs', totals.carbs, targets.carbs],
@@ -348,9 +354,12 @@ export default function DashboardScreen() {
                           )
                         })
                       }}
-                      style={[styles.check, quest.done && styles.checkDone]}
+                      hitSlop={8}
+                      style={[styles.checkTarget, !personalId && styles.checkTargetDisabled]}
                     >
-                      {quest.done && <Ionicons name="checkmark" size={15} color={colors.onAccent} />}
+                      <View style={[styles.check, quest.done && styles.checkDone]}>
+                        {quest.done && <Ionicons name="checkmark" size={15} color={colors.onAccent} />}
+                      </View>
                     </Pressable>
                     <Text style={[styles.questText, quest.done && styles.questDone]}>{quest.label}</Text>
                     <Text style={styles.questProgress}>{quest.progress}</Text>
@@ -365,7 +374,7 @@ export default function DashboardScreen() {
           <Text style={styles.sectionTitle}>Goals</Text>
           <Text style={styles.sectionMeta}>PILLARS</Text>
         </View>
-        <View style={styles.goalGrid}>
+        <View style={[styles.goalGrid, compact && styles.goalGridCompact]}>
           <GoalCard
             title="Training plan"
             subtitle="Push, pull and legs"
@@ -382,7 +391,12 @@ export default function DashboardScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Today’s logs</Text>
-          <Pressable onPress={() => router.push('/logfood')}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Organise today's logs"
+            hitSlop={10}
+            onPress={() => router.push('/logfood')}
+          >
             <Text style={styles.link}>ORGANISE</Text>
           </Pressable>
         </View>
@@ -429,6 +443,7 @@ export default function DashboardScreen() {
               onChangeText={setTaskDraft}
               placeholder="e.g. Evening stretch"
               placeholderTextColor={colors.textFaint}
+              accessibilityLabel="Task name"
               style={styles.taskInput}
               autoFocus
               returnKeyType="done"
@@ -436,12 +451,16 @@ export default function DashboardScreen() {
             />
             <View style={styles.taskActions}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setTaskModalVisible(false)}
                 style={({ pressed }) => [styles.taskBtnGhost, pressed && { opacity: 0.7 }]}
               >
                 <Text style={styles.taskBtnGhostText}>Cancel</Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !taskDraft.trim() }}
+                disabled={!taskDraft.trim()}
                 onPress={submitTask}
                 style={({ pressed }) => [styles.taskBtn, pressed && { opacity: 0.85 }]}
               >
@@ -469,7 +488,12 @@ function GoalCard({
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.goalCard, pressed && { opacity: 0.78 }]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${subtitle}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.goalCard, pressed && { opacity: 0.78 }]}
+    >
       <View style={styles.goalIcon}><Ionicons name={icon} size={22} color={colors.success} /></View>
       <Text style={styles.goalTitle}>{title}</Text>
       <Text style={styles.goalSubtitle}>{subtitle}</Text>
@@ -550,7 +574,8 @@ function DashboardFab({
           <Animated.View style={[styles.fabShell, shellStyle]}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open actions"
+              accessibilityLabel="Open quick add menu"
+              accessibilityState={{ expanded: open }}
               onPress={onToggle}
               pointerEvents={open ? 'none' : 'auto'}
               style={styles.fabPlusLayer}
@@ -612,7 +637,7 @@ const stylesStatic = StyleSheet.create({
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
-  content: { paddingHorizontal: 20, paddingBottom: 130, gap: 22, alignSelf: 'center', width: '100%', maxWidth: 760 },
+  content: { paddingBottom: 156, gap: 22, alignSelf: 'center', width: '100%', maxWidth: 760 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
   eyebrow: { ...typography.labelSmall, color: c.brand },
   date: { ...typography.headlineLarge, color: c.text, marginTop: 4 },
@@ -625,6 +650,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   heroCard: { backgroundColor: c.background, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingVertical: 8, alignItems: 'center', gap: 14 },
   sectionTitle: { ...typography.headline, color: c.text },
   macroStrip: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 14, width: '100%', gap: 16 },
+  macroStripCompact: { gap: 8 },
   macroCell: { flex: 1, alignItems: 'center', gap: 5 },
   macroValue: { ...typography.label, color: c.text },
   macroLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 10 },
@@ -637,12 +663,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   goalProgressMeta: { ...typography.labelSmall, color: c.textMuted, textAlign: 'right' },
   quest: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+  checkTarget: { width: 44, height: 44, marginHorizontal: -10, alignItems: 'center', justifyContent: 'center' },
+  checkTargetDisabled: { opacity: 0.8 },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center' },
   checkDone: { backgroundColor: c.success, borderColor: c.success },
   questText: { ...typography.body, color: c.text, flex: 1 },
   questDone: { color: c.textMuted, textDecorationLine: 'line-through' },
   questProgress: { ...typography.labelSmall, color: c.success },
   goalGrid: { flexDirection: 'row', gap: 12 },
+  goalGridCompact: { flexDirection: 'column' },
   goalCard: { flex: 1, minHeight: 120, backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.md, padding: 14, gap: 8 },
   goalIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.brandSoft, alignItems: 'center', justifyContent: 'center' },
   goalTitle: { ...typography.body, color: c.text, fontWeight: '600' },
@@ -661,7 +690,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   fabAnchor: {
     position: 'absolute',
     right: 12,
-    bottom: 12,
+    bottom: 88,
     width: MENU_WIDTH,
     height: MENU_HEIGHT,
     zIndex: 50,
