@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/AuthContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { spacing } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
@@ -33,11 +34,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: spacing.md,
   },
   text: {
+    ...typography.body,
     color: c.text,
   },
   link: {
-    color: c.accent,
-    fontSize: 16,
-    textDecorationLine: 'underline',
+    ...typography.label,
+    color: c.brand,
+    minHeight: 44,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
   },
 });

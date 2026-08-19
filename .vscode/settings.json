@@ -10,5 +10,6 @@
     "typescriptreact": "npx expo start --dev-client --" 
   },
   "code-runner.runInTerminal": true, 
-  "code-runner.showRunIconInEditorTitleMenu": true
+  "code-runner.showRunIconInEditorTitleMenu": true,
+  "npm.packageManager": "npm"
 }

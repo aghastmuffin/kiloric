@@ -513,7 +513,7 @@ function DashboardFab({
       height,
       borderRadius: radius,
       borderColor: interpolateColor(progress.value, [0, 1], [colors.accent, colors.border]),
-      backgroundColor: interpolateColor(progress.value, [0, 1], [colors.accent, colors.surface]),
+      backgroundColor: interpolateColor(progress.value, [0, 1], [colors.brand, colors.surface]),
     }
   })
 
@@ -556,7 +556,7 @@ function DashboardFab({
               style={styles.fabPlusLayer}
             >
               <Animated.View pointerEvents="none" style={plusStyle}>
-                <Ionicons name="add" size={28} color={colors.onAccent} />
+                <Ionicons name="add" size={28} color={colors.onBrand} />
               </Animated.View>
             </Pressable>
             <Animated.View
@@ -612,25 +612,25 @@ const stylesStatic = StyleSheet.create({
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
-  content: { paddingHorizontal: 16, paddingBottom: 130, gap: 18, alignSelf: 'center', width: '100%', maxWidth: 760 },
+  content: { paddingHorizontal: 20, paddingBottom: 130, gap: 22, alignSelf: 'center', width: '100%', maxWidth: 760 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
-  eyebrow: { ...typography.labelSmall, color: c.textMuted },
-  date: { ...typography.headlineLarge, color: c.accent, marginTop: 2 },
+  eyebrow: { ...typography.labelSmall, color: c.brand },
+  date: { ...typography.headlineLarge, color: c.text, marginTop: 4 },
   lede: { ...typography.body, color: c.textMuted },
-  gameStrip: { flexDirection: 'row', gap: 10 },
-  gameMetric: { flex: 1, padding: 12, backgroundColor: c.accentSoft, borderRadius: borderRadius.lg, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  gameValue: { ...typography.label, color: c.accent, fontWeight: '700' },
+  gameStrip: { flexDirection: 'row', gap: 0, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong },
+  gameMetric: { flex: 1, minHeight: 58, paddingVertical: 12, paddingHorizontal: 10, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 },
+  gameValue: { ...typography.label, color: c.text, fontWeight: '500' },
   gameLabel: { ...typography.labelSmall, color: c.textMuted, marginLeft: 'auto' },
   levelHint: { ...typography.labelTiny, color: c.textMuted, marginLeft: 'auto'},
-  heroCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.lg, padding: 16, alignItems: 'center', gap: 14 },
-  sectionTitle: { ...typography.headline, color: c.accent },
+  heroCard: { backgroundColor: c.background, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingVertical: 8, alignItems: 'center', gap: 14 },
+  sectionTitle: { ...typography.headline, color: c.text },
   macroStrip: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 14, width: '100%', gap: 16 },
   macroCell: { flex: 1, alignItems: 'center', gap: 5 },
   macroValue: { ...typography.label, color: c.text },
   macroLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 10 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 7 },
   sectionMeta: { ...typography.labelSmall, color: c.textMuted },
-  card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.lg, paddingHorizontal: 16 },
+  card: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.md, paddingHorizontal: 16 },
   goalProgressBody: { paddingVertical: 16, gap: 10 },
   goalProgressRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   goalProgressValue: { ...typography.body, color: c.text, fontWeight: '600' },
@@ -643,9 +643,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   questDone: { color: c.textMuted, textDecorationLine: 'line-through' },
   questProgress: { ...typography.labelSmall, color: c.success },
   goalGrid: { flexDirection: 'row', gap: 12 },
-  goalCard: { flex: 1, minHeight: 120, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.lg, padding: 14, gap: 8 },
-  goalIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
-  goalTitle: { ...typography.body, color: c.accent, fontWeight: '700' },
+  goalCard: { flex: 1, minHeight: 120, backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.md, padding: 14, gap: 8 },
+  goalIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.brandSoft, alignItems: 'center', justifyContent: 'center' },
+  goalTitle: { ...typography.body, color: c.text, fontWeight: '600' },
   goalSubtitle: { ...typography.labelSmall, color: c.textMuted, flex: 1 },
   link: { ...typography.labelSmall, color: c.accent },
   empty: { ...typography.body, color: c.textMuted, paddingVertical: 24, textAlign: 'center' },
@@ -772,10 +772,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   taskBtnGhost: { paddingVertical: 10, paddingHorizontal: 14 },
   taskBtnGhostText: { ...typography.label, color: c.textMuted },
   taskBtn: {
-    backgroundColor: c.accent,
-    borderRadius: 8,
+    backgroundColor: c.brand,
+    borderRadius: borderRadius.pill,
     paddingVertical: 10,
     paddingHorizontal: 18,
   },
-  taskBtnText: { ...typography.label, color: c.onAccent, fontWeight: '700' },
+  taskBtnText: { ...typography.label, color: c.onBrand, fontWeight: '500' },
 })

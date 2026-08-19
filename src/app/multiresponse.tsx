@@ -416,11 +416,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: spacing.md,
   },
   header: {
-    backgroundColor: c.surface,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: c.border,
+    paddingBottom: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.borderStrong,
   },
   headerLabel: {
     ...typography.labelSmall,
@@ -447,9 +445,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   card: {
     backgroundColor: c.surface,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8 },
@@ -524,11 +522,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 8,
     marginTop: 14,
     borderWidth: 1,
-    borderColor: c.accent,
+    borderColor: c.brand,
     alignItems: 'center',
   },
   viewMoreButtonText: {
-    color: c.accent,
+    color: c.brand,
     fontSize: 15,
     fontWeight: 'bold',
   },
@@ -560,14 +558,14 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   contributeButton: {
     marginTop: spacing.md,
-    backgroundColor: c.accent,
+    backgroundColor: c.brand,
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 999,
   },
   contributeButtonText: {
     ...typography.label,
-    color: c.onAccent,
+    color: c.onBrand,
     fontWeight: '700',
   },
 });

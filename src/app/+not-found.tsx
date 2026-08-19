@@ -1,4 +1,5 @@
 import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { View, StyleSheet } from 'react-native';
 import { Link, Stack } from 'expo-router';
@@ -26,8 +27,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
 
   button: {
-    fontSize: 20,
-    textDecorationLine: 'underline',
-    color: c.accent,
+    ...typography.label,
+    color: c.onBrand,
+    backgroundColor: c.brand,
+    borderRadius: 999,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
   },
 });

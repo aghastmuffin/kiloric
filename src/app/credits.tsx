@@ -197,8 +197,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 20,
   },
   listHeader: {
-    color: c.textFaint,
-    fontSize: 14,
+    color: c.brand,
+    fontSize: 11,
     marginBottom: 10,
     textTransform: 'uppercase',
     letterSpacing: 2,

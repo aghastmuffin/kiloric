@@ -116,7 +116,7 @@ export default function WorkoutsScreen() {
             {['M', 'W', 'F'].map((day, index) => (
               <View key={`${day}-${index}`} style={[styles.dayDot, index < completedSessions && styles.dayDotActive]}>
                 {index < completedSessions ? (
-                  <Ionicons name="checkmark" size={13} color={colors.onAccent} />
+                  <Ionicons name="checkmark" size={13} color={colors.onBrand} />
                 ) : (
                   <Text style={styles.dayText}>{day}</Text>
                 )}
@@ -157,7 +157,7 @@ export default function WorkoutsScreen() {
                     <Ionicons
                       name={pillar.icon}
                       size={21}
-                      color={active ? colors.onAccent : colors.success}
+                      color={active ? colors.onBrand : colors.brand}
                     />
                   </View>
                   <Text style={[styles.pillarTitle, active && styles.pillarTitleActive]}>{pillar.title}</Text>
@@ -285,7 +285,7 @@ export default function WorkoutsScreen() {
               transition={{ type: 'spring', damping: 8, delay: 100 }}
               style={styles.trophy}
             >
-              <Ionicons name="trophy" size={29} color={colors.onAccent} />
+              <Ionicons name="trophy" size={29} color={colors.onBrand} />
             </MotionView>
             <Text style={styles.celebrationKicker}>SESSION COMPLETE</Text>
             <Text style={styles.celebrationTitle}>Strong work.</Text>
@@ -305,34 +305,34 @@ export default function WorkoutsScreen() {
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
-  content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 16, gap: 18 },
+  content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 20, gap: 22 },
   hero: { gap: 6, paddingTop: 2 },
   mockPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
   mockText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9, letterSpacing: 0.8 },
-  eyebrow: { ...typography.labelSmall, color: c.success },
-  title: { ...typography.headlineLarge, color: c.accent },
+  eyebrow: { ...typography.labelSmall, color: c.brand },
+  title: { ...typography.headlineLarge, color: c.text },
   lede: { ...typography.body, color: c.textMuted, maxWidth: 560 },
-  weekCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: c.accentSoft, borderRadius: 12, padding: 15, gap: 12 },
+  weekCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, paddingVertical: 14, gap: 12 },
   weekLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 10 },
   weekValue: { ...typography.body, color: c.accent, fontWeight: '700' },
   weekDays: { flexDirection: 'row', gap: 6 },
   dayDot: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center' },
-  dayDotActive: { backgroundColor: c.accent, borderColor: c.accent },
+  dayDotActive: { backgroundColor: c.brand, borderColor: c.brand },
   dayText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 8 },
-  sectionKicker: { ...typography.labelSmall, color: c.success, fontSize: 10 },
-  sectionTitle: { ...typography.headline, color: c.accent, fontSize: 22, lineHeight: 28 },
+  sectionKicker: { ...typography.labelSmall, color: c.brand, fontSize: 10 },
+  sectionTitle: { ...typography.headline, color: c.text, fontSize: 22, lineHeight: 28 },
   sectionMeta: { ...typography.labelSmall, color: c.textMuted },
   pillarRow: { gap: 10, paddingRight: 16 },
-  pillarCard: { width: 178, minHeight: 164, padding: 14, borderWidth: 1, borderColor: c.border, borderRadius: 12, backgroundColor: c.surface, gap: 6 },
-  pillarCardActive: { backgroundColor: c.accent, borderColor: c.accent },
-  pillarIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  pillarCard: { width: 178, minHeight: 164, padding: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: 8, backgroundColor: c.surface, gap: 6 },
+  pillarCardActive: { backgroundColor: c.brand, borderColor: c.brand },
+  pillarIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.brandSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   pillarIconActive: { backgroundColor: 'rgba(255,255,255,0.15)' },
   pillarTitle: { ...typography.headline, color: c.accent, fontSize: 21, lineHeight: 26 },
-  pillarTitleActive: { color: c.onAccent },
+  pillarTitleActive: { color: c.onBrand },
   pillarFocus: { ...typography.body, color: c.textMuted, fontSize: 14, lineHeight: 19 },
   pillarMeta: { ...typography.labelSmall, color: c.textFaint, fontSize: 9, marginTop: 'auto' },
-  pillarCopyActive: { color: c.onAccent, opacity: 0.78 },
+  pillarCopyActive: { color: c.onBrand, opacity: 0.82 },
   pressed: { opacity: 0.72 },
   sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 3 },
   sessionTitle: { ...typography.headline, color: c.accent },
@@ -341,7 +341,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   progressLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 9 },
   progressTrack: { height: 5, backgroundColor: c.progressTrail, borderRadius: 999, overflow: 'hidden', marginTop: -10 },
   progressFill: { height: 5, backgroundColor: c.success, borderRadius: 999 },
-  timelineCard: { borderWidth: 1, borderColor: c.border, borderRadius: 12, backgroundColor: c.surface, paddingHorizontal: 14, paddingVertical: 8 },
+  timelineCard: { borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: 8, backgroundColor: c.surface, paddingHorizontal: 14, paddingVertical: 8 },
   timelineRow: { flexDirection: 'row', minHeight: 96 },
   timelineRail: { width: 34, alignItems: 'center', paddingTop: 18 },
   check: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
@@ -363,7 +363,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   celebration: { alignItems: 'center', overflow: 'hidden', backgroundColor: c.surface, borderWidth: 1, borderColor: c.success, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 30, marginTop: 2 },
   celebrationHalo: { position: 'absolute', top: 35, width: 74, height: 74, borderRadius: 37, backgroundColor: c.levelGlow },
   particle: { position: 'absolute', top: 72, alignSelf: 'center' },
-  trophy: { width: 62, height: 62, borderRadius: 31, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  trophy: { width: 62, height: 62, borderRadius: 31, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   celebrationKicker: { ...typography.labelSmall, color: c.success, fontSize: 10 },
   celebrationTitle: { ...typography.headlineLarge, color: c.accent, marginTop: 2 },
   celebrationText: { ...typography.body, color: c.textMuted, textAlign: 'center', maxWidth: 380, marginTop: 4 },

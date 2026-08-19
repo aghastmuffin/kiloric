@@ -138,8 +138,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: 12,
     backgroundColor: c.surface,
     borderColor: c.danger,
-    borderWidth: 1.5,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 14,
     ...Platform.select({

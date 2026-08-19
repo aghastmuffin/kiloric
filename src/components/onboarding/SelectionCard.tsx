@@ -1,4 +1,5 @@
 import type { OnboardingColors } from '@/lib/theme/tokens'
+import { FONT_FAMILY } from '@/lib/fonts'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
@@ -47,10 +48,10 @@ export function SelectionCard<T extends string>({
 const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
   card: {
     backgroundColor: onboardingColors.card,
-    borderRadius: 12,
+    borderRadius: 6,
     padding: 14,
     marginBottom: 10,
-    borderWidth: 1.5,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: onboardingColors.border,
   },
   cardSelected: {
@@ -91,12 +92,14 @@ const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
     flex: 1,
   },
   label: {
+    fontFamily: FONT_FAMILY,
     color: onboardingColors.text,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 4,
   },
   description: {
+    fontFamily: FONT_FAMILY,
     color: onboardingColors.textMuted,
     fontSize: 13,
     lineHeight: 18,

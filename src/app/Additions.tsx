@@ -457,13 +457,13 @@ export default function AdditionsScreen() {
             ]}
           >
             {adding ? (
-              <ActivityIndicator color={colors.onAccent} />
+              <ActivityIndicator color={colors.onBrand} />
             ) : (
               <>
                 <Ionicons
                   name={added ? 'checkmark' : 'add-circle-outline'}
                   size={18}
-                  color={colors.onAccent}
+                  color={colors.onBrand}
                 />
                 <Text style={styles.primaryButtonText}>
                   {added ? `Added to ${selectedMealType}` : `Add to ${selectedMealType}`}
@@ -481,7 +481,7 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: c.bg,
+      backgroundColor: c.background,
     },
     header: {
       flexDirection: 'row',
@@ -508,7 +508,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     eyebrow: {
       ...typography.labelSmall,
-      color: c.textMuted,
+      color: c.brand,
       letterSpacing: 1.2,
     },
     headerTitle: {
@@ -534,7 +534,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     mealSelectText: {
       ...typography.label,
-      color: c.accent,
+      color: c.brand,
     },
     mealMenu: {
       position: 'absolute',
@@ -558,14 +558,14 @@ const makeStyles = (c: ThemeColors) =>
       paddingVertical: 12,
     },
     mealMenuItemSelected: {
-      backgroundColor: c.accentSoft,
+      backgroundColor: c.brandSoft,
     },
     mealMenuItemText: {
       ...typography.label,
       color: c.text,
     },
     mealMenuItemTextSelected: {
-      color: c.accent,
+      color: c.brand,
       fontWeight: '700',
     },
     content: {
@@ -714,7 +714,7 @@ const makeStyles = (c: ThemeColors) =>
       bottom: 0,
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.md,
-      backgroundColor: c.bg,
+      backgroundColor: c.background,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: c.border,
     },
@@ -723,8 +723,8 @@ const makeStyles = (c: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-      backgroundColor: c.accent,
-      borderRadius: borderRadius.md,
+      backgroundColor: c.brand,
+      borderRadius: borderRadius.pill,
       paddingVertical: 14,
     },
     primaryButtonDisabled: {
@@ -732,7 +732,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     primaryButtonText: {
       ...typography.label,
-      color: c.onAccent,
+      color: c.onBrand,
       fontWeight: '700',
     },
     secondaryButton: {

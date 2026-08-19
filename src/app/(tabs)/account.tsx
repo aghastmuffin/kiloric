@@ -95,14 +95,18 @@ export default function AccountScreen() {
         <TouchableOpacity 
       onPress={() => {
           router.push('/privacy-policy');
-        }}>
-          <Text>Tap to view legal docs.</Text>
+        }}
+      style={styles.footerLink}>
+          <Text style={styles.footerLinkText}>Legal & privacy</Text>
+          <Ionicons name="arrow-forward" size={15} color={colors.brand} />
         </TouchableOpacity>
                 <TouchableOpacity 
       onPress={() => {
           router.push('/privacy-policy');
-        }}>
-          <Text>Our thanks to the many organizations that made this possible.</Text>
+        }}
+      style={styles.footerLink}>
+          <Text style={styles.footerLinkText}>Credits & acknowledgements</Text>
+          <Ionicons name="arrow-forward" size={15} color={colors.brand} />
         </TouchableOpacity>
       </ScrollView>
   );
@@ -372,7 +376,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             style={[styles.button, signingOut && styles.buttonDisabled]}
             onPress={() => router.push('/config')}
         >
-          <Ionicons name="create-outline" size={18} color={colors.onAccent} />
+          <Ionicons name="create-outline" size={18} color={colors.onBrand} />
           <Text style={styles.buttonText}>Edit profile & goals</Text>
         </TouchableOpacity>
 
@@ -410,7 +414,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   eyebrow: {
     ...typography.labelSmall,
-    color: c.textFaint,
+    color: c.brand,
   },
   title: {
     ...typography.headlineLarge,
@@ -425,9 +429,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   playerCard: {
     backgroundColor: c.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 16,
     marginBottom: 12,
   },
@@ -447,7 +451,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: c.accentSoft,
     borderWidth: 2,
-    borderColor: c.accent,
+    borderColor: c.brand,
   },
   avatarText: {
     ...typography.headline,
@@ -455,7 +459,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   levelBadge: {
     marginTop: -8,
-    backgroundColor: c.accent,
+    backgroundColor: c.brand,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -463,7 +467,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   levelBadgeText: {
     ...typography.labelSmall,
     fontSize: 10,
-    color: c.onAccent,
+    color: c.onBrand,
   },
   identityCopy: {
     flex: 1,
@@ -533,9 +537,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: c.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 8,
   },
@@ -570,7 +574,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   card: {
     backgroundColor: c.surface,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
@@ -632,8 +636,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'center',
-    backgroundColor: c.accent,
-    borderRadius: 8,
+    backgroundColor: c.brand,
+    borderRadius: 999,
     padding: 14,
     alignItems: 'center',
   },
@@ -653,7 +657,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   buttonText: {
     ...typography.label,
-    color: c.onAccent,
+    color: c.onBrand,
   },
   buttonDangerText: {
     ...typography.label,
@@ -663,5 +667,17 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     ...typography.body,
     color: c.textMuted,
     marginTop: 8,
+  },
+  footerLink: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
+  },
+  footerLinkText: {
+    ...typography.label,
+    color: c.text,
   },
 });

@@ -19,6 +19,12 @@ export type ThemeColors = {
   textFaint: string
   /** Primary action accent. */
   accent: string
+  /** Brand accent used sparingly for editorial marks and active states. */
+  brand: string
+  /** Text/icon rendered on top of `brand`. */
+  onBrand: string
+  /** Translucent brand fill for selected states. */
+  brandSoft: string
   /** Text/icon rendered on top of `accent`. */
   onAccent: string
   /** Translucent accent fill for selected states. */
@@ -55,28 +61,33 @@ export type OnboardingColors = {
   border: string
   borderSelected: string
   accent: string
+  onAccent: string
   accentMuted: string
   text: string
   textMuted: string
   textSoft: string
   danger: string
+  dangerSoft: string
 }
 
 // Paper & Ink === the signature taeson.co aesthetic.
-// Light mode: warm paper background, pure white cards, rich charcoal text.
+// Light mode: warm paper background, softly lifted surfaces, rich charcoal text.
 export const paperLightColors: ThemeColors = {
   background: '#F7F6F2',
-  surface: '#FFFFFF',
-  surfaceAlt: '#EBEAE4',
+  surface: '#FBFAF7',
+  surfaceAlt: '#ECEAE3',
   surfaceMuted: '#F7F6F2',
-  border: '#D0CEC5',
-  borderStrong: '#A3A196',
-  text: '#1A1A1A',
-  textMuted: '#6B6966',
-  textFaint: '#92908B',
-  accent: '#1A1A1A',
+  border: '#D9D6CE',
+  borderStrong: '#B8B4AB',
+  text: '#121216',
+  textMuted: '#6E6E6A',
+  textFaint: '#96948E',
+  accent: '#121216',
+  brand: '#D6402F',
+  onBrand: '#FFFDF8',
+  brandSoft: 'rgba(214, 64, 47, 0.10)',
   onAccent: '#F7F6F2',
-  accentSoft: '#EBEAE4',
+  accentSoft: '#E7E5DE',
   danger: '#8B3A3A',
   onDanger: '#FFFFFF',
   dangerButtonBg: '#F5E8E8',
@@ -86,27 +97,30 @@ export const paperLightColors: ThemeColors = {
   mono: '#1A1A1A',
   overlay: 'rgba(26, 26, 26, 0.4)',
   pickerVariant: 'light',
-  pickerAccent: '#1A1A1A',
-  xpAccent: '#4A6741',
-  streakColor: '#A67C00',
+  pickerAccent: '#D6402F',
+  xpAccent: '#D6402F',
+  streakColor: '#B96725',
   levelGlow: 'rgba(74, 103, 65, 0.12)',
   progressTrail: '#EBEAE4',
 }
 
 // Dark mode: deep charcoal, off-white text, same editorial restraint.
 export const paperDarkColors: ThemeColors = {
-  background: '#1A1A1A',
-  surface: '#242424',
-  surfaceAlt: '#2E2E2E',
-  surfaceMuted: '#1A1A1A',
-  border: '#3A3A3A',
-  borderStrong: '#4A4A4A',
+  background: '#151515',
+  surface: '#1C1C1B',
+  surfaceAlt: '#292826',
+  surfaceMuted: '#151515',
+  border: '#373633',
+  borderStrong: '#56534D',
   text: '#F7F6F2',
-  textMuted: '#92908B',
-  textFaint: '#6B6966',
+  textMuted: '#AAA7A0',
+  textFaint: '#74716B',
   accent: '#F7F6F2',
-  onAccent: '#1A1A1A',
-  accentSoft: '#2E2E2E',
+  brand: '#FF6755',
+  onBrand: '#151515',
+  brandSoft: 'rgba(255, 103, 85, 0.14)',
+  onAccent: '#151515',
+  accentSoft: '#292826',
   danger: '#D4706E',
   onDanger: '#1A1A1A',
   dangerButtonBg: 'rgba(212, 112, 110, 0.15)',
@@ -116,8 +130,8 @@ export const paperDarkColors: ThemeColors = {
   mono: '#EBEAE4',
   overlay: 'rgba(0, 0, 0, 0.6)',
   pickerVariant: 'dark',
-  pickerAccent: '#F7F6F2',
-  xpAccent: '#6B9B5E',
+  pickerAccent: '#FF6755',
+  xpAccent: '#FF6755',
   streakColor: '#D4A030',
   levelGlow: 'rgba(107, 155, 94, 0.2)',
   progressTrail: '#2E2E2E',
@@ -135,6 +149,9 @@ export const barebonesColors: ThemeColors = {
   textMuted: '#aaaaaa',
   textFaint: '#888888',
   accent: '#ffd33d',
+  brand: '#ffd33d',
+  onBrand: '#25292e',
+  brandSoft: 'rgba(255, 211, 61, 0.12)',
   onAccent: '#25292e',
   accentSoft: 'rgba(255, 211, 61, 0.12)',
   danger: '#ff7272',
@@ -165,6 +182,9 @@ export const iosLightColors: ThemeColors = {
   textMuted: '#787672',
   textFaint: '#92908B',
   accent: '#1B365D',
+  brand: '#D6402F',
+  onBrand: '#ffffff',
+  brandSoft: 'rgba(214, 64, 47, 0.10)',
   onAccent: '#ffffff',
   accentSoft: '#DAE6D1',
   danger: '#BA1A1A',
@@ -194,6 +214,9 @@ export const iosDarkColors: ThemeColors = {
   textMuted: '#aeaeb2',
   textFaint: '#8e8e93',
   accent: '#0a84ff',
+  brand: '#FF6755',
+  onBrand: '#1c1c1e',
+  brandSoft: 'rgba(255, 103, 85, 0.14)',
   onAccent: '#ffffff',
   accentSoft: 'rgba(10, 132, 255, 0.18)',
   danger: '#ff453a',
@@ -217,30 +240,34 @@ const paperLightOnboardingColors: OnboardingColors = {
   background: '#F7F6F2',
   surface: '#FFFFFF',
   card: '#FFFFFF',
-  cardSelected: '#EBEAE4',
-  border: '#D0CEC5',
-  borderSelected: '#1A1A1A',
-  accent: '#1A1A1A',
+  cardSelected: 'rgba(214, 64, 47, 0.08)',
+  border: '#D9D6CE',
+  borderSelected: '#D6402F',
+  accent: '#D6402F',
+  onAccent: '#FFFDF8',
   accentMuted: '#6B6966',
   text: '#1A1A1A',
   textMuted: '#6B6966',
   textSoft: '#92908B',
   danger: '#8B3A3A',
+  dangerSoft: 'rgba(139, 58, 58, 0.08)',
 }
 
 const paperDarkOnboardingColors: OnboardingColors = {
   background: '#1A1A1A',
   surface: '#242424',
   card: '#242424',
-  cardSelected: '#2E2E2E',
-  border: '#3A3A3A',
-  borderSelected: '#F7F6F2',
-  accent: '#F7F6F2',
+  cardSelected: 'rgba(255, 103, 85, 0.12)',
+  border: '#373633',
+  borderSelected: '#FF6755',
+  accent: '#FF6755',
+  onAccent: '#151515',
   accentMuted: '#92908B',
   text: '#F7F6F2',
   textMuted: '#92908B',
   textSoft: '#6B6966',
   danger: '#D4706E',
+  dangerSoft: 'rgba(212, 112, 110, 0.10)',
 }
 
 const barebonesOnboardingColors: OnboardingColors = {
@@ -251,11 +278,13 @@ const barebonesOnboardingColors: OnboardingColors = {
   border: '#3a3f47',
   borderSelected: '#87ff72',
   accent: '#87ff72',
+  onAccent: '#1a1d22',
   accentMuted: '#5ecf55',
   text: '#ffffff',
   textMuted: '#9aa3ad',
   textSoft: '#c5ccd3',
   danger: '#ff7272',
+  dangerSoft: 'rgba(255, 114, 114, 0.12)',
 }
 
 const iosLightOnboardingColors: OnboardingColors = {
@@ -266,11 +295,13 @@ const iosLightOnboardingColors: OnboardingColors = {
   border: '#DADAD6',
   borderSelected: '#1B365D',
   accent: '#1B365D',
+  onAccent: '#ffffff',
   accentMuted: '#667160',
   text: '#353C44',
   textMuted: '#787672',
   textSoft: '#576251',
   danger: '#BA1A1A',
+  dangerSoft: '#FFDAD6',
 }
 
 const iosDarkOnboardingColors: OnboardingColors = {
@@ -281,17 +312,19 @@ const iosDarkOnboardingColors: OnboardingColors = {
   border: '#38383a',
   borderSelected: '#0a84ff',
   accent: '#0a84ff',
+  onAccent: '#ffffff',
   accentMuted: '#409cff',
   text: '#ffffff',
   textMuted: '#aeaeb2',
   textSoft: '#d1d1d6',
   danger: '#ff453a',
+  dangerSoft: 'rgba(255, 69, 58, 0.12)',
 }
 
 export type AppThemeChoice = 'paper' | 'barebones' | 'ios'
 
-export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const
-export const borderRadius = { sm: 4, md: 8, lg: 12, pill: 999 } as const
+export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const
+export const borderRadius = { sm: 3, md: 6, lg: 10, pill: 999 } as const
 
 export function resolveThemeColors(
   choice: AppThemeChoice,

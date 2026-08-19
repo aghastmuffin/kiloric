@@ -29,7 +29,7 @@ export function ThemedSegmentedControl({
       selectedIndex={selectedIndex}
       enabled={enabled}
       appearance={scheme}
-      tintColor={colors.accent}
+      tintColor={colors.brand}
       onChange={(event) => onChange(event.nativeEvent.selectedSegmentIndex)}
       style={style}
     />

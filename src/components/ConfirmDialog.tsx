@@ -152,7 +152,7 @@ const makeStyles = (c: OnboardingColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     backgroundColor: c.surface,
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: c.border,
     paddingHorizontal: 22,
@@ -193,7 +193,7 @@ const makeStyles = (c: OnboardingColors) => StyleSheet.create({
   },
   button: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: 999,
     paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
@@ -219,7 +219,7 @@ const makeStyles = (c: OnboardingColors) => StyleSheet.create({
     backgroundColor: c.accent,
   },
   confirmButtonText: {
-    color: '#ffffff',
+    color: c.onAccent,
     fontSize: 16,
     fontWeight: '700',
   },

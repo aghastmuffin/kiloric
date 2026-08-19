@@ -1,10 +1,10 @@
 import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
-import { FONT_FAMILY } from '@/lib/fonts';
+import { FONT_FAMILY, MONO_FONT_FAMILY } from '@/lib/fonts';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function TabNavigator() {
@@ -18,37 +18,64 @@ function TabNavigator() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarActiveBackgroundColor: colors.accentSoft,
+        tabBarActiveBackgroundColor: colors.brandSoft,
         headerStyle: {
           backgroundColor: colors.surfaceMuted,
         },
         headerShadowVisible: false,
         headerTintColor: colors.text,
         headerTitleStyle: { ...navigationFontStyle, fontWeight: '600', fontSize: 17 },
-        tabBarIconStyle: { marginBottom: -1 },
-        tabBarLabelStyle: { ...navigationFontStyle, fontSize: 10, fontWeight: '600' },
+        tabBarIconStyle: { marginBottom: -2 },
+        tabBarLabelStyle: {
+          fontFamily: MONO_FONT_FAMILY,
+          fontSize: 9,
+          fontWeight: '400',
+          letterSpacing: 0.6,
+          textTransform: 'uppercase',
+        },
         tabBarItemStyle: {
-          borderRadius: 12,
-          marginHorizontal: 4,
-          marginVertical: 5,
+          borderRadius: 17,
+          marginHorizontal: 3,
+          marginVertical: 6,
         },
         tabBarStyle: {
-          backgroundColor: colors.surfaceMuted,
-          borderTopColor: colors.border,
-          paddingHorizontal: 8,
-          paddingTop: 2,
-          paddingBottom: 2,
+          position: 'absolute',
+          width: '92%',
+          maxWidth: 560,
+          ...Platform.select({
+            web: {
+              left: '50%',
+              transform: [{ translateX: '-50%' }],
+            } as never,
+            default: {
+              left: '4%',
+              right: '4%',
+            },
+          }),
+          bottom: 10,
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          paddingHorizontal: 6,
+          paddingTop: 1,
+          paddingBottom: 1,
+          borderWidth: StyleSheet.hairlineWidth,
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: 68,
+          borderRadius: 22,
+          height: 66,
+          shadowColor: colors.text,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.10,
+          shadowRadius: 18,
+          elevation: 8,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Today',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'grid' : 'grid-outline'} color={color} size={22} />
           ),
@@ -75,7 +102,7 @@ function TabNavigator() {
       <Tabs.Screen
         name="account"
         options={{
-          title: 'Account',
+          title: 'You',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22} />
           ),

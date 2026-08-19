@@ -2,7 +2,7 @@ import { ApiErrorProvider } from '@/lib/ApiErrorContext';
 import { ApiBackendPreferencesProvider } from '@/lib/ApiBackendPreferencesContext';
 import { AuthProvider } from '@/lib/AuthContext';
 import { FontPreferencesProvider, useFontPreferences } from '@/lib/FontPreferencesContext';
-import { FONT_FAMILY, fontAssets } from '@/lib/fonts';
+import { FONT_FAMILY, MONO_FONT_FAMILY, fontAssets } from '@/lib/fonts';
 import { MealTypePreferencesProvider } from '@/lib/MealTypePreferencesContext';
 import { SearchPreferencesProvider } from '@/lib/SearchPreferencesContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
@@ -66,7 +66,13 @@ function RootNavigation() {
     [scheme, colors, resolvedFontFamily],
   );
 
-  const navigationFontStyle = { fontFamily: resolvedFontFamily };
+  const navigationFontStyle = {
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '400' as const,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase' as const,
+  };
 
   return (
     <ThemeProvider value={navigationTheme}>
@@ -76,7 +82,15 @@ function RootNavigation() {
           <AuthProvider>
             <MealTypePreferencesProvider>
               <SearchPreferencesProvider>
-                <Stack screenOptions={{ headerTitleStyle: navigationFontStyle }}>
+                <Stack
+                  screenOptions={{
+                    headerTitleStyle: navigationFontStyle,
+                    headerStyle: { backgroundColor: colors.background },
+                    headerShadowVisible: false,
+                    headerTintColor: colors.brand,
+                    contentStyle: { backgroundColor: colors.background },
+                  }}
+                >
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen
                     name="cameraview"

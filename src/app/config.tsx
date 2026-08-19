@@ -950,10 +950,10 @@ export default function ConfigScreen() {
             ]}
           >
             {saving ? (
-              <ActivityIndicator color={colors.onAccent} size="small" />
+              <ActivityIndicator color={colors.onBrand} size="small" />
             ) : (
               <View style={styles.btnContent}>
-                <Ionicons name="checkmark-circle-outline" size={20} color={colors.onAccent} />
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.onBrand} />
                 <Text style={styles.btnText}>Save Changes</Text>
               </View>
             )}
@@ -984,9 +984,9 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.background,
     },
     content: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 20,
       paddingBottom: 130,
-      gap: 18,
+      gap: 22,
       alignSelf: 'center',
       width: '100%',
       maxWidth: 720,
@@ -1007,11 +1007,11 @@ const makeStyles = (c: ThemeColors) =>
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 6,
-      backgroundColor: c.accentSoft,
+      backgroundColor: c.brandSoft,
     },
     badgeText: {
       ...typography.labelSmall,
-      color: c.accent,
+      color: c.brand,
       fontSize: 11,
       fontWeight: '700',
     },
@@ -1048,7 +1048,7 @@ const makeStyles = (c: ThemeColors) =>
       width: 28,
       height: 28,
       borderRadius: 14,
-      backgroundColor: c.accentSoft,
+      backgroundColor: c.brandSoft,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1060,9 +1060,9 @@ const makeStyles = (c: ThemeColors) =>
     },
     card: {
       backgroundColor: c.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
-      borderRadius: 16,
+      borderRadius: 8,
       paddingHorizontal: 18,
       paddingVertical: 6,
       shadowColor: '#000',
@@ -1131,10 +1131,10 @@ const makeStyles = (c: ThemeColors) =>
     input: {
       ...typography.body,
       color: c.text,
-      backgroundColor: c.surfaceAlt,
+      backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 10,
+      borderRadius: 6,
       paddingHorizontal: 14,
       paddingVertical: 12,
     },
@@ -1149,7 +1149,9 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.borderStrong,
-      borderRadius: 16,
+      borderRadius: 8,
+      borderLeftWidth: 2,
+      borderLeftColor: c.brand,
       padding: 16,
       gap: 8,
     },
@@ -1191,12 +1193,12 @@ const makeStyles = (c: ThemeColors) =>
       marginTop: 12,
     },
     btn: {
-      backgroundColor: c.accent,
-      borderRadius: 12,
+      backgroundColor: c.brand,
+      borderRadius: 999,
       paddingVertical: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: c.accent,
+      shadowColor: c.brand,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.22,
       shadowRadius: 10,
@@ -1216,7 +1218,7 @@ const makeStyles = (c: ThemeColors) =>
     btnText: {
       ...typography.body,
       fontWeight: '700',
-      color: c.onAccent,
+      color: c.onBrand,
     },
     discardBtn: {
       backgroundColor: c.dangerButtonBg,

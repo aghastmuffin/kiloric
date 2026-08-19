@@ -632,7 +632,7 @@ export default function LogFoodScreen() {
                 <Ionicons
                   name="search"
                   size={19}
-                  color={searchFocused ? colors.accent : colors.textMuted}
+                  color={searchFocused ? colors.brand : colors.textMuted}
                 />
                 <TextInput
                   ref={searchInputRef}
@@ -670,7 +670,7 @@ export default function LogFoodScreen() {
                   pressed && styles.barcodeButtonPressed,
                 ]}
               >
-                <Ionicons name="barcode-outline" size={24} color={colors.onAccent} />
+                <Ionicons name="barcode-outline" size={24} color={colors.onBrand} />
               </Pressable>
             </View>
 
@@ -696,7 +696,7 @@ export default function LogFoodScreen() {
                     <Ionicons
                       name={selected ? FILTER_ICONS[chip] : (`${FILTER_ICONS[chip]}-outline` as keyof typeof Ionicons.glyphMap)}
                       size={14}
-                      color={selected ? colors.onAccent : colors.textMuted}
+                      color={selected ? colors.onBrand : colors.textMuted}
                     />
                     <Text style={[styles.filterChipText, selected && styles.filterChipTextSelected]}>
                       {chip}
@@ -1429,7 +1429,7 @@ const FoodQuickRow = memo(
 )
 
 function pressedColor(colors: ThemeColors, active: boolean) {
-  return active ? colors.onAccent : colors.textMuted
+  return active ? colors.onBrand : colors.textMuted
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
@@ -1441,8 +1441,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
-    paddingHorizontal: spacing.md,
-    gap: spacing.lg,
+    paddingHorizontal: 20,
+    gap: 22,
   },
   searchBlock: {
     gap: spacing.md,
@@ -1463,10 +1463,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: borderRadius.pill,
+    borderRadius: borderRadius.md,
   },
   searchFieldFocused: {
-    borderColor: c.accent,
+    borderColor: c.brand,
   },
   searchInput: {
     flex: 1,
@@ -1491,7 +1491,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: borderRadius.pill,
-    backgroundColor: c.accent,
+    backgroundColor: c.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1515,15 +1515,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingVertical: 9,
   },
   filterChipSelected: {
-    backgroundColor: c.accent,
-    borderColor: c.accent,
+    backgroundColor: c.brand,
+    borderColor: c.brand,
   },
   filterChipText: {
     ...typography.labelSmall,
     color: c.textMuted,
   },
   filterChipTextSelected: {
-    color: c.onAccent,
+    color: c.onBrand,
   },
   section: {
     gap: spacing.md,
@@ -1539,7 +1539,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   sectionTitle: {
     ...typography.headline,
-    color: c.accent,
+    color: c.text,
   },
   sectionMeta: {
     ...typography.label,
@@ -1555,7 +1555,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   mealCard: {
     backgroundColor: c.surface,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: c.border,
     overflow: 'hidden',
@@ -1630,7 +1630,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   logNewButton: {
     minHeight: 54,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: c.textMuted,
@@ -1711,8 +1711,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
   },
   addCircleActive: {
-    backgroundColor: c.accent,
-    borderColor: c.accent,
+    backgroundColor: c.brand,
+    borderColor: c.brand,
   },
   rowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,

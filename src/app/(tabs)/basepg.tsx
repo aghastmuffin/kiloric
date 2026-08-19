@@ -1,4 +1,5 @@
 import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -19,6 +20,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
   },
   text: {
+    ...typography.headlineLarge,
     color: c.text,
   },
 });

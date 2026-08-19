@@ -50,7 +50,7 @@ export function SearchModeSwapButton({ current }: Props) {
             pressed && styles.buttonPressed,
           ]}
       >
-        <Ionicons name={icon} size={26} color={colors.accent} />
+        <Ionicons name={icon} size={26} color={colors.brand} />
       </Pressable>
   )
 }
@@ -65,7 +65,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: c.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
   },
   buttonPressed: {

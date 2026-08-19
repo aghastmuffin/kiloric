@@ -1,18 +1,18 @@
-import { FontPreferencePicker } from '@/components/FontPreferencePicker'
-import { setHasSkippedSignIn } from '@/components/ProfileGate'
-import { ThemePreferencePicker } from '@/components/ThemePreferencePicker'
-import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl' // Added to handle search tab picker
-import { showApiError } from '@/lib/apiErrors'
-import { isValidEmail, isValidPassword } from '@/lib/authValidation'
-import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext'
-import { useSearchPreferences } from '@/lib/SearchPreferencesContext' // Added to power state hooks
-import { useTheme } from '@/lib/theme/ThemeContext'
-import type { ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
-import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { FontPreferencePicker } from '@/components/FontPreferencePicker';
+import { setHasSkippedSignIn } from '@/components/ProfileGate';
+import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
+import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'; // Added to handle search tab picker
+import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext';
+import { useSearchPreferences } from '@/lib/SearchPreferencesContext'; // Added to power state hooks
+import { showApiError } from '@/lib/apiErrors';
+import { isValidEmail, isValidPassword } from '@/lib/authValidation';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -22,7 +22,7 @@ import {
     Text,
     TextInput,
     View,
-} from 'react-native'
+} from 'react-native';
 
 type SignInStep = 'landing' | 'email' | 'password'
 
@@ -78,7 +78,13 @@ export function AccountSignInFlow() {
         setSubmitting(true)
         setAuthError(null)
         try {
-            await signIn(email.trim(), password)
+            const signedIn = await signIn(email.trim(), password)
+            if (!signedIn) {
+                setAuthError('Sign in did not complete successfully. Please try again.')
+                return
+            }
+
+            router.replace('/(tabs)')
         } catch (err) {
             const message = getAuthErrorMessage(err)
             console.error('[auth] sign in failed:', message)
@@ -121,7 +127,7 @@ export function AccountSignInFlow() {
                             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
                             onPress={goToEmail}
                         >
-                            <Ionicons name="log-in-outline" size={18} color={colors.onAccent} />
+                            <Ionicons name="log-in-outline" size={18} color={colors.onBrand} />
                             <Text style={styles.buttonText}>Sign in</Text>
                         </Pressable>
 
@@ -218,7 +224,7 @@ export function AccountSignInFlow() {
 
                 {step === 'password' ? (
                     <>
-                        <Text style={styles.title}>Your password</Text>
+                        <Text style={styles.title}>Your password, please</Text>
                         <Text style={styles.subtitle}>{email.trim()}</Text>
 
                         {authError ? (
@@ -293,14 +299,14 @@ const makeStyles = (c: ThemeColors) =>
             borderRadius: 32,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: c.accentSoft,
-            borderWidth: 2,
-            borderColor: c.accent,
+            backgroundColor: c.brandSoft,
+            borderWidth: 1,
+            borderColor: c.brand,
             marginBottom: 16,
         },
         eyebrow: {
             ...typography.labelSmall,
-            color: c.textFaint,
+            color: c.brand,
             marginBottom: 4,
         },
         title: {
@@ -352,19 +358,19 @@ const makeStyles = (c: ThemeColors) =>
             backgroundColor: c.surface,
             color: c.text,
             ...typography.body,
-            borderRadius: 14,
+            borderRadius: 6,
             paddingHorizontal: 16,
             paddingVertical: 14,
             marginBottom: 16,
-            borderWidth: 1.5,
+            borderWidth: 1,
             borderColor: c.border,
         },
         card: {
             backgroundColor: c.surface,
-            borderRadius: 20,
+            borderRadius: 8,
             padding: 16,
             marginTop: 24,
-            borderWidth: 1,
+            borderWidth: StyleSheet.hairlineWidth,
             borderColor: c.border,
         },
         settingsCardInner: {
@@ -397,12 +403,12 @@ const makeStyles = (c: ThemeColors) =>
             flexDirection: 'row',
             justifyContent: 'center',
             gap: 8,
-            backgroundColor: c.accent,
-            borderRadius: 8,
+            backgroundColor: c.brand,
+            borderRadius: 999,
             padding: 16,
             alignItems: 'center',
             marginTop: 8,
-            shadowColor: c.accent,
+            shadowColor: c.brand,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.22,
             shadowRadius: 10,
@@ -418,7 +424,7 @@ const makeStyles = (c: ThemeColors) =>
         },
         buttonText: {
             ...typography.label,
-            color: c.onAccent,
+            color: c.onBrand,
         },
         buttonSecondaryText: {
             ...typography.label,
@@ -467,14 +473,14 @@ const makeStyles = (c: ThemeColors) =>
         },
         footerPrimary: {
             flex: 2,
-            backgroundColor: c.accent,
-            borderRadius: 8,
+            backgroundColor: c.brand,
+            borderRadius: 999,
             paddingVertical: 14,
             alignItems: 'center',
         },
         footerPrimaryText: {
             ...typography.label,
-            color: c.onAccent,
+            color: c.onBrand,
         },
         header: {
             paddingVertical: 4,

@@ -1,11 +1,11 @@
-import { account } from '@/lib/appwrite'
+import { account } from '@/lib/appwrite';
 import {
-  clearAppwriteSession,
-  persistAppwriteSession,
-  restoreAppwriteSession,
-} from '@/lib/appwriteSession'
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { ID, type Models } from 'react-native-appwrite'
+    clearAppwriteSession,
+    persistAppwriteSession,
+    restoreAppwriteSession,
+} from '@/lib/appwriteSession';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { ID, type Models } from 'react-native-appwrite';
 
 type AppwriteUser = Models.User<Models.Preferences>
 
@@ -14,7 +14,7 @@ export type SignUpResult = 'signed_in' | 'verification_required'
 type AuthContextValue = {
   user: AppwriteUser | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<boolean>
   signUp: (email: string, password: string) => Promise<SignUpResult>
   signOut: () => Promise<void>
 }
@@ -49,8 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser().finally(() => setLoading(false))
   }, [refreshUser])
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    setUser(await establishSession(email, password))
+  const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
+    const signedInUser = await establishSession(email, password)
+    setUser(signedInUser)
+    return Boolean(signedInUser?.$id)
   }, [])
 
   const signUp = useCallback(async (email: string, password: string): Promise<SignUpResult> => {

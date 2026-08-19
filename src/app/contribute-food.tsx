@@ -492,10 +492,10 @@ export default function ContributeFoodScreen() {
           accessibilityRole="button"
         >
           {submitting ? (
-            <ActivityIndicator color={colors.onAccent} />
+            <ActivityIndicator color={colors.onBrand} />
           ) : (
             <>
-              <Ionicons name="checkmark-circle-outline" size={20} color={colors.onAccent} />
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.onBrand} />
               <Text style={styles.submitText}>Submit new foodstuff</Text>
             </>
           )}
@@ -561,10 +561,10 @@ const makeStyles = (c: ThemeColors) =>
       flexDirection: 'row',
       gap: spacing.sm,
       alignItems: 'flex-start',
-      backgroundColor: c.accentSoft,
+      backgroundColor: c.brandSoft,
       borderRadius: borderRadius.md,
       borderWidth: 1,
-      borderColor: c.accent,
+      borderColor: c.brand,
       padding: spacing.md,
     },
     contextBannerText: {
@@ -576,7 +576,7 @@ const makeStyles = (c: ThemeColors) =>
     card: {
       backgroundColor: c.surface,
       borderRadius: borderRadius.lg,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
       padding: spacing.md,
       gap: spacing.md,
@@ -593,14 +593,14 @@ const makeStyles = (c: ThemeColors) =>
       flex: 1,
     },
     requiredBadge: {
-      backgroundColor: c.accent,
+      backgroundColor: c.brand,
       borderRadius: borderRadius.pill,
       paddingHorizontal: 8,
       paddingVertical: 2,
     },
     requiredBadgeText: {
       ...typography.labelSmall,
-      color: c.onAccent,
+      color: c.onBrand,
       fontWeight: '700',
     },
     optionalBadge: {
@@ -663,7 +663,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     changePhoto: {
       ...typography.label,
-      color: c.accent,
+      color: c.brand,
     },
     fieldBlock: {
       gap: 6,
@@ -677,7 +677,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     input: {
       ...typography.body,
-      backgroundColor: c.surfaceAlt,
+      backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
       borderRadius: borderRadius.md,
@@ -700,14 +700,14 @@ const makeStyles = (c: ThemeColors) =>
     },
     submit: {
       marginTop: spacing.sm,
-      backgroundColor: c.accent,
-      borderRadius: borderRadius.md,
+      backgroundColor: c.brand,
+      borderRadius: borderRadius.pill,
       paddingVertical: 15,
       alignItems: 'center',
       flexDirection: 'row',
       justifyContent: 'center',
       gap: spacing.sm,
-      shadowColor: c.accent,
+      shadowColor: c.brand,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.25,
       shadowRadius: 10,
@@ -718,7 +718,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     submitText: {
       ...typography.label,
-      color: c.onAccent,
+      color: c.onBrand,
       fontWeight: '700',
       fontSize: 16,
     },

@@ -356,7 +356,7 @@ export default function BarcodeDetailModal({
                   disabled={isLoadingImage}
                 >
                   {isLoadingImage ? (
-                    <ActivityIndicator color={colors.onAccent} />
+                    <ActivityIndicator color={colors.onBrand} />
                   ) : (
                     <Text style={styles.yellowButtonText}>Load image from openfoodfacts</Text>
                   )}
@@ -414,8 +414,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   popup: {
     backgroundColor: c.surface,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
     maxHeight: '90%',
     overflow: 'hidden',
@@ -533,15 +533,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     textAlign: 'center',
   },
   yellowButton: {
-    backgroundColor: c.accent,
-    borderRadius: 8,
+    backgroundColor: c.brand,
+    borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 8,
     alignItems: 'center',
     marginTop: 'auto',
   },
   yellowButtonText: {
-    color: c.onAccent,
+    color: c.onBrand,
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
@@ -592,13 +592,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   contributeButton: {
     marginTop: 8,
-    backgroundColor: c.accent,
-    borderRadius: 8,
+    backgroundColor: c.brand,
+    borderRadius: 999,
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
   contributeButtonText: {
-    color: c.onAccent,
+    color: c.onBrand,
     fontSize: 15,
     fontWeight: '700',
   },

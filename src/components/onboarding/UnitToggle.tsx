@@ -1,4 +1,5 @@
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'
+import { FONT_FAMILY, MONO_FONT_FAMILY } from '@/lib/fonts'
 import type { OnboardingColors } from '@/lib/theme/tokens'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import type { DisplayUnits } from '@/lib/units'
@@ -35,14 +36,16 @@ const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
     marginBottom: 20,
   },
   label: {
+    fontFamily: MONO_FONT_FAMILY,
     color: onboardingColors.textMuted,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '400',
     marginBottom: 4,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.1,
   },
   helper: {
+    fontFamily: FONT_FAMILY,
     color: onboardingColors.textMuted,
     fontSize: 12,
     lineHeight: 17,

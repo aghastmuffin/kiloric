@@ -65,7 +65,7 @@ export function MealTypePicker() {
         onPress={() => setOpen((value) => !value)}
         style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
       >
-        <Ionicons name="restaurant-outline" size={18} color={colors.accent} />
+        <Ionicons name="restaurant-outline" size={18} color={colors.brand} />
         <Text style={styles.triggerText}>{selectedMealType}</Text>
         <Ionicons
           name={open ? 'chevron-down' : 'chevron-up'}
@@ -98,8 +98,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     left: 0,
     minWidth: 148,
     backgroundColor: c.surface,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
     padding: 6,
     zIndex: 2,

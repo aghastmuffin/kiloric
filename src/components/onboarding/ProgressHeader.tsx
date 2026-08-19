@@ -1,5 +1,6 @@
 import type { OnboardingStep } from '@/components/onboarding/types'
 import { makeOnboardingStyles } from '@/components/onboarding/styles'
+import { MONO_FONT_FAMILY } from '@/lib/fonts'
 import type { OnboardingColors } from '@/lib/theme/tokens'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import { useEffect } from 'react'
@@ -80,15 +81,16 @@ const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
     backgroundColor: onboardingColors.background,
   },
   eyebrow: {
-    color: onboardingColors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: MONO_FONT_FAMILY,
+    color: onboardingColors.accent,
+    fontSize: 10,
+    fontWeight: '400',
     marginBottom: 6,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
   },
   track: {
-    height: 6,
+    height: 3,
     borderRadius: 99,
     backgroundColor: onboardingColors.border,
     overflow: 'hidden',

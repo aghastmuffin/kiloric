@@ -183,8 +183,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     minWidth: 72,
   },
   optionSelected: {
-    borderColor: c.accent,
-    backgroundColor: c.accentSoft,
+    borderColor: c.brand,
+    backgroundColor: c.brandSoft,
   },
   optionPressed: {
     opacity: 0.85,
@@ -198,7 +198,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
   },
   optionTextSelected: {
-    color: c.accent,
+    color: c.brand,
     fontWeight: '700',
   },
   modalRoot: {
@@ -212,8 +212,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   modalCard: {
     backgroundColor: c.surface,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
     padding: 18,
     gap: 10,
@@ -255,7 +255,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 8,
   },
   modalButtonPrimary: {
-    backgroundColor: c.accent,
+    backgroundColor: c.brand,
   },
   modalButtonPressed: {
     opacity: 0.85,
@@ -266,7 +266,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
   },
   modalButtonTextPrimary: {
-    color: c.onAccent,
+    color: c.onBrand,
     fontSize: 15,
     fontWeight: '700',
   },
