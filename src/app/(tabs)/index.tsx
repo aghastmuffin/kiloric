@@ -3,8 +3,8 @@ import { MotionView } from '@/components/MotionView';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { useAuth } from '@/lib/AuthContext';
-import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
+import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
 import { panelSpring, quickTiming } from '@/lib/motion';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
@@ -14,9 +14,9 @@ import { borderRadius, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
-  formatWeightImperial,
-  formatWeightMetric,
-  parseDisplayUnitsPreference,
+    formatWeightImperial,
+    formatWeightMetric,
+    parseDisplayUnitsPreference,
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -239,6 +239,7 @@ export default function DashboardScreen() {
             <Ionicons name="sparkles-outline" size={20} color={colors.xpAccent} />
             <Text style={styles.gameValue}>LV {xp.level}</Text>
             <Text style={styles.gameLabel}>{xp.xpInCurrentLevel}/{xp.xpNeeded} XP</Text>
+            <Text style={styles.levelHint}>level up to access more features!</Text>
           </View>
         </View>
 
@@ -620,6 +621,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   gameMetric: { flex: 1, padding: 12, backgroundColor: c.accentSoft, borderRadius: borderRadius.lg, flexDirection: 'row', alignItems: 'center', gap: 7 },
   gameValue: { ...typography.label, color: c.accent, fontWeight: '700' },
   gameLabel: { ...typography.labelSmall, color: c.textMuted, marginLeft: 'auto' },
+  levelHint: { ...typography.labelTiny, color: c.textMuted, marginLeft: 'auto'},
   heroCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.lg, padding: 16, alignItems: 'center', gap: 14 },
   sectionTitle: { ...typography.headline, color: c.accent },
   macroStrip: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 14, width: '100%', gap: 16 },

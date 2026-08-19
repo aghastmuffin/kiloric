@@ -1,11 +1,11 @@
-import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'
-import { useApiBackendPreferences } from '@/lib/ApiBackendPreferencesContext'
-import type { ApiBackendChoice } from '@/lib/apiBackendPreferences'
-import type { ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
-import { useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
+import { useApiBackendPreferences } from '@/lib/ApiBackendPreferencesContext';
+import type { ApiBackendChoice } from '@/lib/apiBackendPreferences';
+import type { ThemeColors } from '@/lib/theme/tokens';
+import { typography } from '@/lib/theme/typography';
+import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 const BACKEND_OPTIONS: ApiBackendChoice[] = ['ords', 'legacy']
 const BACKEND_LABELS = ['Oracle ORDS', 'Legacy (deprecated)']

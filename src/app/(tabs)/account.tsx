@@ -1,14 +1,14 @@
-import { AccountSignInFlow } from '@/components/auth/AccountSignInFlow';
 import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
+import { AccountSignInFlow } from '@/components/auth/AccountSignInFlow';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
-import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
+import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { showApiError } from '@/lib/apiErrors';
-import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
-import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
 import { resolveGoalState } from '@/lib/goals';
+import { triggerSelectionHaptic } from '@/lib/haptics';
+import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
@@ -17,32 +17,32 @@ import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
-  formatWeightImperial,
-  formatWeightMetric,
-  parseDisplayUnitsPreference,
+    formatWeightImperial,
+    formatWeightMetric,
+    parseDisplayUnitsPreference,
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { router, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeOut,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
 import type { Models } from 'react-native-appwrite';
+import Animated, {
+    Easing,
+    FadeIn,
+    FadeOut,
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type AppwriteUser = Models.User<Models.Preferences>;
@@ -89,6 +89,21 @@ export default function AccountScreen() {
                 onSearchModeChange={handleSearchModeChange}
             />
         )}
+        <Text style={styles.mutedText}>
+            App version: {process.env.APP_VERSION} (build {process.env.APP_BUILD_NUMBER}) EMAIL: LEVI@TAESON[DOT]CO INTERNAL DISTRIB.
+          </Text>
+        <TouchableOpacity 
+      onPress={() => {
+          router.push('/privacy-policy');
+        }}>
+          <Text>Tap to view legal docs.</Text>
+        </TouchableOpacity>
+                <TouchableOpacity 
+      onPress={() => {
+          router.push('/privacy-policy');
+        }}>
+          <Text>Our thanks to the many organizations that made this possible.</Text>
+        </TouchableOpacity>
       </ScrollView>
   );
 }

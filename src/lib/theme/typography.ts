@@ -1,8 +1,8 @@
 import {
-  FONT_FAMILY,
-  HEADLINE_FONT_FAMILY,
-  MONO_FONT_FAMILY,
-} from '@/lib/fonts'
+    FONT_FAMILY,
+    HEADLINE_FONT_FAMILY,
+    MONO_FONT_FAMILY,
+} from '@/lib/fonts';
 
 export const typography = {
   display: {
@@ -46,6 +46,14 @@ export const typography = {
     fontFamily: MONO_FONT_FAMILY,
     fontSize: 12,
     lineHeight: 16,
+    fontWeight: '500' as const,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  labelTiny: {
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: 8,
+    lineHeight: 12,
     fontWeight: '500' as const,
     letterSpacing: 0.8,
     textTransform: 'uppercase',

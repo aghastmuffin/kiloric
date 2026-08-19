@@ -2,45 +2,45 @@ import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePic
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { MotionView } from '@/components/MotionView';
 import {
-  NativeDatePicker,
-  NativeEnumPicker,
-  NativeIntPicker,
+    NativeDatePicker,
+    NativeEnumPicker,
+    NativeIntPicker,
 } from '@/components/NativePickers';
 import { HeightPicker, WeightPicker } from '@/components/onboarding/BodyMetricPickers';
 import { SelectionCard } from '@/components/onboarding/SelectionCard';
 import { UnitToggle } from '@/components/onboarding/UnitToggle';
-import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
+import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
 import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries';
-import {
-  ACTIVITY_OPTIONS,
-  buildGoalPlainText,
-  buildNutritionPlan,
-  calculateWeeklyDeficit,
-  DIET_OPTIONS,
-  estimateWeeklyWeightChangeKg,
-  GOAL_OPTIONS,
-  PACE_OPTIONS,
-  type ActivityLevel,
-  type DietStyle,
-  type FitnessGoal,
-  type GoalPace,
-  type NutritionPlan,
-  type Sex,
-} from '@/lib/nutrition';
 import { buildGoalState } from '@/lib/goals';
 import {
-  dateToIso,
-  DEFAULT_PROFILE_ROLE,
-  formatProfileSaveError,
-  getProfile,
-  isProfileComplete,
-  PROFILE_ROLE_OPTIONS,
-  saveProfileFields,
-  type ProfileRole,
+    ACTIVITY_OPTIONS,
+    buildGoalPlainText,
+    buildNutritionPlan,
+    calculateWeeklyDeficit,
+    DIET_OPTIONS,
+    estimateWeeklyWeightChangeKg,
+    GOAL_OPTIONS,
+    PACE_OPTIONS,
+    type ActivityLevel,
+    type DietStyle,
+    type FitnessGoal,
+    type GoalPace,
+    type NutritionPlan,
+    type Sex,
+} from '@/lib/nutrition';
+import {
+    dateToIso,
+    DEFAULT_PROFILE_ROLE,
+    formatProfileSaveError,
+    getProfile,
+    isProfileComplete,
+    PROFILE_ROLE_OPTIONS,
+    saveProfileFields,
+    type ProfileRole,
 } from '@/lib/profile';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
@@ -49,31 +49,31 @@ import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import {
-  appendDisplayUnitsToGoalPlain,
-  defaultDisplayUnits,
-  formatFluid,
-  formatPaceRate,
-  normalizeStoredMetricsToMetric,
-  normalizeStoredTargetWeightKg,
-  parseDisplayUnitsPreference,
-  prefersImperialDisplay,
-  roundMetric,
-  type DisplayUnits,
+    appendDisplayUnitsToGoalPlain,
+    defaultDisplayUnits,
+    formatFluid,
+    formatPaceRate,
+    normalizeStoredMetricsToMetric,
+    normalizeStoredTargetWeightKg,
+    parseDisplayUnitsPreference,
+    prefersImperialDisplay,
+    roundMetric,
+    type DisplayUnits,
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    BackHandler,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -285,7 +285,10 @@ export default function ConfigScreen() {
       setSavingSearchPref(false);
     }
   }
-
+  async function handleViewLegalDocs() {
+    router.push('/privacy-policy');
+  }
+  
   async function handleSave() {
     if (!user?.$id || !user.email) {
       Alert.alert('Not signed in', 'Your account needs an email before saving a profile.');
