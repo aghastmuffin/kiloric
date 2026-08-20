@@ -1,4 +1,5 @@
 import { showApiError } from '@/lib/apiErrors';
+import { MotionView } from '@/components/MotionView';
 import { useAuth } from '@/lib/AuthContext';
 import {
     submitFoodContribution,
@@ -6,11 +7,13 @@ import {
     type OffStringField,
 } from '@/lib/foodContributions';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -136,6 +139,7 @@ export default function ContributeFoodScreen() {
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
+  const { gutter } = useAppLayout()
   const params = useLocalSearchParams<Record<string, string | string[] | undefined>>()
 
   const initialCode = useMemo(() => paramString(params.code), [params.code])
@@ -184,6 +188,7 @@ export default function ContributeFoodScreen() {
       ),
   )
   const [submitting, setSubmitting] = useState(false)
+  const essentialsComplete = Boolean(photo && productName.trim())
 
   async function ensureLibraryPermission(): Promise<boolean> {
     const current = await ImagePicker.getMediaLibraryPermissionsAsync()
@@ -217,6 +222,7 @@ export default function ContributeFoodScreen() {
       fileName: asset.fileName,
       fileSize: asset.fileSize,
     })
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
   }
 
   async function takePhoto() {
@@ -237,6 +243,7 @@ export default function ContributeFoodScreen() {
       fileName: asset.fileName,
       fileSize: asset.fileSize,
     })
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
   }
 
   function choosePhotoSource() {
@@ -317,26 +324,54 @@ export default function ContributeFoodScreen() {
         <View style={styles.navSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingHorizontal: gutter, paddingBottom: insets.bottom + 48 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+
+        <MotionView
+          from={{ opacity: 0, translateY: 8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 200 }}
+          style={styles.completionCard}
+        >
+          <View style={[styles.completionStep, photo && styles.completionStepDone]}>
+            <Ionicons name={photo ? 'checkmark' : 'camera-outline'} size={16} color={photo ? colors.onBrand : colors.textMuted} />
+            <Text style={[styles.completionText, photo && styles.completionTextDone]}>Photo</Text>
+          </View>
+          <View style={styles.completionLine} />
+          <View style={[styles.completionStep, productName.trim() && styles.completionStepDone]}>
+            <Ionicons name={productName.trim() ? 'checkmark' : 'text-outline'} size={16} color={productName.trim() ? colors.onBrand : colors.textMuted} />
+            <Text style={[styles.completionText, productName.trim() && styles.completionTextDone]}>Name</Text>
+          </View>
+          <Text style={styles.completionHint}>{essentialsComplete ? 'Ready to submit' : 'Complete the two essentials'}</Text>
+        </MotionView>
 
         {/* Context banner — shown when prefilled from a search result */}
         {hasPrefill ? (
           <View style={styles.contextBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
-            <Text style={styles.contextBannerText}>
-              Some catalog data was pre-filled from search. Snap a photo of the nutrition facts
-              panel and ingredients list — that&apos;s the essential requirement.
-            </Text>
+            <View style={styles.contextBannerCopy}>
+              <Text style={styles.contextBannerTitle}>Thanks for helping!</Text>
+              <Text style={styles.contextBannerText}>
+                We filled in everything already available. Add a clear photo showing the nutrition
+                panel and ingredients so the missing details can be reviewed.
+              </Text>
+            </View>
           </View>
         ) : (
-          <Text style={styles.lead}>
-            Help fill catalog gaps. Snap a clear photo of the nutrition facts and ingredients list
-            (required). Typed nutrition details are optional extras for later review.
-          </Text>
+          <View style={styles.welcomeCopy}>
+            <Text style={styles.welcomeTitle}>We need your help!</Text>
+            <Text style={styles.lead}>
+              Add a clear photo showing the nutrition panel and ingredients, then tell us the
+              product name. Everything else is optional and can be filled in if it is easy to read.
+            </Text>
+          </View>
         )}
 
         {/* Photo card */}
-        <View style={styles.card}>
+        <MotionView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 40, type: 'timing', duration: 220 }} style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="camera-outline" size={16} color={colors.accent} />
             <Text style={styles.cardTitle}>Nutrition facts photo</Text>
@@ -370,10 +405,10 @@ export default function ContributeFoodScreen() {
               <Text style={styles.changePhoto}>Change photo</Text>
             </Pressable>
           ) : null}
-        </View>
+        </MotionView>
 
         {/* Product info card */}
-        <View style={styles.card}>
+        <MotionView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 80, type: 'timing', duration: 220 }} style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="pricetag-outline" size={16} color={colors.accent} />
             <Text style={styles.cardTitle}>Product info</Text>
@@ -405,10 +440,10 @@ export default function ContributeFoodScreen() {
               autoCapitalize="none"
             />
           </View>
-        </View>
+        </MotionView>
 
         {/* Macros card */}
-        <View style={styles.card}>
+        <MotionView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 120, type: 'timing', duration: 220 }} style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="nutrition-outline" size={16} color={colors.accent} />
             <Text style={styles.cardTitle}>Nutrition per 100g</Text>
@@ -431,7 +466,7 @@ export default function ContributeFoodScreen() {
               />
             </View>
           ))}
-        </View>
+        </MotionView>
 
         {/* More details toggle */}
         <Pressable
@@ -450,7 +485,12 @@ export default function ContributeFoodScreen() {
         </Pressable>
 
         {showMore ? (
-          <View style={[styles.card, styles.moreBlock]}>
+          <MotionView
+            from={{ opacity: 0, translateY: -8 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={[styles.card, styles.moreBlock]}
+          >
             <View style={styles.cardHeader}>
               <Ionicons name="list-outline" size={16} color={colors.accent} />
               <Text style={styles.cardTitle}>Additional fields</Text>
@@ -482,14 +522,15 @@ export default function ContributeFoodScreen() {
                 />
               </View>
             ))}
-          </View>
+          </MotionView>
         ) : null}
 
         <Pressable
-          style={[styles.submit, submitting && styles.submitDisabled]}
+          style={[styles.submit, (!essentialsComplete || submitting) && styles.submitDisabled]}
           onPress={() => void handleSubmit()}
-          disabled={submitting}
+          disabled={!essentialsComplete || submitting}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !essentialsComplete || submitting }}
         >
           {submitting ? (
             <ActivityIndicator color={colors.onBrand} />
@@ -546,17 +587,44 @@ const makeStyles = (c: ThemeColors) =>
       opacity: 0.75,
     },
     content: {
-      padding: spacing.lg,
-      paddingBottom: 60,
+      paddingTop: spacing.lg,
       gap: spacing.md,
       maxWidth: 620,
       width: '100%',
       alignSelf: 'center',
     },
+    completionCard: {
+      minHeight: 56,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: borderRadius.lg,
+      padding: spacing.sm,
+    },
+    completionStep: {
+      minHeight: 38,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      borderRadius: borderRadius.pill,
+      paddingHorizontal: 10,
+      backgroundColor: c.surfaceAlt,
+    },
+    completionStepDone: { backgroundColor: c.brand },
+    completionText: { ...typography.labelSmall, color: c.textMuted },
+    completionTextDone: { color: c.onBrand },
+    completionLine: { width: 12, height: 1, backgroundColor: c.borderStrong },
+    completionHint: { ...typography.labelSmall, color: c.textMuted, flexGrow: 1, flexBasis: 120, textAlign: 'right' },
     lead: {
       ...typography.body,
       color: c.textMuted,
     },
+    welcomeCopy: { gap: spacing.xs },
+    welcomeTitle: { ...typography.headline, color: c.text },
     contextBanner: {
       flexDirection: 'row',
       gap: spacing.sm,
@@ -570,9 +638,10 @@ const makeStyles = (c: ThemeColors) =>
     contextBannerText: {
       ...typography.body,
       color: c.text,
-      flex: 1,
       lineHeight: 20,
     },
+    contextBannerCopy: { flex: 1, gap: 3 },
+    contextBannerTitle: { ...typography.label, color: c.brand, fontWeight: '700' },
     card: {
       backgroundColor: c.surface,
       borderRadius: borderRadius.lg,
@@ -684,11 +753,13 @@ const makeStyles = (c: ThemeColors) =>
       color: c.text,
       paddingHorizontal: spacing.md,
       paddingVertical: Platform.OS === 'ios' ? 12 : 10,
+      minHeight: 48,
     },
     moreToggle: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      minHeight: 48,
       paddingVertical: spacing.sm,
     },
     moreToggleText: {

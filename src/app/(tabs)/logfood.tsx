@@ -7,6 +7,7 @@ import {
 } from '@/components/LogFoodMultiView';
 import { LogItemDragRow } from '@/components/LogItemDragRow';
 import { MotionView } from '@/components/MotionView';
+import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { useAuth } from '@/lib/AuthContext';
 import {
@@ -30,6 +31,7 @@ import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay';
 import { getProfile } from '@/lib/profile';
 import { storeSearchResult } from '@/lib/searchResultStore';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -250,6 +252,7 @@ function MacroPills({
 export default function LogFoodScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { gutter } = useAppLayout()
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const { user } = useAuth()
@@ -466,6 +469,7 @@ export default function LogFoodScreen() {
 
   const openDetail = useCallback(
     (barcode: string, item?: SearchResult) => {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       const product = item ? unwrapProduct(item) : { code: barcode }
       const id = storeSearchResult(barcode, product)
       router.push({
@@ -615,12 +619,17 @@ export default function LogFoodScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.content,
-            { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 110 },
+            { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 112, paddingHorizontal: gutter },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           scrollEnabled={scrollEnabled}
         >
+          <AppScreenHeader
+            overline="FOOD LOG"
+            title="What did you have?"
+            description="Search for a food or scan its barcode, then choose the meal it belongs to."
+          />
           <MotionView
             from={{ opacity: 0, translateY: -8 }}
             animate={{ opacity: 1, translateY: 0 }}
@@ -1441,7 +1450,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
-    paddingHorizontal: 20,
     gap: 22,
   },
   searchBlock: {
@@ -1480,9 +1488,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
       : null),
   },
   clearButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: c.surfaceAlt,

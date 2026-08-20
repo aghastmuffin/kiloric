@@ -13,6 +13,7 @@ import { getProfile, type ProfileDocument } from '@/lib/profile';
 import type { DefaultSearchMode } from '@/lib/searchPreferences';
 import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
+import { useAppLayout } from '@/lib/theme/layout';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -30,7 +31,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 import type { Models } from 'react-native-appwrite';
@@ -52,6 +52,7 @@ export default function AccountScreen() {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { gutter } = useAppLayout();
   const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences();
   const [savingPreference, setSavingPreference] = useState(false);
 
@@ -76,7 +77,7 @@ export default function AccountScreen() {
 
   return (
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingHorizontal: gutter }]}
         showsVerticalScrollIndicator={false}
       >
         {!user ? (
@@ -90,24 +91,24 @@ export default function AccountScreen() {
             />
         )}
         <Text style={styles.mutedText}>
-            App version: {process.env.APP_VERSION} (build {process.env.APP_BUILD_NUMBER}) EMAIL: LEVI@TAESON[DOT]CO INTERNAL DISTRIB.
-          </Text>
-        <TouchableOpacity 
-      onPress={() => {
-          router.push('/privacy-policy');
-        }}
-      style={styles.footerLink}>
+          Version {process.env.APP_VERSION ?? '1.0.0'} · build {process.env.APP_BUILD_NUMBER ?? 'development'}
+        </Text>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/privacy-policy')}
+          style={({ pressed }) => [styles.footerLink, pressed && styles.headerPressed]}
+        >
           <Text style={styles.footerLinkText}>Legal & privacy</Text>
           <Ionicons name="arrow-forward" size={15} color={colors.brand} />
-        </TouchableOpacity>
-                <TouchableOpacity 
-      onPress={() => {
-          router.push('/privacy-policy');
-        }}
-      style={styles.footerLink}>
+        </Pressable>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/credits')}
+          style={({ pressed }) => [styles.footerLink, pressed && styles.headerPressed]}
+        >
           <Text style={styles.footerLinkText}>Credits & acknowledgements</Text>
           <Ionicons name="arrow-forward" size={15} color={colors.brand} />
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
   );
 }
@@ -372,22 +373,25 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             onSearchModeChange={onSearchModeChange}
         />
 
-        <TouchableOpacity
+        <Pressable
+            accessibilityRole="button"
             style={[styles.button, signingOut && styles.buttonDisabled]}
             onPress={() => router.push('/config')}
         >
           <Ionicons name="create-outline" size={18} color={colors.onBrand} />
           <Text style={styles.buttonText}>Edit profile & goals</Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
+        <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: signingOut }}
             style={[styles.buttonDanger, signingOut && styles.buttonDisabled]}
             onPress={handleSignOut}
             disabled={signingOut}
         >
           <Ionicons name="log-out-outline" size={17} color={colors.onDanger} />
           <Text style={styles.buttonDangerText}>{signingOut ? 'Signing out…' : 'Sign out'}</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
   );
 }
@@ -405,8 +409,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 48,
+    paddingBottom: 112,
     backgroundColor: c.background,
   },
   panel: {
