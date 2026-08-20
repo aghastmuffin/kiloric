@@ -7,6 +7,7 @@ import {
 } from '@/components/LogFoodMultiView';
 import { LogItemDragRow } from '@/components/LogItemDragRow';
 import { MotionView } from '@/components/MotionView';
+import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { useAuth } from '@/lib/AuthContext';
 import {
@@ -624,6 +625,11 @@ export default function LogFoodScreen() {
           showsVerticalScrollIndicator={false}
           scrollEnabled={scrollEnabled}
         >
+          <AppScreenHeader
+            overline="FOOD LOG"
+            title="What did you have?"
+            description="Search for a food or scan its barcode, then choose the meal it belongs to."
+          />
           <MotionView
             from={{ opacity: 0, translateY: -8 }}
             animate={{ opacity: 1, translateY: 0 }}

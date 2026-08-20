@@ -1,4 +1,5 @@
 import { MotionView } from '@/components/MotionView'
+import { AppScreenHeader } from '@/components/ui/AppScreenHeader'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useAppLayout } from '@/lib/theme/layout'
 import type { ThemeColors } from '@/lib/theme/tokens'
@@ -112,17 +113,17 @@ export default function MedsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.hero}>
-          <View style={styles.mockPill}>
-            <Ionicons name="flask-outline" size={12} color={colors.success} />
-            <Text style={styles.mockText}>WELLBEING PLANNER · MOCK DATA</Text>
-          </View>
-          <Text style={styles.eyebrow}>VITALITY / WELLBEING</Text>
-          <Text style={styles.title}>A gentler rhythm.</Text>
-          <Text style={styles.lede}>
-            A calm schedule for everyday reminders and small moments of care.
-          </Text>
-        </View>
+        <AppScreenHeader
+          overline="VITALITY / WELLBEING"
+          title="A gentler rhythm."
+          description="Move through today’s reminders and check in with how you feel."
+          accessory={(
+            <View style={styles.mockPill}>
+              <Ionicons name="flask-outline" size={12} color={colors.success} />
+              <Text style={styles.mockText}>WELLBEING PLANNER · MOCK DATA</Text>
+            </View>
+          )}
+        />
 
         <View style={styles.notice}>
           <Ionicons name="information-circle-outline" size={19} color={colors.accent} />
@@ -346,9 +347,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   hero: { gap: 6, paddingTop: 2 },
   mockPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
   mockText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9, letterSpacing: 0.8 },
-  eyebrow: { ...typography.labelSmall, color: c.brand },
-  title: { ...typography.headlineLarge, color: c.text },
-  lede: { ...typography.body, color: c.textMuted, maxWidth: 560 },
   notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderLeftWidth: 2, borderLeftColor: c.brand, backgroundColor: c.brandSoft, padding: 13 },
   noticeText: { ...typography.body, color: c.textMuted, fontSize: 13, lineHeight: 19, flex: 1 },
   dateHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },

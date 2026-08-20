@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/AuthContext';
+import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { resolveGoalState } from '@/lib/goals';
 import { calculateEnergyTrend } from '@/lib/nutritionTrends';
 import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
@@ -318,11 +319,11 @@ export default function StatsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingHorizontal: gutter }]}
       >
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>PROGRESS, NOT PERFECTION</Text>
-          <Text style={styles.title}>Your rhythm</Text>
-          <Text style={styles.lede}>Recorded nutrition, viewed with a little perspective.</Text>
-        </View>
+        <AppScreenHeader
+          overline="PROGRESS, NOT PERFECTION"
+          title="Your rhythm"
+          description="See how your nutrition changes over time without losing sight of the day-to-day."
+        />
 
         <PeriodToggle period={period} onChange={setPeriod} />
 
@@ -461,10 +462,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingBottom: 112,
     gap: 16,
   },
-  header: { gap: 3, marginBottom: 3 },
-  eyebrow: { ...typography.labelSmall, color: c.brand },
-  title: { ...typography.headlineLarge, color: c.text },
-  lede: { ...typography.body, color: c.textMuted },
   toggle: {
     alignSelf: 'stretch',
     flexDirection: 'row',

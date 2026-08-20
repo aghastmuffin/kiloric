@@ -2,6 +2,7 @@ import RadialGauge from '@/components/Gague';
 import { MotionView } from '@/components/MotionView';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
+import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
@@ -227,13 +228,11 @@ export default function DashboardScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingHorizontal: gutter }]}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-          <Text accessibilityRole="header" style={styles.eyebrow}>TODAY</Text>
-          <Text accessibilityRole="header" style={styles.date}>
-            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-          </Text>
-          <Text style={styles.lede}>A calm view of what matters now.</Text>
-        </View>
+        <AppScreenHeader
+          overline="TODAY"
+          title={new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+          description="Your meals, goals, and daily rhythm in one place."
+        />
 
         <View accessibilityLabel={`${streak} day streak. Level ${xp.level}, ${xp.xpInCurrentLevel} of ${xp.xpNeeded} experience points.`} style={styles.gameStrip}>
           <View style={styles.gameMetric}>
@@ -640,8 +639,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   content: { paddingBottom: 156, gap: 22, alignSelf: 'center', width: '100%', maxWidth: 760 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
   eyebrow: { ...typography.labelSmall, color: c.brand },
-  date: { ...typography.headlineLarge, color: c.text, marginTop: 4 },
-  lede: { ...typography.body, color: c.textMuted },
   gameStrip: { flexDirection: 'row', gap: 0, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong },
   gameMetric: { flex: 1, minHeight: 58, paddingVertical: 12, paddingHorizontal: 10, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 },
   gameValue: { ...typography.label, color: c.text, fontWeight: '500' },
