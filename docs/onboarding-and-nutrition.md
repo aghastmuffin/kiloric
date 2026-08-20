@@ -22,14 +22,17 @@ Success path: onboarding wizard → `/onboard_success` → main tabs.
 Typical flow (see `types.ts` for exact order):
 
 1. Welcome / username
-2. Date of birth, sex
-3. Country
-4. Height and weight (metric stored; imperial display optional)
-5. Activity level
-6. Fitness goal and pace
-7. Diet style
-8. Review computed plan (optional macro overrides)
-9. Confirm and save
+2. Adult eligibility, date of birth, and country
+3. Sex, height, and weight (metric stored; imperial display optional)
+4. Activity level, fitness goal, and pace
+5. Diet style
+6. Review computed plan (optional macro overrides)
+7. Confirm and save
+
+Date of birth must be actively confirmed. Anyone under 18 is stopped before body or nutrition
+questions are shown; the restriction screen explains that adult nutrition targets are not suitable,
+offers a way to correct an accidental date, and otherwise signs the account out without saving a
+profile or plan. Eligibility is checked again immediately before the final save.
 
 UI building blocks: `ProgressHeader`, `StepTransition`, `SelectionCard`, `BodyMetricPickers`, `UnitToggle`, `ConfirmDialog`.
 
@@ -99,7 +102,9 @@ Exported arrays drive UI labels and descriptions:
 
 ## Profile completeness
 
-`isProfileComplete()` in `profile.ts` checks required create fields only. Nutrition targets are optional for completeness but are normally set during onboarding.
+`isProfileComplete()` in `profile.ts` requires both the profile identity/body fields and the core
+nutrition plan fields. `ProfileGate` keeps the tab UI covered until that check succeeds, so a new or
+partially-created account cannot bypass setup while a redirect is in flight.
 
 ## Config screen vs wizard
 

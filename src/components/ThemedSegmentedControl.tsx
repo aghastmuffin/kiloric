@@ -1,5 +1,5 @@
 import { useTheme } from '@/lib/theme/ThemeContext'
-import SegmentedControl from '@expo/ui/community/segmented-control'
+import { SegmentedControl as ExpoSegmentedControl } from '@expo/ui/community/segmented-control'
 import type { StyleProp, ViewStyle } from 'react-native'
 
 type ThemedSegmentedControlProps = {
@@ -24,7 +24,7 @@ export function ThemedSegmentedControl({
   const { colors, scheme } = useTheme()
 
   return (
-    <SegmentedControl
+    <ExpoSegmentedControl
       values={values}
       selectedIndex={selectedIndex}
       enabled={enabled}

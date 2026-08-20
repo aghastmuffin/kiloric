@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -27,11 +27,6 @@ export default function CreditsScreen() {
   // Clean state management for current rendering text
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [, setTapCount] = useState(0);
-
-  useEffect(() => {
-    // Kickoff the chain reaction
-    startIntro();
-  }, []);
 
   const triggerEasterEgg = () => {
     fetch('https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex')
@@ -64,54 +59,55 @@ export default function CreditsScreen() {
     });
   };
 
-  // 1. Morph to circle, then slide up
-  const startIntro = () => {
-    borderRadius.value = withDelay(1000, withTiming(100, { duration: 600 }));
-    headerY.value = withDelay(
-      1600, 
-      withTiming(-150, { duration: 800 }, (finished) => {
-        if (finished) {
-          // Once slide up is finished, trigger item 0
-          runOnJS(animateItem)(0);
-        }
-      })
-    );
-  };
-
-  // 2. Recursive function to fade each item in and out sequentially
-  const animateItem = (index: number) => {
-    if (index < contributors.length) {
-      setCurrentIndex(index);
-      
-      // Fade In
-      listOpacity.value = withTiming(1, { duration: 600 }, (finished) => {
-        if (finished) {
-          // Hold text visible for 1.2 seconds, then Fade Out
-          listOpacity.value = withDelay(
-            1200, 
-            withTiming(0, { duration: 600 }, (outFinished) => {
-              if (outFinished) {
-                // Move directly to the next item
-                runOnJS(animateItem)(index + 1);
-              }
-            })
-          );
-        }
-      });
-    } else {
-      // 3. All items complete! Reverse the main setup
-      startOutro();
-    }
-  };
-
   // 4. Slide back down, morph back to square
-  const startOutro = () => {
+  const startOutro = useCallback(() => {
     headerY.value = withDelay(400, withTiming(0, { duration: 800 }, (finished) => {
       if (finished) {
         borderRadius.value = withTiming(0, { duration: 600 });
       }
     }));
-  };
+  }, [borderRadius, headerY]);
+
+  // 2. Fade each item in and out sequentially.
+  const animateItem = useCallback(
+    function animateItem(index: number) {
+      if (index < contributors.length) {
+        setCurrentIndex(index);
+        listOpacity.value = withTiming(1, { duration: 600 }, (finished) => {
+          if (finished) {
+            listOpacity.value = withDelay(
+              1200,
+              withTiming(0, { duration: 600 }, (outFinished) => {
+                if (outFinished) {
+                  runOnJS(animateItem)(index + 1);
+                }
+              })
+            );
+          }
+        });
+      } else {
+        startOutro();
+      }
+    },
+    [listOpacity, startOutro]
+  );
+
+  // 1. Morph to circle, then slide up.
+  const startIntro = useCallback(() => {
+    borderRadius.value = withDelay(1000, withTiming(100, { duration: 600 }));
+    headerY.value = withDelay(
+      1600,
+      withTiming(-150, { duration: 800 }, (finished) => {
+        if (finished) {
+          runOnJS(animateItem)(0);
+        }
+      })
+    );
+  }, [animateItem, borderRadius, headerY]);
+
+  useEffect(() => {
+    startIntro();
+  }, [startIntro]);
 
   // Animated styles linked to shared values
   const animatedHeaderStyle = useAnimatedStyle(() => ({

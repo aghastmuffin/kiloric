@@ -60,7 +60,25 @@ export type ProfileDocument = Models.Document & ProfileFields
 
 export function isProfileComplete(profile: ProfileDocument | null): profile is ProfileDocument & ProfileCreate {
   if (!profile) return false
-  return hasRequiredCreateFields(profile)
+  return (
+    hasRequiredCreateFields(profile) &&
+    hasFinitePositiveNumber(profile.target_kcal) &&
+    hasFiniteNonNegativeNumber(profile.target_protein) &&
+    hasFiniteNonNegativeNumber(profile.target_carbs) &&
+    hasFiniteNonNegativeNumber(profile.target_fat) &&
+    hasFinitePositiveNumber(profile.daily_fluid) &&
+    hasFinitePositiveNumber(profile.TDEE) &&
+    typeof profile.goal_type === 'string' &&
+    profile.goal_type.length > 0
+  )
+}
+
+function hasFinitePositiveNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+}
+
+function hasFiniteNonNegativeNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
 
 function hasRequiredCreateFields(data: Partial<ProfileFields>): data is ProfileCreate {

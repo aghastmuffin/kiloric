@@ -10,10 +10,10 @@ import { useMemo } from 'react'
  */
 export function useThemedStyles<T>(factory: (colors: ThemeColors) => T): T {
   const { colors } = useTheme()
-  return useMemo(() => factory(colors), [colors])
+  return useMemo(() => factory(colors), [colors, factory])
 }
 
 export function useOnboardingStyles<T>(factory: (colors: OnboardingColors) => T): T {
   const { onboardingColors } = useTheme()
-  return useMemo(() => factory(onboardingColors), [onboardingColors])
+  return useMemo(() => factory(onboardingColors), [factory, onboardingColors])
 }

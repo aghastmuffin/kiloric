@@ -1,15 +1,14 @@
-//import { Picker } from '@expo/ui';
+import { createElement, type ReactNode, useMemo } from 'react';
+import { Host } from '@expo/ui/swift-ui';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import DateTimePicker from '@expo/ui/community/datetime-picker';
+import { DateTimePicker as ExpoDateTimePicker } from '@expo/ui/community/datetime-picker';
 import { Picker } from '@react-native-picker/picker';
-import { type ReactNode, useMemo } from 'react';
 import {
   Platform,
   StyleSheet,
   Text,
-  unstable_createElement,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -24,7 +23,6 @@ const pickerHostStyle: ViewStyle = {
 
 function wrapIosPicker(children: ReactNode, compact = false) {
   if (Platform.OS === 'ios') {
-    const { Host } = require('@expo/ui/swift-ui') as typeof import('@expo/ui/swift-ui');
     return (
       <Host
         matchContents={{ vertical: true }}
@@ -127,7 +125,7 @@ export function NativeDatePicker({
 }: NativeDatePickerProps) {
   const themed = useThemedStyles(makeColoredStyles);
   if (Platform.OS === 'web') {
-    return unstable_createElement('input', {
+    return createElement('input', {
       type: 'date',
       value: formatIsoDate(value),
       min: minimumDate ? formatIsoDate(minimumDate) : undefined,
@@ -163,7 +161,7 @@ function NativeDatePickerControl({
   const { colors } = useTheme();
 
   return (
-    <DateTimePicker
+    <ExpoDateTimePicker
       value={value}
       mode="date"
       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -281,7 +279,7 @@ export function NativeDecimalPicker({
   }
 
   if (Platform.OS === 'web') {
-    return unstable_createElement('input', {
+    return createElement('input', {
       type: 'number',
       value: clamped,
       min,

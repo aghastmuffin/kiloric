@@ -7,8 +7,8 @@ import {
 } from '@/components/LogFoodMultiView';
 import { LogItemDragRow } from '@/components/LogItemDragRow';
 import { MotionView } from '@/components/MotionView';
-import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { SwipeableRow } from '@/components/SwipeableRow';
+import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { useAuth } from '@/lib/AuthContext';
 import {
     loadFavoriteFoods,
@@ -30,8 +30,8 @@ import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay';
 import { getProfile } from '@/lib/profile';
 import { storeSearchResult } from '@/lib/searchResultStore';
-import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
+import { useTheme } from '@/lib/theme/ThemeContext';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -671,6 +671,18 @@ export default function LogFoodScreen() {
                   </Pressable>
                 ) : null}
               </View>
+              {query.length > 0 ? (
+              <Pressable
+                accessibilityLabel="Scan barcode"
+                onPress={() => router.push('/cameraview')}
+                style={({ pressed }) => [
+                  styles.barcodeButton,
+                  pressed && styles.barcodeButtonPressed,
+                ]}
+              >
+              <Ionicons name="search" size={24} color={colors.onBrand} />
+              </Pressable>
+              ) :
               <Pressable
                 accessibilityLabel="Scan barcode"
                 onPress={() => router.push('/cameraview')}
@@ -681,6 +693,7 @@ export default function LogFoodScreen() {
               >
                 <Ionicons name="barcode-outline" size={24} color={colors.onBrand} />
               </Pressable>
+              }
             </View>
 
             <ScrollView

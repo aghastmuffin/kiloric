@@ -20,6 +20,7 @@ import {
 } from '@/components/onboarding/types'
 import { UnitToggle } from '@/components/onboarding/UnitToggle'
 import { showApiError } from '@/lib/apiErrors'
+import { isEligibleOnboardingAge, MINIMUM_ONBOARDING_AGE } from '@/lib/ageEligibility'
 import { isValidEmail, isValidPassword } from '@/lib/authValidation'
 import { useAuth } from '@/lib/AuthContext'
 import { buildGoalStateFromPlan } from '@/lib/goals'
@@ -58,6 +59,8 @@ import {
   roundMetric,
 } from '@/lib/units'
 import { useNavigation, useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
@@ -71,6 +74,82 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated'
+
+function AgeRestrictionScreen({
+  correcting,
+  exiting,
+  onCorrect,
+  onExit,
+}: {
+  correcting: boolean
+  exiting: boolean
+  onCorrect: () => void
+  onExit: () => void
+}) {
+  const { onboardingColors } = useTheme()
+  const styles = useOnboardingStyles(makeOnboardingStyles)
+  const opacity = useSharedValue(0)
+  const scale = useSharedValue(0.76)
+  const translateY = useSharedValue(18)
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) })
+    scale.value = withSpring(1, { damping: 15, stiffness: 150 })
+    translateY.value = withTiming(0, { duration: 460, easing: Easing.out(Easing.cubic) })
+  }, [opacity, scale, translateY])
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+  }))
+
+  return (
+    <View style={styles.restrictionScreen}>
+      <Animated.View style={[styles.restrictionContent, animatedStyle]}>
+        <View style={styles.restrictionIcon}>
+          <Ionicons name="shield-checkmark-outline" size={34} color={onboardingColors.accent} />
+        </View>
+        <Text style={styles.restrictionEyebrow}>Age requirement</Text>
+        <Text accessibilityRole="header" style={styles.restrictionTitle}>CalCount is for adults</Text>
+        <Text style={styles.restrictionBody}>
+          CalCount isn’t available to anyone under {MINIMUM_ONBOARDING_AGE}, including children
+          under 13. Its nutrition targets are designed for adults and won’t work correctly for
+          younger users.
+        </Text>
+        <View style={styles.restrictionNote}>
+          <Ionicons name="lock-closed-outline" size={16} color={onboardingColors.textMuted} />
+          <Text style={styles.restrictionNoteText}>No profile or nutrition plan has been saved.</Text>
+        </View>
+      </Animated.View>
+
+      <View style={styles.restrictionActions}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onCorrect}
+          disabled={correcting || exiting}
+          style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.78 }]}
+        >
+          <Text style={styles.secondaryButtonText}>Correct my date</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onExit}
+          disabled={correcting || exiting}
+          style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.84 }]}
+        >
+          <Text style={styles.primaryButtonText}>{exiting ? 'Signing out…' : 'Return to sign in'}</Text>
+        </Pressable>
+      </View>
+    </View>
+  )
+}
 
 function parseProfileDate(value?: string): Date {
   if (!value) return DEFAULT_DATE_OF_BIRTH
@@ -109,6 +188,8 @@ export function OnboardingWizard() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [ageBlocked, setAgeBlocked] = useState(false)
+  const [dateOfBirthConfirmed, setDateOfBirthConfirmed] = useState(false)
 
   const visibleSteps = useMemo(
     () => getOnboardingSteps(Boolean(user?.$id)),
@@ -217,6 +298,7 @@ export function OnboardingWizard() {
         const defaults = createDefaultFormState(user.email)
         if (!profile) {
           setForm(defaults)
+          setDateOfBirthConfirmed(false)
           return
         }
 
@@ -259,6 +341,7 @@ export function OnboardingWizard() {
               }
             : null,
         })
+        setDateOfBirthConfirmed(Boolean(profile.dateOfBirth))
       })
       .finally(() => {
         if (active) setLoadingProfile(false)
@@ -281,6 +364,10 @@ export function OnboardingWizard() {
         if (!form.username.trim()) return 'Choose a username to continue.'
         if (form.username.trim().length > 64) return 'Username must be 64 characters or fewer.'
         return null
+      case 'eligibility':
+        if (!dateOfBirthConfirmed) return 'Select your date of birth to continue.'
+        if (form.dateOfBirth > new Date()) return 'Choose a valid date of birth.'
+        return null
       case 'body':
         if (form.height <= 0 || form.weight <= 0) return 'Enter your height and weight.'
         return null
@@ -300,6 +387,12 @@ export function OnboardingWizard() {
     const error = validateStep(step)
     if (error) {
       Alert.alert('Almost there', error)
+      return
+    }
+
+    if (step === 'eligibility' && !isEligibleOnboardingAge(form.dateOfBirth)) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+      setAgeBlocked(true)
       return
     }
 
@@ -370,6 +463,11 @@ export function OnboardingWizard() {
   async function handleSave() {
     if (!user?.$id || !user.email) {
       Alert.alert('Not signed in', 'Your account needs an email before saving a profile.')
+      return
+    }
+
+    if (!isEligibleOnboardingAge(form.dateOfBirth)) {
+      setAgeBlocked(true)
       return
     }
 
@@ -544,10 +642,23 @@ export function OnboardingWizard() {
               maxLength={64}
               style={onboardingStyles.input}
             />
+          </>
+        )
+
+      case 'eligibility':
+        return (
+          <>
+            <Text style={onboardingStyles.stepSubtitle}>
+              CalCount creates adult nutrition targets, so you must be {MINIMUM_ONBOARDING_AGE} or
+              older to continue.
+            </Text>
             <Text style={onboardingStyles.label}>Date of birth</Text>
             <NativeDatePicker
               value={form.dateOfBirth}
-              onChange={(value) => updateForm('dateOfBirth', value)}
+              onChange={(value) => {
+                updateForm('dateOfBirth', value)
+                setDateOfBirthConfirmed(true)
+              }}
               disabled={saving}
               minimumDate={new Date(1900, 0, 1)}
               maximumDate={new Date()}
@@ -794,6 +905,31 @@ export function OnboardingWizard() {
         <ActivityIndicator color={onboardingColors.accent} size="large" />
         <Text style={{ color: onboardingColors.textMuted, marginTop: 12 }}>Loading profile…</Text>
       </View>
+    )
+  }
+
+  if (ageBlocked) {
+    return (
+      <AgeRestrictionScreen
+        correcting={false}
+        exiting={signingOut}
+        onCorrect={() => {
+          setAgeBlocked(false)
+          setNavDirection('back')
+          setStep('eligibility')
+        }}
+        onExit={() => {
+          setSigningOut(true)
+          allowLeaveRef.current = true
+          void signOut()
+            .then(() => router.replace('/signin'))
+            .catch((err) => {
+              allowLeaveRef.current = false
+              showApiError(err, 'appwrite')
+            })
+            .finally(() => setSigningOut(false))
+        }}
+      />
     )
   }
 

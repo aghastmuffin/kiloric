@@ -161,7 +161,7 @@ export default function OnboardingAnimation() {
     );
 
     textOpacity.value = withDelay(1100, withTiming(1, { duration: 800 }));
-  }, []);
+  }, [buildingY, burgerScale, burgerY, textOpacity, windOpacity, windProgress]);
 
   // Main UI Layer Animated Styles
   const burgerStyle = useAnimatedStyle(() => ({

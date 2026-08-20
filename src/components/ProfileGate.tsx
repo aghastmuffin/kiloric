@@ -36,10 +36,15 @@ export function ProfileGate({ children }: { children: ReactNode }) {
         if (!active) return;
         if (!isProfileComplete(profile)) {
           router.replace('/onboarding');
+          return;
         }
+        setCheckingProfile(false);
       })
-      .finally(() => {
-        if (active) setCheckingProfile(false);
+      .catch(() => {
+        if (!active) return;
+        // Never expose the main tabs when profile eligibility/completeness
+        // cannot be established.
+        router.replace('/onboarding');
       });
 
     return () => {

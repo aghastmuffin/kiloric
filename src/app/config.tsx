@@ -303,10 +303,6 @@ export default function ConfigScreen() {
       setSavingSearchPref(false);
     }
   }
-  async function handleViewLegalDocs() {
-    router.push('/privacy-policy');
-  }
-  
   async function handleSave() {
     if (!user?.$id || !user.email) {
       Alert.alert('Not signed in', 'Your account needs an email before saving a profile.');

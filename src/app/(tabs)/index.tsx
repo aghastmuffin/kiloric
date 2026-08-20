@@ -1,8 +1,8 @@
 import RadialGauge from '@/components/Gague';
 import { MotionView } from '@/components/MotionView';
 import { SwipeableRow } from '@/components/SwipeableRow';
-import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
+import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { useAuth } from '@/lib/AuthContext';
 import { calculateStreak, calculateXP } from '@/lib/gamification';
 import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
@@ -680,7 +680,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   mealMeta: { ...typography.labelSmall, color: c.textMuted },
   mealKcal: { ...typography.label, color: c.accent },
   fabBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: c.overlay,
     zIndex: 40,
   },
@@ -713,12 +713,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'flex-end',
   },
   fabPlusLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   fabMenu: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     padding: 12,
     gap: 4,
   },

@@ -19,6 +19,7 @@ export type OnboardingStep =
   | 'email'
   | 'password'
   | 'welcome'
+  | 'eligibility'
   | 'body'
   | 'lifestyle'
   | 'diet'
@@ -30,6 +31,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   'email',
   'password',
   'welcome',
+  'eligibility',
   'body',
   'lifestyle',
   'diet',
