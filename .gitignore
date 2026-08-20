@@ -39,5 +39,11 @@ example
 # generated native folders
 /ios
 /android
+
+# tooling / editor junk
+.idea/
+.jules/
+*.log
+
 tasks.json
 .env.local

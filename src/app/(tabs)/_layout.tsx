@@ -125,8 +125,6 @@ function TabNavigator() {
       <Tabs.Screen name="workouts" options={{ href: null }} />
       <Tabs.Screen name="meds" options={{ href: null }} />
       <Tabs.Screen name="searchrewrite" options={{ href: null }} />
-      <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
-      <Tabs.Screen name="basepg" options={{ href: null }} />
     </Tabs>
   );
 }
