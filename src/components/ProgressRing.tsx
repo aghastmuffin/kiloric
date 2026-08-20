@@ -75,7 +75,10 @@ export function ProgressRing({ value, max, label, unit = '', size = 176, color }
   return (
     <Animated.View
       style={[styles.root, { width: size, height: size }, containerAnimatedStyle]}
-      accessibilityLabel={`${label}: ${Math.round(value)} of ${Math.round(max)} ${unit}`}
+      accessible={true}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: Math.round(max), now: Math.round(value) }}
+      accessibilityLabel={`${label}: ${Math.round(value)} of ${Math.round(max)}${unit ? ' ' + unit : ''}`}
     >
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
         <Circle
