@@ -99,7 +99,7 @@ export default function WorkoutsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <AppScreenHeader
-          overline="VITALITY / TRAINING"
+          overline="Training"
           title="Move with intention."
           description="Choose a training focus, follow the session, and mark each movement as you go."
           accessory={(

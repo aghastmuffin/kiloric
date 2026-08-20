@@ -626,9 +626,9 @@ export default function LogFoodScreen() {
           scrollEnabled={scrollEnabled}
         >
           <AppScreenHeader
-            overline="FOOD LOG"
-            title="What did you have?"
-            description="Search for a food or scan its barcode, then choose the meal it belongs to."
+            overline="Food log"
+            title="Add food"
+            description="Search, scan a barcode, or choose something you’ve logged before."
           />
           <MotionView
             from={{ opacity: 0, translateY: -8 }}
@@ -1448,9 +1448,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   content: {
     width: '100%',
-    maxWidth: 760,
+    maxWidth: 680,
     alignSelf: 'center',
-    gap: 22,
+    gap: 16,
   },
   searchBlock: {
     gap: spacing.md,

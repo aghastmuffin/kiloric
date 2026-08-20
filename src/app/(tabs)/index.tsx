@@ -46,9 +46,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const FAB_SIZE = 56
-const MENU_WIDTH = 208
-const MENU_HEIGHT = 152
+const FAB_SIZE = 48
+const MENU_WIDTH = 196
+const MENU_HEIGHT = 140
 
 type DashboardData = {
   today: MealDocument[]
@@ -229,27 +229,27 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <AppScreenHeader
-          overline="TODAY"
+          overline="Today"
           title={new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-          description="Your meals, goals, and daily rhythm in one place."
+          description="A clear view of today’s nutrition and routines."
         />
 
         <View accessibilityLabel={`${streak} day streak. Level ${xp.level}, ${xp.xpInCurrentLevel} of ${xp.xpNeeded} experience points.`} style={styles.gameStrip}>
           <View style={styles.gameMetric}>
             <Ionicons name="flame-outline" size={20} color={colors.streakColor} />
             <Text style={styles.gameValue}>{streak}</Text>
-            <Text style={styles.gameLabel}>DAY STREAK</Text>
+            <Text style={styles.gameLabel}>day streak</Text>
           </View>
           <View style={styles.gameMetric}>
             <Ionicons name="sparkles-outline" size={20} color={colors.xpAccent} />
-            <Text style={styles.gameValue}>LV {xp.level}</Text>
-            <Text style={styles.gameLabel}>{xp.xpInCurrentLevel}/{xp.xpNeeded} XP</Text>
-            <Text style={styles.levelHint}>level up to access more features!</Text>
+            <Text style={styles.gameValue}>Level {xp.level}</Text>
+            <Text style={styles.gameLabel}>{xp.xpInCurrentLevel} / {xp.xpNeeded} XP</Text>
+            <Text style={styles.levelHint}>XP reflects completed daily actions</Text>
           </View>
         </View>
 
         <View style={styles.heroCard}>
-          <Text style={styles.sectionTitle}>Daily energy</Text>
+          <Text style={styles.sectionTitle}>Energy</Text>
           <RadialGauge
             value={totals.kcal}
             max={targets.kcal}
@@ -267,8 +267,8 @@ export default function DashboardScreen() {
               ['Fat', totals.fat, targets.fat],
             ] as const).map(([label, value, max]) => (
               <View key={label} style={styles.macroCell}>
-                <Text style={styles.macroValue}>{Math.round(value)}g</Text>
-                <Text style={styles.macroLabel}>{label.toUpperCase()}</Text>
+                <Text style={styles.macroLabel}>{label}</Text>
+                <Text style={styles.macroValue}>{Math.round(value)} / {Math.round(max)} g</Text>
                 <ProgressBar value={value} max={max} />
               </View>
             ))}
@@ -298,7 +298,7 @@ export default function DashboardScreen() {
         ) : null}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Daily quests</Text>
+          <Text style={styles.sectionTitle}>Today’s plan</Text>
           <Text style={styles.sectionMeta}>{quests.filter((q) => q.done).length}/{quests.length}</Text>
         </View>
         <View style={styles.card}>
@@ -371,7 +371,7 @@ export default function DashboardScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Goals</Text>
-          <Text style={styles.sectionMeta}>PILLARS</Text>
+          <Text style={styles.sectionMeta}>Routines</Text>
         </View>
         <View style={[styles.goalGrid, compact && styles.goalGridCompact]}>
           <GoalCard
@@ -436,7 +436,7 @@ export default function DashboardScreen() {
           />
           <View style={styles.taskCard}>
             <Text style={styles.taskTitle}>Create task</Text>
-            <Text style={styles.taskHint}>Add a personal quest for today.</Text>
+            <Text style={styles.taskHint}>Add a personal action for today.</Text>
             <TextInput
               value={taskDraft}
               onChangeText={setTaskDraft}
@@ -536,7 +536,7 @@ function DashboardFab({
       height,
       borderRadius: radius,
       borderColor: interpolateColor(progress.value, [0, 1], [colors.accent, colors.border]),
-      backgroundColor: interpolateColor(progress.value, [0, 1], [colors.brand, colors.surface]),
+      backgroundColor: interpolateColor(progress.value, [0, 1], [colors.accent, colors.surface]),
     }
   })
 
@@ -580,7 +580,7 @@ function DashboardFab({
               style={styles.fabPlusLayer}
             >
               <Animated.View pointerEvents="none" style={plusStyle}>
-                <Ionicons name="add" size={28} color={colors.onBrand} />
+                <Ionicons name="add" size={24} color={colors.onAccent} />
               </Animated.View>
             </Pressable>
             <Animated.View
@@ -636,21 +636,21 @@ const stylesStatic = StyleSheet.create({
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
-  content: { paddingBottom: 156, gap: 22, alignSelf: 'center', width: '100%', maxWidth: 760 },
+  content: { paddingBottom: 132, gap: 16, alignSelf: 'center', width: '100%', maxWidth: 680 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
   eyebrow: { ...typography.labelSmall, color: c.brand },
-  gameStrip: { flexDirection: 'row', gap: 0, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong },
-  gameMetric: { flex: 1, minHeight: 58, paddingVertical: 12, paddingHorizontal: 10, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 },
+  gameStrip: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
+  gameMetric: { flex: 1, minHeight: 50, paddingVertical: 10, paddingHorizontal: 12, borderRadius: borderRadius.md, backgroundColor: c.surface, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 },
   gameValue: { ...typography.label, color: c.text, fontWeight: '500' },
   gameLabel: { ...typography.labelSmall, color: c.textMuted, marginLeft: 'auto' },
-  levelHint: { ...typography.labelTiny, color: c.textMuted, marginLeft: 'auto'},
-  heroCard: { backgroundColor: c.background, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingVertical: 8, alignItems: 'center', gap: 14 },
+  levelHint: { ...typography.labelTiny, color: c.textFaint, width: '100%', paddingLeft: 27 },
+  heroCard: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.lg, padding: 16, alignItems: 'center', gap: 12 },
   sectionTitle: { ...typography.headline, color: c.text },
   macroStrip: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 14, width: '100%', gap: 16 },
   macroStripCompact: { gap: 8 },
   macroCell: { flex: 1, alignItems: 'center', gap: 5 },
   macroValue: { ...typography.label, color: c.text },
-  macroLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 10 },
+  macroLabel: { ...typography.labelSmall, color: c.textMuted },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 7 },
   sectionMeta: { ...typography.labelSmall, color: c.textMuted },
   card: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.md, paddingHorizontal: 16 },
@@ -686,8 +686,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   fabAnchor: {
     position: 'absolute',
-    right: 12,
-    bottom: 88,
+    right: 16,
+    bottom: 80,
     width: MENU_WIDTH,
     height: MENU_HEIGHT,
     zIndex: 50,
@@ -700,12 +700,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.28,
-        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
       },
       android: { elevation: 8 },
-      web: { boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.35)' },
+      web: { boxShadow: '0px 6px 18px rgba(0, 0, 0, 0.18)' },
     }),
   },
   fabPressWrap: {

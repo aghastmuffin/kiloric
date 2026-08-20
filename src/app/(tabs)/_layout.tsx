@@ -1,6 +1,6 @@
 import { ProfileGate } from '@/components/ProfileGate';
 import { useFontPreferences } from '@/lib/FontPreferencesContext';
-import { FONT_FAMILY, MONO_FONT_FAMILY } from '@/lib/fonts';
+import { FONT_FAMILY } from '@/lib/fonts';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +24,7 @@ function TabNavigator() {
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarActiveBackgroundColor: colors.brandSoft,
+        tabBarActiveBackgroundColor: 'transparent',
         headerStyle: {
           backgroundColor: colors.surfaceMuted,
         },
@@ -35,18 +35,17 @@ function TabNavigator() {
         tabBarAllowFontScaling: true,
         tabBarIconStyle: { marginBottom: -1 },
         tabBarLabelStyle: {
-          fontFamily: MONO_FONT_FAMILY,
-          fontSize: compact ? 10 : 11,
-          lineHeight: 14,
-          fontWeight: '500',
-          letterSpacing: 0.4,
-          textTransform: 'uppercase',
+          fontFamily: FONT_FAMILY,
+          fontSize: compact ? 11 : 12,
+          lineHeight: 15,
+          fontWeight: '600',
+          letterSpacing: 0,
         },
         tabBarItemStyle: {
-          minHeight: 52,
-          borderRadius: 16,
+          minHeight: 48,
+          borderRadius: 14,
           marginHorizontal: 2,
-          marginVertical: 5,
+          marginVertical: 3,
         },
         tabBarStyle: {
           position: 'absolute',
@@ -70,13 +69,13 @@ function TabNavigator() {
           paddingBottom: 1,
           borderWidth: StyleSheet.hairlineWidth,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderRadius: 20,
-          height: 64,
+          borderRadius: 22,
+          height: 60,
           shadowColor: colors.text,
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.10,
-          shadowRadius: 18,
-          elevation: 8,
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          elevation: 6,
         },
       }}
     >

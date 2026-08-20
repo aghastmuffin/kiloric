@@ -13,8 +13,10 @@ import {
 } from '@expo-google-fonts/jetbrains-mono'
 
 export const FONT_FAMILY = 'InterTight'
-export const HEADLINE_FONT_FAMILY = 'InstrumentSerif'
-export const MONO_FONT_FAMILY = 'JetBrainsMono'
+// Keep the default product voice cohesive and quiet. The display and mono
+// faces remain available as explicit user preferences.
+export const HEADLINE_FONT_FAMILY = 'InterTight'
+export const MONO_FONT_FAMILY = 'InterTight'
 
 export const textFont = { fontFamily: FONT_FAMILY } as const
 export const headlineFont = { fontFamily: HEADLINE_FONT_FAMILY } as const

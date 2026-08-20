@@ -32,9 +32,9 @@ export function AppScreenHeader({ overline, title, description, accessory }: App
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  root: { gap: 3 },
+  root: { gap: 4 },
   accessory: { marginBottom: 5, alignSelf: 'flex-start' },
-  overline: { ...typography.labelSmall, color: colors.brand },
+  overline: { ...typography.labelSmall, color: colors.brand, fontWeight: '600' },
   title: { ...typography.headlineLarge, color: colors.text },
-  description: { ...typography.body, color: colors.textMuted, maxWidth: 560 },
+  description: { ...typography.bodySmall, color: colors.textMuted, maxWidth: 520 },
 })

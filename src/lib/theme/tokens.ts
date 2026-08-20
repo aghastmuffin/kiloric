@@ -73,35 +73,35 @@ export type OnboardingColors = {
 // Paper & Ink === the signature taeson.co aesthetic.
 // Light mode: warm paper background, softly lifted surfaces, rich charcoal text.
 export const paperLightColors: ThemeColors = {
-  background: '#F7F6F2',
-  surface: '#FBFAF7',
-  surfaceAlt: '#ECEAE3',
-  surfaceMuted: '#F7F6F2',
-  border: '#D9D6CE',
-  borderStrong: '#B8B4AB',
-  text: '#121216',
-  textMuted: '#6E6E6A',
-  textFaint: '#96948E',
-  accent: '#121216',
-  brand: '#D6402F',
-  onBrand: '#FFFDF8',
-  brandSoft: 'rgba(214, 64, 47, 0.10)',
-  onAccent: '#F7F6F2',
-  accentSoft: '#E7E5DE',
+  background: '#F5F5F7',
+  surface: '#FFFFFF',
+  surfaceAlt: '#EEEFF2',
+  surfaceMuted: 'rgba(250, 250, 252, 0.94)',
+  border: '#E1E2E6',
+  borderStrong: '#C9CBD1',
+  text: '#17171A',
+  textMuted: '#65666C',
+  textFaint: '#92939A',
+  accent: '#17171A',
+  brand: '#CA3F32',
+  onBrand: '#FFFFFF',
+  brandSoft: 'rgba(202, 63, 50, 0.10)',
+  onAccent: '#FFFFFF',
+  accentSoft: '#E9E9ED',
   danger: '#8B3A3A',
   onDanger: '#FFFFFF',
   dangerButtonBg: '#F5E8E8',
   dangerSoft: 'rgba(139, 58, 58, 0.08)',
   warning: '#A67C00',
   success: '#4A6741',
-  mono: '#1A1A1A',
+  mono: '#17171A',
   overlay: 'rgba(26, 26, 26, 0.4)',
   pickerVariant: 'light',
   pickerAccent: '#D6402F',
-  xpAccent: '#D6402F',
-  streakColor: '#B96725',
-  levelGlow: 'rgba(74, 103, 65, 0.12)',
-  progressTrail: '#EBEAE4',
+  xpAccent: '#CA3F32',
+  streakColor: '#B7601B',
+  levelGlow: 'rgba(202, 63, 50, 0.10)',
+  progressTrail: '#E7E8EB',
 }
 
 // Dark mode: deep charcoal, off-white text, same editorial restraint.
@@ -323,8 +323,8 @@ const iosDarkOnboardingColors: OnboardingColors = {
 
 export type AppThemeChoice = 'paper' | 'barebones' | 'ios'
 
-export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const
-export const borderRadius = { sm: 6, md: 10, lg: 16, pill: 999 } as const
+export const spacing = { xs: 4, sm: 8, md: 14, lg: 20, xl: 28, xxl: 40 } as const
+export const borderRadius = { sm: 8, md: 12, lg: 18, pill: 999 } as const
 
 export function resolveThemeColors(
   choice: AppThemeChoice,

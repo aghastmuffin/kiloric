@@ -299,7 +299,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
 
   return (
       <View style={styles.panel}>
-        <Text style={styles.eyebrow}>YOUR VITALITY</Text>
+        <Text style={styles.eyebrow}>Account</Text>
         <Text style={styles.title}>{displayName}</Text>
         <Text style={styles.subtitle}>{user.email}</Text>
 
@@ -311,12 +311,12 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
               </View>
               <View style={styles.levelBadge}>
                 <Text style={styles.levelBadgeText}>
-                  {loadingProfile ? 'LV —' : `LV ${xp.level}`}
+                  {loadingProfile ? 'Level —' : `Level ${xp.level}`}
                 </Text>
               </View>
             </View>
             <View style={styles.identityCopy}>
-              <Text style={styles.cardLabel}>CURRENT FOCUS</Text>
+              <Text style={styles.cardLabel}>Current focus</Text>
               <Text style={styles.goalText}>{goal}</Text>
               {targetSummary ? <Text style={styles.goalMeta}>{targetSummary}</Text> : null}
             </View>
@@ -326,7 +326,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             <View style={styles.xpHeader}>
               <View style={styles.xpHeaderLeft}>
                 <Ionicons name="sparkles" size={13} color={colors.xpAccent} />
-                <Text style={styles.xpLabel}>DAILY XP</Text>
+                <Text style={styles.xpLabel}>Activity score</Text>
               </View>
               <Text style={styles.xpValue}>
                 {loadingProfile ? '…' : `${xp.xpInCurrentLevel} / ${xp.xpNeeded} XP`}
@@ -336,7 +336,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
               progress={loadingProfile ? 0 : xp.xpInCurrentLevel / xp.xpNeeded}
             />
             <Text style={styles.xpHint}>
-              Earn XP by logging meals, drinking water and hitting your targets.
+              XP reflects logged meals, hydration and completed nutrition targets.
             </Text>
           </View>
         </View>
@@ -347,14 +347,14 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
               <Ionicons name="flame" size={19} color={colors.streakColor} />
             </View>
             <Text style={styles.statValue}>{loadingProfile ? '—' : streak}</Text>
-            <Text style={styles.statLabel}>DAY STREAK</Text>
+            <Text style={styles.statLabel}>Day streak</Text>
           </View>
           <View style={styles.statTile}>
             <View style={[styles.statIconWrap, styles.statIconMeals]}>
               <Ionicons name="restaurant" size={17} color={colors.success} />
             </View>
             <Text style={styles.statValue}>{loadingProfile ? '—' : todayMeals.length}</Text>
-            <Text style={styles.statLabel}>MEALS TODAY</Text>
+            <Text style={styles.statLabel}>Meals today</Text>
           </View>
           <View style={styles.statTile}>
             <View style={[styles.statIconWrap, styles.statIconKcal]}>
@@ -363,7 +363,7 @@ function LoggedInPanel({ user, defaultSearchMode, savingPreference, onSearchMode
             <Text style={styles.statValue}>
               {loadingProfile ? '—' : Math.round(totals.kcal).toLocaleString()}
             </Text>
-            <Text style={styles.statLabel}>KCAL TODAY</Text>
+            <Text style={styles.statLabel}>Calories today</Text>
           </View>
         </View>
 
@@ -407,7 +407,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flexGrow: 1,
     width: '100%',
-    maxWidth: 760,
+    maxWidth: 680,
     alignSelf: 'center',
     paddingBottom: 112,
     backgroundColor: c.background,

@@ -320,9 +320,9 @@ export default function StatsScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingHorizontal: gutter }]}
       >
         <AppScreenHeader
-          overline="PROGRESS, NOT PERFECTION"
-          title="Your rhythm"
-          description="See how your nutrition changes over time without losing sight of the day-to-day."
+          overline="Progress"
+          title="Trends"
+          description="Understand your nutrition over time, with incomplete days clearly identified."
         />
 
         <PeriodToggle period={period} onChange={setPeriod} />
@@ -457,7 +457,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
   content: {
     width: '100%',
-    maxWidth: 760,
+    maxWidth: 680,
     alignSelf: 'center',
     paddingBottom: 112,
     gap: 16,
@@ -471,9 +471,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.surfaceAlt,
   },
   toggleButton: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  toggleButtonSelected: { backgroundColor: c.brand },
+  toggleButtonSelected: { backgroundColor: c.accent },
   toggleText: { ...typography.labelSmall, color: c.textMuted },
-  toggleTextSelected: { color: c.onBrand },
+  toggleTextSelected: { color: c.onAccent },
   pressed: { opacity: 0.72 },
   card: {
     backgroundColor: c.surface,

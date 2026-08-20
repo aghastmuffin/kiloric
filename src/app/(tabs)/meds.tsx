@@ -114,7 +114,7 @@ export default function MedsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <AppScreenHeader
-          overline="VITALITY / WELLBEING"
+          overline="Wellbeing"
           title="A gentler rhythm."
           description="Move through today’s reminders and check in with how you feel."
           accessory={(
