@@ -29,3 +29,8 @@
 **Learning:** Repeatedly querying local persistent stores like `AsyncStorage` (e.g. for recent foods on tab focus or typing) introduces async bridge overhead and redundant `JSON.parse` operations. Adding a synchronous in-memory cache map alongside an `inflightRequests` promise map eliminates disk/bridge reads on sub-sequence requests, while synchronous cache updating during record writes ensures zero-latency reads for quick logging.
 
 **Action:** Cache `AsyncStorage` list reads in memory and deduplicate pending promises; synchronously update the memory cache on writes and hook cache clearing into session logout handlers (`appwriteSession.ts`).
+
+## 2025-05-21 - Modal Text Input State Isolation & Gamification Memoization
+**Learning:** Storing volatile modal text input state in top-level screen components causes full-screen re-renders on every keystroke, forcing expensive date parsing (e.g. `calculateStreak` iterating over meal history dates) and array re-allocations to run repeatedly while typing. Isolating draft state into standalone modal sub-components prevents parent screen re-renders entirely during user input, while memoizing streak, XP, and quest array transformations avoids unnecessary CPU cycles on screen state changes.
+
+**Action:** Always isolate text input draft state into dedicated sub-components or modal wrappers, and wrap date-parsing heavy streak/gamification calculations in `useMemo`.

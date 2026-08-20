@@ -95,7 +95,6 @@ export default function DashboardScreen() {
   const [personalQuests, setPersonalQuests] = useState<PersonalQuest[]>([])
   const [dismissedQuestKeys, setDismissedQuestKeys] = useState<string[]>([])
   const [taskModalVisible, setTaskModalVisible] = useState(false)
-  const [taskDraft, setTaskDraft] = useState('')
 
   useFocusEffect(
     useCallback(() => {
@@ -158,26 +157,41 @@ export default function DashboardScreen() {
     [goalProgress, formatWeight],
   )
 
-  const allMeals = [...data.today, ...data.history]
-  const streak = calculateStreak(allMeals)
-  const xp = calculateXP({
-    meals: data.today.length,
-    water: Math.floor(totals.fluid / 250),
-    calorieTargetHit: totals.kcal >= targets.kcal * 0.9 && totals.kcal <= targets.kcal * 1.1,
-    proteinTargetHit: totals.protein >= targets.protein,
-  })
-  const quests = [
-    { key: 'meals', label: 'Log three meals', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
-    { key: 'protein', label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
-    { key: 'hydrate', label: 'Hydrate with intention', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
-    ...personalQuests.map((q) => ({
-      key: q.id,
-      label: q.label,
-      done: q.done,
-      progress: q.done ? 'Done' : 'Open',
-      id: q.id,
-    })),
-  ].filter((quest) => !dismissedQuestKeys.includes(quest.key))
+  // Memoize streak calculation to avoid re-parsing meal dates and constructing Sets on every render
+  const streak = useMemo(
+    () => calculateStreak([...data.today, ...data.history]),
+    [data.today, data.history],
+  )
+
+  // Memoize XP calculation to eliminate redundant progress arithmetic on unrelated state changes
+  const xp = useMemo(
+    () =>
+      calculateXP({
+        meals: data.today.length,
+        water: Math.floor(totals.fluid / 250),
+        calorieTargetHit: totals.kcal >= targets.kcal * 0.9 && totals.kcal <= targets.kcal * 1.1,
+        proteinTargetHit: totals.protein >= targets.protein,
+      }),
+    [data.today.length, totals.fluid, totals.kcal, totals.protein, targets.kcal, targets.protein],
+  )
+
+  // Memoize quests list construction and filtering
+  const quests = useMemo(
+    () =>
+      [
+        { key: 'meals', label: 'Log three meals', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
+        { key: 'protein', label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
+        { key: 'hydrate', label: 'Hydrate with intention', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
+        ...personalQuests.map((q) => ({
+          key: q.id,
+          label: q.label,
+          done: q.done,
+          progress: q.done ? 'Done' : 'Open',
+          id: q.id,
+        })),
+      ].filter((quest) => !dismissedQuestKeys.includes(quest.key)),
+    [data.today.length, totals.protein, totals.fluid, targets.protein, targets.fluid, personalQuests, dismissedQuestKeys],
+  )
 
   const closeFab = useCallback(() => setFabOpen(false), [])
   const toggleFab = useCallback(() => {
@@ -192,19 +206,16 @@ export default function DashboardScreen() {
 
   const handleCreateTask = useCallback(() => {
     setFabOpen(false)
-    setTaskDraft('')
     setTaskModalVisible(true)
   }, [])
 
-  const submitTask = useCallback(() => {
-    const label = taskDraft.trim()
-    if (!label || !user?.$id) return
+  const handleTaskSubmit = useCallback((title: string) => {
+    if (!user?.$id) return
     const optimisticId = `temp-${Date.now()}`
-    setPersonalQuests((prev) => [...prev, { id: optimisticId, label, done: false }])
+    setPersonalQuests((prev) => [...prev, { id: optimisticId, label: title, done: false }])
     setTaskModalVisible(false)
-    setTaskDraft('')
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    void createTask(user.$id, { title: label })
+    void createTask(user.$id, { title })
       .then((task) => {
         setPersonalQuests((prev) =>
           prev.map((q) => (q.id === optimisticId ? { id: task.$id, label: task.title, done: Boolean(task.done) } : q)),
@@ -214,7 +225,7 @@ export default function DashboardScreen() {
         console.warn('[Dashboard] create task failed', error)
         setPersonalQuests((prev) => prev.filter((q) => q.id !== optimisticId))
       })
-  }, [taskDraft, user])
+  }, [user])
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>
@@ -423,54 +434,92 @@ export default function DashboardScreen() {
         onCreateTask={handleCreateTask}
       />
 
-      <Modal
+      <CreateTaskModal
         visible={taskModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setTaskModalVisible(false)}
-      >
-        <View style={styles.taskBackdrop}>
-          <Pressable
-            accessibilityLabel="Dismiss"
-            style={StyleSheet.absoluteFill}
-            onPress={() => setTaskModalVisible(false)}
+        onClose={() => setTaskModalVisible(false)}
+        onSubmit={handleTaskSubmit}
+      />
+    </View>
+  )
+}
+
+/**
+ * Isolates task draft state so keystrokes in TextInput do not trigger re-renders
+ * of the entire DashboardScreen or recalculations of streak/XP.
+ */
+function CreateTaskModal({
+  visible,
+  onClose,
+  onSubmit,
+}: {
+  visible: boolean
+  onClose: () => void
+  onSubmit: (title: string) => void
+}) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(makeStyles)
+  const [taskDraft, setTaskDraft] = useState('')
+
+  const handleClose = useCallback(() => {
+    setTaskDraft('')
+    onClose()
+  }, [onClose])
+
+  const submit = useCallback(() => {
+    const label = taskDraft.trim()
+    if (!label) return
+    setTaskDraft('')
+    onSubmit(label)
+  }, [taskDraft, onSubmit])
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleClose}
+    >
+      <View style={styles.taskBackdrop}>
+        <Pressable
+          accessibilityLabel="Dismiss"
+          style={StyleSheet.absoluteFill}
+          onPress={handleClose}
+        />
+        <View style={styles.taskCard}>
+          <Text style={styles.taskTitle}>Create task</Text>
+          <Text style={styles.taskHint}>Add a personal quest for today.</Text>
+          <TextInput
+            value={taskDraft}
+            onChangeText={setTaskDraft}
+            placeholder="e.g. Evening stretch"
+            placeholderTextColor={colors.textFaint}
+            accessibilityLabel="Task name"
+            style={styles.taskInput}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={submit}
           />
-          <View style={styles.taskCard}>
-            <Text style={styles.taskTitle}>Create task</Text>
-            <Text style={styles.taskHint}>Add a personal quest for today.</Text>
-            <TextInput
-              value={taskDraft}
-              onChangeText={setTaskDraft}
-              placeholder="e.g. Evening stretch"
-              placeholderTextColor={colors.textFaint}
-              accessibilityLabel="Task name"
-              style={styles.taskInput}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={submitTask}
-            />
-            <View style={styles.taskActions}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setTaskModalVisible(false)}
-                style={({ pressed }) => [styles.taskBtnGhost, pressed && { opacity: 0.7 }]}
-              >
-                <Text style={styles.taskBtnGhostText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !taskDraft.trim() }}
-                disabled={!taskDraft.trim()}
-                onPress={submitTask}
-                style={({ pressed }) => [styles.taskBtn, pressed && { opacity: 0.85 }]}
-              >
-                <Text style={styles.taskBtnText}>Add</Text>
-              </Pressable>
-            </View>
+          <View style={styles.taskActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleClose}
+              style={({ pressed }) => [styles.taskBtnGhost, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={styles.taskBtnGhostText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !taskDraft.trim() }}
+              disabled={!taskDraft.trim()}
+              onPress={submit}
+              style={({ pressed }) => [styles.taskBtn, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.taskBtnText}>Add</Text>
+            </Pressable>
           </View>
         </View>
-      </Modal>
-    </View>
+      </View>
+    </Modal>
   )
 }
 
