@@ -86,7 +86,16 @@ Exported arrays drive UI labels and descriptions:
 - `ACTIVITY_OPTIONS` — sedentary → extra active
 - `GOAL_OPTIONS` — lose, maintain, gain
 - `PACE_OPTIONS` — gentle, moderate, aggressive (with kg/week hints)
-- `DIET_OPTIONS` — balanced, high protein, low carb, mediterranean, plant-forward
+- `DIET_OPTIONS` — balanced, high protein, low carb, Mediterranean, plant-forward, and custom. The custom option starts from the balanced calculation and exposes calorie, protein, carbohydrate, fat, and hydration targets for direct editing.
+
+### Formula audit and trend behavior
+
+- Formula version 4 uses Mifflin–St Jeor for BMR and the selected lifestyle activity factor for estimated TDEE. These are planning estimates, not measured metabolism. Sex, activity, goal, pace, eating style, target weight, display units, and custom targets are also saved in account preferences so later edits do not silently revert to defaults.
+- The three preset paces represent 0.25, 0.50, and 0.75 kg/week. Their calorie adjustment uses the common 7,700 kcal/kg approximation and the app enforces a 1,200 kcal female / 1,500 kcal male planning floor. A floor can therefore make the achieved pace slower than the selected preset; the UI reports the energy-derived pace.
+- Preset macro targets are calculated in grams from current body weight and the selected eating style. The Targets screen reconciles those grams back to calories using 4 kcal/g protein, 4 kcal/g carbohydrate, and 9 kcal/g fat, and warns when a custom combination differs by more than 5% (or 50 kcal) from the energy target.
+- Adult hydration values are beverage targets (2.2 L female / 3.0 L male); they intentionally do not claim to be total-water requirements because food also contributes water.
+- Stats compares equal adjacent windows of **logged days**. Missing days are excluded instead of treated as zero intake, and a visible confidence label is based on logging completeness. Intake trends do not claim to predict weight or metabolic adaptation.
+- Targets are recalculated whenever body data or goal settings change and are stored when the profile is saved. Because the app currently stores one current weight rather than a weight-log collection, it does not fabricate a longitudinal weight trend.
 
 ## Profile completeness
 

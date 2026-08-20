@@ -309,6 +309,7 @@ export default function WorkoutsScreen() {
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
   content: { width: '100%', maxWidth: 760, alignSelf: 'center', gap: 22 },
+  hero: { gap: 6, paddingTop: 2 },
   mockPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
   mockText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9, letterSpacing: 0.8 },
   weekCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, paddingVertical: 14, gap: 12 },
