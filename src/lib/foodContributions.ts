@@ -7,11 +7,11 @@
  *
  * Photos → `images_to_check` bucket. Rows → `food_contributions` in the `foods` DB.
  */
-import { account, databases, storage } from '@/lib/appwrite'
+import { account, databases, storage } from './appwrite'
 import {
   buildContributionPayload,
   type FoodContributionFieldsInput,
-} from '@/lib/foodContributionFields'
+} from './foodContributionFields'
 import { ID, Permission, Role, type Models } from 'react-native-appwrite'
 
 export {
@@ -21,7 +21,7 @@ export {
   buildContributionPayload,
   type OffStringField,
   type OffNumberField,
-} from '@/lib/foodContributionFields'
+} from './foodContributionFields'
 
 const FOODS_DATABASE_ID =
   process.env.EXPO_PUBLIC_APPWRITE_FOODS_DATABASE_ID ?? '6a4577f00008c718d204'
@@ -69,10 +69,14 @@ function guessFileName(uri: string, fileName?: string | null, mime?: string): st
   return `food-contribution.${ext}`
 }
 
+/**
+ * Asserts that the authenticated user matches the target userId.
+ * Defense-in-depth: Prevents BOLA/IDOR vulnerabilities when submitting contributions.
+ */
 async function authenticatedUserId(expectedUserId: string): Promise<string> {
   const user = await account.get()
   if (user.$id !== expectedUserId) {
-    throw new Error('You can only submit contributions as yourself.')
+    throw new Error('Unauthorized: You can only submit food contributions for yourself.')
   }
   return user.$id
 }

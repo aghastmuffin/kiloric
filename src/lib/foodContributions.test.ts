@@ -1,11 +1,45 @@
 // eslint-disable-next-line import/no-unresolved
-import { describe, expect, it } from 'vitest'
+import { vi, describe, expect, it } from 'vitest'
 import {
   buildContributionPayload,
   OFF_TO_APPWRITE,
   NUMBER_OFF_FIELDS,
   STRING_OFF_FIELDS,
 } from './foodContributionFields'
+
+const { mockAccountGet, mockCreateFile, mockDeleteFile, mockCreateDocument } = vi.hoisted(() => ({
+  mockAccountGet: vi.fn(),
+  mockCreateFile: vi.fn(),
+  mockDeleteFile: vi.fn(),
+  mockCreateDocument: vi.fn(),
+}))
+
+vi.mock('./appwrite', () => ({
+  account: {
+    get: (...args: unknown[]) => mockAccountGet(...args),
+  },
+  storage: {
+    createFile: (...args: unknown[]) => mockCreateFile(...args),
+    deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
+  },
+  databases: {
+    createDocument: (...args: unknown[]) => mockCreateDocument(...args),
+  },
+}))
+
+vi.mock('react-native-appwrite', () => ({
+  ID: {
+    unique: () => 'mock-unique-id',
+  },
+  Permission: {
+    read: () => 'read',
+    update: () => 'update',
+    delete: () => 'delete',
+  },
+  Role: {
+    user: (id: string) => `user:${id}`,
+  },
+}))
 
 describe('foodContributionFields map', () => {
   it('maps hyphenated OFF keys to Appwrite snake_case', () => {
@@ -74,5 +108,38 @@ describe('buildContributionPayload', () => {
         fields: { fat_100g: 'not-a-number' },
       }),
     ).toThrow(/number/i)
+  })
+})
+
+describe('submitFoodContribution authorization & BOLA check', () => {
+  it('rejects submission if authenticated user ID does not match target userId', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'session-user-123' })
+    const { submitFoodContribution } = await import('./foodContributions')
+
+    await expect(
+      submitFoodContribution('other-user-999', {
+        product_name: 'Granola',
+        photo: { uri: 'file://photo.jpg', fileSize: 100 },
+      }),
+    ).rejects.toThrow(/Unauthorized: You can only submit food contributions for yourself\./)
+  })
+
+  it('allows submission when authenticated user matches userId', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'session-user-123' })
+    mockCreateFile.mockResolvedValueOnce({ $id: 'file-123' })
+    mockCreateDocument.mockResolvedValueOnce({ $id: 'doc-123', status: 'pending' })
+
+    const { submitFoodContribution } = await import('./foodContributions')
+
+    const result = await submitFoodContribution('session-user-123', {
+      product_name: 'Granola',
+      photo: { uri: 'file://photo.jpg', fileSize: 100 },
+    })
+
+    expect(result).toEqual({
+      id: 'doc-123',
+      photoFileId: 'file-123',
+      status: 'pending',
+    })
   })
 })
