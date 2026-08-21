@@ -29,3 +29,8 @@
 **Learning:** Repeatedly querying local persistent stores like `AsyncStorage` (e.g. for recent foods on tab focus or typing) introduces async bridge overhead and redundant `JSON.parse` operations. Adding a synchronous in-memory cache map alongside an `inflightRequests` promise map eliminates disk/bridge reads on sub-sequence requests, while synchronous cache updating during record writes ensures zero-latency reads for quick logging.
 
 **Action:** Cache `AsyncStorage` list reads in memory and deduplicate pending promises; synchronously update the memory cache on writes and hook cache clearing into session logout handlers (`appwriteSession.ts`).
+
+## 2025-05-21 - In-Memory Caching & Deduplication for Food Favorites
+**Learning:** `loadFavoriteFoods` in `foodFavorites.ts` was executing asynchronous `AsyncStorage.getItem` calls and JSON parsing on every screen focus and favorite status check. Adding an in-memory cache `favoritesCache` with an inflight promise reference `inflightLoadFavorites` eliminates redundant async bridge reads and provides 0ms synchronous promise resolution for subsequent calls.
+
+**Action:** Maintain an in-memory reference and an inflight promise variable for frequently accessed AsyncStorage lists, synchronously update the cache during writes/toggles, and export a cache clear function to hook into session management.
