@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { SERVING_PRESETS, formatServings, isServingPreset, parseServingsInput } from '@/lib/servings'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
@@ -36,6 +37,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
 
   const openCustom = useCallback(() => {
     if (disabled) return
+    triggerSelectionHaptic()
     setCustomVisible(true)
   }, [disabled])
 
@@ -66,8 +68,12 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               accessibilityRole="button"
               accessibilityState={{ selected }}
               accessibilityLabel={`${formatServings(preset)} servings`}
+              accessibilityHint={`Selects ${formatServings(preset)} serving portion`}
               disabled={disabled}
-              onPress={() => onChange(preset)}
+              onPress={() => {
+                triggerSelectionHaptic()
+                onChange(preset)
+              }}
               style={({ pressed }) => [
                 styles.option,
                 selected && styles.optionSelected,
@@ -87,6 +93,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
           accessibilityLabel={
             isCustom ? `Custom: ${formatServings(servings)} servings` : 'Custom servings'
           }
+          accessibilityHint="Opens modal to enter custom serving quantity"
           disabled={disabled}
           onPress={openCustom}
           style={({ pressed }) => [
@@ -127,6 +134,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
             <View style={styles.modalActions}>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Cancel custom serving input"
                 onPress={closeCustom}
                 style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
               >
@@ -134,6 +142,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               </Pressable>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Apply custom serving quantity"
                 onPress={applyCustom}
                 style={({ pressed }) => [
                   styles.modalButton,
