@@ -16,7 +16,7 @@ import {
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -37,6 +37,8 @@ type DayTotal = {
   date: Date
   kcal: number
   hasLog: boolean
+  formattedDate: string
+  weekdayNarrow: string
 }
 
 const EMPTY_DATA: StatsData = { meals: [], profile: null }
@@ -46,19 +48,10 @@ function dayKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function makeDays(meals: MealDocument[], count: number): DayTotal[] {
-  const totals = new Map<string, { kcal: number; hasLog: boolean }>()
-  for (const meal of meals) {
-    const date = new Date(meal.$createdAt)
-    if (Number.isNaN(date.getTime())) continue
-    const key = dayKey(date)
-    const previous = totals.get(key) ?? { kcal: 0, hasLog: false }
-    totals.set(key, {
-      kcal: previous.kcal + (typeof meal.kcal === 'number' ? Math.max(0, meal.kcal) : 0),
-      hasLog: true,
-    })
-  }
-
+function makeDays(
+  totals: Map<string, { kcal: number; hasLog: boolean }>,
+  count: number,
+): DayTotal[] {
   const today = new Date()
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (count - 1 - index))
@@ -68,6 +61,9 @@ function makeDays(meals: MealDocument[], count: number): DayTotal[] {
       date,
       kcal: total?.kcal ?? 0,
       hasLog: total?.hasLog ?? false,
+      // Pre-compute formatted dates once during day creation to avoid calling expensive toLocaleDateString inside chart render loop
+      formattedDate: date.toLocaleDateString(),
+      weekdayNarrow: date.toLocaleDateString(undefined, { weekday: 'narrow' }),
     }
   })
 }
@@ -114,7 +110,7 @@ function getInsight(days: DayTotal[], goal: number | null): { title: string; bod
   }
 }
 
-function PeriodToggle({
+const PeriodToggle = React.memo(function PeriodToggle({
   period,
   onChange,
 }: {
@@ -146,9 +142,17 @@ function PeriodToggle({
       })}
     </View>
   )
-}
+})
 
-function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | null; period: Period }) {
+const EnergyChart = React.memo(function EnergyChart({
+  days,
+  goal,
+  period,
+}: {
+  days: DayTotal[]
+  goal: number | null
+  period: Period
+}) {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const maxValue = Math.max(goal ?? 0, ...days.map((day) => day.kcal), 1)
@@ -197,14 +201,14 @@ function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | 
                 <View key={day.key} style={[styles.barColumn, { width: barWidth }]}>
                   <View style={styles.barArea}>
                     <View
-                      accessibilityLabel={`${day.date.toLocaleDateString()}: ${Math.round(day.kcal)} kilocalories`}
+                      accessibilityLabel={`${day.formattedDate}: ${Math.round(day.kcal)} kilocalories`}
                       style={[styles.bar, { height }]}
                     />
                   </View>
                   <Text style={styles.axisLabel}>
                     {showMonthLabel
                       ? period === 'week'
-                        ? day.date.toLocaleDateString(undefined, { weekday: 'narrow' })
+                        ? day.weekdayNarrow
                         : day.date.getDate()
                       : ''}
                   </Text>
@@ -216,7 +220,7 @@ function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | 
       </ScrollView>
     </View>
   )
-}
+})
 
 export default function StatsScreen() {
   const { user, loading: authLoading } = useAuth()
@@ -264,9 +268,26 @@ export default function StatsScreen() {
     }, [authLoading, reloadKey, user?.$id]),
   )
 
+  // Memoize daily calorie map per meals list update to avoid re-parsing meal dates when toggling periods
+  const mealTotalsByDay = useMemo(() => {
+    const totals = new Map<string, { kcal: number; hasLog: boolean }>()
+    for (const meal of data.meals) {
+      if (!meal.$createdAt) continue
+      const date = new Date(meal.$createdAt)
+      if (Number.isNaN(date.getTime())) continue
+      const key = dayKey(date)
+      const previous = totals.get(key) ?? { kcal: 0, hasLog: false }
+      totals.set(key, {
+        kcal: previous.kcal + (typeof meal.kcal === 'number' ? Math.max(0, meal.kcal) : 0),
+        hasLog: true,
+      })
+    }
+    return totals
+  }, [data.meals])
+
   const days = useMemo(
-    () => makeDays(data.meals, period === 'week' ? 7 : 30),
-    [data.meals, period],
+    () => makeDays(mealTotalsByDay, period === 'week' ? 7 : 30),
+    [mealTotalsByDay, period],
   )
   const goal = data.profile?.target_kcal && data.profile.target_kcal > 0
     ? data.profile.target_kcal

@@ -29,3 +29,8 @@
 **Learning:** Repeatedly querying local persistent stores like `AsyncStorage` (e.g. for recent foods on tab focus or typing) introduces async bridge overhead and redundant `JSON.parse` operations. Adding a synchronous in-memory cache map alongside an `inflightRequests` promise map eliminates disk/bridge reads on sub-sequence requests, while synchronous cache updating during record writes ensures zero-latency reads for quick logging.
 
 **Action:** Cache `AsyncStorage` list reads in memory and deduplicate pending promises; synchronously update the memory cache on writes and hook cache clearing into session logout handlers (`appwriteSession.ts`).
+
+## 2025-05-21 - Pre-computing Formatted Dates & Memoized Aggregation Maps
+**Learning:** In chart rendering components like `EnergyChart` (`stats.tsx`), invoking `toLocaleDateString()` inside render loops causes CPU-intensive ICU locale formatting on every frame. Furthermore, re-aggregating meal arrays into date totals when toggling chart period tabs ('week' vs 'month') re-parses timestamps unnecessarily. Memoizing the daily totals map with `useMemo` and pre-computing formatted date strings (`formattedDate` and `weekdayNarrow`) during day array construction eliminates ICU formatting overhead and skips redundant meal loops.
+
+**Action:** Pre-compute formatted date strings during data array preparation rather than calling `toLocaleDateString` inside JSX render loops, and separate dataset aggregation from view timeline slicing with `useMemo`.
