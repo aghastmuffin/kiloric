@@ -398,9 +398,18 @@ const cachedTodayMeals: { [userId: string]: MealsCacheEntry } = {}
 const inflightTodayMealsPromises: { [userId: string]: Promise<MealDocument[]> } = {}
 
 /** Clear any cached today's meals and any inflight fetching promise to ensure safe mutations/logout. */
-export function clearTodayMealsCache(userId: string): void {
-  delete cachedTodayMeals[userId]
-  delete inflightTodayMealsPromises[userId]
+export function clearTodayMealsCache(userId?: string): void {
+  if (userId) {
+    delete cachedTodayMeals[userId]
+    delete inflightTodayMealsPromises[userId]
+  } else {
+    for (const key of Object.keys(cachedTodayMeals)) {
+      delete cachedTodayMeals[key]
+    }
+    for (const key of Object.keys(inflightTodayMealsPromises)) {
+      delete inflightTodayMealsPromises[key]
+    }
+  }
 }
 
 /** Fetch today's meals (Mirrors the fallback logic in listHistoricMeals to bypass missing index errors) */

@@ -137,19 +137,33 @@ describe('meals caching & deduplication', () => {
     expect(mockListDocuments).toHaveBeenCalledTimes(1)
   })
 
-  it('clearTodayMealsCache invalidates cached entries', async () => {
-    const mockMeals = [{ $id: 'meal-3', owner: 'user-123', kcal: 700 }]
-    mockListDocuments.mockResolvedValue({ documents: mockMeals })
+  it('clearTodayMealsCache invalidates cached entries for specific user or all users', async () => {
+    const mockMeals1 = [{ $id: 'meal-3', owner: 'user-123', kcal: 700 }]
+    const mockMeals2 = [{ $id: 'meal-4', owner: 'user-456', kcal: 400 }]
+    mockListDocuments.mockImplementation((db: string, col: string, queries: string[]) => {
+      if (queries.some((q: string) => q.includes('user-123'))) {
+        return Promise.resolve({ documents: mockMeals1 })
+      }
+      return Promise.resolve({ documents: mockMeals2 })
+    })
 
     await mealsModule.getTodayMeals('user-123')
-    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+    await mealsModule.getTodayMeals('user-456')
+    expect(mockListDocuments).toHaveBeenCalledTimes(2)
 
-    // Clear cache
+    // Clear cache for single user
     mealsModule.clearTodayMealsCache('user-123')
 
-    // Next call should query DB again
     await mealsModule.getTodayMeals('user-123')
-    expect(mockListDocuments).toHaveBeenCalledTimes(2)
+    expect(mockListDocuments).toHaveBeenCalledTimes(3)
+    await mealsModule.getTodayMeals('user-456') // should still be cached
+    expect(mockListDocuments).toHaveBeenCalledTimes(3)
+
+    // Clear cache for all users (no arguments)
+    mealsModule.clearTodayMealsCache()
+
+    await mealsModule.getTodayMeals('user-456')
+    expect(mockListDocuments).toHaveBeenCalledTimes(4)
   })
 
   it('mutations invalidate cached entries', async () => {

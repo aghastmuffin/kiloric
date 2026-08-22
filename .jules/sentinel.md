@@ -40,3 +40,8 @@
 **Vulnerability:** Missing document ownership assertion in `setTaskDone` and `deleteTask` allowed authenticated users to modify or delete tasks belonging to other users if they supplied the target `taskId`.
 **Learning:** Performing document-level updates/deletions relying solely on client-provided IDs without first retrieving the document and comparing its `userId` (owner) property against the active session's ID introduces severe BOLA/IDOR vulnerabilities.
 **Prevention:** Always retrieve the target document using a dedicated getter (e.g. `getTask`) and verify that `document.userId === sessionUserId` before executing mutating operations.
+
+## 2026-08-22 - [In-Memory Meal Cache Purging on Session Transition]
+**Vulnerability:** Session staining and cross-user meal data exposure in memory due to `cachedTodayMeals` retaining meal documents across session changes and logouts.
+**Learning:** In hybrid/SPA mobile environments, module-level memory objects (`cachedTodayMeals`) persist when a user logs out or switches accounts unless explicitly cleared during session transitions.
+**Prevention:** Support parameterless clearing functions (`clearTodayMealsCache()`) that wipe all user keys in memory, and ensure they are systematically called in `persistAppwriteSession` and `clearAppwriteSession`.
