@@ -41,24 +41,84 @@ async function authenticatedUserId(expectedUserId: string): Promise<string> {
   return user.$id
 }
 
-export async function listTasks(userId: string): Promise<TaskDocument[]> {
-  if (!TASKS_DATABASE_ID || !TASKS_COLLECTION_ID) return []
-  await authenticatedUserId(userId)
-  try {
-    const response = await databases.listDocuments({
-      databaseId: TASKS_DATABASE_ID,
-      collectionId: TASKS_COLLECTION_ID,
-      queries: [
-        Query.equal('userId', userId),
-        Query.orderDesc('$createdAt'),
-        Query.limit(100),
-      ],
-    })
-    return response.documents as unknown as TaskDocument[]
-  } catch (error) {
-    if (error instanceof AppwriteException && error.code === 404) return []
-    throw error
+type TasksCacheEntry = {
+  tasks: TaskDocument[]
+  expiresAt: number
+}
+
+// ⚡ Bolt: In-memory TTL cache and promise deduplication map for listTasks
+// to eliminate redundant database calls during dashboard focus transitions.
+const cachedTasks: { [userId: string]: TasksCacheEntry } = {}
+const inflightTasksPromises: { [userId: string]: Promise<TaskDocument[]> } = {}
+
+/** Clear any cached tasks and inflight request promises to guarantee safe mutations and session purges. */
+export function clearTasksCache(userId?: string): void {
+  if (userId) {
+    delete cachedTasks[userId]
+    delete inflightTasksPromises[userId]
+  } else {
+    for (const key of Object.keys(cachedTasks)) {
+      delete cachedTasks[key]
+    }
+    for (const key of Object.keys(inflightTasksPromises)) {
+      delete inflightTasksPromises[key]
+    }
   }
+}
+
+export function listTasks(userId: string): Promise<TaskDocument[]> {
+  if (!TASKS_DATABASE_ID || !TASKS_COLLECTION_ID) return Promise.resolve([])
+
+  // Return inflight promise if a request for this user is already pending (Deduplication)
+  const inflight = inflightTasksPromises[userId]
+  if (inflight) {
+    return inflight
+  }
+
+  // Always verify authenticated session before returning cached or fetched data
+  const currentPromise = authenticatedUserId(userId).then(async (sessionUserId) => {
+    const cached = cachedTasks[sessionUserId]
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.tasks
+    }
+
+    try {
+      const response = await databases.listDocuments({
+        databaseId: TASKS_DATABASE_ID,
+        collectionId: TASKS_COLLECTION_ID,
+        queries: [
+          Query.equal('userId', sessionUserId),
+          Query.orderDesc('$createdAt'),
+          Query.limit(100),
+        ],
+      })
+      return response.documents as unknown as TaskDocument[]
+    } catch (error) {
+      if (error instanceof AppwriteException && error.code === 404) return []
+      throw error
+    }
+  })
+
+  inflightTasksPromises[userId] = currentPromise
+
+  // Chain background caching callbacks outside closure to avoid TDZ (TS2454) warnings
+  currentPromise
+    .then((tasks) => {
+      if (inflightTasksPromises[userId] === currentPromise) {
+        cachedTasks[userId] = {
+          tasks,
+          expiresAt: Date.now() + 15_000, // 15s TTL
+        }
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (inflightTasksPromises[userId] === currentPromise) {
+        delete inflightTasksPromises[userId]
+      }
+    })
+
+  return currentPromise
 }
 
 export async function createTask(
@@ -75,7 +135,7 @@ export async function createTask(
   }
   if (description) data.description = description
 
-  return (await databases.createDocument({
+  const doc = (await databases.createDocument({
     databaseId: TASKS_DATABASE_ID,
     collectionId: TASKS_COLLECTION_ID,
     documentId: ID.unique(),
@@ -86,6 +146,9 @@ export async function createTask(
       Permission.delete(Role.user(owner)),
     ],
   })) as TaskDocument
+
+  clearTasksCache(owner)
+  return doc
 }
 
 export async function getTask(taskId: string): Promise<TaskDocument | null> {
@@ -116,12 +179,15 @@ export async function setTaskDone(
     throw new Error('Unauthorized: You can only update your own tasks.')
   }
 
-  return (await databases.updateDocument({
+  const res = (await databases.updateDocument({
     databaseId: TASKS_DATABASE_ID,
     collectionId: TASKS_COLLECTION_ID,
     documentId: taskId,
     data: { done },
   })) as TaskDocument
+
+  clearTasksCache(sessionUserId)
+  return res
 }
 
 export async function deleteTask(userId: string, taskId: string): Promise<void> {
@@ -139,6 +205,8 @@ export async function deleteTask(userId: string, taskId: string): Promise<void> 
     collectionId: TASKS_COLLECTION_ID,
     documentId: taskId,
   })
+
+  clearTasksCache(sessionUserId)
 }
 
 export { TASKS_COLLECTION_ID, TASKS_DATABASE_ID }

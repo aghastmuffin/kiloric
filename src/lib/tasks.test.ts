@@ -6,6 +6,7 @@ const {
   mockCreateDocument,
   mockUpdateDocument,
   mockDeleteDocument,
+  mockListDocuments,
   mockGetAccount,
 } = vi.hoisted(() => {
   return {
@@ -13,6 +14,7 @@ const {
     mockCreateDocument: vi.fn(),
     mockUpdateDocument: vi.fn(),
     mockDeleteDocument: vi.fn(),
+    mockListDocuments: vi.fn(),
     mockGetAccount: vi.fn(),
   }
 })
@@ -24,6 +26,7 @@ vi.mock('./appwrite', () => {
       createDocument: mockCreateDocument,
       updateDocument: mockUpdateDocument,
       deleteDocument: mockDeleteDocument,
+      listDocuments: mockListDocuments,
     },
     account: {
       get: mockGetAccount,
@@ -127,5 +130,66 @@ describe('tasks BOLA / IDOR security tests', () => {
 
     await expect(tasksModule.deleteTask('user-1', 'task-1')).rejects.toThrow('Task not found.')
     expect(mockDeleteDocument).not.toHaveBeenCalled()
+  })
+
+  it('listTasks rejects when requesting tasks for another user ID (BOLA protection)', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-1' })
+
+    await expect(tasksModule.listTasks('user-2')).rejects.toThrow(
+      'You can only change your own tasks.',
+    )
+    expect(mockListDocuments).not.toHaveBeenCalled()
+  })
+})
+
+describe('tasks caching and deduplication tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    tasksModule.clearTasksCache()
+  })
+
+  it('deduplicates concurrent listTasks requests', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-1' })
+    mockListDocuments.mockResolvedValue({
+      documents: [{ $id: 'task-1', userId: 'user-1', title: 'Task 1' }],
+    })
+
+    const p1 = tasksModule.listTasks('user-1')
+    const p2 = tasksModule.listTasks('user-1')
+
+    expect(p1).toBe(p2)
+    const [res1, res2] = await Promise.all([p1, p2])
+    expect(res1).toEqual(res2)
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+  })
+
+  it('serves cached tasks on subsequent calls within TTL', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-1' })
+    mockListDocuments.mockResolvedValue({
+      documents: [{ $id: 'task-1', userId: 'user-1', title: 'Task 1' }],
+    })
+
+    const first = await tasksModule.listTasks('user-1')
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+
+    const second = await tasksModule.listTasks('user-1')
+    expect(second).toEqual(first)
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+  })
+
+  it('invalidates cache when createTask is called', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-1' })
+    mockListDocuments.mockResolvedValue({
+      documents: [{ $id: 'task-1', userId: 'user-1', title: 'Task 1' }],
+    })
+    mockCreateDocument.mockResolvedValue({ $id: 'task-2', userId: 'user-1', title: 'Task 2' })
+
+    await tasksModule.listTasks('user-1')
+    expect(mockListDocuments).toHaveBeenCalledTimes(1)
+
+    await tasksModule.createTask('user-1', { title: 'Task 2' })
+
+    await tasksModule.listTasks('user-1')
+    expect(mockListDocuments).toHaveBeenCalledTimes(2)
   })
 })
