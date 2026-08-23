@@ -9,3 +9,7 @@
 ## 2025-08-11 - [Dynamic Initial State Synchronization & Tactile Haptic Feedback]
 **Learning:** For date-based or dynamic calendar lists, hardcoding a static initial selection state (such as `'mon'`) instead of computing it dynamically (such as `DAYS[0].key`) leads to visual incoherence where no calendar item is selected upon initial screen mount. Furthermore, state transitions on checklists, segment selectors, and rating buttons benefit immensely from physical, safety-wrapped haptic feedback (`triggerSelectionHaptic`), which transforms flat digital taps into tactile game-like interactions.
 **Action:** Always synchronize initial state keys with dynamically generated collection bounds, and embed haptic feedback on discrete state-switching interactions to enhance mechanical satisfaction.
+
+## 2026-08-23 - [Tactile Haptics & Accessible Labels for Native Segmented Controls]
+**Learning:** Wrapped native or fallback segmented control components (like `ThemedSegmentedControl`) often hide state change feedback and screen reader labels. Triggering `triggerSelectionHaptic()` during segment index transitions gives users immediate physical validation, while fallback dynamic `accessibilityLabel` formatting ("Selected segment: X") ensures screen readers announce active selections properly.
+**Action:** Embed selection haptic feedback and dynamic accessibility labels into shared segmented control primitives.
