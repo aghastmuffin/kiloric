@@ -75,4 +75,45 @@ describe('buildContributionPayload', () => {
       }),
     ).toThrow(/number/i)
   })
+
+  it('enforces string length limits on product_name, code, source_query, and string fields', () => {
+    // product_name > 256
+    expect(() =>
+      buildContributionPayload({
+        owner: 'user1',
+        photo_file_id: 'file1',
+        product_name: 'a'.repeat(257),
+      }),
+    ).toThrow(/product name must be 256 characters/i)
+
+    // code > 128
+    expect(() =>
+      buildContributionPayload({
+        owner: 'user1',
+        photo_file_id: 'file1',
+        product_name: 'Soup',
+        code: '1'.repeat(129),
+      }),
+    ).toThrow(/code must be 128 characters/i)
+
+    // source_query > 256
+    expect(() =>
+      buildContributionPayload({
+        owner: 'user1',
+        photo_file_id: 'file1',
+        product_name: 'Soup',
+        source_query: 'q'.repeat(257),
+      }),
+    ).toThrow(/source query must be 256 characters/i)
+
+    // string field (e.g. brands) > 512
+    expect(() =>
+      buildContributionPayload({
+        owner: 'user1',
+        photo_file_id: 'file1',
+        product_name: 'Soup',
+        fields: { brands: 'b'.repeat(513) },
+      }),
+    ).toThrow(/brands must be 512 characters/i)
+  })
 })
