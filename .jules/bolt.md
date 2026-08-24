@@ -29,3 +29,8 @@
 **Learning:** Repeatedly querying local persistent stores like `AsyncStorage` (e.g. for recent foods on tab focus or typing) introduces async bridge overhead and redundant `JSON.parse` operations. Adding a synchronous in-memory cache map alongside an `inflightRequests` promise map eliminates disk/bridge reads on sub-sequence requests, while synchronous cache updating during record writes ensures zero-latency reads for quick logging.
 
 **Action:** Cache `AsyncStorage` list reads in memory and deduplicate pending promises; synchronously update the memory cache on writes and hook cache clearing into session logout handlers (`appwriteSession.ts`).
+
+## 2025-05-21 - Authenticated Promise Deduplication and BOLA Safety
+**Learning:** Returning cached data before running session validation (`authenticatedUserId`) creates a Broken Object Level Authorization (BOLA) vulnerability. At the same time, declaring fetch helpers as `async function` breaks strict promise identity (`p1 === p2`) in tests because the JS runtime wraps returned promises. Wrapping the execution in a synchronous function returning `authenticatedUserId(userId).then(...)` guarantees both session ownership checks and strict Promise reference identity for concurrent deduplication.
+
+**Action:** Always run authentication checks inside the deduplicated Promise chain before resolving cached data, and use non-async functions returning explicit Promises to maintain reference identity for deduplication.
