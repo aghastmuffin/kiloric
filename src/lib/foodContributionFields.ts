@@ -118,12 +118,21 @@ function toFiniteNumber(value: unknown): number | null {
   return n
 }
 
+/** Maximum character limits for string fields to prevent DoS and buffer/payload overflow */
+const MAX_PRODUCT_NAME_LENGTH = 256
+const MAX_CODE_LENGTH = 128
+const MAX_SOURCE_QUERY_LENGTH = 256
+const MAX_STRING_FIELD_LENGTH = 512
+
 /** Map OFF-shaped fields → storage document payload (no network). */
 export function buildContributionPayload(
   input: FoodContributionFieldsInput & { photo_file_id: string; owner: string },
 ): Record<string, string | number> {
   const productName = trimOrNull(input.product_name)
   if (!productName) throw new Error('Product name is required.')
+  if (productName.length > MAX_PRODUCT_NAME_LENGTH) {
+    throw new Error(`Product name must be ${MAX_PRODUCT_NAME_LENGTH} characters or fewer.`)
+  }
 
   const data: Record<string, string | number> = {
     owner: input.owner,
@@ -133,10 +142,20 @@ export function buildContributionPayload(
   }
 
   const sourceQuery = trimOrNull(input.source_query)
-  if (sourceQuery) data.source_query = sourceQuery
+  if (sourceQuery) {
+    if (sourceQuery.length > MAX_SOURCE_QUERY_LENGTH) {
+      throw new Error(`Source query must be ${MAX_SOURCE_QUERY_LENGTH} characters or fewer.`)
+    }
+    data.source_query = sourceQuery
+  }
 
   const code = trimOrNull(input.code ?? input.fields?.code)
-  if (code) data.code = code
+  if (code) {
+    if (code.length > MAX_CODE_LENGTH) {
+      throw new Error(`Code must be ${MAX_CODE_LENGTH} characters or fewer.`)
+    }
+    data.code = code
+  }
 
   const fields = input.fields ?? {}
 
@@ -144,7 +163,12 @@ export function buildContributionPayload(
     if (offKey === 'product_name' || offKey === 'code') continue
     const mapped = OFF_TO_APPWRITE[offKey]
     const value = trimOrNull(fields[offKey])
-    if (value) data[mapped] = value
+    if (value) {
+      if (value.length > MAX_STRING_FIELD_LENGTH) {
+        throw new Error(`${offKey} must be ${MAX_STRING_FIELD_LENGTH} characters or fewer.`)
+      }
+      data[mapped] = value
+    }
   }
 
   for (const offKey of NUMBER_OFF_FIELDS) {
