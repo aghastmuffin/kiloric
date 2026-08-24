@@ -131,8 +131,16 @@ function XPProgressBar({ progress }: { progress: number }) {
     width: `${fill.value * 100}%`,
   }));
 
+  const nowPercentage = Math.round(Math.max(0, Math.min(1, progress)) * 100);
+
   return (
-    <View style={styles.xpTrack}>
+    <View
+      accessible={true}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: nowPercentage }}
+      accessibilityLabel={`Activity level progress: ${nowPercentage}%`}
+      style={styles.xpTrack}
+    >
       <Animated.View style={[styles.xpFill, fillStyle]} />
     </View>
   );
