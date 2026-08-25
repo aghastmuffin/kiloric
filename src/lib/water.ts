@@ -26,30 +26,100 @@ async function authenticatedUserId(expectedUserId: string): Promise<string> {
   return user.$id
 }
 
-export async function listWaterEntries(
+type WaterCacheEntry = {
+  entries: WaterDocument[]
+  expiresAt: number
+}
+
+// ⚡ Bolt: In-memory TTL cache and request deduplication map for listWaterEntries
+// to eliminate redundant database reads during tab switches and concurrent widget mounts.
+const cachedWaterEntries: { [key: string]: WaterCacheEntry } = {}
+const inflightWaterPromises: { [key: string]: Promise<WaterDocument[]> } = {}
+
+/** Clear cached water logs and inflight requests to guarantee fresh state after mutations and session changes. */
+export function clearWaterCache(userId?: string): void {
+  if (userId) {
+    for (const key of Object.keys(cachedWaterEntries)) {
+      if (key.startsWith(`${userId}:`)) {
+        delete cachedWaterEntries[key]
+      }
+    }
+    for (const key of Object.keys(inflightWaterPromises)) {
+      if (key.startsWith(`${userId}:`)) {
+        delete inflightWaterPromises[key]
+      }
+    }
+  } else {
+    for (const key of Object.keys(cachedWaterEntries)) {
+      delete cachedWaterEntries[key]
+    }
+    for (const key of Object.keys(inflightWaterPromises)) {
+      delete inflightWaterPromises[key]
+    }
+  }
+}
+
+export function listWaterEntries(
   userId: string,
   date = new Date(),
 ): Promise<WaterDocument[]> {
-  if (!DATABASE_ID || !WATER_COLLECTION_ID) return []
-  await authenticatedUserId(userId)
+  if (!DATABASE_ID || !WATER_COLLECTION_ID) return Promise.resolve([])
+
   const { start, end } = localDayBounds(date)
-  try {
-    const response = await databases.listDocuments({
-      databaseId: DATABASE_ID,
-      collectionId: WATER_COLLECTION_ID,
-      queries: [
-        Query.equal('owner', userId),
-        Query.greaterThanEqual('consumed_at', start.toISOString()),
-        Query.lessThan('consumed_at', end.toISOString()),
-        Query.orderDesc('consumed_at'),
-        Query.limit(100),
-      ],
-    })
-    return response.documents as unknown as WaterDocument[]
-  } catch (error) {
-    if (error instanceof AppwriteException && error.code === 404) return []
-    throw error
+  const cacheKey = `${userId}:${start.toISOString()}`
+
+  // Return pending in-flight promise if a request for this user & day is already active (Deduplication)
+  const inflight = inflightWaterPromises[cacheKey]
+  if (inflight) {
+    return inflight
   }
+
+  // Always verify session authentication inside the promise chain before returning cached or fetched data
+  const currentPromise = authenticatedUserId(userId).then(async (sessionUserId) => {
+    const cached = cachedWaterEntries[cacheKey]
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.entries
+    }
+
+    try {
+      const response = await databases.listDocuments({
+        databaseId: DATABASE_ID,
+        collectionId: WATER_COLLECTION_ID,
+        queries: [
+          Query.equal('owner', sessionUserId),
+          Query.greaterThanEqual('consumed_at', start.toISOString()),
+          Query.lessThan('consumed_at', end.toISOString()),
+          Query.orderDesc('consumed_at'),
+          Query.limit(100),
+        ],
+      })
+      return response.documents as unknown as WaterDocument[]
+    } catch (error) {
+      if (error instanceof AppwriteException && error.code === 404) return []
+      throw error
+    }
+  })
+
+  inflightWaterPromises[cacheKey] = currentPromise
+
+  // Chain caching callbacks outside closure to avoid TDZ (TS2454) warnings and race conditions
+  currentPromise
+    .then((entries) => {
+      if (inflightWaterPromises[cacheKey] === currentPromise) {
+        cachedWaterEntries[cacheKey] = {
+          entries,
+          expiresAt: Date.now() + 15_000, // 15s TTL
+        }
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      if (inflightWaterPromises[cacheKey] === currentPromise) {
+        delete inflightWaterPromises[cacheKey]
+      }
+    })
+
+  return currentPromise
 }
 
 export async function addWaterEntry(
@@ -62,7 +132,7 @@ export async function addWaterEntry(
   if (Number.isNaN(consumedAt.getTime()) || consumedAt > new Date(Date.now() + 5 * 60_000)) {
     throw new Error('Water time is invalid.')
   }
-  return (await databases.createDocument({
+  const doc = (await databases.createDocument({
     databaseId: DATABASE_ID,
     collectionId: WATER_COLLECTION_ID,
     documentId: ID.unique(),
@@ -77,6 +147,9 @@ export async function addWaterEntry(
       Permission.delete(Role.user(owner)),
     ],
   })) as WaterDocument
+
+  clearWaterCache(owner)
+  return doc
 }
 
 export async function deleteWaterEntry(userId: string, documentId: string): Promise<void> {
@@ -103,6 +176,8 @@ export async function deleteWaterEntry(userId: string, documentId: string): Prom
     collectionId: WATER_COLLECTION_ID,
     documentId,
   })
+
+  clearWaterCache(sessionUserId)
 }
 
 export function totalWaterMl(entries: readonly WaterFields[]): number {

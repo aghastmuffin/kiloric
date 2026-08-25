@@ -6,6 +6,7 @@ import { clearCachedToken } from './getAccessToken'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
 import { clearTasksCache } from './tasks'
+import { clearWaterCache } from './water'
 import { clearAppwriteSession, persistAppwriteSession } from './appwriteSession'
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -38,6 +39,10 @@ vi.mock('./recentFoods', () => ({
 
 vi.mock('./tasks', () => ({
   clearTasksCache: vi.fn(),
+}))
+
+vi.mock('./water', () => ({
+  clearWaterCache: vi.fn(),
 }))
 
 describe('appwriteSession cache clearing', () => {
@@ -82,6 +87,7 @@ describe('appwriteSession cache clearing', () => {
     expect(clearProfileCache).toHaveBeenCalled()
     expect(clearRecentFoodsCache).toHaveBeenCalled()
     expect(clearTasksCache).toHaveBeenCalled()
+    expect(clearWaterCache).toHaveBeenCalled()
   })
 
   it('clearAppwriteSession should clear client session, remove from storage, and clear caches', async () => {
@@ -93,5 +99,6 @@ describe('appwriteSession cache clearing', () => {
     expect(clearProfileCache).toHaveBeenCalled()
     expect(clearRecentFoodsCache).toHaveBeenCalled()
     expect(clearTasksCache).toHaveBeenCalled()
+    expect(clearWaterCache).toHaveBeenCalled()
   })
 })

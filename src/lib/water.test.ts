@@ -100,6 +100,103 @@ describe('water', () => {
     ).toBe(750)
   })
 
+  describe('listWaterEntries caching and request deduplication', () => {
+    beforeEach(() => {
+      waterModule.clearWaterCache()
+    })
+
+    it('caches listWaterEntries results within TTL to avoid duplicate database calls', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockListDocuments.mockResolvedValue({
+        documents: [{ $id: 'water-1', owner: 'user-123', amount_ml: 250, consumed_at: '2026-07-09T10:00:00.000Z' }],
+      })
+
+      const targetDate = new Date(2026, 6, 9)
+      const res1 = await waterModule.listWaterEntries('user-123', targetDate)
+      expect(res1).toHaveLength(1)
+      expect(mockListDocuments).toHaveBeenCalledTimes(1)
+
+      // Second call immediately after should hit in-memory cache
+      const res2 = await waterModule.listWaterEntries('user-123', targetDate)
+      expect(res2).toHaveLength(1)
+      expect(mockListDocuments).toHaveBeenCalledTimes(1) // Still 1!
+    })
+
+    it('deduplicates concurrent listWaterEntries calls returning identical promise instance', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockListDocuments.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  documents: [{ $id: 'water-1', owner: 'user-123', amount_ml: 250, consumed_at: '2026-07-09T10:00:00.000Z' }],
+                }),
+              10,
+            ),
+          ),
+      )
+
+      const targetDate = new Date(2026, 6, 9)
+      const p1 = waterModule.listWaterEntries('user-123', targetDate)
+      const p2 = waterModule.listWaterEntries('user-123', targetDate)
+
+      expect(p1).toBe(p2) // Strict reference equality for inflight promise
+
+      const [res1, res2] = await Promise.all([p1, p2])
+      expect(res1).toEqual(res2)
+      expect(mockListDocuments).toHaveBeenCalledTimes(1)
+    })
+
+    it('clears water cache when addWaterEntry is called', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockListDocuments.mockResolvedValue({
+        documents: [{ $id: 'water-1', owner: 'user-123', amount_ml: 250, consumed_at: '2026-07-09T10:00:00.000Z' }],
+      })
+      mockCreateDocument.mockResolvedValue({
+        $id: 'water-2',
+        owner: 'user-123',
+        amount_ml: 500,
+        consumed_at: '2026-07-09T11:00:00.000Z',
+      })
+
+      const targetDate = new Date(2026, 6, 9)
+      await waterModule.listWaterEntries('user-123', targetDate)
+      expect(mockListDocuments).toHaveBeenCalledTimes(1)
+
+      // Add new water entry
+      await waterModule.addWaterEntry('user-123', 500, targetDate)
+
+      // Subsequent listWaterEntries call should query database again
+      await waterModule.listWaterEntries('user-123', targetDate)
+      expect(mockListDocuments).toHaveBeenCalledTimes(2)
+    })
+
+    it('clears water cache when deleteWaterEntry is called', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockListDocuments.mockResolvedValue({
+        documents: [{ $id: 'water-1', owner: 'user-123', amount_ml: 250, consumed_at: '2026-07-09T10:00:00.000Z' }],
+      })
+      mockGetDocument.mockResolvedValue({
+        $id: 'water-1',
+        owner: 'user-123',
+        amount_ml: 250,
+      })
+      mockDeleteDocument.mockResolvedValue({})
+
+      const targetDate = new Date(2026, 6, 9)
+      await waterModule.listWaterEntries('user-123', targetDate)
+      expect(mockListDocuments).toHaveBeenCalledTimes(1)
+
+      // Delete water entry
+      await waterModule.deleteWaterEntry('user-123', 'water-1')
+
+      // Subsequent listWaterEntries call should query database again
+      await waterModule.listWaterEntries('user-123', targetDate)
+      expect(mockListDocuments).toHaveBeenCalledTimes(2)
+    })
+  })
+
   describe('deleteWaterEntry BOLA / IDOR protection', () => {
     it('throws error if current authenticated user does not match requested userId', async () => {
       mockGetAccount.mockResolvedValue({ $id: 'user-123' })

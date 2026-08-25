@@ -5,6 +5,7 @@ import { clearCachedToken } from './getAccessToken'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
 import { clearTasksCache } from './tasks'
+import { clearWaterCache } from './water'
 
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID ?? 'default'
 
@@ -25,6 +26,7 @@ export async function persistAppwriteSession(session: Models.Session): Promise<v
   clearProfileCache()
   clearRecentFoodsCache()
   clearTasksCache()
+  clearWaterCache()
 }
 
 export async function restoreAppwriteSession(): Promise<boolean> {
@@ -41,4 +43,5 @@ export async function clearAppwriteSession(): Promise<void> {
   clearProfileCache()
   clearRecentFoodsCache()
   clearTasksCache()
+  clearWaterCache()
 }
