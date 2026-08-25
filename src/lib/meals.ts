@@ -314,6 +314,38 @@ export async function createMeal(input: CreateMealInput): Promise<MealDocument> 
   }
 }
 
+export async function deleteMeal(userId: string, mealId: string): Promise<void> {
+  if (isMealsConfigMissing()) {
+    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+  }
+
+  const sessionUserId = await assertActiveSession()
+  if (userId !== sessionUserId) {
+    throw new Error('Unauthorized: You can only delete your own meals.')
+  }
+
+  if (!/^[a-zA-Z0-9._-]{1,64}$/.test(mealId)) {
+    throw new Error('Invalid meal ID.')
+  }
+
+  const existingMeal = await getMeal(mealId)
+  if (!existingMeal) {
+    throw new Error('Meal not found.')
+  }
+
+  if (existingMeal.owner !== sessionUserId) {
+    throw new Error('Unauthorized: You can only delete your own meals.')
+  }
+
+  await databases.deleteDocument({
+    databaseId: DATABASE_ID,
+    collectionId: MEALS_COLLECTION_ID,
+    documentId: mealId,
+  })
+
+  clearTodayMealsCache(sessionUserId)
+}
+
 export async function getMeal(mealId: string): Promise<MealDocument | null> {
   if (isMealsConfigMissing()) return null
 

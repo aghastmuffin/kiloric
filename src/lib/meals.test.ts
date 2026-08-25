@@ -193,6 +193,17 @@ describe('meals caching & deduplication', () => {
       expect(mockUpdateDocument).not.toHaveBeenCalled()
       expect(mockDeleteDocument).not.toHaveBeenCalled()
     })
+
+    it('deleteMeal fails if user is not the owner of meal document', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-9', owner: 'user-456' })
+
+      await expect(
+        mealsModule.deleteMeal('user-123', 'meal-9')
+      ).rejects.toThrow('Unauthorized: You can only delete your own meals.')
+
+      expect(mockDeleteDocument).not.toHaveBeenCalled()
+    })
   })
 })
 
@@ -247,5 +258,46 @@ describe('meals authorization checks', () => {
         { kcal: 100, protein: 5, carbs: 10, fat: 2 }
       )
     ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
+  })
+
+  describe('deleteMeal', () => {
+    it('deletes meal document successfully if user is owner', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-123', owner: 'user-123' })
+      mockDeleteDocument.mockResolvedValue({})
+
+      await mealsModule.deleteMeal('user-123', 'meal-123')
+
+      expect(mockDeleteDocument).toHaveBeenCalledWith({
+        databaseId: 'test-db',
+        collectionId: 'test-col',
+        documentId: 'meal-123',
+      })
+    })
+
+    it('throws error if userId does not match active session', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.deleteMeal('user-456', 'meal-123')
+      ).rejects.toThrow('Unauthorized: You can only delete your own meals.')
+    })
+
+    it('throws error if mealId format is invalid', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.deleteMeal('user-123', 'invalid/meal/id!')
+      ).rejects.toThrow('Invalid meal ID.')
+    })
+
+    it('throws error if meal does not exist', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue(null)
+
+      await expect(
+        mealsModule.deleteMeal('user-123', 'nonexistent-id')
+      ).rejects.toThrow('Meal not found.')
+    })
   })
 })
