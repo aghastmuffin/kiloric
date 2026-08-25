@@ -36,6 +36,8 @@ export function ThemePreferencePicker() {
         selectedIndex={Math.max(0, THEME_OPTIONS.indexOf(themeChoice))}
         onChange={handleIndexChange}
         enabled={!saving}
+        accessibilityLabel="Appearance theme"
+        accessibilityHint="Select app appearance theme style"
       />
     </View>
   )

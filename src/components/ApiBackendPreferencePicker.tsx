@@ -38,6 +38,8 @@ export function ApiBackendPreferencePicker() {
         selectedIndex={Math.max(0, BACKEND_OPTIONS.indexOf(apiBackend))}
         onChange={handleIndexChange}
         enabled={!saving}
+        accessibilityLabel="Food data source"
+        accessibilityHint="Select database backend for looking up food items"
       />
       {apiBackend === 'legacy' ? (
         <Text style={styles.warning}>

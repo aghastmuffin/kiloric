@@ -37,6 +37,8 @@ export function FontPreferencePicker() {
         selectedIndex={Math.max(0, FONT_OPTIONS.indexOf(fontChoice))}
         onChange={handleIndexChange}
         enabled={!saving}
+        accessibilityLabel="App font preference"
+        accessibilityHint="Select typography font style for the app"
       />
       {!customFontLoaded ? (
         <Text style={styles.warning}>
