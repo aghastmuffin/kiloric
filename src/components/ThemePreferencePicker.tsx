@@ -1,12 +1,13 @@
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { AppThemeChoice, ThemeColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
 
 const THEME_OPTIONS: AppThemeChoice[] = ['paper', 'ios', 'barebones']
-const THEME_LABELS = ['Paper', 'Vitality', 'Classic']
+const THEME_LABELS = ['Paper', 'Cool', 'Barebones']
 
 export function ThemePreferencePicker() {
   const { themeChoice, setThemeChoice } = useTheme()
@@ -26,10 +27,10 @@ export function ThemePreferencePicker() {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.label}>Appearance</Text>
+      <Text accessibilityRole="header" style={styles.label}>Color theme</Text>
       <Text style={styles.hint}>
-        Paper is the signature warm, ink-and-vermilion look. Vitality and Classic keep
-        the existing alternate palettes.
+        Paper is warm and editorial. Cool is crisp and blue; Barebones is dark and
+        high-contrast.
       </Text>
       <ThemedSegmentedControl
         values={THEME_LABELS}
@@ -44,18 +45,15 @@ export function ThemePreferencePicker() {
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     section: {
-      marginTop: 16,
-      marginBottom: 4,
+      gap: 8,
+      paddingVertical: 4,
     },
     label: {
+      ...typography.label,
       color: c.text,
-      fontSize: 16,
-      marginBottom: 6,
     },
     hint: {
+      ...typography.bodySmall,
       color: c.textFaint,
-      fontSize: 12,
-      marginBottom: 8,
-      lineHeight: 18,
     },
   })

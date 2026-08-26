@@ -2,12 +2,13 @@ import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'
 import { useFontPreferences } from '@/lib/FontPreferencesContext'
 import type { AppFontChoice } from '@/lib/fontPreferences'
 import type { ThemeColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
 
 const FONT_OPTIONS: AppFontChoice[] = ['default', 'custom', 'mono']
-const FONT_LABELS = ['Clean sans', 'Editorial serif', 'Mono code']
+const FONT_LABELS = ['Editorial mix', 'Serif', 'Mono']
 
 export function FontPreferencePicker() {
   const { fontChoice, setFontChoice, customFontLoaded } = useFontPreferences()
@@ -28,9 +29,10 @@ export function FontPreferencePicker() {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.label}>App font</Text>
+      <Text accessibilityRole="header" style={styles.label}>Typography</Text>
       <Text style={styles.hint}>
-        Choose Inter Tight for everyday UI, Instrument Serif for an editorial feel, or JetBrains Mono for a code/editor aesthetic.
+        Editorial mix pairs Instrument Serif headings with Inter Tight UI. Serif and Mono
+        apply one typeface throughout.
       </Text>
       <ThemedSegmentedControl
         values={FONT_LABELS}
@@ -39,8 +41,8 @@ export function FontPreferencePicker() {
         enabled={!saving}
       />
       {!customFontLoaded ? (
-        <Text style={styles.warning}>
-          Vitality fonts could not be loaded.
+        <Text accessibilityRole="alert" style={styles.warning}>
+          App fonts are unavailable. Using the system typeface.
         </Text>
       ) : null}
     </View>
@@ -49,24 +51,19 @@ export function FontPreferencePicker() {
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   section: {
-    marginTop: 16,
-    marginBottom: 4,
+    gap: 8,
+    paddingVertical: 4,
   },
   label: {
+    ...typography.label,
     color: c.text,
-    fontSize: 16,
-    marginBottom: 6,
   },
   hint: {
+    ...typography.bodySmall,
     color: c.textFaint,
-    fontSize: 12,
-    marginBottom: 8,
-    lineHeight: 18,
   },
   warning: {
+    ...typography.bodySmall,
     color: c.warning,
-    fontSize: 12,
-    marginTop: 10,
-    lineHeight: 18,
   },
 })

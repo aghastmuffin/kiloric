@@ -128,6 +128,24 @@ async function waitForAttribute(key, { attempts = 30, delayMs = 1000 } = {}) {
   throw new Error(`Timed out waiting for attribute "${key}"`)
 }
 
+async function waitForIndex(key, { attempts = 30, delayMs = 1000 } = {}) {
+  for (let i = 0; i < attempts; i += 1) {
+    const index = await appwrite(
+      `/databases/${databaseId}/collections/${collectionId}/indexes/${key}`,
+    )
+    if (index?.status === 'available') {
+      console.log(`  ✓ ${key} available`)
+      return
+    }
+    if (index?.status === 'failed') {
+      throw new Error(`Index "${key}" failed to build`)
+    }
+    console.log(`  … ${key} status: ${index?.status ?? 'unknown'}, waiting`)
+    await new Promise((r) => setTimeout(r, delayMs))
+  }
+  throw new Error(`Timed out waiting for index "${key}"`)
+}
+
 async function ensureCollection() {
   try {
     await appwrite(`/databases/${databaseId}/collections/${collectionId}`)
@@ -241,6 +259,50 @@ async function ensureAttributes() {
   )
 }
 
+async function ensureIndexes() {
+  const response = await appwrite(
+    `/databases/${databaseId}/collections/${collectionId}/indexes`,
+  )
+  const key = 'owner_created_at'
+  const expectedAttributes = ['owner', '$createdAt']
+  const expectedOrders = ['ASC', 'DESC']
+  const existing = (response?.indexes ?? response?.documents ?? []).find((index) => index.key === key)
+  if (existing) {
+    const attributes = existing.attributes ?? existing.columns ?? []
+    const orders = existing.orders ?? []
+    const matches =
+      existing.type === 'key' &&
+      attributes.length === expectedAttributes.length &&
+      attributes.every((attribute, index) => attribute === expectedAttributes[index]) &&
+      orders.length === expectedOrders.length &&
+      orders.every((order, index) => order === expectedOrders[index])
+    if (!matches) {
+      throw new Error(
+        `Index "${key}" exists with an unexpected definition. Expected owner ASC, $createdAt DESC.`,
+      )
+    }
+    if (existing.status === 'available') {
+      console.log(`  skip ${key} (available)`)
+      return
+    }
+    console.log(`  wait ${key} (status: ${existing.status ?? 'unknown'})`)
+    await waitForIndex(key)
+    return
+  }
+
+  await appwrite(`/databases/${databaseId}/collections/${collectionId}/indexes`, {
+    method: 'POST',
+    body: {
+      key,
+      type: 'key',
+      attributes: expectedAttributes,
+      orders: expectedOrders,
+    },
+  })
+  console.log(`  + ${key} (owner ASC, $createdAt DESC)`)
+  await waitForIndex(key)
+}
+
 async function main() {
   console.log('Appwrite meals collection setup')
   console.log(`  endpoint:   ${endpoint}`)
@@ -252,6 +314,7 @@ async function main() {
 
   await ensureCollection()
   await ensureAttributes()
+  await ensureIndexes()
 
   console.log('\nDone. Set EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID=meals in .env if not already.')
 }

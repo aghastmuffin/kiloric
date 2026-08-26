@@ -6,17 +6,17 @@ import {
 export const typography = {
   display: {
     fontFamily: HEADLINE_FONT_FAMILY,
-    fontSize: 40,
-    lineHeight: 44,
-    fontWeight: '600' as const,
-    letterSpacing: -1,
+    fontSize: 46,
+    lineHeight: 49,
+    fontWeight: '400' as const,
+    letterSpacing: -0.8,
   },
   headlineLarge: {
     fontFamily: HEADLINE_FONT_FAMILY,
-    fontSize: 32,
-    lineHeight: 37,
-    fontWeight: '600' as const,
-    letterSpacing: -0.8,
+    fontSize: 38,
+    lineHeight: 41,
+    fontWeight: '400' as const,
+    letterSpacing: -0.55,
   },
   headline: {
     fontFamily: FONT_FAMILY,
@@ -60,5 +60,20 @@ export const typography = {
     lineHeight: 14,
     fontWeight: '500' as const,
     letterSpacing: 0.15,
+  },
+  metric: {
+    fontFamily: HEADLINE_FONT_FAMILY,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '400' as const,
+    letterSpacing: -0.35,
+  },
+  overline: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600' as const,
+    letterSpacing: 1.15,
+    textTransform: 'uppercase' as const,
   },
 } as const

@@ -16,10 +16,10 @@ export type MacroOverrides = {
 }
 
 export type OnboardingStep =
+  | 'eligibility'
   | 'email'
   | 'password'
   | 'welcome'
-  | 'eligibility'
   | 'body'
   | 'lifestyle'
   | 'diet'
@@ -27,11 +27,12 @@ export type OnboardingStep =
 
 export const AUTH_ONBOARDING_STEPS: OnboardingStep[] = ['email', 'password']
 
+// Eligibility is verified before any account information is collected.
 export const ONBOARDING_STEPS: OnboardingStep[] = [
+  'eligibility',
   'email',
   'password',
   'welcome',
-  'eligibility',
   'body',
   'lifestyle',
   'diet',
@@ -75,7 +76,7 @@ export function createDefaultFormState(email?: string | null): OnboardingFormSta
     height: 170,
     weight: 70,
     activity: 'moderate',
-    goal: 'lose',
+    goal: 'maintain',
     pace: 'moderate',
     diet: 'balanced',
     targetWeight: null,

@@ -14,23 +14,29 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const STEP_LABELS: Record<OnboardingStep, string> = {
+  eligibility: 'About you',
   email: 'Your email',
   password: 'Your password',
   welcome: 'Welcome',
-  eligibility: 'About you',
   body: 'Body details',
   lifestyle: 'Activity & goals',
   diet: 'Eating style',
   plan: 'Your plan',
 }
 
+const CONTEXT_LABELS = {
+  create: 'Create account',
+  setup: 'Set up your account',
+  edit: 'Edit profile',
+} as const
+
 type ProgressHeaderProps = {
   step: OnboardingStep
   steps: OnboardingStep[]
-  isRequired: boolean
+  context: keyof typeof CONTEXT_LABELS
 }
 
-export function ProgressHeader({ step, steps, isRequired }: ProgressHeaderProps) {
+export function ProgressHeader({ step, steps, context }: ProgressHeaderProps) {
   const insets = useSafeAreaInsets()
   const styles = useOnboardingStyles(makeStyles)
   const onboardingStyles = useOnboardingStyles(makeOnboardingStyles)
@@ -62,14 +68,25 @@ export function ProgressHeader({ step, steps, isRequired }: ProgressHeaderProps)
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
-      <Text style={styles.eyebrow}>
-        {isRequired ? 'Setup' : 'Edit profile'} · Step {stepIndex + 1} of {steps.length}
-      </Text>
-      <Animated.Text style={[onboardingStyles.stepTitle, titleStyle]}>
-        {STEP_LABELS[step]}
-      </Animated.Text>
-      <View style={styles.track}>
-        <Animated.View style={[styles.fill, fillStyle]} />
+      <View style={styles.content}>
+        <Text style={styles.eyebrow}>
+          {CONTEXT_LABELS[context]} · Step {stepIndex + 1} of {steps.length}
+        </Text>
+        <Animated.Text accessibilityRole="header" style={[onboardingStyles.stepTitle, titleStyle]}>
+          {STEP_LABELS[step]}
+        </Animated.Text>
+        <View
+          accessibilityRole="progressbar"
+          accessibilityValue={{
+            min: 1,
+            max: steps.length,
+            now: stepIndex + 1,
+            text: `Step ${stepIndex + 1} of ${steps.length}`,
+          }}
+          style={styles.track}
+        >
+          <Animated.View style={[styles.fill, fillStyle]} />
+        </View>
       </View>
     </View>
   )
@@ -80,6 +97,11 @@ const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
     backgroundColor: onboardingColors.background,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
   },
   eyebrow: {
     fontFamily: MONO_FONT_FAMILY,

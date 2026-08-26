@@ -19,6 +19,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, {
@@ -28,7 +29,7 @@ import Animated, {
 } from 'react-native-reanimated';
 const PlaceholderImage = require('../../assets/images/dark.svg');
 
-const FIELD_PRIORITY = [...ORDS_FIELD_PRIORITY];
+const FIELD_PRIORITY: readonly string[] = [...ORDS_FIELD_PRIORITY];
 
 type Props = {
   visible: boolean;
@@ -152,6 +153,8 @@ export default function BarcodeDetailModal({
   const { selectedMealType } = useMealTypePreferences();
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const compact = width < 560;
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
@@ -268,9 +271,9 @@ export default function BarcodeDetailModal({
 
   return (
     <Modal visible={visible} animationType="none" transparent onRequestClose={handleClose}>
-      <View style={styles.root}>
+      <View style={[styles.root, compact && styles.rootCompact]}>
         <Animated.View style={[styles.backdrop, backdropStyle]} />
-        <Animated.View style={[styles.popup, popupStyle]}>
+        <Animated.View accessibilityViewIsModal style={[styles.popup, popupStyle]}>
           <Text style={styles.title}>
             {confirmMode ? 'Is this correct?' : 'Product details'}
           </Text>
@@ -305,7 +308,7 @@ export default function BarcodeDetailModal({
               ) : null}
             </View>
           ) : data ? (
-            <View style={styles.body}>
+            <View style={[styles.body, compact && styles.bodyCompact]}>
               <ScrollView
                 style={styles.dataPanel}
                 contentContainerStyle={styles.dataPanelContent}
@@ -319,7 +322,7 @@ export default function BarcodeDetailModal({
                 ))}
               </ScrollView>
 
-              <View style={styles.summaryPanel}>
+              <View style={[styles.summaryPanel, compact && styles.summaryPanelCompact]}>
                 <Text style={styles.panelHeading}>Key facts</Text>
                 <ScrollView
                   style={styles.summaryScroll}
@@ -342,10 +345,10 @@ export default function BarcodeDetailModal({
                   {imageUri ? (
                     <ImageViewer
                       imgSource={{ uri: imageUri }}
-                      style={styles.productImage}
+                      style={[styles.productImage, compact && styles.productImageCompact]}
                     />
                   ) : (
-                    <ImageViewer imgSource={PlaceholderImage} style={styles.productImage} />
+                    <ImageViewer imgSource={PlaceholderImage} style={[styles.productImage, compact && styles.productImageCompact]} />
                   )}
                   {imageError ? <Text style={styles.imageErrorText}>{imageError}</Text> : null}
                 </View>
@@ -365,15 +368,18 @@ export default function BarcodeDetailModal({
             </View>
           ) : null}
 
-          <View style={styles.footer}>
-            <Pressable style={styles.redButton} onPress={handleClose}>
+          <View style={[styles.footer, compact && styles.footerCompact]}>
+            <Pressable accessibilityRole="button" style={[styles.redButton, compact && styles.footerButtonCompact]} onPress={handleClose}>
               <Text style={styles.footerButtonText}>
                 {confirmMode ? 'No, scan again' : 'Close'}
               </Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canPressAdd }}
               style={[
                 styles.greenButton,
+                compact && styles.footerButtonCompact,
                 !canPressAdd && styles.buttonDisabled,
               ]}
               onPress={handleAddToMeals}
@@ -408,11 +414,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
   },
+  rootCompact: { padding: 8 },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: c.overlay,
   },
   popup: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: c.surface,
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
@@ -448,6 +458,11 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 12,
     gap: 10,
   },
+  bodyCompact: {
+    flexDirection: 'column',
+    minHeight: 0,
+    maxHeight: 560,
+  },
   dataPanel: {
     flex: 1.2,
     backgroundColor: c.background,
@@ -467,6 +482,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderColor: c.border,
     padding: 10,
     gap: 8,
+  },
+  summaryPanelCompact: {
+    maxHeight: 260,
   },
   panelHeading: {
     color: c.text,
@@ -527,6 +545,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     height: 120,
     borderRadius: 8,
   },
+  productImageCompact: {
+    width: 88,
+    height: 88,
+  },
   imageErrorText: {
     color: c.danger,
     fontSize: 11,
@@ -556,6 +578,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 14,
     borderTopWidth: 1,
     borderTopColor: c.border,
+  },
+  footerCompact: {
+    flexWrap: 'wrap',
+  },
+  footerButtonCompact: {
+    flexGrow: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   redButton: {
     backgroundColor: c.danger,

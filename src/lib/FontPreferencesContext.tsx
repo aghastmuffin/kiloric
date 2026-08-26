@@ -57,9 +57,9 @@ export function FontPreferencesProvider({
 
   useEffect(() => {
     if (!loading) {
-      applyAppFont(activeFontFamily)
+      applyAppFont(activeFontFamily, fontChoice !== 'default')
     }
-  }, [activeFontFamily, loading])
+  }, [activeFontFamily, fontChoice, loading])
 
   const setFontChoice = useCallback(async (choice: AppFontChoice) => {
     setFontChoiceState(choice)

@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "taesonco-calcount",
+    "name": "CalCount",
     "slug": "taesonco-calcount",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/dark.png",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "calorie",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/dark.png",
+      "icon": "./assets/images/app-icon.png",
       "bundleIdentifier": "co.taeson.calcount",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -16,31 +16,29 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/dark.png",
-        "backgroundImage": "./assets/images/dark.png",
-        "monochromeImage": "./assets/images/dark.png"
+        "backgroundColor": "#B74435",
+        "foregroundImage": "./assets/images/app-mark.png",
+        "monochromeImage": "./assets/images/app-mark-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ],
       "package": "co.taeson.calcount"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/dark.png"
+      "favicon": "./assets/images/app-icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#B74435",
           "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
+            "image": "./assets/images/app-mark.png",
+            "imageWidth": 112
           }
         }
       ],
@@ -48,10 +46,17 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
-          "recordAudioAndroid": true,
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to scan food barcodes.",
+          "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to choose food and nutrition label photos.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to photograph food and nutrition labels.",
+          "microphonePermission": false
         }
       ],
       "@react-native-community/datetimepicker",

@@ -94,9 +94,10 @@ function RootNavigation() {
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen
                     name="cameraview"
-                    options={{ headerShown: true, headerTitle: "Scan Barcode", unmountOnBlur: true }}
+                    options={{ headerShown: true, headerTitle: "Scan barcode" }}
                   />
                   <Stack.Screen name="signin" options={{ headerShown: false }} />
+                  <Stack.Screen name="reset-password" options={{ headerShown: true, headerTitle: "Reset password" }} />
                   <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
                   <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
                   <Stack.Screen name="Additions" options={{ headerShown: false }} />
@@ -104,13 +105,14 @@ function RootNavigation() {
                   <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Results" }} />
                   <Stack.Screen
                     name="contribute-food"
-                    options={{ headerShown: true, headerTitle: "Add missing food" }}
+                    options={{ headerShown: false }}
                   />
                   
                   <Stack.Screen
                     name="privacy-policy"
                     options={{ headerShown: true, headerTitle: "Privacy Policy" }}
                   />
+                  <Stack.Screen name="credits" options={{ headerShown: true, headerTitle: "Credits" }} />
                 </Stack>
               </SearchPreferencesProvider>
             </MealTypePreferencesProvider>

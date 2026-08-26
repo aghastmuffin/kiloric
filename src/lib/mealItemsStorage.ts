@@ -12,7 +12,13 @@ export type MealItemEntry = {
 export type MealBarcodesStore = Record<MealType, MealItemEntry[]>
 
 function emptyStore(): MealBarcodesStore {
-  return Object.fromEntries(MEAL_TYPE_OPTIONS.map((type) => [type, []])) as MealBarcodesStore
+  return {
+    Breakfast: [],
+    Lunch: [],
+    Dinner: [],
+    Snack: [],
+    Other: [],
+  }
 }
 
 function normalizeEntry(raw: unknown): MealItemEntry | null {
@@ -131,4 +137,3 @@ export async function updateMealItemServings(
 
   return store
 }
-

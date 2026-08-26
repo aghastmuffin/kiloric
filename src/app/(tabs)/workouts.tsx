@@ -6,6 +6,7 @@ import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
+import { Redirect } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -65,7 +66,7 @@ export default function WorkoutsScreen() {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
-  const { gutter } = useAppLayout()
+  const { compact, gutter } = useAppLayout()
   const [selectedPillar, setSelectedPillar] = useState<Pillar['id']>('push')
   const [completed, setCompleted] = useState<Record<string, boolean>>({})
   const exercises = EXERCISES[selectedPillar]
@@ -89,11 +90,14 @@ export default function WorkoutsScreen() {
     setCompleted((current) => ({ ...current, [key]: !current[key] }))
   }
 
+  if (!__DEV__) return <Redirect href="/" />
+
   return (
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={[
           styles.content,
+          compact && styles.contentCompact,
           { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 112, paddingHorizontal: gutter },
         ]}
         showsVerticalScrollIndicator={false}
@@ -101,18 +105,25 @@ export default function WorkoutsScreen() {
         <AppScreenHeader
           overline="Training"
           title="Move with intention."
-          description="Choose a training focus, follow the session, and mark each movement as you go."
+          description="Explore a sample push, pull, or legs session and mark each movement as you go."
           accessory={(
-            <View style={styles.mockPill}>
-              <Ionicons name="construct-outline" size={12} color={colors.success} />
-              <Text style={styles.mockText}>PRESET PLANNER · MOCK</Text>
+            <View style={styles.previewPill}>
+              <Ionicons name="eye-outline" size={13} color={colors.success} />
+              <Text style={styles.previewText}>INTERACTIVE SAMPLE</Text>
             </View>
           )}
         />
 
-        <View style={styles.weekCard}>
+        <View style={styles.previewNote}>
+          <Ionicons name="information-circle-outline" size={19} color={colors.brand} />
+          <Text style={styles.previewNoteText}>
+            Preview only. Progress stays on this screen and is not saved to your account.
+          </Text>
+        </View>
+
+        <View style={[styles.weekCard, compact && styles.weekCardCompact]}>
           <View>
-            <Text style={styles.weekLabel}>THIS WEEK</Text>
+            <Text style={styles.weekLabel}>SAMPLE WEEK</Text>
             <Text style={styles.weekValue}>{completedSessions} of 3 sessions</Text>
           </View>
           <View style={styles.weekDays}>
@@ -129,11 +140,11 @@ export default function WorkoutsScreen() {
         </View>
 
         <View style={styles.sectionHeader}>
-          <View>
+          <View style={styles.sectionHeadingCopy}>
             <Text style={styles.sectionKicker}>TRAINING PILLARS</Text>
             <Text style={styles.sectionTitle}>Choose today’s focus</Text>
           </View>
-          <Text style={styles.sectionMeta}>P / P / L</Text>
+          <Text style={styles.sectionMeta}>3 SAMPLE SESSIONS</Text>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillarRow}>
@@ -148,10 +159,12 @@ export default function WorkoutsScreen() {
               >
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={`Select ${pillar.title} session`}
                   accessibilityState={{ selected: active }}
                   onPress={() => selectPillar(pillar.id)}
                   style={({ pressed }) => [
                     styles.pillarCard,
+                    compact && styles.pillarCardCompact,
                     active && styles.pillarCardActive,
                     pressed && styles.pressed,
                   ]}
@@ -174,7 +187,7 @@ export default function WorkoutsScreen() {
 
         <View style={styles.sessionHeader}>
           <View>
-            <Text style={styles.sectionKicker}>CURRENT SESSION</Text>
+            <Text style={styles.sectionKicker}>SAMPLE SESSION</Text>
             <Text style={styles.sessionTitle}>{selected.title} / 01</Text>
           </View>
           <View style={styles.progressCopy}>
@@ -203,23 +216,17 @@ export default function WorkoutsScreen() {
                 style={styles.timelineRow}
               >
                 <View style={styles.timelineRail}>
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={`Mark ${exercise.name} complete`}
-                    accessibilityState={{ checked: done }}
-                    hitSlop={8}
-                    onPress={() => toggleExercise(exercise.id)}
-                    style={[styles.check, done && styles.checkDone]}
-                  >
+                  <View accessible={false} style={[styles.check, done && styles.checkDone]}>
                     {done ? <Ionicons name="checkmark" size={16} color={colors.onAccent} /> : (
                       <Text style={styles.stepNumber}>{String(index + 1).padStart(2, '0')}</Text>
                     )}
-                  </Pressable>
+                  </View>
                   {index < exercises.length - 1 && <View style={[styles.rail, done && styles.railDone]} />}
                 </View>
                 <Pressable
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: done }}
+                  accessibilityLabel={`Mark ${exercise.name} ${done ? 'incomplete' : 'complete'}`}
                   onPress={() => toggleExercise(exercise.id)}
                   style={({ pressed }) => [styles.exerciseCopy, pressed && styles.pressed]}
                 >
@@ -295,10 +302,6 @@ export default function WorkoutsScreen() {
             <Text style={styles.celebrationText}>
               {selected.title} is in the books. Take the win and recover well.
             </Text>
-            <View style={styles.rewardRow}>
-              <Ionicons name="sparkles-outline" size={15} color={colors.xpAccent} />
-              <Text style={styles.rewardText}>+120 MOVEMENT XP</Text>
-            </View>
           </MotionView>
         )}
       </ScrollView>
@@ -309,10 +312,13 @@ export default function WorkoutsScreen() {
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
   content: { width: '100%', maxWidth: 760, alignSelf: 'center', gap: 22 },
-  hero: { gap: 6, paddingTop: 2 },
-  mockPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
-  mockText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9, letterSpacing: 0.8 },
+  contentCompact: { gap: 18 },
+  previewPill: { minHeight: 28, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
+  previewText: { ...typography.overline, color: c.textMuted, fontSize: 9, lineHeight: 12, letterSpacing: 0.8 },
+  previewNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderLeftWidth: 2, borderLeftColor: c.brand, backgroundColor: c.brandSoft, padding: 13 },
+  previewNoteText: { ...typography.bodySmall, color: c.textMuted, flex: 1 },
   weekCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, paddingVertical: 14, gap: 12 },
+  weekCardCompact: { paddingVertical: 12 },
   weekLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 10 },
   weekValue: { ...typography.body, color: c.accent, fontWeight: '700' },
   weekDays: { flexDirection: 'row', gap: 6 },
@@ -320,11 +326,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   dayDotActive: { backgroundColor: c.brand, borderColor: c.brand },
   dayText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 8 },
+  sectionHeadingCopy: { flex: 1, minWidth: 0 },
   sectionKicker: { ...typography.labelSmall, color: c.brand, fontSize: 10 },
   sectionTitle: { ...typography.headline, color: c.text, fontSize: 22, lineHeight: 28 },
-  sectionMeta: { ...typography.labelSmall, color: c.textMuted },
+  sectionMeta: { ...typography.labelSmall, color: c.textMuted, textAlign: 'right' },
   pillarRow: { gap: 10, paddingRight: 16 },
   pillarCard: { width: 178, minHeight: 164, padding: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: 8, backgroundColor: c.surface, gap: 6 },
+  pillarCardCompact: { width: 158, minHeight: 154 },
   pillarCardActive: { backgroundColor: c.brand, borderColor: c.brand },
   pillarIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.brandSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   pillarIconActive: { backgroundColor: 'rgba(255,255,255,0.15)' },
@@ -367,6 +375,4 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   celebrationKicker: { ...typography.labelSmall, color: c.success, fontSize: 10 },
   celebrationTitle: { ...typography.headlineLarge, color: c.accent, marginTop: 2 },
   celebrationText: { ...typography.body, color: c.textMuted, textAlign: 'center', maxWidth: 380, marginTop: 4 },
-  rewardRow: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: c.accentSoft, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7, marginTop: 15 },
-  rewardText: { ...typography.labelSmall, color: c.accent, fontSize: 10 },
 })

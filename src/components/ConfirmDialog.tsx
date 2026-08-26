@@ -145,7 +145,7 @@ const makeStyles = (c: OnboardingColors) => StyleSheet.create({
     paddingHorizontal: 28,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.62)',
   },
   card: {

@@ -499,7 +499,21 @@
                     "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "owner_created_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "water_logs",

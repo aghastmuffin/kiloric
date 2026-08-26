@@ -127,7 +127,10 @@ export function useMealDragAndDrop(
     LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
 
     setAllMeals((prev) => {
-      const next = prev.map((meal) => ({ ...meal, items: [...(meal.items ?? [])] }));
+      const next: MealDocument[] = prev.map((meal) => ({
+        ...meal,
+        items: [...(meal.items ?? [])],
+      }));
       const sourceMeal = next.find((meal) => meal.$id === item.mealId);
       if (!sourceMeal?.items) return prev;
 
@@ -178,7 +181,7 @@ export function useMealDragAndDrop(
           carbs: item.carbs,
           fat: item.fat,
           items: [item.barcode],
-        } as MealDocument);
+        });
       }
 
       return next;

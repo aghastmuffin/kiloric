@@ -194,13 +194,14 @@ export default function PrivacyPolicyScreen() {
 
         <Heading level={3}>How to Submit a Privacy Request</Heading>
         <Paragraph>
-          To request data deletion, an update on your personal data, or to
-          exercise any other privacy right:
+          Signed-in users can start deletion from You, Settings, Delete account.
+          Account access is removed immediately and the remaining deletion
+          process is completed within 30 days. For exports, updates, or help:
         </Paragraph>
         <NumberedList
           items={[
             'Send an email to data_privacy@taeson.co.',
-            'Subject Line Requirement: Your email subject line must explicitly specify the name of the service: CalCount (e.g., "CalCount - Data Deletion Request" or "CalCount - Personal Data Update Request").',
+            'Include CalCount in the subject line (for example, "CalCount - Data Export Request").',
             'Body Details: Please include the email address associated with your CalCount account so we can verify your identity before processing the request.',
           ]}
         />
@@ -231,7 +232,7 @@ export default function PrivacyPolicyScreen() {
           items={[
             'Primary Database Records: All profile documents, goal records, weight logs, meal logs, and water records associated with the user ID are permanently purged from Appwrite databases.',
             'File Storage: All images and files uploaded by the user in Appwrite storage buckets are permanently removed.',
-            'Authentication Record: The user authentication record is deleted from Appwrite Auth.',
+            'Authentication Record: Account access is blocked immediately. The authentication record is then hard-deleted through the server-side Appwrite Users API within 30 days.',
             'Backups: Residual data in automated system backups will be overwritten in accordance with standard backup rotation cycles (not exceeding 30 days).',
           ]}
         />
@@ -265,11 +266,12 @@ export default function PrivacyPolicyScreen() {
 
       <Section title="Part 4: Children's Privacy">
         <Paragraph>
-          CalCount is not intended for use by children under the age of 13 (or
-          under 16 in the European Economic Area / UK). We do not knowingly
-          collect personal data from children. If we become aware that a child
-          has provided us with personal data, we will promptly delete such
-          information.
+          CalCount is an adult-only service and requires every user to be at
+          least 18 years old. Eligibility is checked before account creation
+          and whenever the saved date of birth changes. We do not knowingly
+          collect personal data from anyone under 18. If we learn that an
+          ineligible person created an account, we will block access and
+          promptly delete the associated information.
         </Paragraph>
       </Section>
 
@@ -448,7 +450,7 @@ function RetentionTable() {
             index === rows.length - 1 && styles.tableRowLast,
           ]}
         >
-          <View style={[styles.tableCell, styles.tableCellWide]}>
+          <View style={styles.tableCellWide}>
             <Text style={styles.tableCellTitle}>{row.category}</Text>
             <Text style={styles.tableCellDetail}>{row.details}</Text>
           </View>

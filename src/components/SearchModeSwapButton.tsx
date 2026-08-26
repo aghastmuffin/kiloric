@@ -40,7 +40,7 @@ export function SearchModeSwapButton({ current }: Props) {
       <Pressable
           accessibilityRole="button"
           accessibilityLabel={label}
-          onPress={() => router.push(`/(tabs)/${target}`)}
+          onPress={() => router.push(target === 'scan' ? '/cameraview' : '/logfood')}
           style={({ pressed }) => [
             styles.button,
             { bottom: bottomOffset },

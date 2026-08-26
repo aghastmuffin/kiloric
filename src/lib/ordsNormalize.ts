@@ -71,10 +71,16 @@ export const ORDS_LABEL_PHOTO_FIELDS = [
   'saturated_fat_100g',
 ] as const
 
+export type MissingOrdsLabelField =
+  | (typeof ORDS_LABEL_PHOTO_FIELDS)[number]
+  | 'ingredients'
+
 export function missingOrdsLabelFields(
   product: Record<string, unknown>,
-): string[] {
-  const missing = ORDS_LABEL_PHOTO_FIELDS.filter((key) => !isOrdsPresent(product[key]))
+): MissingOrdsLabelField[] {
+  const missing: MissingOrdsLabelField[] = ORDS_LABEL_PHOTO_FIELDS.filter(
+    (key) => !isOrdsPresent(product[key]),
+  )
   const hasIngredients =
     isOrdsPresent(product.ingredients_text) || isOrdsPresent(product.ingredients)
   if (!hasIngredients) missing.push('ingredients')

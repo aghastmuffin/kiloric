@@ -1,326 +1,358 @@
-import { useTheme } from '@/lib/theme/ThemeContext';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '@/lib/theme/ThemeContext'
+import type { ThemeColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
+import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
+import { useEffect, useState } from 'react'
+import {
+  AccessibilityInfo,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withSequence,
-    withTiming,
-} from 'react-native-reanimated';
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-const { width, height } = Dimensions.get('window');
+const PLAN_PARTS = ['CAL', 'PRO', 'CARB', 'FAT'] as const
 
-// --- Configuration Constants ---
-const NUM_BUILDINGS = Math.ceil(width / 35); 
-const NUM_GLOBAL_WINDS = 14; 
-const NUM_BURGER_WINDS = 8;  
+export default function OnboardingSuccess() {
+  const router = useRouter()
+  const { colors } = useTheme()
+  const styles = useThemedStyles(makeStyles)
+  const insets = useSafeAreaInsets()
+  const { width } = useWindowDimensions()
+  const wide = width >= 760
+  const plateSize = Math.min(wide ? 340 : 286, width - 64)
+  const platePartSize = (plateSize - 20) / 2
+  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null)
 
-const random = (min: number, max: number) => Math.random() * (max - min) + min;
-
-// --- Interfaces ---
-interface BuildingData {
-  id: number;
-  height: number;
-  width: number;
-}
-
-interface WindData {
-  id: string;
-  left: number;
-  topOffset: number;
-  height: number;
-  speedMultiplier: number;
-}
-
-// --- Isolated Sub-Components (Safely handling Hooks) ---
-
-const Building = ({ h, w }: { h: number; w: number }) => {
-  const rows = Math.floor(h / 16);
-  const windows = Array.from({ length: rows * 2 }).map((_, i) => ({
-    top: random(8, h - 12),
-    left: random(4, w - 8),
-  }));
-
-  return (
-    <View style={[styles.building, { height: h, width: w }]}>
-      {windows.map((win, i) => (
-        <View key={i} style={[styles.window, { top: win.top, left: win.left }]} />
-      ))}
-    </View>
-  );
-};
-
-// Moving the loop animation logic inside this component fixes the React Hook violation!
-const WindLine = ({ wind, progress, baseOpacity, extraWidth = 0, isCore = false }: { 
-  wind: WindData; 
-  progress: Animated.SharedValue<number>; 
-  baseOpacity: Animated.SharedValue<number>;
-  extraWidth?: number;
-  isCore?: boolean;
-}) => {
-  const animatedStyle = useAnimatedStyle(() => {
-    const currentY = ((wind.topOffset + progress.value * height * wind.speedMultiplier) % height) - 150;
-    return {
-      opacity: isCore ? baseOpacity.value * 1.4 : baseOpacity.value,
-      transform: [{ translateY: currentY }],
-    };
-  });
-
-  return (
-    <Animated.View 
-      style={[
-        styles.windLine, 
-        { 
-          left: wind.left, 
-          height: wind.height, 
-          width: 2 + extraWidth,
-          backgroundColor: isCore ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.35)'
-        }, 
-        animatedStyle
-      ]} 
-    />
-  );
-};
-
-// --- Main Component ---
-export default function OnboardingAnimation() {
-  const router = useRouter();
-  const { colors, onboardingColors } = useTheme();
-  // Animation Nodes
-  const burgerY = useSharedValue(0);
-  const burgerScale = useSharedValue(1);
-  const buildingY = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  
-  const windProgress = useSharedValue(0);
-  const windOpacity = useSharedValue(0);
-
-  // Strictly typed states
-  const [skyline, setSkyline] = useState<BuildingData[]>([]);
-  const [globalWinds, setGlobalWinds] = useState<WindData[]>([]);
-  const [burgerWinds, setBurgerWinds] = useState<WindData[]>([]);
+  const copyOpacity = useSharedValue(0)
+  const copyY = useSharedValue(14)
+  const plateOpacity = useSharedValue(0)
+  const plateScale = useSharedValue(0.94)
+  const ruleScale = useSharedValue(0)
 
   useEffect(() => {
-    // Generate Skyline layout
-    setSkyline(
-      Array.from({ length: NUM_BUILDINGS }).map((_, i) => ({
-        id: i,
-        height: random(110, 260),
-        width: random(28, 42),
-      }))
-    );
+    let active = true
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (active) setReduceMotion(enabled)
+      })
+      .catch(() => {
+        if (active) setReduceMotion(true)
+      })
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion)
+    return () => {
+      active = false
+      subscription.remove()
+    }
+  }, [])
 
-    // Global background winds
-    setGlobalWinds(
-      Array.from({ length: NUM_GLOBAL_WINDS }).map((_, i) => ({
-        id: `g-${i}`,
-        left: random(0, width),
-        topOffset: random(0, height),
-        height: random(70, 140),
-        speedMultiplier: random(0.8, 1.3),
-      }))
-    );
+  useEffect(() => {
+    if (reduceMotion == null) return
 
-    // Dynamic core winds (Concentrated around burger corridor)
-    setBurgerWinds(
-      Array.from({ length: NUM_BURGER_WINDS }).map((_, i) => ({
-        id: `b-${i}`,
-        left: random(width * 0.5 - 45, width * 0.5 + 45),
-        topOffset: random(0, height * 0.5),
-        height: random(90, 160),
-        speedMultiplier: random(1.2, 1.6),
-      }))
-    );
+    if (reduceMotion) {
+      copyOpacity.value = 1
+      copyY.value = 0
+      plateOpacity.value = 1
+      plateScale.value = 1
+      ruleScale.value = 1
+      return
+    }
 
-    // Orchestrate Timelines
-    burgerScale.value = withSequence(
-      withTiming(0.85, { duration: 200, easing: Easing.ease }),
-      withTiming(1.1, { duration: 150, easing: Easing.linear })
-    );
+    plateOpacity.value = withTiming(1, { duration: 420 })
+    plateScale.value = withTiming(1, {
+      duration: 620,
+      easing: Easing.out(Easing.cubic),
+    })
+    ruleScale.value = withDelay(
+      180,
+      withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
+    )
+    copyOpacity.value = withDelay(220, withTiming(1, { duration: 420 }))
+    copyY.value = withDelay(
+      220,
+      withTiming(0, { duration: 480, easing: Easing.out(Easing.cubic) }),
+    )
+  }, [copyOpacity, copyY, plateOpacity, plateScale, reduceMotion, ruleScale])
 
-    burgerY.value = withDelay(200, 
-      withTiming(-height * 0.45, { duration: 1000, easing: Easing.out(Easing.quad) })
-    );
-    
-    buildingY.value = withDelay(250, 
-      withTiming(height * 0.55, { duration: 900, easing: Easing.in(Easing.quad) })
-    );
-
-    // Wind Streamer Loops
-    windOpacity.value = withDelay(500, withTiming(0.35, { duration: 300 }));
-    windProgress.value = withDelay(500, 
-      withRepeat(
-        withTiming(1, { duration: 500, easing: Easing.linear }),
-        -1,
-        false
-      )
-    );
-
-    textOpacity.value = withDelay(1100, withTiming(1, { duration: 800 }));
-  }, [buildingY, burgerScale, burgerY, textOpacity, windOpacity, windProgress]);
-
-  // Main UI Layer Animated Styles
-  const burgerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: burgerY.value }, { scale: burgerScale.value }],
-  }));
-
-  const buildingStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: buildingY.value }],
-  }));
-
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
+  const copyStyle = useAnimatedStyle(() => ({
+    opacity: copyOpacity.value,
+    transform: [{ translateY: copyY.value }],
+  }))
+  const plateStyle = useAnimatedStyle(() => ({
+    opacity: plateOpacity.value,
+    transform: [{ scale: plateScale.value }],
+  }))
+  const ruleStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: ruleScale.value }],
+  }))
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      
-      {/* 1. Global Wind Layer */}
-      {globalWinds.map((wind) => (
-        <WindLine 
-          key={wind.id} 
-          wind={wind} 
-          progress={windProgress} 
-          baseOpacity={windOpacity} 
-        />
-      ))}
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        {
+          minHeight: '100%',
+          paddingTop: insets.top + 28,
+          paddingBottom: insets.bottom + 24,
+        },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.masthead}>
+        <Text style={styles.wordmark}>CALCOUNT</Text>
+        <Text style={styles.issue}>PLAN · 01</Text>
+      </View>
 
-      {/* 2. Concentrated Core Wind Layer */}
-      {burgerWinds.map((wind) => (
-        <WindLine 
-          key={wind.id} 
-          wind={wind} 
-          progress={windProgress} 
-          baseOpacity={windOpacity} 
-          extraWidth={1} 
-          isCore={true}
-        />
-      ))}
-
-      {/* 3. Hero Burger */}
-      <Animated.View style={[styles.burgerContainer, burgerStyle]}>
-        <Text style={styles.burgerEmoji}>🍔</Text>
-      </Animated.View>
-
-      {/* 4. Falling Silhouette Skyline */}
-      <Animated.View style={[styles.citySilhouette, buildingStyle]}>
-        {skyline.map((b) => (
-          <Building key={b.id} h={b.height} w={b.width} />
-        ))}
-      </Animated.View>
-
-      {/* 5. Typography Display */}
-      <Animated.View style={[styles.textContainer, textStyle]}>
-        <Text style={[styles.title, { color: colors.text }]}>You&apos;re all set!</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Your personalized calorie and macro plan is ready.
-        </Text>
-        <Pressable
-          onPress={() => router.replace('/(tabs)')}
-          style={({ pressed }) => [
-            styles.continueButton,
-            { backgroundColor: onboardingColors.accent },
-            pressed && styles.continueButtonPressed,
-          ]}
+      <View style={[styles.hero, wide && styles.heroWide]}>
+        <Animated.View
+          accessible
+          accessibilityLabel="A balanced daily plan for calories, protein, carbohydrates, and fat"
+          style={[styles.plateStage, wide && styles.plateStageWide, plateStyle]}
         >
-          <Text style={[styles.continueButtonText, { color: colors.onAccent }]}>
-            Start tracking
+          <View style={[styles.plate, { width: plateSize, height: plateSize, borderRadius: plateSize / 2 }]}>
+            {PLAN_PARTS.map((part, index) => (
+              <View
+                key={part}
+                style={[
+                  styles.platePart,
+                  {
+                    width: platePartSize,
+                    height: platePartSize,
+                    backgroundColor: index % 2 === 0 ? colors.brandSoft : colors.accentSoft,
+                  },
+                ]}
+              >
+                <Text style={styles.platePartText}>{part}</Text>
+              </View>
+            ))}
+            <View style={styles.plateCenter}>
+              <Ionicons name="leaf-outline" size={28} color={colors.brand} />
+              <Text style={styles.plateCenterText}>READY</Text>
+            </View>
+          </View>
+          <Animated.View style={[styles.celebrationRule, ruleStyle]} />
+          <Text style={styles.figureCaption}>A daily framework, shaped around you.</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.copy, wide && styles.copyWide, copyStyle]}>
+          <View style={styles.readyLine}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.brand} />
+            <Text style={styles.readyText}>PROFILE & TARGETS SAVED</Text>
+          </View>
+          <Text accessibilityRole="header" style={styles.title}>Your plan is ready.</Text>
+          <Text style={styles.subtitle}>
+            Your calorie, macro, and hydration targets are set. Start with today’s meals and let
+            the pattern build from there.
           </Text>
-        </Pressable>
-      </Animated.View>
-    </View>
-  );
+
+          <View style={styles.planLedger}>
+            <View style={styles.ledgerRow}>
+              <Text style={styles.ledgerLabel}>DAILY ENERGY</Text>
+              <Text style={styles.ledgerValue}>PERSONALIZED</Text>
+            </View>
+            <View style={styles.ledgerRow}>
+              <Text style={styles.ledgerLabel}>MACRO BALANCE</Text>
+              <Text style={styles.ledgerValue}>CALCULATED</Text>
+            </View>
+            <View style={styles.ledgerRow}>
+              <Text style={styles.ledgerLabel}>HYDRATION</Text>
+              <Text style={styles.ledgerValue}>READY</Text>
+            </View>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.replace('/(tabs)')}
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+          >
+            <Text style={styles.buttonText}>Start tracking</Text>
+            <Ionicons name="arrow-forward" size={18} color={colors.onBrand} />
+          </Pressable>
+        </Animated.View>
+      </View>
+    </ScrollView>
+  )
 }
 
-const styles = StyleSheet.create({
-  container: {
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: c.background,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 980,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+  },
+  masthead: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.borderStrong,
+  },
+  wordmark: {
+    ...typography.overline,
+    color: c.text,
+  },
+  issue: {
+    ...typography.overline,
+    color: c.brand,
+  },
+  hero: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
+    gap: 36,
+    paddingVertical: 36,
   },
-  burgerContainer: {
-    position: 'absolute',
-    bottom: height * 0.12,
-    zIndex: 15,
-  },
-  burgerEmoji: {
-    fontSize: 85,
-  },
-  citySilhouette: {
-    position: 'absolute',
-    bottom: 0,
+  heroWide: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    width: '100%',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  building: {
-    backgroundColor: '#12131a',
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-    position: 'relative',
-    marginHorizontal: 1.5,
-  },
-  window: {
-    position: 'absolute',
-    width: 2.5,
-    height: 3.5,
-    backgroundColor: 'rgba(255, 253, 230, 0.75)',
-    borderRadius: 0.5,
-  },
-  windLine: {
-    position: 'absolute',
-    top: 0,
-    borderRadius: 99,
-    zIndex: 2,
-  },
-  textContainer: {
-    position: 'absolute',
-    top: '56%',
     alignItems: 'center',
-    paddingHorizontal: 30,
-    zIndex: 25,
+    gap: 64,
+    paddingVertical: 56,
+  },
+  plateStage: {
+    alignItems: 'center',
+  },
+  plateStageWide: {
+    flex: 1,
+  },
+  plate: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    overflow: 'hidden',
+    borderWidth: 10,
+    borderColor: c.surface,
+    backgroundColor: c.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 3,
+  },
+  platePart: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.border,
+  },
+  platePartText: {
+    ...typography.overline,
+    color: c.textMuted,
+  },
+  plateCenter: {
+    position: 'absolute',
+    left: '32%',
+    right: '32%',
+    top: '32%',
+    bottom: '32%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.borderStrong,
+    gap: 4,
+  },
+  plateCenterText: {
+    ...typography.labelTiny,
+    color: c.textMuted,
+    letterSpacing: 1,
+  },
+  celebrationRule: {
+    width: '74%',
+    height: 2,
+    marginTop: 24,
+    backgroundColor: c.brand,
+  },
+  figureCaption: {
+    ...typography.bodySmall,
+    color: c.textMuted,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  copy: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+  },
+  copyWide: {
+    flex: 1,
+    width: 'auto',
+  },
+  readyLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  readyText: {
+    ...typography.overline,
+    color: c.brand,
   },
   title: {
-    fontSize: 34,
-    fontWeight: '900',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-    marginBottom: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
+    ...typography.display,
+    color: c.text,
+    marginBottom: 14,
   },
   subtitle: {
-    fontSize: 15,
-    fontWeight: '400',
-    textAlign: 'center',
-    letterSpacing: 0.2,
-    marginBottom: 24,
+    ...typography.bodyLarge,
+    color: c.textMuted,
+    marginBottom: 28,
   },
-  continueButton: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    shadowColor: '#25c946',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.8,
-    shadowRadius: 0,
-    elevation: 4,
+  planLedger: {
+    borderTopWidth: 1,
+    borderTopColor: c.borderStrong,
+    marginBottom: 28,
   },
-  continueButtonPressed: {
-    transform: [{ translateY: 2 }],
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 0,
+  ledgerRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
   },
-  continueButtonText: {
-    fontWeight: '700',
-    fontSize: 16,
+  ledgerLabel: {
+    ...typography.labelTiny,
+    color: c.textMuted,
   },
-});
+  ledgerValue: {
+    ...typography.labelTiny,
+    color: c.text,
+  },
+  button: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    borderRadius: 999,
+    paddingHorizontal: 22,
+    backgroundColor: c.brand,
+  },
+  buttonPressed: {
+    opacity: 0.84,
+    transform: [{ translateY: 1 }],
+  },
+  buttonText: {
+    ...typography.label,
+    color: c.onBrand,
+  },
+})

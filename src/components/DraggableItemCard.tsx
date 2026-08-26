@@ -73,16 +73,14 @@ export const DraggableItemCard = memo(function DraggableItemCard({
         cbRef.current.onDragStart(cbRef.current.item);
       },
 
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { 
-          useNativeDriver: false,
-          listener: (e, gs) => {
-             const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);
-             cbRef.current.onDragMove(target);
-          }
-        },
-      ),
+      onPanResponderMove: (_event, gestureState) => {
+        pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+        const target = cbRef.current.findDropTarget(
+          gestureState.moveX,
+          gestureState.moveY,
+        );
+        cbRef.current.onDragMove(target);
+      },
 
       onPanResponderRelease: (_e, gs) => {
         const target = cbRef.current.findDropTarget(gs.moveX, gs.moveY);

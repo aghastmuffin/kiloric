@@ -103,6 +103,16 @@ export type FoodContributionFieldsInput = {
   fields?: Partial<Record<OffStringField | OffNumberField, string | number | null | undefined>>
 }
 
+export type FoodContributionPayload = {
+  owner: string
+  status: 'pending'
+  photo_file_id: string
+  product_name: string
+  source_query?: string
+  code?: string
+  [key: string]: string | number | undefined
+}
+
 function trimOrNull(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const text = String(value).trim()
@@ -121,11 +131,11 @@ function toFiniteNumber(value: unknown): number | null {
 /** Map OFF-shaped fields → storage document payload (no network). */
 export function buildContributionPayload(
   input: FoodContributionFieldsInput & { photo_file_id: string; owner: string },
-): Record<string, string | number> {
+): FoodContributionPayload {
   const productName = trimOrNull(input.product_name)
   if (!productName) throw new Error('Product name is required.')
 
-  const data: Record<string, string | number> = {
+  const data: FoodContributionPayload = {
     owner: input.owner,
     status: 'pending',
     photo_file_id: input.photo_file_id,

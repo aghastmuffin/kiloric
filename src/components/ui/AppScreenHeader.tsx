@@ -24,7 +24,10 @@ export function AppScreenHeader({ overline, title, description, accessory }: App
       style={styles.root}
     >
       {accessory ? <View style={styles.accessory}>{accessory}</View> : null}
-      <Text style={styles.overline}>{overline}</Text>
+      <View style={styles.overlineRow}>
+        <Text style={styles.overline}>{overline}</Text>
+        <View style={styles.overlineRule} />
+      </View>
       <Text accessibilityRole="header" style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
     </MotionView>
@@ -32,9 +35,11 @@ export function AppScreenHeader({ overline, title, description, accessory }: App
 }
 
 const makeStyles = (colors: ThemeColors) => StyleSheet.create({
-  root: { gap: 4 },
+  root: { gap: 5, paddingBottom: 4 },
   accessory: { marginBottom: 5, alignSelf: 'flex-start' },
-  overline: { ...typography.labelSmall, color: colors.brand, fontWeight: '600' },
+  overlineRow: { flexDirection: 'row', alignItems: 'center', gap: 10, maxWidth: 220 },
+  overline: { ...typography.overline, color: colors.brand },
+  overlineRule: { height: StyleSheet.hairlineWidth, flex: 1, backgroundColor: colors.brand, opacity: 0.45 },
   title: { ...typography.headlineLarge, color: colors.text },
-  description: { ...typography.bodySmall, color: colors.textMuted, maxWidth: 520 },
+  description: { ...typography.body, color: colors.textMuted, maxWidth: 540, marginTop: 2 },
 })

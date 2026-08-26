@@ -1,4 +1,4 @@
-import { getActiveFontFamily } from '@/lib/appFont'
+import { getActiveFontFamily, getActiveFontOverridesRoles } from '@/lib/appFont'
 import React from 'react'
 import {
   Text as OriginalText,
@@ -14,7 +14,9 @@ function mergeFontStyle(style: StyleProp<TextStyle>) {
     return style
   }
 
-  return [{ fontFamily }, style]
+  return getActiveFontOverridesRoles()
+    ? [style, { fontFamily }]
+    : [{ fontFamily }, style]
 }
 
 export const Text = React.forwardRef<React.ComponentRef<typeof OriginalText>, TextProps>(

@@ -8,11 +8,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const AUTO_DISMISS_MS = 5500
@@ -61,7 +61,7 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
       easing: Easing.in(Easing.cubic),
     })
     opacity.value = withTiming(0, { duration: 220 }, (finished) => {
-      if (finished) runOnJS(finishDismiss)()
+      if (finished) scheduleOnRN(finishDismiss)
     })
   }, [clearTimer, finishDismiss, opacity, translateY])
 
@@ -127,7 +127,7 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 9999,
     elevation: 9999,
   },

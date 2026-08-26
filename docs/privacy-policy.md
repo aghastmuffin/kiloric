@@ -70,10 +70,12 @@ Depending on your jurisdiction, you have the following rights regarding your per
 
 #### How to Submit a Privacy Request
 
-To request **data deletion**, an **update on your personal data**, or to exercise any other privacy right:
+Signed-in users can start account deletion directly from **You → Settings → Delete account**. Account access is removed immediately and the remaining deletion process is completed within 30 days.
+
+To request a data export, an update, or help with deletion:
 
 1. Send an email to **`data_privacy@taeson.co`**.
-2. **Subject Line Requirement:** Your email subject line **must explicitly specify the name of the service: `CalCount`** (e.g., `CalCount - Data Deletion Request` or `CalCount - Personal Data Update Request`).
+2. Include **`CalCount`** in the subject line (for example, `CalCount - Data Export Request`).
 3. **Body Details:** Please include the email address associated with your CalCount account so we can verify your identity before processing the request.
 
 We will acknowledge receipt within 5 business days and fulfill verified requests within 30 calendar days (or within timelines required by applicable law).
@@ -102,7 +104,7 @@ Taeson Co. retains your personal data only for as long as necessary to fulfill t
 When an account deletion request is processed:
 1. **Primary Database Records:** All profile documents, goal records, weight logs, meal logs, and water records associated with the user ID are permanently purged from Appwrite databases.
 2. **File Storage:** All images and files uploaded by the user in Appwrite storage buckets are permanently removed.
-3. **Authentication Record:** The user authentication record is deleted from Appwrite Auth.
+3. **Authentication Record:** Account access is blocked immediately. The authentication record is then hard-deleted through the server-side Appwrite Users API within 30 days.
 4. **Backups:** Residual data in automated system backups will be overwritten in accordance with standard backup rotation cycles (not exceeding 30 days).
 
 ---
@@ -117,7 +119,7 @@ We implement industry-standard administrative, technical, and physical safeguard
 ---
 
 ## Part 4: Children's Privacy
-CalCount is not intended for use by children under the age of 13 (or under 16 in the European Economic Area / UK). Our own agreements require a minmum age of 18. We do not knowingly collect personal data from children. If we become aware that a child has provided us with personal data, we will promptly delete such information.
+CalCount is an adult-only service and requires every user to be at least 18 years old. Eligibility is checked before account creation and whenever the saved date of birth changes. We do not knowingly collect personal data from anyone under 18. If we learn that an ineligible person created an account, we will block access and promptly delete the associated information.
 
 ---
 

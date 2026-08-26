@@ -1,6 +1,6 @@
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'
-import { FONT_FAMILY, MONO_FONT_FAMILY } from '@/lib/fonts'
 import type { OnboardingColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import type { DisplayUnits } from '@/lib/units'
 import { StyleSheet, Text, View } from 'react-native'
@@ -36,50 +36,13 @@ const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontFamily: MONO_FONT_FAMILY,
+    ...typography.label,
     color: onboardingColors.textMuted,
-    fontSize: 13,
-    fontWeight: '400',
     marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 1.1,
   },
   helper: {
-    fontFamily: FONT_FAMILY,
+    ...typography.bodySmall,
     color: onboardingColors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
     marginBottom: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  chip: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: onboardingColors.border,
-    backgroundColor: onboardingColors.card,
-  },
-  chipSelected: {
-    borderColor: onboardingColors.borderSelected,
-    backgroundColor: onboardingColors.cardSelected,
-  },
-  chipPressed: {
-    opacity: 0.9,
-  },
-  chipDisabled: {
-    opacity: 0.5,
-  },
-  chipText: {
-    color: onboardingColors.textSoft,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  chipTextSelected: {
-    color: onboardingColors.accent,
   },
 })

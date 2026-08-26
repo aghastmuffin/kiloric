@@ -1,6 +1,16 @@
 import { useTheme } from '@/lib/theme/ThemeContext'
+import type { ThemeColors } from '@/lib/theme/tokens'
+import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { SegmentedControl as ExpoSegmentedControl } from '@expo/ui/community/segmented-control'
-import type { StyleProp, ViewStyle } from 'react-native'
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native'
 
 type ThemedSegmentedControlProps = {
   values: string[]
@@ -22,6 +32,39 @@ export function ThemedSegmentedControl({
   style,
 }: ThemedSegmentedControlProps) {
   const { colors, scheme } = useTheme()
+  const styles = useThemedStyles(makeStyles)
+
+  if (Platform.OS === 'web') {
+    return (
+      <View accessibilityRole="radiogroup" style={[styles.control, style]}>
+        {values.map((value, index) => {
+          const selected = index === selectedIndex
+          return (
+            <Pressable
+              key={value}
+              aria-checked={selected}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected, disabled: !enabled }}
+              disabled={!enabled}
+              onPress={() => onChange(index)}
+              style={({ pressed }) => [
+                styles.segment,
+                selected && styles.segmentSelected,
+                pressed && styles.segmentPressed,
+              ]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[styles.label, selected && styles.labelSelected]}
+              >
+                {value}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </View>
+    )
+  }
 
   return (
     <ExpoSegmentedControl
@@ -35,3 +78,39 @@ export function ThemedSegmentedControl({
     />
   )
 }
+
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    control: {
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      flexDirection: 'row',
+      gap: 2,
+      padding: 2,
+      width: '100%',
+    },
+    segment: {
+      alignItems: 'center',
+      borderRadius: 8,
+      flex: 1,
+      justifyContent: 'center',
+      minHeight: 36,
+      paddingHorizontal: 10,
+    },
+    segmentSelected: {
+      backgroundColor: c.brand,
+    },
+    segmentPressed: {
+      opacity: 0.72,
+    },
+    label: {
+      color: c.textMuted,
+      fontSize: 14,
+      fontWeight: '500',
+      textAlign: 'center',
+    },
+    labelSelected: {
+      color: c.onBrand,
+      fontWeight: '700',
+    },
+  })

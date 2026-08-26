@@ -130,6 +130,7 @@ function PeriodToggle({
           <Pressable
             key={option}
             accessibilityRole="tab"
+            accessibilityLabel={option === 'week' ? 'Show the last 7 days' : 'Show the last 30 days'}
             accessibilityState={{ selected }}
             onPress={() => onChange(option)}
             style={({ pressed }) => [
@@ -139,7 +140,7 @@ function PeriodToggle({
             ]}
           >
             <Text style={[styles.toggleText, selected && styles.toggleTextSelected]}>
-              {option === 'week' ? 'WEEKLY' : 'MONTHLY'}
+              {option === 'week' ? '7 DAYS' : '30 DAYS'}
             </Text>
           </Pressable>
         )
@@ -152,18 +153,27 @@ function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | 
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const maxValue = Math.max(goal ?? 0, ...days.map((day) => day.kcal), 1)
-  const scaleMax = maxValue * 1.12
-  const goalBottom = goal ? Math.min(CHART_HEIGHT, (goal / scaleMax) * CHART_HEIGHT) : 0
-  const barWidth = period === 'week' ? 28 : 12
-  const gap = period === 'week' ? 14 : 7
-  const chartWidth = period === 'week' ? '100%' : days.length * (barWidth + gap) + 16
+  const scaleMax = Math.ceil((maxValue * 1.12) / 100) * 100
+  const goalBottom = goal ? Math.min(CHART_HEIGHT - 1, (goal / scaleMax) * CHART_HEIGHT) : 0
+  const barWidth = period === 'week' ? 26 : 6
+  const axisDays = period === 'week'
+    ? days
+    : days.filter((_, index) => (
+      index === 0
+      || index === days.length - 1
+      || (index % 7 === 0 && index < days.length - 3)
+    ))
 
   return (
-    <View>
+    <View accessibilityLabel={`Recorded energy for the last ${days.length} days`}>
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={styles.legendSwatch} />
           <Text style={styles.legendText}>RECORDED KCAL</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={styles.legendMissing} />
+          <Text style={styles.legendText}>NO LOG</Text>
         </View>
         {goal ? (
           <View style={styles.legendItem}>
@@ -174,46 +184,66 @@ function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | 
           <Text style={styles.legendText}>NO ENERGY GOAL SET</Text>
         )}
       </View>
-      <ScrollView
-        horizontal
-        bounces={false}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={period === 'week' ? styles.chartScrollerWeekly : undefined}
-      >
-        <View style={[styles.chart, { width: chartWidth, minWidth: period === 'week' ? 300 : undefined }]}>
-          <View style={styles.gridLineTop} />
-          <View style={styles.gridLineMiddle} />
-          {goal ? (
-            <View
-              pointerEvents="none"
-              style={[styles.goalLine, { bottom: 24 + goalBottom, backgroundColor: colors.accent }]}
-            />
-          ) : null}
-          <View style={[styles.bars, { gap }]}>
-            {days.map((day, index) => {
-              const height = day.kcal > 0 ? Math.max(3, (day.kcal / scaleMax) * CHART_HEIGHT) : 0
-              const showMonthLabel = period === 'week' || index === 0 || index === days.length - 1 || index % 5 === 0
-              return (
-                <View key={day.key} style={[styles.barColumn, { width: barWidth }]}>
-                  <View style={styles.barArea}>
-                    <View
-                      accessibilityLabel={`${day.date.toLocaleDateString()}: ${Math.round(day.kcal)} kilocalories`}
-                      style={[styles.bar, { height }]}
-                    />
+      <View style={styles.chartFrame}>
+        <View style={styles.yAxis} importantForAccessibility="no-hide-descendants">
+          <Text style={styles.yAxisLabel}>{scaleMax.toLocaleString()}</Text>
+          <Text style={styles.yAxisLabel}>{Math.round(scaleMax / 2).toLocaleString()}</Text>
+          <Text style={styles.yAxisLabel}>0</Text>
+        </View>
+        <View style={styles.chartBody}>
+          <View style={styles.plotArea}>
+            <View style={styles.gridLineTop} />
+            <View style={styles.gridLineMiddle} />
+            <View style={styles.gridLineBottom} />
+            {goal ? (
+              <View
+                pointerEvents="none"
+                style={[styles.goalLine, { bottom: goalBottom, backgroundColor: colors.accent }]}
+              />
+            ) : null}
+            <View style={styles.bars}>
+              {days.map((day) => {
+                const height = day.hasLog
+                  ? Math.max(3, (day.kcal / scaleMax) * CHART_HEIGHT)
+                  : 0
+                return (
+                  <View
+                    key={day.key}
+                    accessible
+                    accessibilityRole="text"
+                    accessibilityLabel={day.hasLog
+                      ? `${day.date.toLocaleDateString()}: ${Math.round(day.kcal)} kilocalories recorded`
+                      : `${day.date.toLocaleDateString()}: no meals logged`}
+                    style={styles.barColumn}
+                  >
+                    {day.hasLog ? (
+                      <View style={[styles.bar, { width: barWidth, height }]} />
+                    ) : (
+                      <View style={styles.missingDot} />
+                    )}
                   </View>
-                  <Text style={styles.axisLabel}>
-                    {showMonthLabel
-                      ? period === 'week'
-                        ? day.date.toLocaleDateString(undefined, { weekday: 'narrow' })
-                        : day.date.getDate()
-                      : ''}
-                  </Text>
-                </View>
-              )
-            })}
+                )
+              })}
+            </View>
+          </View>
+          <View style={styles.xAxis} importantForAccessibility="no-hide-descendants">
+            {axisDays.map((day, index) => (
+              <Text
+                key={day.key}
+                style={[
+                  styles.axisLabel,
+                  index === 0 && styles.axisLabelFirst,
+                  index === axisDays.length - 1 && styles.axisLabelLast,
+                ]}
+              >
+                {period === 'week'
+                  ? day.date.toLocaleDateString(undefined, { weekday: 'short' })
+                  : day.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </Text>
+            ))}
           </View>
         </View>
-      </ScrollView>
+      </View>
     </View>
   )
 }
@@ -224,7 +254,7 @@ export default function StatsScreen() {
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
   const { gutter } = useAppLayout()
-  const [period, setPeriod] = useState<Period>('week')
+  const [period, setPeriod] = useState<Period>('month')
   const [data, setData] = useState<StatsData>(EMPTY_DATA)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -275,9 +305,6 @@ export default function StatsScreen() {
   const onTargetDays = goal
     ? days.filter((day) => day.hasLog && Math.abs(day.kcal - goal) <= goal * 0.15).length
     : 0
-  const consistency = goal
-    ? Math.round(((loggedDays + onTargetDays) / (days.length * 2)) * 100)
-    : Math.round((loggedDays / days.length) * 100)
   const insight = getInsight(days, goal)
   const energyTrend = useMemo(() => calculateEnergyTrend(days), [days])
 
@@ -296,7 +323,12 @@ export default function StatsScreen() {
 
   if (authLoading || loading) {
     return (
-      <View style={styles.centered}>
+      <View
+        accessible
+        accessibilityLabel="Loading progress report"
+        accessibilityState={{ busy: true }}
+        style={styles.centered}
+      >
         <ActivityIndicator color={colors.accent} />
         <Text style={styles.stateText}>Loading your progress…</Text>
       </View>
@@ -307,7 +339,7 @@ export default function StatsScreen() {
     return (
       <View style={[styles.centered, styles.statePadding]}>
         <Ionicons name="stats-chart-outline" size={36} color={colors.success} />
-        <Text style={styles.stateTitle}>Sign in to see your stats</Text>
+        <Text accessibilityRole="header" style={styles.stateTitle}>Sign in to see your stats</Text>
         <Text style={styles.stateText}>Your meal history and profile goals will appear here.</Text>
       </View>
     )
@@ -328,14 +360,15 @@ export default function StatsScreen() {
         <PeriodToggle period={period} onChange={setPeriod} />
 
         {error ? (
-          <View style={styles.errorCard}>
+          <View accessibilityLiveRegion="polite" style={styles.errorCard}>
             <Ionicons name="cloud-offline-outline" size={22} color={colors.danger} />
             <View style={styles.errorCopy}>
-              <Text style={styles.errorTitle}>Stats unavailable</Text>
-              <Text style={styles.stateText}>{error}</Text>
+              <Text accessibilityRole="header" style={styles.errorTitle}>Stats unavailable</Text>
+              <Text style={styles.errorMessage}>{error}</Text>
             </View>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Retry loading stats"
               onPress={() => setReloadKey((key) => key + 1)}
               style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
             >
@@ -345,55 +378,53 @@ export default function StatsScreen() {
         ) : data.meals.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="leaf-outline" size={30} color={colors.success} />
-            <Text style={styles.stateTitle}>No meal history yet</Text>
+            <Text accessibilityRole="header" style={styles.stateTitle}>No meal history yet</Text>
             <Text style={styles.stateText}>Log your first meal and your energy pattern will begin here.</Text>
           </View>
         ) : (
           <>
-            <View style={styles.card}>
+            <View style={styles.reportSection}>
               <View style={styles.sectionHeader}>
-                <View>
+                <View style={styles.sectionHeadingCopy}>
                   <Text style={styles.sectionKicker}>{period === 'week' ? 'LAST 7 DAYS' : 'LAST 30 DAYS'}</Text>
-                  <Text style={styles.sectionTitle}>Energy vs goal</Text>
+                  <Text accessibilityRole="header" style={styles.sectionTitle}>Energy report</Text>
                 </View>
-                <Text style={styles.sectionMeta}>{loggedDays}/{days.length} LOGGED</Text>
+                <Text style={styles.sectionMeta}>RECORDED INTAKE</Text>
               </View>
+              <View style={styles.metricLedger}>
+                <View style={styles.detailMetric}>
+                  <Text style={styles.detailValue}>{loggedDays}<Text style={styles.detailSuffix}>/{days.length}</Text></Text>
+                  <Text style={styles.metricLabel}>DAYS LOGGED</Text>
+                </View>
+                <View style={styles.detailMetric}>
+                  <Text style={styles.detailValue}>{goal ? onTargetDays : 'N/A'}</Text>
+                  <Text style={styles.metricLabel}>IN GOAL RANGE</Text>
+                </View>
+              </View>
+              <Text style={styles.metricCaption}>
+                {goal
+                  ? 'Recorded days within 15% of your energy goal are shown without grading missed days.'
+                  : 'This report shows recorded days only. Set an energy goal to add a goal-range count.'}
+              </Text>
               <EnergyChart days={days} goal={goal} period={period} />
             </View>
 
-            <View style={styles.scoreCard}>
-              <View style={styles.scoreCopy}>
-                <Text style={styles.sectionKicker}>CONSISTENCY SCORE</Text>
-                <Text style={styles.scoreValue}>{consistency}<Text style={styles.scoreSuffix}>%</Text></Text>
-              </View>
-              <View style={styles.scoreExplanation}>
-                <Text style={styles.scoreTitle}>
-                  {goal ? 'Daily logging + goal range' : 'Daily logging'}
-                </Text>
-                <Text style={styles.scoreDetail}>
-                  {goal
-                    ? `${loggedDays} days logged · ${onTargetDays} within ±15% of goal`
-                    : 'Set an energy goal to include goal adherence in this score.'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.insightCard}>
-              <View style={styles.insightIcon}>
-                <Ionicons name="sparkles-outline" size={21} color={colors.accent} />
-              </View>
+            <View style={styles.insightSection}>
               <View style={styles.insightCopy}>
-                <Text style={styles.sectionKicker}>RULE-BASED INSIGHT</Text>
-                <Text style={styles.insightTitle}>{insight.title}</Text>
+                <View style={styles.insightKickerRow}>
+                  <Ionicons name="sparkles-outline" size={16} color={colors.brand} />
+                  <Text style={styles.sectionKicker}>RULE-BASED INSIGHT</Text>
+                </View>
+                <Text accessibilityRole="header" style={styles.insightTitle}>{insight.title}</Text>
                 <Text style={styles.insightBody}>{insight.body}</Text>
               </View>
             </View>
 
-            <View style={styles.card}>
+            <View style={styles.journalSection}>
               <View style={styles.sectionHeader}>
-                <View>
+                <View style={styles.sectionHeadingCopy}>
                   <Text style={styles.sectionKicker}>LOGGED-DAY TREND</Text>
-                  <Text style={styles.sectionTitle}>
+                  <Text accessibilityRole="header" style={styles.sectionTitle}>
                     {energyTrend.direction === 'insufficient'
                       ? 'More complete days needed'
                       : energyTrend.direction === 'steady'
@@ -407,7 +438,7 @@ export default function StatsScreen() {
                   color={colors.accent}
                 />
               </View>
-              <Text style={styles.stateText}>
+              <Text style={styles.sectionBody}>
                 {energyTrend.changeKcal == null
                   ? `Log at least 4 complete days to compare equal time windows. ${energyTrend.loggedDays}/${days.length} days are currently logged.`
                   : `${Math.abs(Math.round(energyTrend.changeKcal))} kcal/day ${energyTrend.direction === 'down' ? 'lower' : energyTrend.direction === 'up' ? 'higher' : 'difference'} between adjacent logged-day windows · ${energyTrend.confidence} confidence from ${energyTrend.loggedDays}/${days.length} logged days.`}
@@ -419,15 +450,17 @@ export default function StatsScreen() {
           </>
         )}
 
-        <View style={styles.card}>
+        <View style={styles.journalSection}>
           <View style={styles.sectionHeader}>
-            <View>
+            <View style={styles.sectionHeadingCopy}>
               <Text style={styles.sectionKicker}>PROFILE SNAPSHOT</Text>
-              <Text style={styles.sectionTitle}>Weight</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Weight</Text>
             </View>
             <Ionicons name="scale-outline" size={22} color={colors.success} />
           </View>
-          {weightSnapshot ? (
+          {error ? (
+            <Text style={styles.emptyInline}>Profile data is unavailable until the report can be reloaded.</Text>
+          ) : weightSnapshot ? (
             <>
               <View style={styles.weightRow}>
                 <View style={styles.weightMetric}>
@@ -460,29 +493,41 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     maxWidth: 680,
     alignSelf: 'center',
     paddingBottom: 112,
-    gap: 16,
+    gap: 24,
   },
   toggle: {
-    alignSelf: 'stretch',
+    alignSelf: 'flex-start',
     flexDirection: 'row',
-    padding: 4,
-    gap: 4,
-    borderRadius: 8,
-    backgroundColor: c.surfaceAlt,
+    width: '100%',
+    maxWidth: 280,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.borderStrong,
   },
-  toggleButton: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  toggleButtonSelected: { backgroundColor: c.accent },
-  toggleText: { ...typography.labelSmall, color: c.textMuted },
-  toggleTextSelected: { color: c.onAccent },
+  toggleButton: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  toggleButtonSelected: { borderBottomColor: c.brand, backgroundColor: c.brandSoft },
+  toggleText: { ...typography.overline, color: c.textMuted, fontSize: 10 },
+  toggleTextSelected: { color: c.brand },
   pressed: { opacity: 0.72 },
-  card: {
-    backgroundColor: c.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-    borderRadius: 8,
-    padding: 16,
+  reportSection: {
+    gap: 20,
+    paddingVertical: 22,
+    borderTopWidth: 1,
+    borderTopColor: c.borderStrong,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
+  journalSection: {
     gap: 16,
-    overflow: 'hidden',
+    paddingTop: 22,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.borderStrong,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -490,24 +535,61 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  sectionKicker: { ...typography.labelSmall, color: c.brand, fontSize: 10 },
-  sectionTitle: { ...typography.headline, color: c.text },
-  sectionMeta: { ...typography.labelSmall, color: c.textMuted, textAlign: 'right' },
+  sectionHeadingCopy: { flex: 1, minWidth: 0, gap: 3 },
+  sectionKicker: { ...typography.overline, color: c.brand, fontSize: 10 },
+  sectionTitle: { ...typography.metric, color: c.text },
+  sectionMeta: { ...typography.overline, color: c.textFaint, fontSize: 9, textAlign: 'right' },
+  sectionBody: { ...typography.body, color: c.textMuted, maxWidth: 580 },
+  metricLedger: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    gap: 12,
+    paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
+  leadMetric: { flexGrow: 1.35, flexBasis: 160, justifyContent: 'flex-end' },
+  detailMetric: {
+    flexGrow: 1,
+    flexBasis: 100,
+    justifyContent: 'flex-end',
+    paddingLeft: 12,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: c.border,
+  },
+  metricLabel: { ...typography.overline, color: c.textFaint, fontSize: 9 },
+  scoreValue: { ...typography.display, color: c.text, fontSize: 48, lineHeight: 51 },
+  scoreSuffix: { ...typography.metric, color: c.brand },
+  detailValue: { ...typography.metric, color: c.text },
+  detailSuffix: { ...typography.bodyLarge, color: c.textMuted },
+  metricCaption: { ...typography.bodySmall, color: c.textMuted, maxWidth: 540 },
   legendRow: {
-    minHeight: 20,
+    minHeight: 22,
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 8,
+    gap: 14,
+    marginBottom: 10,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 8, height: 8, borderRadius: 2, backgroundColor: c.success },
+  legendMissing: { width: 5, height: 5, borderRadius: 3, backgroundColor: c.textFaint },
   legendLine: { width: 14, height: 2, backgroundColor: c.accent },
-  legendText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9 },
-  chartScrollerWeekly: { flexGrow: 1 },
-  chart: { height: CHART_HEIGHT + 24, position: 'relative' },
+  legendText: { ...typography.overline, color: c.textMuted, fontSize: 9 },
+  chartFrame: { flexDirection: 'row', width: '100%' },
+  yAxis: {
+    width: 44,
+    height: CHART_HEIGHT,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingRight: 8,
+  },
+  yAxisLabel: { ...typography.labelTiny, color: c.textFaint, fontSize: 10 },
+  chartBody: { flex: 1, minWidth: 0 },
+  plotArea: { height: CHART_HEIGHT, position: 'relative' },
   gridLineTop: {
     position: 'absolute',
     left: 0,
@@ -524,58 +606,69 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: c.border,
   },
+  gridLineBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.borderStrong,
+  },
   goalLine: { position: 'absolute', left: 0, right: 0, height: 2, zIndex: 2, opacity: 0.88 },
   bars: {
-    height: CHART_HEIGHT + 24,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-around',
   },
-  barColumn: { height: CHART_HEIGHT + 24, alignItems: 'center' },
-  barArea: { height: CHART_HEIGHT, width: '100%', justifyContent: 'flex-end', alignItems: 'center' },
-  bar: { width: '100%', maxWidth: 28, minHeight: 0, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: c.success },
-  axisLabel: { ...typography.labelSmall, color: c.textMuted, height: 24, paddingTop: 6, fontSize: 9 },
-  scoreCard: {
-    backgroundColor: c.text,
-    borderRadius: 8,
-    padding: 18,
-    flexDirection: 'row',
+  barColumn: {
+    flex: 1,
+    minWidth: 0,
+    height: CHART_HEIGHT,
     alignItems: 'center',
-    gap: 18,
+    justifyContent: 'flex-end',
   },
-  scoreCopy: { minWidth: 92 },
-  scoreValue: { ...typography.display, color: c.onAccent, fontSize: 44, lineHeight: 50 },
-  scoreSuffix: { ...typography.headline, color: c.onAccent },
-  scoreExplanation: { flex: 1, gap: 3 },
-  scoreTitle: { ...typography.body, color: c.onAccent, fontWeight: '700' },
-  scoreDetail: { ...typography.body, color: c.onAccent, opacity: 0.82 },
-  insightCard: {
-    backgroundColor: c.accentSoft,
-    borderWidth: 1,
-    borderColor: c.borderStrong,
-    borderRadius: 8,
-    padding: 16,
+  bar: {
+    maxWidth: 26,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    backgroundColor: c.success,
+  },
+  missingDot: { width: 4, height: 4, borderRadius: 2, marginBottom: 1, backgroundColor: c.textFaint },
+  xAxis: {
     flexDirection: 'row',
-    gap: 12,
+    minHeight: 34,
+    paddingTop: 8,
   },
-  insightIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: c.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+  axisLabel: {
+    ...typography.labelTiny,
+    flex: 1,
+    color: c.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
   },
-  insightCopy: { flex: 1, gap: 4 },
-  insightTitle: { ...typography.bodyLarge, color: c.accent, fontWeight: '700' },
-  insightBody: { ...typography.body, color: c.textMuted },
+  axisLabelFirst: { textAlign: 'left' },
+  axisLabelLast: { textAlign: 'right' },
+  insightSection: {
+    borderLeftWidth: 3,
+    borderLeftColor: c.brand,
+    paddingLeft: 18,
+    paddingVertical: 4,
+  },
+  insightCopy: { gap: 7, maxWidth: 590 },
+  insightKickerRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  insightTitle: { ...typography.metric, color: c.text },
+  insightBody: { ...typography.body, color: c.textMuted, maxWidth: 560 },
   weightRow: { flexDirection: 'row', alignItems: 'stretch' },
   weightMetric: { flex: 1, gap: 4 },
   weightDivider: { width: StyleSheet.hairlineWidth, backgroundColor: c.border, marginHorizontal: 16 },
-  weightLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 10 },
-  weightValue: { ...typography.headline, color: c.text },
+  weightLabel: { ...typography.overline, color: c.textFaint, fontSize: 9 },
+  weightValue: { ...typography.metric, color: c.text },
   snapshotNote: {
-    ...typography.labelSmall,
+    ...typography.bodySmall,
     color: c.textFaint,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: c.border,
@@ -589,15 +682,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     backgroundColor: c.background,
   },
   statePadding: { paddingHorizontal: 32 },
-  stateTitle: { ...typography.headline, color: c.accent, textAlign: 'center' },
+  stateTitle: { ...typography.metric, color: c.text, textAlign: 'center' },
   stateText: { ...typography.body, color: c.textMuted, textAlign: 'center' },
   emptyCard: {
-    minHeight: 210,
+    minHeight: 190,
     padding: 24,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 12,
-    backgroundColor: c.surface,
+    borderTopWidth: 1,
+    borderTopColor: c.borderStrong,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
@@ -605,9 +698,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   emptyInline: { ...typography.body, color: c.textMuted, textAlign: 'center', paddingVertical: 20 },
   errorCard: {
     padding: 16,
-    borderWidth: 1,
-    borderColor: c.danger,
-    borderRadius: 12,
+    borderTopWidth: 1,
+    borderTopColor: c.danger,
+    borderBottomWidth: 1,
+    borderBottomColor: c.danger,
     backgroundColor: c.dangerSoft,
     flexDirection: 'row',
     alignItems: 'center',
@@ -615,6 +709,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   errorCopy: { flex: 1, gap: 2 },
   errorTitle: { ...typography.body, color: c.danger, fontWeight: '700' },
+  errorMessage: { ...typography.bodySmall, color: c.textMuted },
   retryButton: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
-  retryText: { ...typography.labelSmall, color: c.accent },
+  retryText: { ...typography.overline, color: c.accent },
 })

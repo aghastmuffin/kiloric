@@ -12,7 +12,7 @@ import {
 import { getAccessToken } from '@/lib/getAccessToken'
 import { normalizeOrdsResponse } from '@/lib/ordsNormalize'
 
-type RequestOptions = RequestInit & {
+type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>
 }
 

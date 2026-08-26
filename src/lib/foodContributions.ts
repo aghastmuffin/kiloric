@@ -138,7 +138,7 @@ export async function submitFoodContribution(
   })
 
   try {
-    const doc = (await databases.createDocument({
+    const doc = await databases.createDocument<FoodContributionDocument>({
       databaseId: FOODS_DATABASE_ID,
       collectionId: COLLECTION_ID,
       documentId: ID.unique(),
@@ -148,7 +148,7 @@ export async function submitFoodContribution(
         Permission.update(Role.user(owner)),
         Permission.delete(Role.user(owner)),
       ],
-    })) as FoodContributionDocument
+    })
 
     return {
       id: doc.$id,

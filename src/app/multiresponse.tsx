@@ -5,14 +5,16 @@ import { useAuth } from '@/lib/AuthContext';
 import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
-import { spacing, type ThemeColors } from '@/lib/theme/tokens';
+import { useAppLayout } from '@/lib/theme/layout';
+import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
@@ -92,22 +94,77 @@ function ObjectCard({
   addStatus?: { state: 'adding' | 'added' | 'error'; message: string };
 }) {
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const title = getItemTitle(item, index);
   const barcode = getItemBarcode(item);
   const entries = Object.entries(item).filter(([key]) => !TITLE_KEYS.includes(key));
+  const isAdding = addStatus?.state === 'adding';
+  const isAdded = addStatus?.state === 'added';
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{title}</Text>
+      <View style={styles.cardHeading}>
+        <View style={styles.cardHeadingText}>
+          <Text style={styles.cardTitle}>{title}</Text>
+          {barcode ? <Text style={styles.barcodeText}>Barcode · {barcode}</Text> : null}
+        </View>
+        <Text style={styles.resultNumber}>{String(index + 1).padStart(2, '0')}</Text>
+      </View>
       {entries.length > 0 ? (
-        entries.map(([key, value]) => (
-          <ResultRow key={key} label={formatLabel(key)} value={formatValue(value)} />
-        ))
+        <View style={styles.detailsBlock}>
+          {entries.map(([key, value]) => (
+            <ResultRow key={key} label={formatLabel(key)} value={formatValue(value)} />
+          ))}
+        </View>
       ) : (
         <Text style={styles.mutedText}>No additional details</Text>
       )}
-      {barcode && onViewMore ? (
-        <Text style={styles.viewMoreButtonText}>View more →</Text>
+      {barcode && (onViewMore || onAdd) ? (
+        <View style={styles.cardActions}>
+          {onViewMore ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`View full details for ${title}`}
+              onPress={() => onViewMore(barcode)}
+              style={({ pressed }) => [styles.secondaryAction, pressed && styles.pressed]}
+            >
+              <Ionicons name="eye-outline" size={17} color={colors.accent} />
+              <Text style={styles.secondaryActionText}>Full details</Text>
+            </Pressable>
+          ) : null}
+          {onAdd ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${isAdded ? 'Added' : 'Add'} ${title}`}
+              accessibilityState={{ disabled: isAdding || isAdded }}
+              disabled={isAdding || isAdded}
+              onPress={() => onAdd(item, index)}
+              style={({ pressed }) => [
+                styles.primaryAction,
+                isAdded && styles.primaryActionDone,
+                pressed && styles.pressed,
+              ]}
+            >
+              {isAdding ? (
+                <ActivityIndicator size="small" color={colors.onBrand} />
+              ) : (
+                <Ionicons
+                  name={isAdded ? 'checkmark' : 'add'}
+                  size={18}
+                  color={colors.onBrand}
+                />
+              )}
+              <Text style={styles.primaryActionText}>
+                {isAdding ? 'Adding…' : isAdded ? 'Added' : 'Add to meal'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      {addStatus ? (
+        <Text style={[styles.addStatus, addStatus.state === 'error' && styles.addStatusError]}>
+          {addStatus.message}
+        </Text>
       ) : null}
     </View>
   );
@@ -199,6 +256,16 @@ function ResultsBody({
   }
 
   if (Array.isArray(data)) {
+    if (data.length === 0) {
+      return (
+        <EmptyContributeState
+          title="No matches found"
+          subtitle="Try another search, or contribute this product with a clear label photo."
+          onContribute={onContribute}
+        />
+      )
+    }
+
     if (
       data.length === 1 &&
       typeof data[0] === 'string' &&
@@ -283,6 +350,8 @@ export default function MultiResponseScreen() {
   const { query, result } = useLocalSearchParams<{ query?: string; result?: string }>()
   const router = useRouter()
   const styles = useThemedStyles(makeStyles)
+  const insets = useSafeAreaInsets()
+  const { gutter } = useAppLayout()
   const { user } = useAuth()
   const { selectedMealType } = useMealTypePreferences()
   const parsedResult = parseResult(result)
@@ -291,6 +360,7 @@ export default function MultiResponseScreen() {
   const [detailData, setDetailData] = useState<Record<string, unknown> | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const detailRequestIdRef = useRef(0)
   const [addStatuses, setAddStatuses] = useState<
     Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
   >({})
@@ -308,6 +378,7 @@ export default function MultiResponseScreen() {
   }, [query, router])
 
   const handleViewMore = useCallback(async (barcode: string) => {
+    const requestId = ++detailRequestIdRef.current
     setSelectedBarcode(barcode)
     setModalVisible(true)
     setDetailLoading(true)
@@ -315,18 +386,30 @@ export default function MultiResponseScreen() {
     setDetailData(null)
 
     try {
-      const data = await authenticatedRequest(`/api/barcode/${barcode}`)
+      const data = await authenticatedRequest(`/api/barcode/${encodeURIComponent(barcode)}`)
+      if (requestId !== detailRequestIdRef.current) return
       if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
         setDetailData(data as Record<string, unknown>)
       } else {
         setDetailData({ result: data })
       }
     } catch (error) {
+      if (requestId !== detailRequestIdRef.current) return
       const message = error instanceof Error ? error.message : 'Unknown error'
       setDetailError(`Request failed: ${message}`)
     } finally {
-      setDetailLoading(false)
+      if (requestId === detailRequestIdRef.current) setDetailLoading(false)
     }
+  }, [])
+
+  const closeDetail = useCallback(() => {
+    detailRequestIdRef.current += 1
+    setModalVisible(false)
+    setDetailLoading(false)
+  }, [])
+
+  useEffect(() => () => {
+    detailRequestIdRef.current += 1
   }, [])
 
   const handleQuickAdd = useCallback(
@@ -368,14 +451,24 @@ export default function MultiResponseScreen() {
     <GestureHandlerRootView style={styles.root}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: gutter, paddingBottom: insets.bottom + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        {query ? (
-          <View style={styles.header}>
-            <Text style={styles.headerLabel}>Search query</Text>
-            <Text style={styles.headerQuery}>{query}</Text>
+        <View style={styles.header}>
+          <View style={styles.overlineRow}>
+            <Text style={styles.headerLabel}>FOOD SEARCH</Text>
+            <View style={styles.overlineRule} />
           </View>
-        ) : null}
+          <Text accessibilityRole="header" style={styles.headerQuery}>
+            {query ? `Results for “${query}”` : 'Search results'}
+          </Text>
+          <Text style={styles.headerDescription}>
+            Review the recorded fields, open the full product detail, or add a match to your meal.
+          </Text>
+        </View>
 
         <ResultsBody
           data={parsedResult}
@@ -392,7 +485,7 @@ export default function MultiResponseScreen() {
         data={detailData}
         isLoading={detailLoading}
         error={detailError}
-        onClose={() => setModalVisible(false)}
+        onClose={closeDetail}
       />
     </GestureHandlerRootView>
   )
@@ -409,84 +502,84 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   content: {
     width: '100%',
-    maxWidth: 620,
+    maxWidth: 680,
     alignSelf: 'center',
-    padding: spacing.lg,
-    paddingBottom: 48,
-    gap: spacing.md,
+    paddingTop: spacing.lg,
+    gap: spacing.lg,
   },
   header: {
-    paddingBottom: 14,
+    gap: 5,
+    paddingBottom: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.borderStrong,
   },
+  overlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    maxWidth: 190,
+  },
+  overlineRule: {
+    height: StyleSheet.hairlineWidth,
+    flex: 1,
+    backgroundColor: c.brand,
+    opacity: 0.45,
+  },
   headerLabel: {
-    ...typography.labelSmall,
-    color: c.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  mealChipText: {
-    ...typography.labelSmall,
-    color: c.accent,
-  },
-  swipeHint: {
-    ...typography.labelSmall,
-    color: c.textMuted,
-    fontSize: 13,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 6,
+    ...typography.overline,
+    color: c.brand,
   },
   headerQuery: {
+    ...typography.headlineLarge,
     color: c.text,
-    fontSize: 20,
-    fontWeight: '600',
+  },
+  headerDescription: {
+    ...typography.body,
+    color: c.textMuted,
+    maxWidth: 560,
   },
   card: {
-    backgroundColor: c.surface,
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.border,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8 },
-      android: { elevation: 2 },
-    })
-  },
-  cardPressed: {
-    opacity: 0.8,
-  },
-  errorCard: {
-    borderColor: c.danger,
-    backgroundColor: c.dangerSoft,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: c.borderStrong,
+    gap: spacing.md,
   },
   cardHeading: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
+    alignItems: 'flex-start',
+    gap: spacing.md,
   },
   cardHeadingText: {
     flex: 1,
+    minWidth: 0,
   },
   cardTitle: {
-    ...typography.bodyLarge,
+    ...typography.headline,
     color: c.text,
-    fontWeight: '700',
   },
   barcodeText: {
     ...typography.labelSmall,
     color: c.textMuted,
-    marginTop: 2,
+    marginTop: 3,
+  },
+  resultNumber: {
+    ...typography.metric,
+    color: c.textFaint,
+    fontSize: 23,
+    lineHeight: 27,
+  },
+  detailsBlock: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 8,
+    gap: spacing.md,
+    paddingVertical: 9,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.border,
   },
@@ -496,51 +589,84 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flex: 1,
   },
   rowValue: {
-    ...typography.labelSmall,
+    ...typography.bodySmall,
     color: c.text,
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1.2,
+    flex: 1.25,
     textAlign: 'right',
   },
   messageText: {
     ...typography.body,
     color: c.text,
   },
-  errorText: {
-    color: c.danger,
-  },
   mutedText: {
-    ...typography.body,
+    ...typography.bodySmall,
     color: c.textMuted,
     textAlign: 'center',
-    paddingVertical: 24,
+    paddingVertical: spacing.lg,
   },
-  viewMoreButton: {
-    backgroundColor: c.surfaceAlt,
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: c.brand,
-    alignItems: 'center',
+  cardActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  viewMoreButtonText: {
-    color: c.brand,
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  emptyStateContainer: {
+  secondaryAction: {
+    minHeight: 46,
+    minWidth: 132,
+    flexGrow: 1,
+    flexBasis: 160,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: c.borderStrong,
+    borderRadius: borderRadius.pill,
+    backgroundColor: c.surface,
+    paddingHorizontal: spacing.md,
+  },
+  secondaryActionText: {
+    ...typography.label,
+    color: c.accent,
+  },
+  primaryAction: {
+    minHeight: 46,
+    minWidth: 132,
+    flexGrow: 1,
+    flexBasis: 160,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: borderRadius.pill,
+    backgroundColor: c.brand,
+    paddingHorizontal: spacing.md,
+  },
+  primaryActionDone: {
+    backgroundColor: c.success,
+  },
+  primaryActionText: {
+    ...typography.label,
+    color: c.onBrand,
+  },
+  addStatus: {
+    ...typography.labelSmall,
+    color: c.success,
+  },
+  addStatusError: {
+    color: c.danger,
+  },
+  emptyStateContainer: {
+    minHeight: 280,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
   emptyIconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: c.surfaceAlt,
@@ -555,17 +681,21 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     ...typography.body,
     color: c.textMuted,
     textAlign: 'center',
+    maxWidth: 440,
   },
   contributeButton: {
+    minHeight: 48,
     marginTop: spacing.md,
     backgroundColor: c.brand,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
-    borderRadius: 999,
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'center',
+    borderRadius: borderRadius.pill,
   },
   contributeButtonText: {
     ...typography.label,
     color: c.onBrand,
-    fontWeight: '700',
+  },
+  pressed: {
+    opacity: 0.72,
   },
 });

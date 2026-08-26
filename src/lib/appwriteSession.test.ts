@@ -1,6 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import type { Models } from 'react-native-appwrite'
 import { client } from '@/lib/appwrite'
 import { clearCachedToken } from './getAccessToken'
 import { clearProfileCache } from './profile'
@@ -39,6 +40,7 @@ describe('appwriteSession cache clearing', () => {
     const mockSession = {
       $id: 'session-123',
       $createdAt: '2025-01-01',
+      $updatedAt: '2025-01-01',
       userId: 'user-123',
       expire: '2025-01-02',
       provider: 'email',
@@ -54,15 +56,18 @@ describe('appwriteSession cache clearing', () => {
       clientCode: 'expo',
       clientName: 'Expo',
       clientVersion: '1.0',
+      clientEngine: 'JavaScriptCore',
+      clientEngineVersion: '1.0',
       deviceBrand: 'Apple',
       deviceModel: 'iPhone',
       deviceName: 'iPhone',
-      deviceSubtype: 'phone',
       countryCode: 'US',
       countryName: 'United States',
       current: true,
+      factors: [],
       secret: 'my-session-secret',
-    }
+      mfaUpdatedAt: '',
+    } satisfies Models.Session
 
     await persistAppwriteSession(mockSession)
 

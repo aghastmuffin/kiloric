@@ -1,9 +1,7 @@
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { setHasSkippedSignIn } from '@/components/ProfileGate';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
-import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl'; // Added to handle search tab picker
 import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext';
-import { useSearchPreferences } from '@/lib/SearchPreferencesContext'; // Added to power state hooks
 import { showApiError } from '@/lib/apiErrors';
 import { isValidEmail, isValidPassword } from '@/lib/authValidation';
 import { useTheme } from '@/lib/theme/ThemeContext';
@@ -11,9 +9,10 @@ import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -21,39 +20,32 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    useWindowDimensions,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type SignInStep = 'landing' | 'email' | 'password'
 
 export function AccountSignInFlow() {
-    const { signIn } = useAuth()
+    const { signIn, sendPasswordReset } = useAuth()
     const router = useRouter()
+    const pathname = usePathname()
     const styles = useThemedStyles(makeStyles)
     const { colors } = useTheme()
+    const insets = useSafeAreaInsets()
+    const { width, fontScale } = useWindowDimensions()
+    const stackActions = width < 390 || fontScale > 1.25
+    const isStandalone = pathname === '/signin'
 
-    // 1. Hook up the search hooks properly inside this component
-    const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences()
-    const [savingPreference, setSavingPreference] = useState(false)
-
-    // 2. Local isolated state for toggling this screen's dropdown menu
     const [settingsExpanded, setSettingsExpanded] = useState(false)
 
     const [step, setStep] = useState<SignInStep>('landing')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const [sendingReset, setSendingReset] = useState(false)
     const [authError, setAuthError] = useState<string | null>(null)
-
-    async function handleSearchModeChange(mode: 'scan' | 'text_query') {
-        if (mode === defaultSearchMode || savingPreference) return
-        setSavingPreference(true)
-        try {
-            await setDefaultSearchMode(mode)
-        } finally {
-            setSavingPreference(false)
-        }
-    }
 
     function goToEmail() {
         setAuthError(null)
@@ -95,6 +87,23 @@ export function AccountSignInFlow() {
         }
     }
 
+    async function handleForgotPassword() {
+        if (!isValidEmail(email) || sendingReset) {
+            setAuthError('Enter a valid email address before requesting a reset link.')
+            return
+        }
+        setSendingReset(true)
+        setAuthError(null)
+        try {
+            await sendPasswordReset(email.trim())
+            setAuthError('Check your inbox for a password reset link. The link is valid for one hour.')
+        } catch (err) {
+            setAuthError(getAuthErrorMessage(err))
+        } finally {
+            setSendingReset(false)
+        }
+    }
+
     function goBack() {
         setAuthError(null)
         if (step === 'password') {
@@ -111,19 +120,37 @@ export function AccountSignInFlow() {
             style={styles.screen}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-            <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+            <ScrollView
+                contentContainerStyle={[
+                    styles.container,
+                    {
+                        paddingTop: isStandalone ? Math.max(insets.top + 20, 28) : 0,
+                        paddingBottom: step === 'landing'
+                            ? Math.max(insets.bottom + 32, 48)
+                            : isStandalone
+                                ? insets.bottom + (stackActions ? 188 : 116)
+                                : 24,
+                    },
+                ]}
+                keyboardShouldPersistTaps="handled"
+                scrollEnabled={isStandalone}
+                showsVerticalScrollIndicator={false}
+            >
                 {step === 'landing' ? (
                     <>
-                        <View style={styles.heroBadge}>
-                            <Ionicons name="person" size={30} color={colors.accent} />
+                        <View style={styles.heroMark}>
+                            <View style={styles.heroRule} />
+                            <Text style={styles.heroMarkText}>CALCOUNT</Text>
                         </View>
-                        <Text style={styles.eyebrow}>YOUR VITALITY</Text>
-                        <Text style={styles.title}>Welcome back</Text>
+                        <Text style={styles.eyebrow}>FOOD & NUTRITION</Text>
+                        <Text accessibilityRole="header" style={styles.title}>Welcome to CalCount</Text>
                         <Text style={styles.subtitle}>
-                            Sign in to sync your profile, streaks and meals — or create a new account to start your run.
+                            Log meals and understand your nutrition in one place. CalCount is for adults
+                            18 and older; eligibility is checked before account creation.
                         </Text>
 
                         <Pressable
+                            accessibilityRole="button"
                             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
                             onPress={goToEmail}
                         >
@@ -132,6 +159,7 @@ export function AccountSignInFlow() {
                         </Pressable>
 
                         <Pressable
+                            accessibilityRole="button"
                             style={({ pressed }) => [styles.buttonSecondary, pressed && styles.buttonPressed]}
                             onPress={() => router.replace('/onboarding')}
                         >
@@ -139,6 +167,7 @@ export function AccountSignInFlow() {
                         </Pressable>
 
                         <Pressable
+                            accessibilityRole="button"
                             style={({ pressed }) => [styles.buttonSkip, pressed && styles.buttonPressed]}
                             onPress={() => {
                                 setHasSkippedSignIn(true)
@@ -148,10 +177,20 @@ export function AccountSignInFlow() {
                             <Text style={styles.buttonSkipText}>Skip for now</Text>
                         </Pressable>
 
-                        {/* Collapsible Local Card component wrapper */}
+                        <Pressable
+                            accessibilityRole="link"
+                            onPress={() => router.push('/privacy-policy')}
+                            style={({ pressed }) => [styles.buttonSkip, pressed && styles.buttonPressed]}
+                        >
+                            <Text style={styles.buttonSkipText}>Privacy policy and data use</Text>
+                        </Pressable>
+
                         <View style={styles.card}>
                             <Pressable
-                                onPress={() => setSettingsExpanded(!settingsExpanded)}
+                                accessibilityLabel="Sign-in preferences"
+                                accessibilityRole="button"
+                                accessibilityState={{ expanded: settingsExpanded }}
+                                onPress={() => setSettingsExpanded((current) => !current)}
                                 style={styles.header}
                             >
                                 <View style={styles.settingsHeaderRow}>
@@ -160,8 +199,8 @@ export function AccountSignInFlow() {
                                             <Ionicons name="options-outline" size={17} color={colors.accent} />
                                         </View>
                                         <View>
-                                            <Text style={styles.settingsKicker}>PREFERENCES</Text>
-                                            <Text style={styles.sectionTitle}>Settings</Text>
+                                            <Text style={styles.settingsKicker}>BEFORE YOU BEGIN</Text>
+                                            <Text style={styles.sectionTitle}>App preferences</Text>
                                         </View>
                                     </View>
                                     <Ionicons
@@ -174,20 +213,8 @@ export function AccountSignInFlow() {
 
                             {settingsExpanded && (
                                 <View style={styles.settingsCardInner}>
-                                    <Text style={styles.label}>Default search tab</Text>
-                                    <Text style={styles.hint}>
-                                        Choose whether the bottom tab opens camera scan or manual text search.
-                                    </Text>
-                                    <ThemedSegmentedControl
-                                        values={['Camera scan', 'Text search']}
-                                        selectedIndex={defaultSearchMode === 'scan' ? 0 : 1}
-                                        enabled={!savingPreference}
-                                        onChange={(index) =>
-                                            handleSearchModeChange(index === 0 ? 'scan' : 'text_query')
-                                        }
-                                    />
-
                                     <ThemePreferencePicker />
+                                    <View style={styles.preferenceDivider} />
                                     <FontPreferencePicker />
                                 </View>
                             )}
@@ -197,11 +224,12 @@ export function AccountSignInFlow() {
 
                 {step === 'email' ? (
                     <>
-                        <Text style={styles.title}>Your email</Text>
+                        <Text style={styles.eyebrow}>SIGN IN · 01</Text>
+                        <Text accessibilityRole="header" style={styles.title}>Your email</Text>
                         <Text style={styles.subtitle}>We&apos;ll use this to sign you in on this device.</Text>
 
                         {authError ? (
-                            <View style={styles.errorBox}>
+                            <View accessibilityRole="alert" style={styles.errorBox}>
                                 <Text style={styles.errorTitle}>Something went wrong</Text>
                                 <Text style={styles.errorText}>{authError}</Text>
                             </View>
@@ -217,18 +245,33 @@ export function AccountSignInFlow() {
                             keyboardType="email-address"
                             maxLength={254}
                             autoFocus
+                            accessibilityLabel="Email address"
+                            autoComplete="email"
+                            textContentType="emailAddress"
                             style={styles.input}
                         />
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: sendingReset }}
+                            disabled={sendingReset}
+                            onPress={() => void handleForgotPassword()}
+                            style={({ pressed }) => [styles.recoveryLink, pressed && styles.buttonPressed]}
+                        >
+                            <Text style={styles.recoveryLinkText}>
+                                {sendingReset ? 'Sending reset link…' : 'Forgot password?'}
+                            </Text>
+                        </Pressable>
                     </>
                 ) : null}
 
                 {step === 'password' ? (
                     <>
-                        <Text style={styles.title}>Your password, please</Text>
+                        <Text style={styles.eyebrow}>SIGN IN · 02</Text>
+                        <Text accessibilityRole="header" style={styles.title}>Your password</Text>
                         <Text style={styles.subtitle}>{email.trim()}</Text>
 
                         {authError ? (
-                            <View style={styles.errorBox}>
+                            <View accessibilityRole="alert" style={styles.errorBox}>
                                 <Text style={styles.errorTitle}>Something went wrong</Text>
                                 <Text style={styles.errorText}>{authError}</Text>
                             </View>
@@ -244,6 +287,9 @@ export function AccountSignInFlow() {
                             autoCapitalize="none"
                             maxLength={128}
                             autoFocus
+                            accessibilityLabel="Password"
+                            autoComplete="current-password"
+                            textContentType="password"
                             style={styles.input}
                         />
                     </>
@@ -251,31 +297,48 @@ export function AccountSignInFlow() {
             </ScrollView>
 
             {step !== 'landing' ? (
-                <View style={styles.footer}>
-                    <Pressable
-                        onPress={goBack}
-                        disabled={submitting}
-                        style={({ pressed }) => [
-                            styles.footerSecondary,
-                            pressed && styles.buttonPressed,
-                            submitting && styles.buttonDisabled,
-                        ]}
-                    >
-                        <Text style={styles.footerSecondaryText}>Back</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={step === 'email' ? goToPassword : handleSignIn}
-                        disabled={submitting}
-                        style={({ pressed }) => [
-                            styles.footerPrimary,
-                            pressed && styles.buttonPressed,
-                            submitting && styles.buttonDisabled,
-                        ]}
-                    >
-                        <Text style={styles.footerPrimaryText}>
-                            {submitting ? 'Working…' : step === 'email' ? 'Continue' : 'Sign in'}
-                        </Text>
-                    </Pressable>
+                <View
+                    style={[
+                        styles.footer,
+                        !isStandalone && styles.footerInline,
+                        { paddingBottom: isStandalone ? Math.max(insets.bottom, 16) : 12 },
+                    ]}
+                >
+                    <View style={[styles.footerContent, stackActions && styles.footerContentStacked]}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: submitting }}
+                            onPress={goBack}
+                            disabled={submitting}
+                            style={({ pressed }) => [
+                                styles.footerSecondary,
+                                stackActions && styles.footerButtonStacked,
+                                pressed && styles.buttonPressed,
+                                submitting && styles.buttonDisabled,
+                            ]}
+                        >
+                            <Text style={styles.footerSecondaryText}>Back</Text>
+                        </Pressable>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: submitting, busy: submitting }}
+                            onPress={step === 'email' ? goToPassword : handleSignIn}
+                            disabled={submitting}
+                            style={({ pressed }) => [
+                                styles.footerPrimary,
+                                stackActions && styles.footerButtonStacked,
+                                pressed && styles.buttonPressed,
+                                submitting && styles.buttonDisabled,
+                            ]}
+                        >
+                            <View style={styles.buttonContent}>
+                                {submitting ? <ActivityIndicator color={colors.onBrand} size="small" /> : null}
+                                <Text style={styles.footerPrimaryText}>
+                                    {submitting ? 'Signing in…' : step === 'email' ? 'Continue' : 'Sign in'}
+                                </Text>
+                            </View>
+                        </Pressable>
+                    </View>
                 </View>
             ) : null}
         </KeyboardAvoidingView>
@@ -290,34 +353,41 @@ const makeStyles = (c: ThemeColors) =>
         },
         container: {
             flexGrow: 1,
-            padding: 20,
-            paddingBottom: 120,
+            width: '100%',
+            maxWidth: 620,
+            alignSelf: 'center',
+            paddingHorizontal: 20,
         },
-        heroBadge: {
-            width: 64,
-            height: 64,
-            borderRadius: 32,
+        heroMark: {
+            flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: c.brandSoft,
-            borderWidth: 1,
-            borderColor: c.brand,
-            marginBottom: 16,
+            gap: 10,
+            marginBottom: 28,
+        },
+        heroRule: {
+            width: 40,
+            height: 2,
+            backgroundColor: c.brand,
+        },
+        heroMarkText: {
+            ...typography.overline,
+            color: c.textMuted,
         },
         eyebrow: {
-            ...typography.labelSmall,
+            ...typography.overline,
             color: c.brand,
-            marginBottom: 4,
+            marginBottom: 8,
         },
         title: {
-            ...typography.headlineLarge,
+            ...typography.display,
             color: c.text,
-            marginBottom: 8,
+            marginBottom: 10,
         },
         subtitle: {
             ...typography.body,
             color: c.textMuted,
-            marginBottom: 24,
+            marginBottom: 28,
+            maxWidth: 540,
         },
         sectionTitle: {
             ...typography.headline,
@@ -336,16 +406,15 @@ const makeStyles = (c: ThemeColors) =>
             gap: 12,
         },
         settingsIconBadge: {
-            width: 36,
-            height: 36,
-            borderRadius: 11,
+            width: 44,
+            height: 44,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: c.accentSoft,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: c.borderStrong,
         },
         settingsKicker: {
-            ...typography.labelSmall,
-            fontSize: 10,
+            ...typography.overline,
             color: c.textFaint,
         },
         label: {
@@ -366,38 +435,33 @@ const makeStyles = (c: ThemeColors) =>
             borderColor: c.border,
         },
         card: {
-            backgroundColor: c.surface,
-            borderRadius: 8,
-            padding: 16,
-            marginTop: 24,
-            borderWidth: StyleSheet.hairlineWidth,
+            marginTop: 32,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderBottomWidth: StyleSheet.hairlineWidth,
             borderColor: c.border,
         },
         settingsCardInner: {
-            marginTop: 16,
-            paddingTop: 14,
+            paddingTop: 18,
+            paddingBottom: 20,
             borderTopWidth: StyleSheet.hairlineWidth,
             borderTopColor: c.border,
         },
         errorBox: {
             backgroundColor: c.dangerSoft,
             borderColor: c.danger,
-            borderWidth: 1.5,
-            borderRadius: 12,
-            padding: 14,
+            borderLeftWidth: 3,
+            paddingLeft: 14,
+            paddingVertical: 4,
             marginBottom: 20,
         },
         errorTitle: {
             color: c.danger,
-            fontSize: 15,
-            fontWeight: '700',
+            ...typography.label,
             marginBottom: 6,
         },
         errorText: {
             color: c.danger,
-            fontSize: 13,
-            lineHeight: 19,
-            fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+            ...typography.bodySmall,
         },
         button: {
             flexDirection: 'row',
@@ -405,19 +469,17 @@ const makeStyles = (c: ThemeColors) =>
             gap: 8,
             backgroundColor: c.brand,
             borderRadius: 999,
-            padding: 16,
+            minHeight: 48,
+            paddingHorizontal: 16,
             alignItems: 'center',
             marginTop: 8,
-            shadowColor: c.brand,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.22,
-            shadowRadius: 10,
-            elevation: 3,
         },
         buttonSecondary: {
-            borderRadius: 8,
-            padding: 15,
+            borderRadius: 999,
+            minHeight: 48,
+            paddingHorizontal: 15,
             alignItems: 'center',
+            justifyContent: 'center',
             marginTop: 12,
             borderWidth: 1.5,
             borderColor: c.accent,
@@ -431,8 +493,10 @@ const makeStyles = (c: ThemeColors) =>
             color: c.accent,
         },
         buttonSkip: {
-            padding: 12,
+            minHeight: 44,
+            paddingHorizontal: 12,
             alignItems: 'center',
+            justifyContent: 'center',
             marginTop: 4,
         },
         buttonSkipText: {
@@ -452,18 +516,35 @@ const makeStyles = (c: ThemeColors) =>
             bottom: 0,
             paddingHorizontal: 20,
             paddingTop: 12,
-            paddingBottom: 24,
             backgroundColor: c.background,
             borderTopWidth: 1,
             borderTopColor: c.border,
+        },
+        footerContent: {
+            width: '100%',
+            maxWidth: 620,
+            alignSelf: 'center',
             flexDirection: 'row',
             gap: 12,
+        },
+        footerInline: {
+            position: 'relative',
+            marginTop: 24,
+        },
+        footerContentStacked: {
+            flexDirection: 'column-reverse',
+        },
+        footerButtonStacked: {
+            flex: 0,
+            width: '100%',
         },
         footerSecondary: {
             flex: 1,
             borderRadius: 8,
             paddingVertical: 14,
+            minHeight: 48,
             alignItems: 'center',
+            justifyContent: 'center',
             borderWidth: 1.5,
             borderColor: c.border,
         },
@@ -476,19 +557,43 @@ const makeStyles = (c: ThemeColors) =>
             backgroundColor: c.brand,
             borderRadius: 999,
             paddingVertical: 14,
+            minHeight: 48,
             alignItems: 'center',
+            justifyContent: 'center',
         },
         footerPrimaryText: {
             ...typography.label,
             color: c.onBrand,
         },
+        buttonContent: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+        },
         header: {
-            paddingVertical: 4,
+            minHeight: 68,
+            justifyContent: 'center',
+            paddingVertical: 8,
         },
         hint: {
+            ...typography.bodySmall,
             color: c.textFaint,
-            fontSize: 12,
             marginTop: 4,
-            lineHeight: 18,
+        },
+        recoveryLink: {
+            minHeight: 44,
+            alignSelf: 'flex-start',
+            justifyContent: 'center',
+            marginTop: -8,
+        },
+        recoveryLinkText: {
+            ...typography.label,
+            color: c.brand,
+        },
+        preferenceDivider: {
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: c.border,
+            marginVertical: 12,
         },
     })

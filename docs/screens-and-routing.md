@@ -1,73 +1,46 @@
 # Screens and routing
 
-Expo Router file-based routes under `src/app/`. Typed routes enabled (`experiments.typedRoutes`).
+Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 
-## Tab group `(tabs)`
+## Main tabs
 
 | File | Route | Description |
 |------|-------|-------------|
-| `index.tsx` | `/` | Home — links to credits, scan, text query |
-| `scan.tsx` | `/scan` | Shows last scanned barcode + API result; opens camera |
-| `text_query.tsx` | `/text_query` | Text or manual barcode search; fuzzy results → multiresponse |
-| `meals.tsx` | `/meals` | Placeholder — under construction |
-| `account.tsx` | `/account` | Auth form, settings (font, search mode), profile editor link |
-| `about.tsx` | `/about` | Hidden from tab bar |
-| `basepg.tsx` | `/basepg` | Hidden legacy page |
-| `_layout.tsx` | — | Tabs + `ProfileGate` + `SearchPreferencesProvider` |
+| `(tabs)/index.tsx` | `/` | Today dashboard: nutrition targets, automatic indicators, personal tasks, and recent logs |
+| `(tabs)/logfood.tsx` | `/logfood` | Food search, barcode entry, favorites, history, and meal logging |
+| `(tabs)/stats.tsx` | `/stats` | Nutrition history and progress summaries |
+| `(tabs)/account.tsx` | `/account` | Sign in, account summary, user preferences, privacy controls, and deletion |
 
-### Search tab visibility
+`(tabs)/_layout.tsx` applies `ProfileGate`. Signed-in users cannot enter the main tabs until a complete, adult-eligible profile is confirmed.
 
-Controlled in `(tabs)/_layout.tsx`:
-
-- `defaultSearchMode === 'scan'` → Scan tab visible, Manual Search hidden
-- `defaultSearchMode === 'text_query'` → opposite
-
-User can still swap modes temporarily via `SearchModeSwapButton` without changing the default.
+The `meals`, `workouts`, `meds`, and `searchrewrite` files are hidden routes. Preview planners have no production navigation entry point.
 
 ## Stack screens
 
-| File | Route | Params | Description |
-|------|-------|--------|-------------|
-| `_layout.tsx` | — | — | Root stack, fonts, providers |
-| `cameraview.tsx` | `/cameraview` | — | Barcode scanner; writes `saved_barcode` to AsyncStorage |
-| `onboarding.tsx` | `/onboarding` | — | Hosts `OnboardingWizard` |
-| `onboard_success.tsx` | `/onboard_success` | — | Success screen after onboarding |
-| `config.tsx` | `/config` | — | Full profile editor (all Appwrite fields) |
-| `multiresponse.tsx` | `/multiresponse` | `data` (JSON string) | Renders fuzzy search result list |
-| `fooddetail.tsx` | `/fooddetail` | `code` | Fetches `/api/barcode/:code` for detail view |
-| `present_n_save.tsx` | `/present_n_save` | — | Stub for confirm/save flow |
-| `credits.tsx` | `/credits` | — | Credits |
-| `+not-found.tsx` | — | — | 404 fallback |
+| File | Route | Description |
+|------|-------|-------------|
+| `signin.tsx` | `/signin` | Neutral CalCount introduction and password sign-in |
+| `onboarding.tsx` | `/onboarding` | Eligibility-first account creation and profile setup |
+| `onboard_success.tsx` | `/onboard_success` | Setup completion screen |
+| `reset-password.tsx` | `/reset-password` | Completes Appwrite email recovery links |
+| `cameraview.tsx` | `/cameraview` | Barcode scanner; opened only from an explicit scan action |
+| `config.tsx` | `/config` | Profile, goals, nutrition targets, and appearance preferences |
+| `contribute-food.tsx` | `/contribute-food` | Submit a food record for review |
+| `privacy-policy.tsx` | `/privacy-policy` | Privacy and retention policy |
+| `credits.tsx` | `/credits` | Credits and acknowledgements |
 
-## Common navigation patterns
+## Authentication and eligibility
 
-```tsx
-import { useRouter } from 'expo-router'
+1. A new user confirms a date of birth and must be at least 18 before entering an email or password.
+2. After account creation, onboarding gathers the fields needed for nutrition calculations.
+3. `ProfileGate` revalidates profile completeness and age on every signed-in tab entry.
+4. Profile edits reject an ineligible date of birth.
+5. Password recovery begins from the sign-in password screen and returns through `/reset-password`.
+6. Account deletion is available from the You tab and immediately blocks account access; server-side retention procedures complete the purge.
 
-const router = useRouter()
+## Camera behavior
 
-router.push('/cameraview')
-router.push('/fooddetail?code=012345678905')
-router.push({ pathname: '/multiresponse', params: { data: JSON.stringify(items) } })
-router.replace('/onboarding')
-```
-
-## Screen dependencies
-
-| Screen | Requires login | Requires complete profile | Backend API |
-|--------|----------------|---------------------------|-------------|
-| Home, About | No | No | No |
-| Scan, Text query | Yes (for API) | No | Yes |
-| Account | No (shows auth form) | No | JWT test only |
-| Meals | No | No | No |
-| Onboarding | Yes | No (creates profile) | No |
-| Config | Yes | Partial (editable anytime) | No |
-| Food detail, Multiresponse | Yes | No | Yes |
-
-`ProfileGate` only forces onboarding for signed-in users with incomplete profiles.
-
-## Camera notes
-
-- iOS Simulator: scanning disabled (`expo-device` check); message shown instead.
-- Permissions requested via `useCameraPermissions()` from `expo-camera`.
-- Supported barcode types listed in `cameraview.tsx` (EAN, UPC, QR, Code128, etc.).
+- Camera permission is requested only after an explicit scan or photo action.
+- CalCount does not request microphone access.
+- A permanently denied camera permission shows an Open settings action on native platforms.
+- The iOS Simulator shows a physical-camera requirement instead of opening the scanner.

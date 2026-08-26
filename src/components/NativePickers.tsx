@@ -1,9 +1,9 @@
 import { createElement, type ReactNode, useMemo } from 'react';
-import { Host } from '@expo/ui/swift-ui';
+import { NativeDatePickerControl } from '@/components/NativeDatePickerControl';
+import { NativePickerHost } from '@/components/NativePickerHost';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { DateTimePicker as ExpoDateTimePicker } from '@expo/ui/community/datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import {
   Platform,
@@ -22,21 +22,10 @@ const pickerHostStyle: ViewStyle = {
 };
 
 function wrapIosPicker(children: ReactNode, compact = false) {
-  if (Platform.OS === 'ios') {
-    return (
-      <Host
-        matchContents={{ vertical: true }}
-        style={compact ? pickerLayoutStyles.compactPickerHost : pickerHostStyle}
-      >
-        {children}
-      </Host>
-    );
-  }
-
   return (
-    <View style={compact ? pickerLayoutStyles.compactPickerHost : pickerHostStyle}>
+    <NativePickerHost style={compact ? pickerLayoutStyles.compactPickerHost : pickerHostStyle}>
       {children}
-    </View>
+    </NativePickerHost>
   );
 }
 
@@ -57,18 +46,12 @@ function snapToStep(value: number, min: number, max: number, step: number): numb
   return clampNumber(snapped, min, max);
 }
 
-function formatIsoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 interface NativeEnumPickerProps<T extends string> {
   value: T | string;
   options: T[] | string[] | { label: string; value: T | string }[];
   onChange: (value: T) => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
 }
 
 export function NativeEnumPicker<T extends string>({
@@ -76,15 +59,23 @@ export function NativeEnumPicker<T extends string>({
   options,
   onChange,
   disabled = false,
+  accessibilityLabel,
 }: NativeEnumPickerProps<T>) {
-  const appearance = Platform.OS === 'ios' ? 'wheel' : 'menu';
+  const { colors } = useTheme();
+  const themed = useThemedStyles(makeColoredStyles);
 
   return wrapIosPicker(
     <Picker
-      appearance={appearance}
+      accessibilityLabel={accessibilityLabel}
+      mode={Platform.OS === 'android' ? 'dropdown' : undefined}
       selectedValue={value}
       onValueChange={(next) => onChange(next as T)}
       enabled={!disabled}
+      dropdownIconColor={colors.textMuted}
+      style={Platform.OS === 'web'
+        ? themed.webPicker
+        : { color: colors.text, backgroundColor: colors.surfaceAlt }}
+      itemStyle={{ color: colors.text }}
     >
       {options.map((option, index) => {
         // 2. Runtime check: determine if it's an object or a plain string
@@ -100,7 +91,8 @@ export function NativeEnumPicker<T extends string>({
           <Picker.Item 
             key={itemKey} 
             label={itemLabel} 
-            value={itemValue} 
+            value={itemValue}
+            color={colors.text}
           />
         );
       })}
@@ -114,6 +106,7 @@ type NativeDatePickerProps = {
   disabled?: boolean;
   minimumDate?: Date;
   maximumDate?: Date;
+  accessibilityLabel?: string;
 };
 
 export function NativeDatePicker({
@@ -122,59 +115,16 @@ export function NativeDatePicker({
   disabled = false,
   minimumDate,
   maximumDate,
+  accessibilityLabel,
 }: NativeDatePickerProps) {
-  const themed = useThemedStyles(makeColoredStyles);
-  if (Platform.OS === 'web') {
-    return createElement('input', {
-      type: 'date',
-      value: formatIsoDate(value),
-      min: minimumDate ? formatIsoDate(minimumDate) : undefined,
-      max: maximumDate ? formatIsoDate(maximumDate) : undefined,
-      disabled,
-      onChange: (event: { target: { value: string } }) => {
-        const next = event.target.value;
-        if (!next) return;
-        const [year, month, day] = next.split('-').map(Number);
-        onChange(new Date(year, month - 1, day));
-      },
-      style: themed.webDateInput,
-    });
-  }
-
   return <NativeDatePickerControl
     value={value}
     onChange={onChange}
     disabled={disabled}
     minimumDate={minimumDate}
     maximumDate={maximumDate}
+    accessibilityLabel={accessibilityLabel}
   />;
-}
-
-function NativeDatePickerControl({
-  value,
-  onChange,
-  disabled,
-  minimumDate,
-  maximumDate,
-}: Required<Pick<NativeDatePickerProps, 'value' | 'onChange'>> &
-  Pick<NativeDatePickerProps, 'disabled' | 'minimumDate' | 'maximumDate'>) {
-  const { colors } = useTheme();
-
-  return (
-    <ExpoDateTimePicker
-      value={value}
-      mode="date"
-      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-      presentation={Platform.OS === 'android' ? 'inline' : undefined}
-      minimumDate={minimumDate}
-      maximumDate={maximumDate}
-      disabled={disabled}
-      themeVariant={colors.pickerVariant}
-      accentColor={colors.pickerAccent}
-      onValueChange={(_event, date) => onChange(date)}
-      style={pickerHostStyle}
-    />
-  );
 }
 
 type NativeIntPickerProps = {
@@ -186,6 +136,7 @@ type NativeIntPickerProps = {
   optional?: boolean;
   disabled?: boolean;
   formatLabel?: (value: number) => string;
+  accessibilityLabel?: string;
 };
 
 export function NativeIntPicker({
@@ -197,9 +148,11 @@ export function NativeIntPicker({
   optional = false,
   disabled = false,
   formatLabel,
+  accessibilityLabel,
 }: NativeIntPickerProps) {
+  const { colors } = useTheme();
+  const themed = useThemedStyles(makeColoredStyles);
   const options = useMemo(() => buildIntRange(min, max, step), [min, max, step]);
-  const appearance = Platform.OS === 'ios' ? 'wheel' : 'menu';
   const selectedValue =
     value == null
       ? NOT_SET_VALUE
@@ -209,7 +162,8 @@ export function NativeIntPicker({
 
   return wrapIosPicker(
     <Picker
-      appearance={appearance}
+      accessibilityLabel={accessibilityLabel}
+      mode={Platform.OS === 'android' ? 'dropdown' : undefined}
       selectedValue={selectedValue}
       onValueChange={(next) => {
         if (next === NOT_SET_VALUE) {
@@ -219,13 +173,19 @@ export function NativeIntPicker({
         onChange(Number(next));
       }}
       enabled={!disabled}
+      dropdownIconColor={colors.textMuted}
+      style={Platform.OS === 'web'
+        ? themed.webPicker
+        : { color: colors.text, backgroundColor: colors.surfaceAlt }}
+      itemStyle={{ color: colors.text }}
     >
-      {optional ? <Picker.Item label="Not set" value={NOT_SET_VALUE} /> : null}
+      {optional ? <Picker.Item label="Not set" value={NOT_SET_VALUE} color={colors.text} /> : null}
       {options.map((option) => (
         <Picker.Item
           key={option}
           label={formatLabel ? formatLabel(option) : String(option)}
           value={option}
+          color={colors.text}
         />
       ))}
     </Picker>,
@@ -240,6 +200,7 @@ type NativeDecimalPickerProps = {
   decimals?: number;
   disabled?: boolean;
   unit?: string;
+  accessibilityLabel?: string;
 };
 
 export function NativeDecimalPicker({
@@ -250,8 +211,10 @@ export function NativeDecimalPicker({
   decimals = 1,
   disabled = false,
   unit,
+  accessibilityLabel,
 }: NativeDecimalPickerProps) {
   const themed = useThemedStyles(makeColoredStyles);
+  const { colors } = useTheme();
   const clamped = clampNumber(value, min, max);
   const factor = 10 ** decimals;
   const wholeMin = Math.floor(min);
@@ -286,6 +249,7 @@ export function NativeDecimalPicker({
       max,
       step: 1 / factor,
       disabled,
+      'aria-label': accessibilityLabel,
       onChange: (event: { target: { value: string } }) => {
         const next = Number(event.target.value);
         if (!Number.isFinite(next)) return;
@@ -295,20 +259,22 @@ export function NativeDecimalPicker({
     });
   }
 
-  const appearance = Platform.OS === 'ios' ? 'wheel' : 'menu';
-
   return (
     <View style={pickerLayoutStyles.decimalRow}>
       <View style={pickerLayoutStyles.decimalWhole}>
         {wrapIosPicker(
           <Picker
-            appearance={appearance}
+            accessibilityLabel={accessibilityLabel ? `${accessibilityLabel}, whole number` : undefined}
+            mode={Platform.OS === 'android' ? 'dropdown' : undefined}
             selectedValue={whole}
             onValueChange={(next) => updateWhole(Number(next))}
             enabled={!disabled}
+            dropdownIconColor={colors.textMuted}
+            style={{ color: colors.text, backgroundColor: colors.surfaceAlt }}
+            itemStyle={{ color: colors.text }}
           >
             {wholeOptions.map((option) => (
-              <Picker.Item key={option} label={String(option)} value={option} />
+              <Picker.Item key={option} label={String(option)} value={option} color={colors.text} />
             ))}
           </Picker>,
           true,
@@ -318,16 +284,21 @@ export function NativeDecimalPicker({
       <View style={pickerLayoutStyles.decimalFraction}>
         {wrapIosPicker(
           <Picker
-            appearance={appearance}
+            accessibilityLabel={accessibilityLabel ? `${accessibilityLabel}, decimal` : undefined}
+            mode={Platform.OS === 'android' ? 'dropdown' : undefined}
             selectedValue={fraction}
             onValueChange={(next) => updateFraction(Number(next))}
             enabled={!disabled}
+            dropdownIconColor={colors.textMuted}
+            style={{ color: colors.text, backgroundColor: colors.surfaceAlt }}
+            itemStyle={{ color: colors.text }}
           >
             {fractionOptions.map((option) => (
               <Picker.Item
                 key={option}
                 label={String(option).padStart(decimals, '0')}
                 value={option}
+                color={colors.text}
               />
             ))}
           </Picker>,
@@ -371,9 +342,10 @@ const makeColoredStyles = (c: ThemeColors) =>
       fontSize: 16,
       minWidth: 28,
     },
-    webDateInput: {
+    webNumberInput: {
       backgroundColor: c.surfaceAlt,
       borderRadius: 8,
+      boxSizing: 'border-box',
       color: c.text,
       fontSize: 16,
       marginBottom: 16,
@@ -382,15 +354,15 @@ const makeColoredStyles = (c: ThemeColors) =>
       borderWidth: 1,
       borderColor: c.border,
     },
-    webNumberInput: {
+    webPicker: {
       backgroundColor: c.surfaceAlt,
+      borderColor: c.border,
       borderRadius: 8,
+      borderWidth: 1,
       color: c.text,
       fontSize: 16,
-      marginBottom: 16,
-      padding: 12,
+      minHeight: 52,
+      paddingHorizontal: 12,
       width: '100%',
-      borderWidth: 1,
-      borderColor: c.border,
     },
   });

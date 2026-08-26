@@ -9,10 +9,10 @@ import {
 import { HeightPicker, WeightPicker } from '@/components/onboarding/BodyMetricPickers';
 import { SelectionCard } from '@/components/onboarding/SelectionCard';
 import { UnitToggle } from '@/components/onboarding/UnitToggle';
-import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { showApiError } from '@/lib/apiErrors';
+import { isEligibleOnboardingAge, MINIMUM_ONBOARDING_AGE } from '@/lib/ageEligibility';
 import { useAuth } from '@/lib/AuthContext';
 import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries';
 import { buildGoalState } from '@/lib/goals';
@@ -45,8 +45,6 @@ import {
     saveProfileFields,
     type ProfileRole,
 } from '@/lib/profile';
-import type { DefaultSearchMode } from '@/lib/searchPreferences';
-import { useSearchPreferences } from '@/lib/SearchPreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
@@ -76,6 +74,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    useWindowDimensions,
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -97,13 +96,15 @@ export default function ConfigScreen() {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { defaultSearchMode, setDefaultSearchMode } = useSearchPreferences();
+  const { width, fontScale } = useWindowDimensions();
+  const compactLayout = width < 560 || fontScale > 1.2;
 
   const allowLeaveRef = useRef(false);
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
   const [profileComplete, setProfileComplete] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Profile fields
   const [username, setUsername] = useState('');
@@ -134,9 +135,6 @@ export default function ConfigScreen() {
   const [targetFat, setTargetFat] = useState<number | null>(null);
   const [dailyFluid, setDailyFluid] = useState<number | null>(null);
   const [customGoalText, setCustomGoalText] = useState('');
-
-  // Preference fields
-  const [savingSearchPref, setSavingSearchPref] = useState(false);
 
   const isRequired = !profileComplete;
 
@@ -294,15 +292,6 @@ export default function ConfigScreen() {
     );
   }
 
-  async function handleSearchModeChange(mode: DefaultSearchMode) {
-    if (mode === defaultSearchMode || savingSearchPref) return;
-    setSavingSearchPref(true);
-    try {
-      await setDefaultSearchMode(mode);
-    } finally {
-      setSavingSearchPref(false);
-    }
-  }
   async function handleSave() {
     if (!user?.$id || !user.email) {
       Alert.alert('Not signed in', 'Your account needs an email before saving a profile.');
@@ -329,7 +318,17 @@ export default function ConfigScreen() {
       return;
     }
 
+    // Eligibility is revalidated on every profile change, not just during onboarding.
+    if (!isEligibleOnboardingAge(dateOfBirth)) {
+      Alert.alert(
+        'Age requirement',
+        `CalCount is for adults ${MINIMUM_ONBOARDING_AGE} or older. Your profile cannot be saved with this date of birth.`,
+      );
+      return;
+    }
+
     setSaving(true);
+    setSaveError(null);
     try {
       const finalGoalBase = customGoalText.trim()
         ? customGoalText.trim()
@@ -401,7 +400,9 @@ export default function ConfigScreen() {
         router.back();
       }
     } catch (err) {
-      showApiError(formatProfileSaveError(err), 'appwrite');
+      const message = formatProfileSaveError(err);
+      setSaveError(message);
+      showApiError(message, 'appwrite');
     } finally {
       setSaving(false);
     }
@@ -409,8 +410,9 @@ export default function ConfigScreen() {
 
   if (loading || loadingProfile) {
     return (
-      <View style={styles.screen}>
-        <ActivityIndicator color={colors.accent} style={{ flex: 1 }} />
+      <View style={styles.loadingState}>
+        <ActivityIndicator color={colors.brand} size="large" />
+        <Text style={styles.loadingText}>Loading configuration…</Text>
       </View>
     );
   }
@@ -428,7 +430,10 @@ export default function ConfigScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: Math.max(insets.top, 16) },
+          {
+            paddingTop: 16,
+            paddingBottom: Math.max(insets.bottom + 32, 56),
+          },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -447,7 +452,7 @@ export default function ConfigScreen() {
             </View>
             <Text style={styles.emailSubhead}>{user.email}</Text>
           </View>
-          <Text style={styles.heading}>App & Profile Settings</Text>
+          <Text accessibilityRole="header" style={styles.heading}>App & Profile Settings</Text>
           <Text style={styles.lede}>
             {isRequired
               ? 'Complete your profile setup to personalize your targets and use the app.'
@@ -455,19 +460,36 @@ export default function ConfigScreen() {
           </Text>
         </MotionView>
 
-        {/* Tabs Control */}
         <MotionView
           from={{ opacity: 0, translateY: 6 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ delay: 40, type: 'spring', damping: 22 }}
           style={styles.tabsWrapper}
         >
-          <ThemedSegmentedControl
-            values={CONFIG_TABS as unknown as string[]}
-            selectedIndex={selectedTabIndex}
-            onChange={(idx) => setSelectedTabIndex(idx)}
-            enabled={!saving}
-          />
+          <View accessibilityRole="tablist" style={styles.configTabs}>
+            {CONFIG_TABS.map((tab, index) => {
+              const selected = selectedTabIndex === index;
+              return (
+                <Pressable
+                  key={tab}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected, disabled: saving }}
+                  disabled={saving}
+                  onPress={() => setSelectedTabIndex(index)}
+                  style={({ pressed }) => [
+                    styles.configTab,
+                    compactLayout && styles.configTabCompact,
+                    selected && styles.configTabSelected,
+                    pressed && styles.configTabPressed,
+                  ]}
+                >
+                  <Text style={[styles.configTabText, selected && styles.configTabTextSelected]}>
+                    {tab}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </MotionView>
 
         {/* Tab 0: Profile / Account */}
@@ -483,7 +505,7 @@ export default function ConfigScreen() {
               <View style={styles.sectionHeaderIcon}>
                 <Ionicons name="person-circle-outline" size={18} color={colors.accent} />
               </View>
-              <Text style={styles.sectionTitle}>Account & Identity</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Account & Identity</Text>
             </View>
 
             <View style={styles.card}>
@@ -496,9 +518,10 @@ export default function ConfigScreen() {
                   placeholderTextColor={colors.textFaint}
                   autoCapitalize="none"
                   maxLength={64}
+                  accessibilityLabel="Username"
                   style={styles.input}
                 />
-                <Text style={styles.fieldHint}>Used for your vitality card and public profile.</Text>
+                <Text style={styles.fieldHint}>Shown only to you — your profile is private.</Text>
               </View>
 
               <View style={styles.divider} />
@@ -508,19 +531,21 @@ export default function ConfigScreen() {
                 <TextInput
                   value={user.email ?? ''}
                   editable={false}
+                  accessibilityLabel="Account email"
                   style={[styles.input, styles.inputDisabled]}
                 />
-                <Text style={styles.fieldHint}>Connected Appwrite auth account.</Text>
+                <Text style={styles.fieldHint}>The email connected to your account.</Text>
               </View>
 
               <View style={styles.divider} />
 
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
+              <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
                   <Text style={styles.fieldLabel}>Date of birth</Text>
                   <Text style={styles.fieldHint}>Used to calculate age and BMR</Text>
                 </View>
                 <NativeDatePicker
+                  accessibilityLabel="Date of birth"
                   value={dateOfBirth}
                   onChange={setDateOfBirth}
                   disabled={saving}
@@ -531,14 +556,15 @@ export default function ConfigScreen() {
 
               <View style={styles.divider} />
 
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
+              <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
                   <Text style={styles.fieldLabel}>Country</Text>
                   <Text style={styles.fieldHint}>
                     {getCountryName(country)} ({country})
                   </Text>
                 </View>
                 <NativeEnumPicker
+                  accessibilityLabel="Country"
                   value={country}
                   options={COUNTRY_OPTIONS}
                   onChange={(val) => {
@@ -549,16 +575,6 @@ export default function ConfigScreen() {
                   }}
                   disabled={saving}
                 />
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
-                  <Text style={styles.fieldLabel}>Account Role</Text>
-                  <Text style={styles.fieldHint}>Permissions tier</Text>
-                </View>
-                <Text style={styles.fieldValueBadge}>{role.toUpperCase()}</Text>
               </View>
 
               <View style={styles.divider} />
@@ -575,6 +591,7 @@ export default function ConfigScreen() {
                   placeholderTextColor={colors.textFaint}
                   multiline
                   maxLength={512}
+                  accessibilityLabel="Bio"
                   style={[styles.input, styles.multilineInput]}
                 />
               </View>
@@ -595,7 +612,7 @@ export default function ConfigScreen() {
               <View style={styles.sectionHeaderIcon}>
                 <Ionicons name="body-outline" size={18} color={colors.accent} />
               </View>
-              <Text style={styles.sectionTitle}>Body Stats & Units</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Body Stats & Units</Text>
             </View>
 
             <View style={styles.card}>
@@ -668,7 +685,7 @@ export default function ConfigScreen() {
               <View style={styles.sectionHeaderIcon}>
                 <Ionicons name="fitness-outline" size={18} color={colors.accent} />
               </View>
-              <Text style={styles.sectionTitle}>Activity & Goal Strategy</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Activity & Goal Strategy</Text>
             </View>
 
             <View style={styles.card}>
@@ -773,9 +790,10 @@ export default function ConfigScreen() {
                 Formula v{NUTRITION_FORMULA_VERSION} · Mifflin–St Jeor BMR · activity-factor TDEE · macros account for {targetAudit.macroCalories} kcal/day.
               </Text>
               {targetAudit.warnings.map((warning) => (
-                <Text key={warning} style={[styles.fieldHint, { color: colors.danger }]}>⚠ {warning}</Text>
+                <Text key={warning} accessibilityRole="alert" style={[styles.fieldHint, { color: colors.danger }]}>Warning: {warning}</Text>
               ))}
               <Pressable
+                accessibilityRole="button"
                 onPress={handleResetTargetsToSuggested}
                 disabled={saving}
                 style={({ pressed }) => [
@@ -792,17 +810,18 @@ export default function ConfigScreen() {
               <View style={styles.sectionHeaderIcon}>
                 <Ionicons name="flame-outline" size={18} color={colors.accent} />
               </View>
-              <Text style={styles.sectionTitle}>Daily Targets & Macros</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Daily Targets & Macros</Text>
             </View>
 
             <View style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
+              <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
                   <Text style={styles.fieldLabel}>Daily Calories</Text>
                   <Text style={styles.fieldHint}>Recommended: {computedPlan.targetKcal} kcal</Text>
                 </View>
                 <Text style={styles.fieldValue}>{activeTargetKcal} kcal</Text>
                 <NativeIntPicker
+                  accessibilityLabel="Daily calories"
                   value={activeTargetKcal}
                   onChange={(val) => setTargetKcal(val)}
                   min={800}
@@ -815,13 +834,14 @@ export default function ConfigScreen() {
 
               <View style={styles.divider} />
 
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
+              <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
                   <Text style={styles.fieldLabel}>Protein</Text>
                   <Text style={styles.fieldHint}>Recommended: {computedPlan.targetProtein} g</Text>
                 </View>
                 <Text style={styles.fieldValue}>{activeTargetProtein} g</Text>
                 <NativeIntPicker
+                  accessibilityLabel="Daily protein grams"
                   value={activeTargetProtein}
                   onChange={(val) => setTargetProtein(val)}
                   min={0}
@@ -833,13 +853,14 @@ export default function ConfigScreen() {
 
               <View style={styles.divider} />
 
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
+              <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
                   <Text style={styles.fieldLabel}>Carbohydrates</Text>
                   <Text style={styles.fieldHint}>Recommended: {computedPlan.targetCarbs} g</Text>
                 </View>
                 <Text style={styles.fieldValue}>{activeTargetCarbs} g</Text>
                 <NativeIntPicker
+                  accessibilityLabel="Daily carbohydrate grams"
                   value={activeTargetCarbs}
                   onChange={(val) => setTargetCarbs(val)}
                   min={0}
@@ -851,13 +872,14 @@ export default function ConfigScreen() {
 
               <View style={styles.divider} />
 
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
+              <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
                   <Text style={styles.fieldLabel}>Fat</Text>
                   <Text style={styles.fieldHint}>Recommended: {computedPlan.targetFat} g</Text>
                 </View>
                 <Text style={styles.fieldValue}>{activeTargetFat} g</Text>
                 <NativeIntPicker
+                  accessibilityLabel="Daily fat grams"
                   value={activeTargetFat}
                   onChange={(val) => setTargetFat(val)}
                   min={0}
@@ -869,8 +891,8 @@ export default function ConfigScreen() {
 
               <View style={styles.divider} />
 
-              <View style={styles.row}>
-                <View style={styles.rowTextCol}>
+              <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
                   <Text style={styles.fieldLabel}>Daily Hydration</Text>
                   <Text style={styles.fieldHint}>
                     {formatFluid(displayUnits, activeDailyFluid)}
@@ -878,6 +900,7 @@ export default function ConfigScreen() {
                 </View>
                 <Text style={styles.fieldValue}>{activeDailyFluid} ml</Text>
                 <NativeIntPicker
+                  accessibilityLabel="Daily hydration milliliters"
                   value={activeDailyFluid}
                   onChange={(val) => setDailyFluid(val)}
                   min={500}
@@ -893,7 +916,7 @@ export default function ConfigScreen() {
               <View style={styles.sectionHeaderIcon}>
                 <Ionicons name="flag-outline" size={18} color={colors.accent} />
               </View>
-              <Text style={styles.sectionTitle}>Goal Description</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Goal Description</Text>
             </View>
 
             <View style={styles.card}>
@@ -905,6 +928,7 @@ export default function ConfigScreen() {
                   placeholder={computedPlan.goalPlain}
                   placeholderTextColor={colors.textFaint}
                   multiline
+                  accessibilityLabel="Custom goal statement"
                   style={[styles.input, styles.multilineInput]}
                 />
                 <Text style={styles.fieldHint}>
@@ -928,27 +952,10 @@ export default function ConfigScreen() {
               <View style={styles.sectionHeaderIcon}>
                 <Ionicons name="options-outline" size={18} color={colors.accent} />
               </View>
-              <Text style={styles.sectionTitle}>App Preferences & Style</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>App Preferences & Style</Text>
             </View>
 
             <View style={styles.card}>
-              <View style={styles.verticalRow}>
-                <Text style={styles.fieldLabel}>Default Food Log Search Mode</Text>
-                <Text style={styles.fieldHint}>
-                  Choose your starting screen when logging new meals.
-                </Text>
-                <ThemedSegmentedControl
-                  values={['Camera Scanner', 'Text Search']}
-                  selectedIndex={defaultSearchMode === 'scan' ? 0 : 1}
-                  enabled={!savingSearchPref}
-                  onChange={(index) =>
-                    handleSearchModeChange(index === 0 ? 'scan' : 'text_query')
-                  }
-                />
-              </View>
-
-              <View style={styles.divider} />
-
               <View style={styles.verticalRow}>
                 <ThemePreferencePicker />
               </View>
@@ -959,16 +966,36 @@ export default function ConfigScreen() {
                 <FontPreferencePicker />
               </View>
 
-              <View style={styles.divider} />
+              {__DEV__ ? (
+                <>
+                  <View style={styles.divider} />
 
-              <View style={styles.verticalRow}>
-                <ApiBackendPreferencePicker />
-              </View>
+                  <View style={styles.verticalRow}>
+                    <ApiBackendPreferencePicker />
+                  </View>
+                </>
+              ) : null}
             </View>
           </MotionView>
         )}
 
-        {/* Action Buttons */}
+        {saveError ? (
+          <View accessibilityRole="alert" style={styles.errorBox}>
+            <View style={styles.errorHeadingRow}>
+              <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+              <Text style={styles.errorTitle}>Couldn’t save changes</Text>
+            </View>
+            <Text style={styles.errorText}>{saveError}</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setSaveError(null)}
+              style={({ pressed }) => [styles.errorDismiss, pressed && styles.btnPressed]}
+            >
+              <Text style={styles.errorDismissText}>Dismiss</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <MotionView
           from={{ opacity: 0, translateY: 8 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -976,6 +1003,9 @@ export default function ConfigScreen() {
           style={styles.actions}
         >
           <Pressable
+            accessibilityLabel={saving ? 'Saving changes' : 'Save changes'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving, busy: saving }}
             onPress={handleSave}
             disabled={saving}
             style={({ pressed }) => [
@@ -996,6 +1026,8 @@ export default function ConfigScreen() {
 
           {!isRequired && (
             <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving }}
               onPress={() => router.back()}
               disabled={saving}
               style={({ pressed }) => [
@@ -1018,9 +1050,19 @@ const makeStyles = (c: ThemeColors) =>
       flex: 1,
       backgroundColor: c.background,
     },
+    loadingState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      backgroundColor: c.background,
+    },
+    loadingText: {
+      ...typography.bodySmall,
+      color: c.textMuted,
+    },
     content: {
       paddingHorizontal: 20,
-      paddingBottom: 130,
       gap: 22,
       alignSelf: 'center',
       width: '100%',
@@ -1039,10 +1081,6 @@ const makeStyles = (c: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 6,
-      backgroundColor: c.brandSoft,
     },
     badgeText: {
       ...typography.labelSmall,
@@ -1055,10 +1093,10 @@ const makeStyles = (c: ThemeColors) =>
       color: c.textFaint,
     },
     heading: {
-      ...typography.headlineLarge,
+      ...typography.display,
       color: c.text,
-      marginTop: 2,
-      marginBottom: 4,
+      marginTop: 6,
+      marginBottom: 8,
     },
     lede: {
       ...typography.body,
@@ -1068,6 +1106,42 @@ const makeStyles = (c: ThemeColors) =>
     },
     tabsWrapper: {
       marginVertical: 4,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderColor: c.borderStrong,
+    },
+    configTabs: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    configTab: {
+      flex: 1,
+      minHeight: 46,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+    },
+    configTabCompact: {
+      flex: 0,
+      flexBasis: '50%',
+    },
+    configTabSelected: {
+      backgroundColor: c.brandSoft,
+      borderBottomColor: c.brand,
+    },
+    configTabPressed: {
+      opacity: 0.72,
+    },
+    configTabText: {
+      ...typography.labelSmall,
+      color: c.textMuted,
+      textAlign: 'center',
+    },
+    configTabTextSelected: {
+      color: c.brand,
     },
     section: {
       gap: 12,
@@ -1080,10 +1154,8 @@ const makeStyles = (c: ThemeColors) =>
       marginBottom: 2,
     },
     sectionHeaderIcon: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: c.brandSoft,
+      width: 24,
+      height: 24,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1094,25 +1166,22 @@ const makeStyles = (c: ThemeColors) =>
       color: c.text,
     },
     card: {
-      backgroundColor: c.surface,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderBottomWidth: StyleSheet.hairlineWidth,
       borderColor: c.border,
-      borderRadius: 8,
-      paddingHorizontal: 18,
+      paddingHorizontal: 0,
       paddingVertical: 6,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      elevation: 1,
     },
     row: {
       minHeight: 56,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      paddingVertical: 8,
+      alignItems: 'stretch',
+      gap: 8,
+      paddingVertical: 12,
+    },
+    rowCompact: {
+      flexWrap: 'wrap',
+      alignItems: 'flex-start',
+      paddingVertical: 12,
     },
     rowBetween: {
       flexDirection: 'row',
@@ -1120,8 +1189,13 @@ const makeStyles = (c: ThemeColors) =>
       justifyContent: 'space-between',
     },
     rowTextCol: {
-      flex: 1,
+      width: '100%',
       gap: 2,
+    },
+    rowTextColCompact: {
+      flex: 0,
+      flexBasis: '100%',
+      marginBottom: 4,
     },
     verticalRow: {
       paddingVertical: 12,
@@ -1170,6 +1244,7 @@ const makeStyles = (c: ThemeColors) =>
       borderWidth: 1,
       borderColor: c.border,
       borderRadius: 6,
+      minHeight: 48,
       paddingHorizontal: 14,
       paddingVertical: 12,
     },
@@ -1181,13 +1256,10 @@ const makeStyles = (c: ThemeColors) =>
       textAlignVertical: 'top',
     },
     infoBanner: {
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.borderStrong,
-      borderRadius: 8,
       borderLeftWidth: 2,
       borderLeftColor: c.brand,
-      padding: 16,
+      paddingLeft: 16,
+      paddingVertical: 4,
       gap: 8,
     },
     infoBannerHeader: {
@@ -1214,7 +1286,8 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.accentSoft,
       borderRadius: 999,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      minHeight: 44,
+      justifyContent: 'center',
       marginTop: 4,
     },
     resetPillText: {
@@ -1227,17 +1300,44 @@ const makeStyles = (c: ThemeColors) =>
       gap: 10,
       marginTop: 12,
     },
+    errorBox: {
+      borderLeftWidth: 3,
+      borderLeftColor: c.danger,
+      backgroundColor: c.dangerSoft,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      gap: 6,
+    },
+    errorHeadingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    errorTitle: {
+      ...typography.label,
+      color: c.danger,
+    },
+    errorText: {
+      ...typography.bodySmall,
+      color: c.textMuted,
+    },
+    errorDismiss: {
+      minHeight: 44,
+      alignSelf: 'flex-start',
+      justifyContent: 'center',
+      paddingRight: 16,
+    },
+    errorDismissText: {
+      ...typography.label,
+      color: c.danger,
+    },
     btn: {
       backgroundColor: c.brand,
       borderRadius: 999,
-      paddingVertical: 16,
+      minHeight: 52,
+      paddingHorizontal: 18,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: c.brand,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.22,
-      shadowRadius: 10,
-      elevation: 3,
     },
     btnContent: {
       flexDirection: 'row',
@@ -1257,8 +1357,9 @@ const makeStyles = (c: ThemeColors) =>
     },
     discardBtn: {
       backgroundColor: c.dangerButtonBg,
-      borderRadius: 12,
-      paddingVertical: 14,
+      borderRadius: 999,
+      minHeight: 48,
+      paddingHorizontal: 18,
       alignItems: 'center',
       justifyContent: 'center',
     },

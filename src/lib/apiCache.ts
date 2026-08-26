@@ -2,6 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const STORAGE_PREFIX = '@calcount/api_cache:'
 const DAY_MS = 24 * 60 * 60 * 1000
+const MAX_MEMORY_ENTRIES = 100
+const MAX_STORED_ENTRIES = 200
+const STORAGE_PRUNE_INTERVAL = 25
 
 /** Barcode / product macro data — stable, cache aggressively. */
 export const BARCODE_CACHE_TTL_MS = 14 * DAY_MS
@@ -15,6 +18,79 @@ type CacheEntry = {
 }
 
 const memoryCache = new Map<string, CacheEntry>()
+let writesSinceStoragePrune = STORAGE_PRUNE_INTERVAL - 1
+let storagePrunePromise: Promise<void> | null = null
+
+function parseCacheEntry(raw: string): CacheEntry | null {
+  try {
+    const value = JSON.parse(raw) as unknown
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+    if (!Object.prototype.hasOwnProperty.call(value, 'data')) return null
+
+    const entry = value as Partial<CacheEntry>
+    if (!Number.isFinite(entry.expiresAt)) return null
+    return { data: entry.data, expiresAt: entry.expiresAt as number }
+  } catch {
+    return null
+  }
+}
+
+function setMemoryEntry(cacheKey: string, entry: CacheEntry): void {
+  memoryCache.delete(cacheKey)
+  memoryCache.set(cacheKey, entry)
+
+  while (memoryCache.size > MAX_MEMORY_ENTRIES) {
+    const oldestKey = memoryCache.keys().next().value
+    if (typeof oldestKey !== 'string') break
+    memoryCache.delete(oldestKey)
+  }
+}
+
+async function pruneStoredEntries(): Promise<void> {
+  try {
+    const keys = (await AsyncStorage.getAllKeys()).filter((key) => key.startsWith(STORAGE_PREFIX))
+    if (keys.length === 0) return
+
+    const now = Date.now()
+    const entries = await AsyncStorage.multiGet(keys)
+    const remove = new Set<string>()
+    const fresh: { key: string; expiresAt: number }[] = []
+
+    for (const [key, raw] of entries) {
+      const entry = raw ? parseCacheEntry(raw) : null
+      if (!entry || entry.expiresAt <= now) {
+        remove.add(key)
+      } else {
+        fresh.push({ key, expiresAt: entry.expiresAt })
+      }
+    }
+
+    const overflow = Math.max(0, fresh.length - MAX_STORED_ENTRIES)
+    fresh
+      .sort((a, b) => a.expiresAt - b.expiresAt)
+      .slice(0, overflow)
+      .forEach(({ key }) => remove.add(key))
+
+    if (remove.size > 0) {
+      await AsyncStorage.multiRemove([...remove])
+    }
+  } catch (err) {
+    console.warn('[apiCache] prune failed', err)
+  }
+}
+
+function maybePruneStoredEntries(): Promise<void> {
+  writesSinceStoragePrune += 1
+  if (writesSinceStoragePrune < STORAGE_PRUNE_INTERVAL) return Promise.resolve()
+  writesSinceStoragePrune = 0
+
+  if (!storagePrunePromise) {
+    storagePrunePromise = pruneStoredEntries().finally(() => {
+      storagePrunePromise = null
+    })
+  }
+  return storagePrunePromise
+}
 
 function decodePathSegment(segment: string): string {
   try {
@@ -78,6 +154,7 @@ export async function getCachedResponse(
   const memoryEntry = memoryCache.get(cacheKey)
   if (memoryEntry) {
     if (isFresh(memoryEntry)) {
+      setMemoryEntry(cacheKey, memoryEntry)
       return memoryEntry.data
     }
     memoryCache.delete(cacheKey)
@@ -87,13 +164,13 @@ export async function getCachedResponse(
     const raw = await AsyncStorage.getItem(storageKey(cacheKey))
     if (!raw) return null
 
-    const entry = JSON.parse(raw) as CacheEntry
-    if (!isFresh(entry)) {
+    const entry = parseCacheEntry(raw)
+    if (!entry || !isFresh(entry)) {
       await AsyncStorage.removeItem(storageKey(cacheKey))
       return null
     }
 
-    memoryCache.set(cacheKey, entry)
+    setMemoryEntry(cacheKey, entry)
     return entry.data
   } catch (err) {
     console.warn('[apiCache] read failed', err)
@@ -113,10 +190,11 @@ export async function setCachedResponse(
     expiresAt: Date.now() + ttlMs,
   }
 
-  memoryCache.set(cacheKey, entry)
+  setMemoryEntry(cacheKey, entry)
 
   try {
     await AsyncStorage.setItem(storageKey(cacheKey), JSON.stringify(entry))
+    await maybePruneStoredEntries()
   } catch (err) {
     console.warn('[apiCache] write failed', err)
   }

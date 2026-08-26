@@ -41,6 +41,7 @@ export function HeightPicker({ valueCm, displayUnits, onChange, disabled = false
         <View style={styles.imperialRow}>
           <View style={styles.imperialColumn}>
             <NativeIntPicker
+              accessibilityLabel="Height in feet"
               value={feet}
               onChange={(nextFeet) => onChange(feetInchesToCm(nextFeet ?? feet, inches))}
               min={4}
@@ -51,6 +52,7 @@ export function HeightPicker({ valueCm, displayUnits, onChange, disabled = false
           </View>
           <View style={styles.imperialColumn}>
             <NativeIntPicker
+              accessibilityLabel="Height in inches"
               value={inches}
               onChange={(nextInches) => onChange(feetInchesToCm(feet, nextInches ?? inches))}
               min={0}
@@ -71,6 +73,7 @@ export function HeightPicker({ valueCm, displayUnits, onChange, disabled = false
     <View style={styles.block}>
       <Text style={onboardingStyles.label}>Height</Text>
       <NativeIntPicker
+        accessibilityLabel="Height in centimeters"
         value={Math.round(valueCm)}
         onChange={(value) => onChange(roundMetric(value ?? valueCm))}
         min={120}
@@ -100,6 +103,7 @@ export function WeightPicker({
       <View style={styles.block}>
         <Text style={onboardingStyles.label}>{label}</Text>
         <NativeIntPicker
+          accessibilityLabel={`${label} in pounds`}
           value={pounds}
           onChange={(lbs) => onChange(lbsToKg(lbs ?? pounds))}
           min={80}
@@ -118,6 +122,7 @@ export function WeightPicker({
     <View style={styles.block}>
       <Text style={onboardingStyles.label}>{label}</Text>
       <NativeIntPicker
+        accessibilityLabel={`${label} in kilograms`}
         value={Math.round(valueKg)}
         onChange={(value) => onChange(roundMetric(value ?? valueKg))}
         min={35}

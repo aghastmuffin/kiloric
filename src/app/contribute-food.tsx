@@ -39,13 +39,13 @@ type PhotoState = {
 }
 
 const PRIMARY_MACROS: { key: OffNumberField; label: string; placeholder: string }[] = [
-  { key: 'energy-kcal_100g', label: 'Calories (kcal / 100g)', placeholder: 'e.g. 250' },
-  { key: 'proteins_100g', label: 'Protein (g / 100g)', placeholder: 'e.g. 10' },
-  { key: 'carbohydrates_100g', label: 'Carbs (g / 100g)', placeholder: 'e.g. 30' },
-  { key: 'fat_100g', label: 'Fat (g / 100g)', placeholder: 'e.g. 8' },
-  { key: 'fiber_100g', label: 'Fiber (g / 100g)', placeholder: 'optional' },
-  { key: 'sugars_100g', label: 'Sugars (g / 100g)', placeholder: 'optional' },
-  { key: 'sodium_100g', label: 'Sodium (g / 100g)', placeholder: 'optional' },
+  { key: 'energy-kcal_100g', label: 'Energy (kcal)', placeholder: 'e.g. 250' },
+  { key: 'proteins_100g', label: 'Protein (g)', placeholder: 'e.g. 10' },
+  { key: 'carbohydrates_100g', label: 'Carbohydrate (g)', placeholder: 'e.g. 30' },
+  { key: 'fat_100g', label: 'Fat (g)', placeholder: 'e.g. 8' },
+  { key: 'fiber_100g', label: 'Fiber (g)', placeholder: 'Optional' },
+  { key: 'sugars_100g', label: 'Sugars (g)', placeholder: 'Optional' },
+  { key: 'sodium_100g', label: 'Sodium (g)', placeholder: 'Optional' },
 ]
 
 const MORE_STRINGS: { key: OffStringField; label: string }[] = [
@@ -60,26 +60,26 @@ const MORE_STRINGS: { key: OffStringField; label: string }[] = [
 ]
 
 const MORE_NUMBERS: { key: OffNumberField; label: string }[] = [
-  { key: 'serving_quantity', label: 'Serving quantity' },
-  { key: 'energy-kj_100g', label: 'Energy (kJ / 100g)' },
-  { key: 'added-sugars_100g', label: 'Added sugars' },
-  { key: 'polyols_100g', label: 'Polyols' },
-  { key: 'saturated-fat_100g', label: 'Saturated fat' },
-  { key: 'trans-fat_100g', label: 'Trans fat' },
-  { key: 'monounsaturated-fat_100g', label: 'Monounsaturated fat' },
-  { key: 'polyunsaturated-fat_100g', label: 'Polyunsaturated fat' },
-  { key: 'cholesterol_100g', label: 'Cholesterol' },
-  { key: 'vitamin-a_100g', label: 'Vitamin A' },
-  { key: 'vitamin-c_100g', label: 'Vitamin C' },
-  { key: 'vitamin-d_100g', label: 'Vitamin D' },
-  { key: 'vitamin-b12_100g', label: 'Vitamin B12' },
-  { key: 'calcium_100g', label: 'Calcium' },
-  { key: 'iron_100g', label: 'Iron' },
-  { key: 'potassium_100g', label: 'Potassium' },
-  { key: 'magnesium_100g', label: 'Magnesium' },
-  { key: 'caffeine_100g', label: 'Caffeine' },
-  { key: 'taurine_100g', label: 'Taurine' },
-  { key: 'carbon-footprint_100g', label: 'Carbon footprint' },
+  { key: 'serving_quantity', label: 'Serving quantity (g)' },
+  { key: 'energy-kj_100g', label: 'Energy (kJ)' },
+  { key: 'added-sugars_100g', label: 'Added sugars (g)' },
+  { key: 'polyols_100g', label: 'Polyols (g)' },
+  { key: 'saturated-fat_100g', label: 'Saturated fat (g)' },
+  { key: 'trans-fat_100g', label: 'Trans fat (g)' },
+  { key: 'monounsaturated-fat_100g', label: 'Monounsaturated fat (g)' },
+  { key: 'polyunsaturated-fat_100g', label: 'Polyunsaturated fat (g)' },
+  { key: 'cholesterol_100g', label: 'Cholesterol (g)' },
+  { key: 'vitamin-a_100g', label: 'Vitamin A (g)' },
+  { key: 'vitamin-c_100g', label: 'Vitamin C (g)' },
+  { key: 'vitamin-d_100g', label: 'Vitamin D (g)' },
+  { key: 'vitamin-b12_100g', label: 'Vitamin B12 (g)' },
+  { key: 'calcium_100g', label: 'Calcium (g)' },
+  { key: 'iron_100g', label: 'Iron (g)' },
+  { key: 'potassium_100g', label: 'Potassium (g)' },
+  { key: 'magnesium_100g', label: 'Magnesium (g)' },
+  { key: 'caffeine_100g', label: 'Caffeine (g)' },
+  { key: 'taurine_100g', label: 'Taurine (g)' },
+  { key: 'carbon-footprint_100g', label: 'Carbon footprint (g CO₂e)' },
   { key: 'nova_group', label: 'NOVA group' },
   { key: 'additives_n', label: 'Additives count' },
 ]
@@ -139,8 +139,8 @@ export default function ContributeFoodScreen() {
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const { gutter } = useAppLayout()
-  const params = useLocalSearchParams<Record<string, string | string[] | undefined>>()
+  const { compact, gutter } = useAppLayout()
+  const params = useLocalSearchParams() as Record<string, string | string[] | undefined>
 
   const initialCode = useMemo(() => paramString(params.code), [params.code])
   const initialQuery = useMemo(() => paramString(params.query), [params.query])
@@ -160,6 +160,7 @@ export default function ContributeFoodScreen() {
   )
 
   const [photo, setPhoto] = useState<PhotoState | null>(null)
+  const [actionBarHeight, setActionBarHeight] = useState(156)
   const [productName, setProductName] = useState(initialName)
   const [code, setCode] = useState(initialCode)
   const [stringFields, setStringFields] = useState<Partial<Record<OffStringField, string>>>(() => {
@@ -291,7 +292,7 @@ export default function ContributeFoodScreen() {
       })
 
       Alert.alert(
-        'Thanks for contributing! 🎉',
+        'Contribution sent',
         `"${productName.trim()}" has been submitted for review. It will appear in search results once approved.`,
         [{ text: 'Back to Log Food', onPress: () => router.back() }],
       )
@@ -308,8 +309,8 @@ export default function ContributeFoodScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Custom back header matching logfood aesthetic */}
-      <View style={[styles.navBar, { paddingTop: insets.top + 8 }]}>
+      {/* Kept until the parent stack header is consolidated. */}
+      <View style={[styles.navBar, { paddingTop: insets.top + 6, paddingHorizontal: gutter }]}>
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
@@ -318,17 +319,31 @@ export default function ContributeFoodScreen() {
           hitSlop={10}
         >
           <Ionicons name="chevron-back" size={22} color={colors.accent} />
-          <Text style={styles.navBackText}>Log Food</Text>
+          <Text numberOfLines={1} style={styles.navBackText}>Log food</Text>
         </Pressable>
-        <Text style={styles.navTitle}>Contribute</Text>
+        <Text numberOfLines={1} style={styles.navTitle}>Food contribution</Text>
         <View style={styles.navSpacer} />
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingHorizontal: gutter, paddingBottom: insets.bottom + 48 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: gutter, paddingBottom: actionBarHeight + spacing.lg },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+
+        <View style={styles.orientation}>
+          <View style={styles.overlineRow}>
+            <Text style={styles.overline}>COMMUNITY FOOD DATA</Text>
+            <View style={styles.overlineRule} />
+          </View>
+          <Text accessibilityRole="header" style={styles.pageTitle}>Complete the product record.</Text>
+          <Text style={styles.pageDescription}>
+            A clear label photo and product name are required. Add only the details you can verify.
+          </Text>
+        </View>
 
         <MotionView
           from={{ opacity: 0, translateY: 8 }}
@@ -353,7 +368,7 @@ export default function ContributeFoodScreen() {
           <View style={styles.contextBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
             <View style={styles.contextBannerCopy}>
-              <Text style={styles.contextBannerTitle}>Thanks for helping!</Text>
+              <Text style={styles.contextBannerTitle}>Existing details carried forward</Text>
               <Text style={styles.contextBannerText}>
                 We filled in everything already available. Add a clear photo showing the nutrition
                 panel and ingredients so the missing details can be reviewed.
@@ -362,7 +377,7 @@ export default function ContributeFoodScreen() {
           </View>
         ) : (
           <View style={styles.welcomeCopy}>
-            <Text style={styles.welcomeTitle}>We need your help!</Text>
+            <Text style={styles.welcomeTitle}>Start with the label</Text>
             <Text style={styles.lead}>
               Add a clear photo showing the nutrition panel and ingredients, then tell us the
               product name. Everything else is optional and can be filled in if it is easy to read.
@@ -370,7 +385,7 @@ export default function ContributeFoodScreen() {
           </View>
         )}
 
-        {/* Photo card */}
+        {/* Required evidence */}
         <MotionView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 40, type: 'timing', duration: 220 }} style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="camera-outline" size={16} color={colors.accent} />
@@ -392,15 +407,18 @@ export default function ContributeFoodScreen() {
                 <View style={styles.photoIconWrap}>
                   <Ionicons name="camera" size={32} color={colors.accent} />
                 </View>
-                <Text style={styles.photoHint}>
-                  Tap to photograph nutrition facts &amp; ingredients
-                </Text>
+                <Text style={styles.photoHint}>Add a nutrition facts and ingredients photo</Text>
                 <Text style={styles.photoSubHint}>Camera or photo library</Text>
               </View>
             )}
           </Pressable>
           {photo ? (
-            <Pressable onPress={choosePhotoSource} style={styles.changePhotoRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change attached photo"
+              onPress={choosePhotoSource}
+              style={({ pressed }) => [styles.changePhotoRow, pressed && styles.pressed]}
+            >
               <Ionicons name="refresh-outline" size={14} color={colors.accent} />
               <Text style={styles.changePhoto}>Change photo</Text>
             </Pressable>
@@ -414,31 +432,35 @@ export default function ContributeFoodScreen() {
             <Text style={styles.cardTitle}>Product info</Text>
           </View>
 
-          <View style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>
-              Product name <Text style={styles.requiredStar}>*</Text>
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={productName}
-              onChangeText={setProductName}
-              placeholder="e.g. Chobani Plain Greek Yogurt"
-              placeholderTextColor={colors.textFaint}
-              autoCapitalize="words"
-            />
-          </View>
+          <View style={[styles.fieldGrid, compact && styles.fieldGridCompact]}>
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>
+                Product name <Text style={styles.requiredStar}>*</Text>
+              </Text>
+              <TextInput
+                accessibilityLabel="Product name, required"
+                style={styles.input}
+                value={productName}
+                onChangeText={setProductName}
+                placeholder="e.g. Plain Greek yogurt"
+                placeholderTextColor={colors.textFaint}
+                autoCapitalize="words"
+              />
+            </View>
 
-          <View style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>Barcode</Text>
-            <TextInput
-              style={styles.input}
-              value={code}
-              onChangeText={setCode}
-              placeholder="Optional — prefilled from scan when available"
-              placeholderTextColor={colors.textFaint}
-              keyboardType="number-pad"
-              autoCapitalize="none"
-            />
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>Barcode</Text>
+              <TextInput
+                accessibilityLabel="Barcode, optional"
+                style={styles.input}
+                value={code}
+                onChangeText={setCode}
+                placeholder="Optional"
+                placeholderTextColor={colors.textFaint}
+                keyboardType="number-pad"
+                autoCapitalize="none"
+              />
+            </View>
           </View>
         </MotionView>
 
@@ -446,26 +468,30 @@ export default function ContributeFoodScreen() {
         <MotionView from={{ opacity: 0, translateY: 10 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: 120, type: 'timing', duration: 220 }} style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="nutrition-outline" size={16} color={colors.accent} />
-            <Text style={styles.cardTitle}>Nutrition per 100g</Text>
+            <Text style={styles.cardTitle}>Nutrition per 100 g</Text>
             <View style={styles.optionalBadge}>
               <Text style={styles.optionalBadgeText}>Optional</Text>
             </View>
           </View>
-          {PRIMARY_MACROS.map((field) => (
-            <View key={field.key} style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>{field.label}</Text>
-              <TextInput
-                style={styles.input}
-                value={numberFields[field.key] ?? ''}
-                onChangeText={(text) =>
-                  setNumberFields((current) => ({ ...current, [field.key]: text }))
-                }
-                placeholder={field.placeholder}
-                placeholderTextColor={colors.textFaint}
-                keyboardType="decimal-pad"
-              />
-            </View>
-          ))}
+          <Text style={styles.measurementNote}>Enter the value printed for 100 g of product.</Text>
+          <View style={[styles.fieldGrid, compact && styles.fieldGridCompact]}>
+            {PRIMARY_MACROS.map((field) => (
+              <View key={field.key} style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{field.label}</Text>
+                <TextInput
+                  accessibilityLabel={`${field.label} per 100 grams, optional`}
+                  style={styles.input}
+                  value={numberFields[field.key] ?? ''}
+                  onChangeText={(text) =>
+                    setNumberFields((current) => ({ ...current, [field.key]: text }))
+                  }
+                  placeholder={field.placeholder}
+                  placeholderTextColor={colors.textFaint}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            ))}
+          </View>
         </MotionView>
 
         {/* More details toggle */}
@@ -473,6 +499,7 @@ export default function ContributeFoodScreen() {
           style={styles.moreToggle}
           onPress={() => setShowMore((open) => !open)}
           accessibilityRole="button"
+          accessibilityState={{ expanded: showMore }}
         >
           <Text style={styles.moreToggleText}>
             {showMore ? 'Hide additional details' : 'More details (optional)'}
@@ -495,57 +522,75 @@ export default function ContributeFoodScreen() {
               <Ionicons name="list-outline" size={16} color={colors.accent} />
               <Text style={styles.cardTitle}>Additional fields</Text>
             </View>
-            {MORE_STRINGS.map((field) => (
-              <View key={field.key} style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{field.label}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={stringFields[field.key] ?? ''}
-                  onChangeText={(text) =>
-                    setStringFields((current) => ({ ...current, [field.key]: text }))
-                  }
-                  placeholderTextColor={colors.textFaint}
-                />
-              </View>
-            ))}
-            {MORE_NUMBERS.map((field) => (
-              <View key={field.key} style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{field.label}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={numberFields[field.key] ?? ''}
-                  onChangeText={(text) =>
-                    setNumberFields((current) => ({ ...current, [field.key]: text }))
-                  }
-                  placeholderTextColor={colors.textFaint}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            ))}
+            <View style={[styles.fieldGrid, compact && styles.fieldGridCompact]}>
+              {MORE_STRINGS.map((field) => (
+                <View key={field.key} style={styles.fieldBlock}>
+                  <Text style={styles.fieldLabel}>{field.label}</Text>
+                  <TextInput
+                    accessibilityLabel={`${field.label}, optional`}
+                    style={styles.input}
+                    value={stringFields[field.key] ?? ''}
+                    onChangeText={(text) =>
+                      setStringFields((current) => ({ ...current, [field.key]: text }))
+                    }
+                    placeholder="Optional"
+                    placeholderTextColor={colors.textFaint}
+                  />
+                </View>
+              ))}
+              {MORE_NUMBERS.map((field) => (
+                <View key={field.key} style={styles.fieldBlock}>
+                  <Text style={styles.fieldLabel}>{field.label}</Text>
+                  <TextInput
+                    accessibilityLabel={`${field.label}, optional`}
+                    style={styles.input}
+                    value={numberFields[field.key] ?? ''}
+                    onChangeText={(text) =>
+                      setNumberFields((current) => ({ ...current, [field.key]: text }))
+                    }
+                    placeholder="Optional"
+                    placeholderTextColor={colors.textFaint}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              ))}
+            </View>
           </MotionView>
         ) : null}
-
-        <Pressable
-          style={[styles.submit, (!essentialsComplete || submitting) && styles.submitDisabled]}
-          onPress={() => void handleSubmit()}
-          disabled={!essentialsComplete || submitting}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !essentialsComplete || submitting }}
-        >
-          {submitting ? (
-            <ActivityIndicator color={colors.onBrand} />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle-outline" size={20} color={colors.onBrand} />
-              <Text style={styles.submitText}>Submit new foodstuff</Text>
-            </>
-          )}
-        </Pressable>
-
-        <Text style={styles.disclaimer}>
-          Contributions are reviewed before appearing in general search, however this will be available to you instantly.
-        </Text>
       </ScrollView>
+
+      <View
+        onLayout={(event) => setActionBarHeight(event.nativeEvent.layout.height)}
+        style={[styles.actionBar, { paddingBottom: Math.max(insets.bottom, spacing.md), paddingHorizontal: gutter }]}
+      >
+        <View style={styles.actionBarInner}>
+          <Text style={styles.disclaimer}>
+            {essentialsComplete
+              ? 'Ready to send. Review is required before general search.'
+              : 'Add a photo and product name. Submissions are reviewed before general search.'}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.submit,
+              (!essentialsComplete || submitting) && styles.submitDisabled,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => void handleSubmit()}
+            disabled={!essentialsComplete || submitting}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !essentialsComplete || submitting }}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.onBrand} />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.onBrand} />
+                <Text style={styles.submitText}>Submit for review</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+      </View>
     </KeyboardAvoidingView>
   )
 }
@@ -559,7 +604,6 @@ const makeStyles = (c: ThemeColors) =>
     navBar: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: spacing.md,
       paddingBottom: spacing.sm,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: c.border,
@@ -570,15 +614,20 @@ const makeStyles = (c: ThemeColors) =>
       alignItems: 'center',
       gap: 2,
       flex: 1,
+      minWidth: 0,
+      minHeight: 44,
     },
     navBackText: {
       ...typography.label,
       color: c.accent,
+      flexShrink: 1,
     },
     navTitle: {
       ...typography.label,
       color: c.text,
       fontWeight: '700',
+      flexShrink: 1,
+      textAlign: 'center',
     },
     navSpacer: {
       flex: 1,
@@ -588,22 +637,51 @@ const makeStyles = (c: ThemeColors) =>
     },
     content: {
       paddingTop: spacing.lg,
-      gap: spacing.md,
+      gap: spacing.lg,
       maxWidth: 620,
       width: '100%',
       alignSelf: 'center',
     },
+    orientation: {
+      gap: 5,
+      paddingBottom: spacing.xs,
+    },
+    overlineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      maxWidth: 240,
+    },
+    overline: {
+      ...typography.overline,
+      color: c.brand,
+    },
+    overlineRule: {
+      height: StyleSheet.hairlineWidth,
+      flex: 1,
+      backgroundColor: c.brand,
+      opacity: 0.45,
+    },
+    pageTitle: {
+      ...typography.headlineLarge,
+      color: c.text,
+    },
+    pageDescription: {
+      ...typography.body,
+      color: c.textMuted,
+      maxWidth: 540,
+      marginTop: 2,
+    },
     completionCard: {
-      minHeight: 56,
+      minHeight: 52,
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
       gap: spacing.sm,
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: borderRadius.lg,
-      padding: spacing.sm,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderColor: c.borderStrong,
+      paddingVertical: spacing.sm,
     },
     completionStep: {
       minHeight: 38,
@@ -630,9 +708,8 @@ const makeStyles = (c: ThemeColors) =>
       gap: spacing.sm,
       alignItems: 'flex-start',
       backgroundColor: c.brandSoft,
-      borderRadius: borderRadius.md,
-      borderWidth: 1,
-      borderColor: c.brand,
+      borderLeftWidth: 2,
+      borderLeftColor: c.brand,
       padding: spacing.md,
     },
     contextBannerText: {
@@ -643,11 +720,9 @@ const makeStyles = (c: ThemeColors) =>
     contextBannerCopy: { flex: 1, gap: 3 },
     contextBannerTitle: { ...typography.label, color: c.brand, fontWeight: '700' },
     card: {
-      backgroundColor: c.surface,
-      borderRadius: borderRadius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      padding: spacing.md,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.borderStrong,
+      paddingTop: spacing.md,
       gap: spacing.md,
     },
     cardHeader: {
@@ -656,9 +731,8 @@ const makeStyles = (c: ThemeColors) =>
       gap: spacing.sm,
     },
     cardTitle: {
-      ...typography.label,
+      ...typography.headline,
       color: c.text,
-      fontWeight: '700',
       flex: 1,
     },
     requiredBadge: {
@@ -687,7 +761,7 @@ const makeStyles = (c: ThemeColors) =>
     photoBox: {
       borderWidth: 1.5,
       borderStyle: 'dashed',
-      borderColor: c.border,
+      borderColor: c.borderStrong,
       borderRadius: borderRadius.md,
       backgroundColor: c.surfaceAlt,
       overflow: 'hidden',
@@ -729,13 +803,25 @@ const makeStyles = (c: ThemeColors) =>
       alignItems: 'center',
       gap: 4,
       alignSelf: 'flex-start',
+      minHeight: 44,
     },
     changePhoto: {
       ...typography.label,
       color: c.brand,
     },
+    fieldGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.md,
+    },
+    fieldGridCompact: {
+      gap: spacing.sm,
+    },
     fieldBlock: {
       gap: 6,
+      flexGrow: 1,
+      flexBasis: '46%',
+      minWidth: 240,
     },
     fieldLabel: {
       ...typography.labelSmall,
@@ -746,7 +832,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     input: {
       ...typography.body,
-      backgroundColor: c.surface,
+      backgroundColor: c.surfaceAlt,
       borderWidth: 1,
       borderColor: c.border,
       borderRadius: borderRadius.md,
@@ -754,6 +840,11 @@ const makeStyles = (c: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingVertical: Platform.OS === 'ios' ? 12 : 10,
       minHeight: 48,
+    },
+    measurementNote: {
+      ...typography.bodySmall,
+      color: c.textMuted,
+      marginTop: -spacing.xs,
     },
     moreToggle: {
       flexDirection: 'row',
@@ -769,20 +860,32 @@ const makeStyles = (c: ThemeColors) =>
     moreBlock: {
       gap: spacing.md,
     },
+    actionBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingTop: spacing.sm,
+      backgroundColor: c.surfaceMuted,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.borderStrong,
+    },
+    actionBarInner: {
+      width: '100%',
+      maxWidth: 620,
+      alignSelf: 'center',
+      gap: spacing.sm,
+    },
     submit: {
-      marginTop: spacing.sm,
+      minHeight: 50,
       backgroundColor: c.brand,
       borderRadius: borderRadius.pill,
-      paddingVertical: 15,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 13,
       alignItems: 'center',
       flexDirection: 'row',
       justifyContent: 'center',
       gap: spacing.sm,
-      shadowColor: c.brand,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 10,
-      elevation: 4,
     },
     submitDisabled: {
       opacity: 0.7,
@@ -795,8 +898,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     disclaimer: {
       ...typography.labelSmall,
-      color: c.textFaint,
+      color: c.textMuted,
       textAlign: 'center',
-      paddingHorizontal: spacing.md,
     },
   })

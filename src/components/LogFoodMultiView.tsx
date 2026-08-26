@@ -452,7 +452,13 @@ export function LogFoodMultiView({
     >
       <View style={styles.sectionHeader}>
         <View style={styles.resultsHeading}>
-          <Pressable onPress={onBack} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back to food log"
+            onPress={onBack}
+            hitSlop={8}
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+          >
             <Ionicons name="arrow-back" size={18} color={colors.accent} />
           </Pressable>
           <View style={styles.headingCopy}>
@@ -466,6 +472,9 @@ export function LogFoodMultiView({
         </View>
         <View style={styles.mealSelectWrap}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Add results to ${selectedMealType}`}
+            accessibilityState={{ expanded: mealPickerOpen }}
             onPress={onToggleMealPicker}
             style={({ pressed }) => [styles.mealSelect, pressed && styles.pressed]}
           >
@@ -481,6 +490,9 @@ export function LogFoodMultiView({
               {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type) => (
                 <Pressable
                   key={type}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: type === selectedMealType }}
+                  accessibilityLabel={`Add results to ${type}`}
                   onPress={() => onSelectMealType(type)}
                   style={({ pressed }) => [
                     styles.mealMenuItem,
@@ -504,7 +516,7 @@ export function LogFoodMultiView({
       </View>
 
       <Text style={styles.swipeHint}>
-        Expand a match for full columns · swipe or tap + to add to {selectedMealType}
+        Expand a match for nutrition details · swipe or tap + to add to {selectedMealType}
       </Text>
 
       <View style={styles.resultsStack}>
@@ -602,28 +614,18 @@ const ResultCard = memo(
   const needsLabelPhoto = useMemo(() => productHasUnknownDetails(product), [product])
 
   const header = (
-    <Pressable
-      onPress={onToggleExpand}
-      style={({ pressed }) => [styles.cardHeader, pressed && styles.pressed]}
-    >
-      <View style={styles.cardHeaderCopy}>
+    <View style={styles.cardHeader}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
+        accessibilityState={{ expanded }}
+        onPress={onToggleExpand}
+        style={({ pressed }) => [styles.cardHeaderCopy, pressed && styles.pressed]}
+      >
         <View style={styles.titleRow}>
           <Text style={styles.resultTitle} numberOfLines={expanded ? 3 : 2}>
             {title}
           </Text>
-          {barcode ? (
-            <Pressable
-              hitSlop={8}
-              onPress={onToggleFavorite}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Ionicons
-                name={favorited ? 'star' : 'star-outline'}
-                size={16}
-                color={favorited ? colors.accent : colors.textFaint}
-              />
-            </Pressable>
-          ) : null}
         </View>
         <Text style={styles.resultBrand} numberOfLines={1}>
           {brand}
@@ -634,11 +636,12 @@ const ResultCard = memo(
             <Text style={styles.resultBadgeText}>{calories}</Text>
           </View>
           <Text style={styles.expandHint}>
-            {expanded ? 'Hide columns' : `${columns.length} columns`}
+            {expanded ? 'Hide details' : 'View nutrition details'}
           </Text>
         </View>
         {status ? (
           <Text
+            accessibilityLiveRegion="polite"
             style={[
               styles.resultFeedback,
               status.state === 'error' && styles.resultFeedbackError,
@@ -647,27 +650,46 @@ const ResultCard = memo(
             {status.message}
           </Text>
         ) : null}
-      </View>
-      <Pressable
-        accessibilityLabel={`Add ${title}`}
-        disabled={!barcode || status?.state === 'adding'}
-        onPress={onAdd}
-        style={({ pressed }) => [
-          styles.addCircle,
-          (pressed || status?.state === 'added') && styles.addCircleActive,
-        ]}
-      >
-        {status?.state === 'adding' ? (
-          <ActivityIndicator size="small" color={colors.accent} />
-        ) : (
-          <Ionicons
-            name={status?.state === 'added' ? 'checkmark' : 'add'}
-            size={18}
-            color={status?.state === 'added' ? colors.onAccent : colors.textMuted}
-          />
-        )}
       </Pressable>
-    </Pressable>
+      <View style={styles.cardHeaderActions}>
+        {barcode ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={favorited ? `Remove ${title} from favorites` : `Add ${title} to favorites`}
+            hitSlop={6}
+            onPress={onToggleFavorite}
+            style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]}
+          >
+            <Ionicons
+              name={favorited ? 'star' : 'star-outline'}
+              size={18}
+              color={favorited ? colors.accent : colors.textFaint}
+            />
+          </Pressable>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Add ${title}`}
+          accessibilityState={{ disabled: !barcode || status?.state === 'adding' }}
+          disabled={!barcode || status?.state === 'adding'}
+          onPress={onAdd}
+          style={({ pressed }) => [
+            styles.addCircle,
+            (pressed || status?.state === 'added') && styles.addCircleActive,
+          ]}
+        >
+          {status?.state === 'adding' ? (
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <Ionicons
+              name={status?.state === 'added' ? 'checkmark' : 'add'}
+              size={18}
+              color={status?.state === 'added' ? colors.onAccent : colors.textMuted}
+            />
+          )}
+        </Pressable>
+      </View>
+    </View>
   )
 
   const body = (
@@ -684,21 +706,28 @@ const ResultCard = memo(
             </View>
           ))}
           {!expanded && columns.length > 4 ? (
-            <Pressable onPress={onToggleExpand} style={styles.moreColumns}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Show ${columns.length - 4} more details`}
+              onPress={onToggleExpand}
+              style={styles.moreColumns}
+            >
               <Text style={styles.moreColumnsText}>
-                +{columns.length - 4} more columns
+                +{columns.length - 4} more details
               </Text>
               <Ionicons name="chevron-down" size={14} color={colors.accent} />
             </Pressable>
           ) : null}
         </View>
       ) : (
-        <Text style={styles.mutedInline}>No additional columns on this match.</Text>
+        <Text style={styles.mutedInline}>No additional details on this match.</Text>
       )}
 
       <View style={styles.cardActions}>
         {barcode ? (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`View full details for ${title}`}
             onPress={() => onOpenDetail(barcode)}
             style={({ pressed }) => [styles.actionChip, pressed && styles.pressed]}
           >
@@ -707,6 +736,8 @@ const ResultCard = memo(
           </Pressable>
         ) : null}
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={needsLabelPhoto ? `Add a label photo for ${title}` : `Edit details for ${title}`}
           onPress={onImprove}
           style={({ pressed }) => [
             styles.actionChip,
@@ -754,18 +785,6 @@ const ResultCard = memo(
     </MotionView>
   )
 },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.index === nextProps.index &&
-      prevProps.expanded === nextProps.expanded &&
-      prevProps.favorited === nextProps.favorited &&
-      prevProps.colors === nextProps.colors &&
-      prevProps.styles === nextProps.styles &&
-      prevProps.status?.state === nextProps.status?.state &&
-      prevProps.status?.message === nextProps.status?.message &&
-      prevProps.item === nextProps.item
-    )
-  }
 )
 
 const makeStyles = (c: ThemeColors) =>
@@ -788,6 +807,14 @@ const makeStyles = (c: ThemeColors) =>
       gap: spacing.sm,
       flex: 1,
     },
+    backButton: {
+      width: 44,
+      height: 44,
+      marginLeft: -10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 22,
+    },
     headingCopy: {
       flex: 1,
       gap: 2,
@@ -805,6 +832,7 @@ const makeStyles = (c: ThemeColors) =>
       zIndex: 5,
     },
     mealSelect: {
+      minHeight: 44,
       minWidth: 118,
       flexDirection: 'row',
       alignItems: 'center',
@@ -839,6 +867,8 @@ const makeStyles = (c: ThemeColors) =>
       shadowRadius: 10,
     },
     mealMenuItem: {
+      minHeight: 44,
+      justifyContent: 'center',
       paddingHorizontal: spacing.md,
       paddingVertical: 12,
     },
@@ -879,6 +909,15 @@ const makeStyles = (c: ThemeColors) =>
     cardHeaderCopy: {
       flex: 1,
       gap: 4,
+      justifyContent: 'center',
+    },
+    cardHeaderActions: { alignItems: 'center', gap: 4 },
+    headerIconButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 22,
     },
     titleRow: {
       flexDirection: 'row',
@@ -928,9 +967,9 @@ const makeStyles = (c: ThemeColors) =>
       color: c.danger,
     },
     addCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       borderWidth: 1,
       borderColor: c.textMuted,
       alignItems: 'center',

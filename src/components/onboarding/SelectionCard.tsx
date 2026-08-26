@@ -23,6 +23,9 @@ export function SelectionCard<T extends string>({
   const styles = useOnboardingStyles(makeStyles)
   return (
     <Pressable
+      accessibilityLabel={`${label}. ${description}`}
+      accessibilityRole="radio"
+      accessibilityState={{ selected, disabled }}
       onPress={() => onPress(value)}
       disabled={disabled}
       style={({ pressed }) => [
@@ -37,7 +40,7 @@ export function SelectionCard<T extends string>({
           {selected ? <View style={styles.radioDot} /> : null}
         </View>
         <View style={styles.copy}>
-          <Text style={styles.label}>{label}</Text>
+          <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
           <Text style={styles.description}>{description}</Text>
         </View>
       </View>
@@ -47,15 +50,18 @@ export function SelectionCard<T extends string>({
 
 const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
   card: {
-    backgroundColor: onboardingColors.card,
-    borderRadius: 6,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
+    minHeight: 64,
+    paddingHorizontal: 4,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: onboardingColors.border,
   },
   cardSelected: {
     backgroundColor: onboardingColors.cardSelected,
+    borderLeftWidth: 3,
+    paddingLeft: 12,
+    paddingRight: 12,
     borderColor: onboardingColors.borderSelected,
   },
   cardPressed: {
@@ -97,6 +103,9 @@ const makeStyles = (onboardingColors: OnboardingColors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 4,
+  },
+  labelSelected: {
+    color: onboardingColors.accent,
   },
   description: {
     fontFamily: FONT_FAMILY,

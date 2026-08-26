@@ -14,6 +14,7 @@ import {
   DEFAULT_DATE_OF_BIRTH,
   AUTH_ONBOARDING_STEPS,
   getOnboardingSteps,
+  ONBOARDING_STEPS,
   type MacroOverrides,
   type OnboardingFormState,
   type OnboardingStep,
@@ -72,6 +73,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native'
 import Animated, {
@@ -81,13 +83,16 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 function AgeRestrictionScreen({
+  hasAccount,
   correcting,
   exiting,
   onCorrect,
   onExit,
 }: {
+  hasAccount: boolean
   correcting: boolean
   exiting: boolean
   onCorrect: () => void
@@ -95,6 +100,7 @@ function AgeRestrictionScreen({
 }) {
   const { onboardingColors } = useTheme()
   const styles = useOnboardingStyles(makeOnboardingStyles)
+  const insets = useSafeAreaInsets()
   const opacity = useSharedValue(0)
   const scale = useSharedValue(0.76)
   const translateY = useSharedValue(18)
@@ -111,7 +117,14 @@ function AgeRestrictionScreen({
   }))
 
   return (
-    <View style={styles.restrictionScreen}>
+    <ScrollView
+      style={{ backgroundColor: onboardingColors.background }}
+      contentContainerStyle={[
+        styles.restrictionScreen,
+        { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
       <Animated.View style={[styles.restrictionContent, animatedStyle]}>
         <View style={styles.restrictionIcon}>
           <Ionicons name="shield-checkmark-outline" size={34} color={onboardingColors.accent} />
@@ -125,7 +138,9 @@ function AgeRestrictionScreen({
         </Text>
         <View style={styles.restrictionNote}>
           <Ionicons name="lock-closed-outline" size={16} color={onboardingColors.textMuted} />
-          <Text style={styles.restrictionNoteText}>No profile or nutrition plan has been saved.</Text>
+          <Text style={styles.restrictionNoteText}>
+            Restricted features are locked and no new health information will be saved.
+          </Text>
         </View>
       </Animated.View>
 
@@ -134,7 +149,11 @@ function AgeRestrictionScreen({
           accessibilityRole="button"
           onPress={onCorrect}
           disabled={correcting || exiting}
-          style={({ pressed }) => [styles.secondaryButton, pressed && { opacity: 0.78 }]}
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            styles.buttonStacked,
+            pressed && { opacity: 0.78 },
+          ]}
         >
           <Text style={styles.secondaryButtonText}>Correct my date</Text>
         </Pressable>
@@ -142,12 +161,18 @@ function AgeRestrictionScreen({
           accessibilityRole="button"
           onPress={onExit}
           disabled={correcting || exiting}
-          style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.84 }]}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            styles.buttonStacked,
+            pressed && { opacity: 0.84 },
+          ]}
         >
-          <Text style={styles.primaryButtonText}>{exiting ? 'Signing out…' : 'Return to sign in'}</Text>
+          <Text style={styles.primaryButtonText}>
+            {exiting ? 'Removing account…' : hasAccount ? 'Delete account and exit' : 'Return to sign in'}
+          </Text>
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   )
 }
 
@@ -168,14 +193,17 @@ function getEffectiveMacros(plan: NutritionPlan, overrides: MacroOverrides | nul
 }
 
 export function OnboardingWizard() {
-  const { user, loading, signOut, signUp } = useAuth()
+  const { user, loading, deleteAccount, signOut, signUp } = useAuth()
   const router = useRouter()
   const navigation = useNavigation()
   const { onboardingColors } = useTheme()
   const onboardingStyles = useOnboardingStyles(makeOnboardingStyles)
+  const insets = useSafeAreaInsets()
+  const { width, fontScale } = useWindowDimensions()
+  const stackActions = width < 390 || fontScale > 1.25
   const allowLeaveRef = useRef(false)
 
-  const [step, setStep] = useState<OnboardingStep>('email')
+  const [step, setStep] = useState<OnboardingStep>('eligibility')
   const [stepInitialized, setStepInitialized] = useState(false)
   const [authEmail, setAuthEmail] = useState('')
   const [authPassword, setAuthPassword] = useState('')
@@ -196,6 +224,11 @@ export function OnboardingWizard() {
     [user?.$id],
   )
   const isRequired = Boolean(user?.$id) && !profileComplete
+  // Keep progress numbering stable throughout signup: count the full step list
+  // until the profile is complete, even though account-creation steps get skipped
+  // once the account exists.
+  const numberingSteps = !user?.$id || isRequired ? ONBOARDING_STEPS : visibleSteps
+  const headerContext = !user?.$id ? 'create' : isRequired ? 'setup' : 'edit'
   const stepIndex = visibleSteps.indexOf(step)
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === visibleSteps.length - 1
@@ -241,7 +274,7 @@ export function OnboardingWizard() {
 
   useEffect(() => {
     if (loading || stepInitialized) return
-    setStep(user?.$id ? 'welcome' : 'email')
+    setStep(user?.$id ? 'welcome' : 'eligibility')
     setStepInitialized(true)
   }, [loading, stepInitialized, user?.$id])
 
@@ -342,6 +375,15 @@ export function OnboardingWizard() {
             : null,
         })
         setDateOfBirthConfirmed(Boolean(profile.dateOfBirth))
+
+        // Central eligibility enforcement: an existing session whose saved date
+        // of birth is under the minimum age stays on the restriction screen.
+        if (profile.dateOfBirth) {
+          const savedDate = parseProfileDate(profile.dateOfBirth)
+          if (!isEligibleOnboardingAge(savedDate)) {
+            setAgeBlocked(true)
+          }
+        }
       })
       .finally(() => {
         if (active) setLoadingProfile(false)
@@ -568,10 +610,15 @@ export function OnboardingWizard() {
               Start with the email you want to use for your CalCount account.
             </Text>
             {authError ? (
-              <View style={onboardingStyles.errorBox}>
+              <View accessibilityRole="alert" style={onboardingStyles.errorBox}>
                 <Text style={onboardingStyles.errorTitle}>Something went wrong</Text>
                 <Text style={onboardingStyles.errorText}>{authError}</Text>
-                <Pressable onPress={() => setAuthError(null)} hitSlop={8}>
+                <Pressable
+                  accessibilityLabel="Dismiss error"
+                  accessibilityRole="button"
+                  onPress={() => setAuthError(null)}
+                  hitSlop={8}
+                >
                   <Text style={onboardingStyles.errorDismiss}>Dismiss</Text>
                 </Pressable>
               </View>
@@ -586,6 +633,9 @@ export function OnboardingWizard() {
               keyboardType="email-address"
               maxLength={254}
               autoFocus
+              accessibilityLabel="Email address"
+              autoComplete="email"
+              textContentType="emailAddress"
               style={onboardingStyles.input}
             />
           </>
@@ -596,10 +646,15 @@ export function OnboardingWizard() {
           <>
             <Text style={onboardingStyles.stepSubtitle}>{authEmail.trim()}</Text>
             {authError ? (
-              <View style={onboardingStyles.errorBox}>
+              <View accessibilityRole="alert" style={onboardingStyles.errorBox}>
                 <Text style={onboardingStyles.errorTitle}>Something went wrong</Text>
                 <Text style={onboardingStyles.errorText}>{authError}</Text>
-                <Pressable onPress={() => setAuthError(null)} hitSlop={8}>
+                <Pressable
+                  accessibilityLabel="Dismiss error"
+                  accessibilityRole="button"
+                  onPress={() => setAuthError(null)}
+                  hitSlop={8}
+                >
                   <Text style={onboardingStyles.errorDismiss}>Dismiss</Text>
                 </Pressable>
               </View>
@@ -614,6 +669,9 @@ export function OnboardingWizard() {
               autoCapitalize="none"
               maxLength={128}
               autoFocus
+              accessibilityLabel="Password"
+              autoComplete="new-password"
+              textContentType="newPassword"
               style={onboardingStyles.input}
             />
           </>
@@ -640,6 +698,7 @@ export function OnboardingWizard() {
               placeholderTextColor={onboardingColors.textMuted}
               autoCapitalize="none"
               maxLength={64}
+              accessibilityLabel="Username"
               style={onboardingStyles.input}
             />
           </>
@@ -654,6 +713,7 @@ export function OnboardingWizard() {
             </Text>
             <Text style={onboardingStyles.label}>Date of birth</Text>
             <NativeDatePicker
+              accessibilityLabel="Date of birth"
               value={form.dateOfBirth}
               onChange={(value) => {
                 updateForm('dateOfBirth', value)
@@ -665,6 +725,7 @@ export function OnboardingWizard() {
             />
             <Text style={onboardingStyles.label}>Country</Text>
             <NativeEnumPicker
+              accessibilityLabel="Country"
               value={form.country}
               options={COUNTRY_OPTIONS}
               onChange={(value) => {
@@ -816,7 +877,12 @@ export function OnboardingWizard() {
             <View style={onboardingStyles.sectionHeaderRow}>
               <Text style={onboardingStyles.sectionLabel}>Daily targets</Text>
               {form.macroOverrides ? (
-                <Pressable onPress={() => updateForm('macroOverrides', null)} disabled={saving}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => updateForm('macroOverrides', null)}
+                  disabled={saving}
+                  hitSlop={8}
+                >
                   <Text style={onboardingStyles.linkText}>Reset to suggested</Text>
                 </Pressable>
               ) : null}
@@ -824,6 +890,7 @@ export function OnboardingWizard() {
 
             <Text style={onboardingStyles.label}>Calories</Text>
             <NativeIntPicker
+              accessibilityLabel="Daily calories"
               value={macros.targetKcal}
               onChange={(value) => updateMacro('targetKcal', value ?? plan.targetKcal)}
               min={800}
@@ -835,6 +902,7 @@ export function OnboardingWizard() {
 
             <Text style={onboardingStyles.label}>Protein</Text>
             <NativeIntPicker
+              accessibilityLabel="Daily protein grams"
               value={macros.targetProtein}
               onChange={(value) => updateMacro('targetProtein', value ?? plan.targetProtein)}
               min={0}
@@ -845,6 +913,7 @@ export function OnboardingWizard() {
 
             <Text style={onboardingStyles.label}>Carbs</Text>
             <NativeIntPicker
+              accessibilityLabel="Daily carbohydrate grams"
               value={macros.targetCarbs}
               onChange={(value) => updateMacro('targetCarbs', value ?? plan.targetCarbs)}
               min={0}
@@ -855,6 +924,7 @@ export function OnboardingWizard() {
 
             <Text style={onboardingStyles.label}>Fat</Text>
             <NativeIntPicker
+              accessibilityLabel="Daily fat grams"
               value={macros.targetFat}
               onChange={(value) => updateMacro('targetFat', value ?? plan.targetFat)}
               min={0}
@@ -878,6 +948,7 @@ export function OnboardingWizard() {
               placeholderTextColor={onboardingColors.textMuted}
               multiline
               maxLength={512}
+              accessibilityLabel="Bio, optional"
               style={[onboardingStyles.input, onboardingStyles.multilineInput]}
             />
 
@@ -903,7 +974,7 @@ export function OnboardingWizard() {
     return (
       <View style={onboardingStyles.loading}>
         <ActivityIndicator color={onboardingColors.accent} size="large" />
-        <Text style={{ color: onboardingColors.textMuted, marginTop: 12 }}>Loading profile…</Text>
+        <Text accessibilityRole="text" style={onboardingStyles.loadingText}>Loading profile…</Text>
       </View>
     )
   }
@@ -911,6 +982,7 @@ export function OnboardingWizard() {
   if (ageBlocked) {
     return (
       <AgeRestrictionScreen
+        hasAccount={Boolean(user?.$id)}
         correcting={false}
         exiting={signingOut}
         onCorrect={() => {
@@ -921,13 +993,16 @@ export function OnboardingWizard() {
         onExit={() => {
           setSigningOut(true)
           allowLeaveRef.current = true
-          void signOut()
-            .then(() => router.replace('/signin'))
-            .catch((err) => {
-              allowLeaveRef.current = false
-              showApiError(err, 'appwrite')
-            })
-            .finally(() => setSigningOut(false))
+          void (async () => {
+            try {
+              if (user?.$id) await deleteAccount()
+            } catch {
+              // The user is still routed away and restricted features remain locked.
+            } finally {
+              setSigningOut(false)
+              router.replace('/signin')
+            }
+          })()
         }}
       />
     )
@@ -938,74 +1013,105 @@ export function OnboardingWizard() {
       style={onboardingStyles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ProgressHeader step={step} steps={visibleSteps} isRequired={isRequired} />
+      <ProgressHeader step={step} steps={numberingSteps} context={headerContext} />
 
-      <ScrollView contentContainerStyle={onboardingStyles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          onboardingStyles.scrollContent,
+          { paddingBottom: stackActions ? insets.bottom + 196 : insets.bottom + 124 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <StepTransition stepKey={step} direction={navDirection}>
           {renderStepContent()}
         </StepTransition>
 
         {saveError ? (
-          <View style={onboardingStyles.errorBox}>
+          <View accessibilityRole="alert" style={onboardingStyles.errorBox}>
             <Text style={onboardingStyles.errorTitle}>Couldn&apos;t save your profile</Text>
             <Text style={onboardingStyles.errorText}>{saveError}</Text>
-            <Pressable onPress={() => setSaveError(null)} hitSlop={8}>
+            <Pressable
+              accessibilityLabel="Dismiss error"
+              accessibilityRole="button"
+              onPress={() => setSaveError(null)}
+              hitSlop={8}
+            >
               <Text style={onboardingStyles.errorDismiss}>Dismiss</Text>
             </Pressable>
           </View>
         ) : null}
       </ScrollView>
 
-      <View style={onboardingStyles.footer}>
-        {isRequired && step === 'welcome' ? (
-          <Pressable
-            onPress={() => setLogoutDialogVisible(true)}
-            disabled={saving || signingOut}
-            style={({ pressed }) => [
-              onboardingStyles.secondaryButton,
-              pressed && { opacity: 0.85 },
-              (saving || signingOut) && { opacity: 0.35 },
-            ]}
-          >
-            <Text style={[onboardingStyles.secondaryButtonText, { color: onboardingColors.danger }]}>
-              Log out
-            </Text>
-          </Pressable>
-        ) : !isRequired || !isFirstStep ? (
-          <Pressable
-            onPress={goBack}
-            disabled={saving}
-            style={({ pressed }) => [
-              onboardingStyles.secondaryButton,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Text style={onboardingStyles.secondaryButtonText}>
-              {isFirstStep && !isRequired ? 'Cancel' : 'Back'}
-            </Text>
-          </Pressable>
-        ) : null}
-        <Pressable
-          onPress={goNext}
-          disabled={saving || signingOut}
-          style={({ pressed }) => [
-            onboardingStyles.primaryButton,
-            pressed && { transform: [{ translateY: 2 }] },
-            (saving || signingOut) && onboardingStyles.primaryButtonDisabled,
+      <View style={[onboardingStyles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <View
+          style={[
+            onboardingStyles.footerContent,
+            stackActions && onboardingStyles.footerContentStacked,
           ]}
         >
-          <Text style={onboardingStyles.primaryButtonText}>
-            {saving
-              ? step === 'password' && !user?.$id
-                ? 'Creating account…'
-                : 'Saving…'
-              : isLastStep
-                ? 'Finish setup'
-                : step === 'password' && !user?.$id
-                  ? 'Create account'
-                  : 'Continue'}
-          </Text>
-        </Pressable>
+          {isRequired && step === 'welcome' ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setLogoutDialogVisible(true)}
+              disabled={saving || signingOut}
+              style={({ pressed }) => [
+                onboardingStyles.secondaryButton,
+                stackActions && onboardingStyles.buttonStacked,
+                pressed && { opacity: 0.85 },
+                (saving || signingOut) && { opacity: 0.35 },
+              ]}
+            >
+              <Text
+                style={[onboardingStyles.secondaryButtonText, { color: onboardingColors.danger }]}
+              >
+                Log out
+              </Text>
+            </Pressable>
+          ) : !isRequired || !isFirstStep ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={goBack}
+              disabled={saving}
+              style={({ pressed }) => [
+                onboardingStyles.secondaryButton,
+                stackActions && onboardingStyles.buttonStacked,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={onboardingStyles.secondaryButtonText}>
+                {isFirstStep && !isRequired ? 'Cancel' : 'Back'}
+              </Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving || signingOut, busy: saving }}
+            onPress={goNext}
+            disabled={saving || signingOut}
+            style={({ pressed }) => [
+              onboardingStyles.primaryButton,
+              stackActions && onboardingStyles.buttonStacked,
+              pressed && { transform: [{ translateY: 2 }] },
+              (saving || signingOut) && onboardingStyles.primaryButtonDisabled,
+            ]}
+          >
+            <View style={onboardingStyles.buttonContent}>
+              {saving ? <ActivityIndicator color={onboardingColors.onAccent} size="small" /> : null}
+              <Text style={onboardingStyles.primaryButtonText}>
+                {saving
+                  ? step === 'password' && !user?.$id
+                    ? 'Creating account…'
+                    : 'Saving…'
+                  : isLastStep
+                    ? 'Finish setup'
+                    : step === 'password' && !user?.$id
+                      ? 'Create account'
+                      : 'Continue'}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
       </View>
 
       <ConfirmDialog

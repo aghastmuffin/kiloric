@@ -1,208 +1,121 @@
-import { Image } from 'expo-image';
-import type { ThemeColors } from '@/lib/theme/tokens';
-import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming
-} from 'react-native-reanimated';
+import { AppScreenHeader } from '@/components/ui/AppScreenHeader'
+import { useTheme } from '@/lib/theme/ThemeContext'
+import type { ThemeColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
+import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import { Ionicons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
+import { useState } from 'react'
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const contributors = [
-  'React Native & Expo Community',
-  'Open Source Contributors',
-  'Special Thanks to You!'
-];
+  ['FOUNDATION', 'React Native & Expo Community'],
+  ['COMMUNITY', 'Open Source Contributors'],
+  ['WITH THANKS', 'You, for making time for your health'],
+] as const
 
 export default function CreditsScreen() {
-  const styles = useThemedStyles(makeStyles);
-  // Animation shared values
-  const headerY = useSharedValue(0);
-  const borderRadius = useSharedValue(0); // 0 = Square, 100 = Circle
-  const listOpacity = useSharedValue(0);
-  
-  // Clean state management for current rendering text
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [, setTapCount] = useState(0);
+  const styles = useThemedStyles(makeStyles)
+  const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
+  const [, setTapCount] = useState(0)
 
   const triggerEasterEgg = () => {
     fetch('https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex')
-      .then((res) => res.json())
+      .then((response) => response.json())
       .then((data) => {
-        const seconds = data.total_seconds || 0;
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const timeStr = `${hours} hour${hours !== 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}`;
-        const message = `🎉 You unlocked the secret! Levi spent ${timeStr} building Sonex. Thank you for checking out CalCount!`;
-        if (Platform.OS === 'web') {
-          alert(message);
-        } else {
-          Alert.alert('Secret Unlocked! 🎨', message);
-        }
+        const seconds = data.total_seconds || 0
+        const hours = Math.floor(seconds / 3600)
+        const minutes = Math.floor((seconds % 3600) / 60)
+        const message = `Levi spent ${hours} hours and ${minutes} minutes building Sonex. Thank you for checking out CalCount.`
+        if (Platform.OS === 'web') alert(message)
+        else Alert.alert('Secret unlocked', message)
       })
-      .catch((err) => {
-        console.warn('Failed to fetch easter egg data:', err);
-      });
-  };
+      .catch((error) => console.warn('Failed to fetch easter egg data:', error))
+  }
 
   const handleAvatarPress = () => {
-    setTapCount((prev) => {
-      const nextCount = prev + 1;
-      if (nextCount >= 10) {
-        setTimeout(triggerEasterEgg, 0);
-        return 0;
+    setTapCount((count) => {
+      const next = count + 1
+      if (next >= 10) {
+        setTimeout(triggerEasterEgg, 0)
+        return 0
       }
-      return nextCount;
-    });
-  };
+      return next
+    })
+  }
 
-  // 4. Slide back down, morph back to square
-  const startOutro = useCallback(() => {
-    headerY.value = withDelay(400, withTiming(0, { duration: 800 }, (finished) => {
-      if (finished) {
-        borderRadius.value = withTiming(0, { duration: 600 });
-      }
-    }));
-  }, [borderRadius, headerY]);
-
-  // 2. Fade each item in and out sequentially.
-  const animateItem = useCallback(
-    function animateItem(index: number) {
-      if (index < contributors.length) {
-        setCurrentIndex(index);
-        listOpacity.value = withTiming(1, { duration: 600 }, (finished) => {
-          if (finished) {
-            listOpacity.value = withDelay(
-              1200,
-              withTiming(0, { duration: 600 }, (outFinished) => {
-                if (outFinished) {
-                  runOnJS(animateItem)(index + 1);
-                }
-              })
-            );
-          }
-        });
-      } else {
-        startOutro();
-      }
-    },
-    [listOpacity, startOutro]
-  );
-
-  // 1. Morph to circle, then slide up.
-  const startIntro = useCallback(() => {
-    borderRadius.value = withDelay(1000, withTiming(100, { duration: 600 }));
-    headerY.value = withDelay(
-      1600,
-      withTiming(-150, { duration: 800 }, (finished) => {
-        if (finished) {
-          runOnJS(animateItem)(0);
-        }
-      })
-    );
-  }, [animateItem, borderRadius, headerY]);
-
-  useEffect(() => {
-    startIntro();
-  }, [startIntro]);
-
-  // Animated styles linked to shared values
-  const animatedHeaderStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: headerY.value }],
-  }));
-
-  const animatedImageStyle = useAnimatedStyle(() => ({
-    borderRadius: borderRadius.value,
-  }));
-
-  const animatedListStyle = useAnimatedStyle(() => ({
-    opacity: listOpacity.value,
-  }));
   return (
-    <View style={styles.container}>
-      {/* Animated Header Box */}
-      <Animated.View style={[styles.centerBox, animatedHeaderStyle]}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: 20, paddingBottom: insets.bottom + 40 },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <AppScreenHeader
+        overline="Credits"
+        title="Made with care."
+        description="The people and open-source communities behind CalCount."
+      />
+
+      <View style={styles.creatorSection}>
         <Pressable
-          onPress={handleAvatarPress}
           accessibilityLabel="Creator's avatar"
           accessibilityRole="button"
           accessibilityHint="Tap repeatedly to unlock a secret"
-          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+          onPress={handleAvatarPress}
+          style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
         >
-          <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-            <Image
-              source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
-              style={styles.avatar}
-            />
-          </Animated.View>
+          <Image
+            source={{ uri: 'https://avatars.githubusercontent.com/u/78246775?v=4' }}
+            style={styles.avatar}
+            contentFit="cover"
+          />
         </Pressable>
-        <Text style={styles.textTitle}>Created by Levi Brown</Text> 
-        <Text style={styles.textSubtitle}>levi@taeson.co</Text>
-      </Animated.View>
+        <View style={styles.creatorCopy}>
+          <Text style={styles.kicker}>CREATOR & DESIGN</Text>
+          <Text accessibilityRole="header" style={styles.creatorName}>Levi Brown</Text>
+          <Text style={styles.creatorEmail}>levi@taeson.co</Text>
+        </View>
+      </View>
 
-      {/* Animated List Box */}
-      <Animated.View style={[styles.listContainer, animatedListStyle]}>
-        <Text style={styles.listHeader}>With thanks to:</Text>
-        <Text style={styles.listItem}>
-          {currentIndex >= 0 ? contributors[currentIndex] : ''}
+      <View style={styles.ledger}>
+        {contributors.map(([label, value]) => (
+          <View key={label} style={styles.ledgerRow}>
+            <Text style={styles.ledgerLabel}>{label}</Text>
+            <Text style={styles.ledgerValue}>{value}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.note}>
+        <Ionicons name="leaf-outline" size={22} color={colors.brand} />
+        <Text style={styles.noteText}>
+          Built with Expo, React Native, Appwrite, and the generosity of open-source maintainers.
         </Text>
-      </Animated.View>
-    </View>
-  );
+      </View>
+    </ScrollView>
+  )
 }
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: c.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  centerBox: {
-    alignItems: 'center',
-    position: 'absolute',
-  },
-  imageWrapper: {
-    width: 200,
-    height: 200,
-    overflow: 'hidden', // Forces the image to adhere to the changing borderRadius
-    marginBottom: 15,
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-  },
-  textTitle: {
-    color: c.text,
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  textSubtitle: {
-    color: c.textMuted,
-    fontSize: 14,
-    marginTop: 4,
-  },
-  listContainer: {
-    position: 'absolute',
-    top: '55%',
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  listHeader: {
-    color: c.brand,
-    fontSize: 11,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  listItem: {
-    color: c.text,
-    fontSize: 22,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-});
+  screen: { flex: 1, backgroundColor: c.background },
+  content: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 24, gap: 32 },
+  creatorSection: { flexDirection: 'row', alignItems: 'center', gap: 22, paddingVertical: 22, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong },
+  avatarButton: { width: 112, height: 112, borderRadius: 56, padding: 4, borderWidth: 1, borderColor: c.brand },
+  avatar: { width: '100%', height: '100%', borderRadius: 52 },
+  creatorCopy: { flex: 1, minWidth: 0 },
+  kicker: { ...typography.overline, color: c.brand, marginBottom: 5 },
+  creatorName: { ...typography.headlineLarge, color: c.text },
+  creatorEmail: { ...typography.body, color: c.textMuted, marginTop: 3 },
+  ledger: { borderTopWidth: 1, borderTopColor: c.borderStrong },
+  ledgerRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+  ledgerLabel: { ...typography.overline, color: c.textMuted, width: 112 },
+  ledgerValue: { ...typography.bodyLarge, color: c.text, flex: 1 },
+  note: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 18, backgroundColor: c.brandSoft, borderLeftWidth: 3, borderLeftColor: c.brand },
+  noteText: { ...typography.body, color: c.textMuted, flex: 1 },
+  pressed: { opacity: 0.76 },
+})

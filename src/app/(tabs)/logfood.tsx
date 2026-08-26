@@ -10,7 +10,9 @@ import { MotionView } from '@/components/MotionView';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { useAuth } from '@/lib/AuthContext';
+import { showApiError } from '@/lib/apiErrors';
 import {
+    favoritesUserKey,
     loadFavoriteFoods,
     toggleFavoriteFood,
     type FavoriteFood,
@@ -62,7 +64,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
 
-type FilterChip = 'Favorites' | 'Recent' | 'My Meals' | 'Recipes'
+type FilterChip = 'Favorites' | 'Recent' | 'My Meals'
 type LogItem = MealItemPreview & { mealId: string; sourceType: MealType; loggedAt: string }
 type LogSection = {
   type: MealType
@@ -70,13 +72,12 @@ type LogSection = {
   items: LogItem[]
 }
 
-const FILTERS: FilterChip[] = ['Favorites', 'Recent', 'My Meals', 'Recipes']
+const FILTERS: FilterChip[] = ['Favorites', 'Recent', 'My Meals']
 
 const FILTER_ICONS: Record<FilterChip, keyof typeof Ionicons.glyphMap> = {
   Favorites: 'star',
   Recent: 'time',
   'My Meals': 'restaurant',
-  Recipes: 'book',
 }
 
 const MEAL_ICONS: Record<MealType, keyof typeof Ionicons.glyphMap> = {
@@ -259,6 +260,8 @@ export default function LogFoodScreen() {
   const { selectedMealType, setSelectedMealType } = useMealTypePreferences()
   const searchInputRef = useRef<TextInput>(null)
   const runSearchRef = useRef<(rawQuery?: string) => Promise<void>>(async () => {})
+  const searchRequestIdRef = useRef(0)
+  const mealLoadRequestIdRef = useRef(0)
 
   const [query, setQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -278,6 +281,7 @@ export default function LogFoodScreen() {
   const [kcalTarget, setKcalTarget] = useState(2400)
   const [previews, setPreviews] = useState<Record<string, MealItemPreview>>({})
   const [loadingMeals, setLoadingMeals] = useState(true)
+  const [mealLoadError, setMealLoadError] = useState<string | null>(null)
   const [addStatuses, setAddStatuses] = useState<
     Record<number, { state: 'adding' | 'added' | 'error'; message: string }>
   >({})
@@ -285,26 +289,26 @@ export default function LogFoodScreen() {
   const [scrollEnabled, setScrollEnabled] = useState(true)
 
   const loadToday = useCallback(async () => {
+    const requestId = ++mealLoadRequestIdRef.current
     if (!user?.$id) {
+      const savedFavorites = await loadFavoriteFoods('local')
+      if (requestId !== mealLoadRequestIdRef.current) return
       setTodayMeals([])
       setHistoricMeals([])
-      setFavorites(await loadFavoriteFoods())
+      setFavorites(savedFavorites)
       setLoadingMeals(false)
       return
     }
 
     setLoadingMeals(true)
+    setMealLoadError(null)
     try {
       const [meals, profile, history, savedFavorites] = await Promise.all([
         getTodayMeals(user.$id),
         getProfile(user.$id),
         listHistoricMeals(user.$id, 8),
-        loadFavoriteFoods(),
+        loadFavoriteFoods(user.$id),
       ])
-      setTodayMeals(meals)
-      setHistoricMeals(history)
-      setFavorites(savedFavorites)
-      if (profile?.target_kcal) setKcalTarget(profile.target_kcal)
 
       const nextPreviews: Record<string, MealItemPreview> = {}
       await Promise.all(
@@ -318,17 +322,25 @@ export default function LogFoodScreen() {
           }),
         ),
       )
+      if (requestId !== mealLoadRequestIdRef.current) return
+      setTodayMeals(meals)
+      setHistoricMeals(history)
+      setFavorites(savedFavorites)
+      if (profile?.target_kcal) setKcalTarget(profile.target_kcal)
       setPreviews(nextPreviews)
     } catch (error) {
+      if (requestId !== mealLoadRequestIdRef.current) return
       console.warn('[Log] failed to load today meals', error)
+      setMealLoadError('Today’s meals could not be refreshed. Your existing view has been kept.')
     } finally {
-      setLoadingMeals(false)
+      if (requestId === mealLoadRequestIdRef.current) setLoadingMeals(false)
     }
   }, [user])
 
   const runSearch = useCallback(async (rawQuery?: string) => {
     const trimmed = (rawQuery ?? query).trim()
     if (!trimmed) return
+    const requestId = ++searchRequestIdRef.current
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setIsSearching(true)
@@ -343,23 +355,32 @@ export default function LogFoodScreen() {
         ? `/api/barcode/${encodeURIComponent(trimmed)}`
         : `/api/fuzzy/${encodeURIComponent(trimmed)}`
       const data = await authenticatedRequest(endpoint)
+      if (requestId !== searchRequestIdRef.current) return
       const parsed = parseSearchPayload(data)
       setResults(parsed)
       if (parsed.length === 0) {
         setSearchError('No matches found. Try another food or scan a barcode.')
       }
     } catch (error) {
+      if (requestId !== searchRequestIdRef.current) return
       const message = error instanceof Error ? error.message : 'Search failed'
       setResults([])
       setSearchError(message)
     } finally {
-      setIsSearching(false)
+      if (requestId === searchRequestIdRef.current) {
+        setIsSearching(false)
+      }
     }
   }, [query])
 
   useEffect(() => {
     runSearchRef.current = runSearch
   }, [runSearch])
+
+  useEffect(() => () => {
+    searchRequestIdRef.current += 1
+    mealLoadRequestIdRef.current += 1
+  }, [])
 
   useFocusEffect(
     useCallback(() => {
@@ -443,12 +464,18 @@ export default function LogFoodScreen() {
     return foods.slice(0, 8)
   }, [previews, todayMeals])
 
-  const clearSearch = () => {
+  const invalidateSearchResults = () => {
+    searchRequestIdRef.current += 1
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setIsSearching(false)
     setHasSearched(false)
     setResults([])
     setSearchError(null)
     setAddStatuses({})
+  }
+
+  const clearSearch = () => {
+    invalidateSearchResults()
     setQuery('')
   }
 
@@ -540,6 +567,7 @@ export default function LogFoodScreen() {
       await loadToday()
     } catch (error) {
       console.warn('Could not add food', error)
+      showApiError(error, 'appwrite')
     }
   }, [loadToday, selectedMealType, user])
 
@@ -552,10 +580,10 @@ export default function LogFoodScreen() {
     fat: number | null
     kcal: number | null
   }) => {
-    const next = await toggleFavoriteFood(food)
+    const next = await toggleFavoriteFood(favoritesUserKey(user?.$id), food)
     setFavorites(next)
     await Haptics.selectionAsync()
-  }, [])
+  }, [user?.$id])
 
   const handleDeleteItem = useCallback((item: LogItem) => {
     Alert.alert('Remove food?', `Remove ${item.title} from ${item.sourceType}?`, [
@@ -566,12 +594,19 @@ export default function LogFoodScreen() {
         onPress: () => {
           void (async () => {
             try {
-              await removeProductFromMeal(item.mealId, item.barcode, {
+              let nutrition = {
                 kcal: item.kcal,
                 protein: item.protein,
                 carbs: item.carbs,
                 fat: item.fat,
-              })
+              }
+              if (Object.values(nutrition).every((value) => value == null)) {
+                const data = await authenticatedRequest(`/api/barcode/${encodeURIComponent(item.barcode)}`)
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                  nutrition = macrosFromProduct(unwrapProduct(data as SearchResult))
+                }
+              }
+              await removeProductFromMeal(item.mealId, item.barcode, nutrition)
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               await loadToday()
             } catch (error) {
@@ -651,13 +686,13 @@ export default function LogFoodScreen() {
                   placeholderTextColor={colors.textFaint}
                   returnKeyType="search"
                   style={styles.searchInput}
-                  value={query}
+                   value={query}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
-                  onChangeText={(value) => {
-                    setQuery(value)
-                    if (!value.trim() && hasSearched) clearSearch()
-                  }}
+                   onChangeText={(value) => {
+                     setQuery(value)
+                     if (hasSearched || isSearching) invalidateSearchResults()
+                   }}
                   onSubmitEditing={() => void runSearch()}
                 />
                 {query.length > 0 ? (
@@ -673,8 +708,9 @@ export default function LogFoodScreen() {
               </View>
               {query.length > 0 ? (
               <Pressable
-                accessibilityLabel="Scan barcode"
-                onPress={() => router.push('/cameraview')}
+                accessibilityRole="button"
+                accessibilityLabel="Search foods"
+                onPress={() => void runSearch()}
                 style={({ pressed }) => [
                   styles.barcodeButton,
                   pressed && styles.barcodeButtonPressed,
@@ -684,6 +720,7 @@ export default function LogFoodScreen() {
               </Pressable>
               ) :
               <Pressable
+                accessibilityRole="button"
                 accessibilityLabel="Scan barcode"
                 onPress={() => router.push('/cameraview')}
                 style={({ pressed }) => [
@@ -695,6 +732,22 @@ export default function LogFoodScreen() {
               </Pressable>
               }
             </View>
+
+            {mealLoadError && !showResults ? (
+              <View accessibilityLiveRegion="polite" style={styles.loadNotice}>
+                <Ionicons name="cloud-offline-outline" size={18} color={colors.danger} />
+                <Text style={styles.loadNoticeText}>{mealLoadError}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry loading meals"
+                  onPress={() => void loadToday()}
+                  hitSlop={8}
+                  style={styles.loadRetry}
+                >
+                  <Text style={styles.loadRetryText}>RETRY</Text>
+                </Pressable>
+              </View>
+            ) : null}
 
             <ScrollView
               horizontal
@@ -811,7 +864,7 @@ export default function LogFoodScreen() {
         onRequestClose={() => setMoveItem(null)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setMoveItem(null)}>
-          <Pressable style={styles.moveSheet} onPress={(event) => event.stopPropagation()}>
+          <Pressable accessibilityViewIsModal style={styles.moveSheet} onPress={(event) => event.stopPropagation()}>
             <View style={styles.moveSheetHeader}>
               <View style={styles.moveSheetTitleGroup}>
                 <Text style={styles.moveSheetEyebrow}>MOVE ITEM</Text>
@@ -922,9 +975,7 @@ function IdleLogPanels({
       ? 'Favorites'
       : activeFilter === 'My Meals'
         ? 'My Meals'
-        : activeFilter === 'Recipes'
-          ? 'Recipes'
-          : 'Recent Foods'
+        : 'Recent Foods'
 
   const isDraggingFood = draggingFoodKey !== null
 
@@ -1038,6 +1089,8 @@ function IdleLogPanels({
                       onLayout={remasureZones}
                     >
                       <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: open }}
                         onPress={() => onToggleSection(section.type)}
                         style={({ pressed }) => [styles.mealCardHeader, pressed && styles.pressed]}
                       >
@@ -1066,6 +1119,8 @@ function IdleLogPanels({
                             const isGhost = draggingItemKey === itemKey
                             const row = (
                               <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={`View ${item.title}`}
                                 onPress={() => onOpenDetail(item.barcode)}
                                 style={({ pressed }) => [
                                   styles.mealItemRow,
@@ -1136,6 +1191,7 @@ function IdleLogPanels({
           )}
 
           <Pressable
+            accessibilityRole="button"
             onPress={onLogNewMeal}
             style={({ pressed }) => [
               styles.logNewButton,
@@ -1143,7 +1199,7 @@ function IdleLogPanels({
             ]}
           >
             <Ionicons name="add" size={18} color={colors.textMuted} />
-            <Text style={styles.logNewButtonText}>Log New Meal</Text>
+            <Text style={styles.logNewButtonText}>Log new meal</Text>
           </Pressable>
         </MotionView>
       ) : null}
@@ -1263,13 +1319,6 @@ function IdleLogPanels({
                 )
               })
             )
-          ) : activeFilter === 'Recipes' ? (
-            <View style={styles.inlineEmpty}>
-              <Ionicons name="restaurant-outline" size={26} color={colors.textMuted} />
-              <Text style={styles.emptyText}>
-                Recipes are on the way. (UNADDED FEATURE)
-              </Text>
-            </View>
           ) : recentFoods.length === 0 ? (
             <View style={styles.inlineEmpty}>
               <Text style={styles.emptyText}>
@@ -1366,6 +1415,7 @@ const FoodQuickRow = memo(
           <View style={styles.recentTitleRow}>
             <Text style={styles.recentTitle} numberOfLines={1}>{title}</Text>
             <Pressable
+              accessibilityRole="button"
               accessibilityLabel={favorited ? 'Remove favorite' : 'Save favorite'}
               hitSlop={8}
               onPress={onToggleFavorite}
@@ -1387,6 +1437,7 @@ const FoodQuickRow = memo(
           />
         </Pressable>
         <Pressable
+          accessibilityRole="button"
           accessibilityLabel={`Add ${title}`}
           onPress={onAdd}
           style={({ pressed }) => [styles.addCircle, pressed && styles.addCircleActive]}
@@ -1435,19 +1486,6 @@ const FoodQuickRow = memo(
 
     return inner
   },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.index === nextProps.index &&
-      prevProps.title === nextProps.title &&
-      prevProps.barcode === nextProps.barcode &&
-      prevProps.protein === nextProps.protein &&
-      prevProps.fat === nextProps.fat &&
-      prevProps.carbs === nextProps.carbs &&
-      prevProps.favorited === nextProps.favorited &&
-      prevProps.styles === nextProps.styles &&
-      prevProps.colors === nextProps.colors
-    )
-  }
 )
 
 function pressedColor(colors: ThemeColors, active: boolean) {
@@ -1461,13 +1499,26 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   content: {
     width: '100%',
-    maxWidth: 680,
+    maxWidth: 720,
     alignSelf: 'center',
-    gap: 16,
+    gap: 20,
   },
   searchBlock: {
     gap: spacing.md,
   },
+  loadNotice: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    backgroundColor: c.dangerSoft,
+    borderLeftWidth: 2,
+    borderLeftColor: c.danger,
+  },
+  loadNoticeText: { ...typography.bodySmall, color: c.textMuted, flex: 1 },
+  loadRetry: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  loadRetryText: { ...typography.overline, color: c.danger },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1525,6 +1576,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingRight: spacing.md,
   },
   filterChip: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -1559,12 +1611,16 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   sectionTitle: {
-    ...typography.headline,
+    ...typography.metric,
     color: c.text,
+    flex: 1,
+    minWidth: 0,
   },
   sectionMeta: {
     ...typography.label,
     color: c.textMuted,
+    flexShrink: 1,
+    textAlign: 'right',
   },
   dragHint: {
     ...typography.labelSmall,
@@ -1723,9 +1779,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 10,
   },
   addCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: c.textMuted,
     alignItems: 'center',

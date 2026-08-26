@@ -6,6 +6,7 @@ import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
+import { Redirect } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -29,6 +30,7 @@ const DAYS = Array.from({ length: 5 }, (_, index) => {
     key: date.toISOString().slice(0, 10),
     day: date.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase(),
     date: String(date.getDate()).padStart(2, '0'),
+    month: date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }).toUpperCase(),
   }
 })
 
@@ -57,8 +59,8 @@ const SCHEDULE: ScheduleItem[] = [
     id: 'afternoon-med',
     time: '13:00',
     period: 'MIDDAY',
-    title: 'Daily prescription',
-    detail: '1 tablet · mock reminder',
+    title: 'Sample prescription',
+    detail: '1 tablet · example reminder',
     instruction: 'After lunch',
     kind: 'medication',
     icon: 'medical-outline',
@@ -85,7 +87,7 @@ export default function MedsScreen() {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
-  const { gutter } = useAppLayout()
+  const { compact, gutter } = useAppLayout()
   const [selectedDay, setSelectedDay] = useState(DAYS[0].key)
   const [completed, setCompleted] = useState<Record<string, boolean>>({})
   const [mood, setMood] = useState<string | null>(null)
@@ -104,11 +106,14 @@ export default function MedsScreen() {
     setCompleted((current) => ({ ...current, [key]: !current[key] }))
   }
 
+  if (!__DEV__) return <Redirect href="/" />
+
   return (
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={[
           styles.content,
+          compact && styles.contentCompact,
           { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 112, paddingHorizontal: gutter },
         ]}
         showsVerticalScrollIndicator={false}
@@ -116,11 +121,11 @@ export default function MedsScreen() {
         <AppScreenHeader
           overline="Wellbeing"
           title="A gentler rhythm."
-          description="Move through today’s reminders and check in with how you feel."
+          description="Explore a sample reminder plan and check in with how you feel."
           accessory={(
-            <View style={styles.mockPill}>
-              <Ionicons name="flask-outline" size={12} color={colors.success} />
-              <Text style={styles.mockText}>WELLBEING PLANNER · MOCK DATA</Text>
+            <View style={styles.previewPill}>
+              <Ionicons name="eye-outline" size={13} color={colors.success} />
+              <Text style={styles.previewText}>INTERACTIVE SAMPLE</Text>
             </View>
           )}
         />
@@ -128,13 +133,13 @@ export default function MedsScreen() {
         <View style={styles.notice}>
           <Ionicons name="information-circle-outline" size={19} color={colors.accent} />
           <Text style={styles.noticeText}>
-            Planner preview only — this does not provide medical advice, alerts, or saved records.
+            Sample planner only. It does not create medical alerts, save records, or provide medical advice.
           </Text>
         </View>
 
         <View style={styles.dateHeader}>
           <View>
-            <Text style={styles.month}>AUGUST 2026</Text>
+            <Text style={styles.month}>{selectedDate.month}</Text>
             <Text style={styles.dateTitle}>Your week</Text>
           </View>
           <View style={styles.calendarIcon}>
@@ -142,7 +147,7 @@ export default function MedsScreen() {
           </View>
         </View>
 
-        <View style={styles.dayRow}>
+        <View style={[styles.dayRow, compact && styles.dayRowCompact]}>
           {DAYS.map((day) => {
             const selected = selectedDay === day.key
             const dayDone = SCHEDULE.filter((item) => completed[`${day.key}-${item.id}`]).length
@@ -150,6 +155,7 @@ export default function MedsScreen() {
               <Pressable
                 key={day.key}
                 accessibilityRole="button"
+                accessibilityLabel={`${day.day} ${day.date} ${day.month}, sample plan`}
                 accessibilityState={{ selected }}
                 onPress={() => {
                   triggerSelectionHaptic()
@@ -157,6 +163,7 @@ export default function MedsScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.day,
+                  compact && styles.dayCompact,
                   selected && styles.daySelected,
                   pressed && styles.pressed,
                 ]}
@@ -177,7 +184,7 @@ export default function MedsScreen() {
           style={styles.overviewCard}
         >
           <View style={styles.overviewTop}>
-            <View>
+            <View style={styles.overviewCopy}>
               <Text style={styles.overviewLabel}>{selectedDate.day} {selectedDate.date} · DAILY PLAN</Text>
               <Text style={styles.overviewTitle}>
                 {doneCount === SCHEDULE.length ? 'All moments complete' : nextItem ? `Next at ${nextItem.time}` : 'Ready for today'}
@@ -211,7 +218,7 @@ export default function MedsScreen() {
             <Text style={styles.sectionKicker}>SCHEDULE</Text>
             <Text style={styles.sectionTitle}>Today’s moments</Text>
           </View>
-          <Text style={styles.sectionMeta}>LOCAL CHECKS</Text>
+          <Text style={styles.sectionMeta}>PREVIEW ONLY</Text>
         </View>
 
         <View style={styles.scheduleCard}>
@@ -234,7 +241,7 @@ export default function MedsScreen() {
                 </View>
                 <Pressable
                   accessibilityRole="checkbox"
-                  accessibilityLabel={`Mark ${item.title} complete`}
+                  accessibilityLabel={`Mark ${item.title} ${done ? 'incomplete' : 'complete'}`}
                   accessibilityState={{ checked: done }}
                   onPress={() => toggleItem(item.id)}
                   style={({ pressed }) => [styles.scheduleBody, pressed && styles.pressed]}
@@ -287,6 +294,7 @@ export default function MedsScreen() {
                 <Pressable
                   key={option.id}
                   accessibilityRole="button"
+                  accessibilityLabel={`Energy feels ${option.label.toLowerCase()}`}
                   accessibilityState={{ selected }}
                   onPress={() => {
                     triggerSelectionHaptic()
@@ -320,7 +328,7 @@ export default function MedsScreen() {
               style={styles.moodThanks}
             >
               <Ionicons name="heart-outline" size={15} color={colors.success} />
-              <Text style={styles.moodThanksText}>Noted for this preview. Thank you for checking in.</Text>
+              <Text style={styles.moodThanksText}>Selected for this preview only. Thank you for checking in.</Text>
             </MotionView>
           )}
         </View>
@@ -332,7 +340,7 @@ export default function MedsScreen() {
           <View style={styles.safetyCopy}>
             <Text style={styles.safetyTitle}>Keep your real plan authoritative</Text>
             <Text style={styles.safetyText}>
-              Follow the label and advice from your clinician or pharmacist. This mock planner does not replace either.
+              Follow the label and advice from your clinician or pharmacist. This sample planner does not replace either.
             </Text>
           </View>
         </View>
@@ -344,9 +352,9 @@ export default function MedsScreen() {
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
   content: { width: '100%', maxWidth: 760, alignSelf: 'center', gap: 22 },
-  hero: { gap: 6, paddingTop: 2 },
-  mockPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
-  mockText: { ...typography.labelSmall, color: c.textMuted, fontSize: 9, letterSpacing: 0.8 },
+  contentCompact: { gap: 18 },
+  previewPill: { minHeight: 28, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, marginBottom: 8 },
+  previewText: { ...typography.overline, color: c.textMuted, fontSize: 9, lineHeight: 12, letterSpacing: 0.8 },
   notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderLeftWidth: 2, borderLeftColor: c.brand, backgroundColor: c.brandSoft, padding: 13 },
   noticeText: { ...typography.body, color: c.textMuted, fontSize: 13, lineHeight: 19, flex: 1 },
   dateHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
@@ -354,7 +362,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   dateTitle: { ...typography.headline, color: c.text },
   calendarIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
   dayRow: { flexDirection: 'row', gap: 7 },
-  day: { flex: 1, minWidth: 52, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface, borderRadius: 8, paddingVertical: 10, gap: 2 },
+  dayRowCompact: { gap: 4 },
+  day: { flex: 1, minWidth: 52, minHeight: 58, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, backgroundColor: c.surface, borderRadius: 8, paddingVertical: 8, gap: 2 },
+  dayCompact: { minWidth: 0 },
   daySelected: { backgroundColor: c.brand, borderColor: c.brand },
   dayName: { ...typography.labelSmall, color: c.textMuted, fontSize: 8 },
   dayDate: { ...typography.headline, color: c.text, fontSize: 19, lineHeight: 23 },
@@ -363,8 +373,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   dayIndicatorStarted: { backgroundColor: c.warning },
   dayIndicatorDone: { backgroundColor: c.success },
   pressed: { opacity: 0.72 },
-  overviewCard: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: 8, padding: 16, gap: 13 },
+  overviewCard: { borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, paddingVertical: 16, gap: 13 },
   overviewTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  overviewCopy: { flex: 1, minWidth: 0 },
   overviewLabel: { ...typography.labelSmall, color: c.textMuted, fontSize: 9 },
   overviewTitle: { ...typography.headline, color: c.accent, fontSize: 21, lineHeight: 27 },
   countBadge: { width: 48, height: 48, borderRadius: 24, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
@@ -372,7 +383,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   progressTrack: { height: 5, borderRadius: 999, backgroundColor: c.progressTrail, overflow: 'hidden' },
   progressFill: { height: 5, borderRadius: 999, backgroundColor: c.success },
   overviewFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  overviewHint: { ...typography.body, color: c.textMuted, fontSize: 13, lineHeight: 18 },
+  overviewHint: { ...typography.body, color: c.textMuted, fontSize: 13, lineHeight: 18, flex: 1 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 8 },
   sectionKicker: { ...typography.labelSmall, color: c.brand, fontSize: 10 },
   sectionTitle: { ...typography.headline, color: c.text, fontSize: 22, lineHeight: 28 },
@@ -403,7 +414,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   typeTextWellbeing: { color: c.success },
   checkbox: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   checkboxDone: { backgroundColor: c.success, borderColor: c.success },
-  moodCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 16, gap: 13 },
+  moodCard: { borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, paddingVertical: 16, gap: 13 },
   moodPrompt: { ...typography.body, color: c.textMuted, fontSize: 14 },
   moodRow: { flexDirection: 'row', gap: 9 },
   moodOption: { flex: 1, height: 72, borderWidth: 1, borderColor: c.border, borderRadius: 12, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center', gap: 5 },

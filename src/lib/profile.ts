@@ -130,44 +130,18 @@ export function logAppwriteError(context: string, err: unknown): void {
   console.error(`[profile] ${context} failed →`, err)
 }
 
-/** Human-readable, verbose error string for display in the app (red box). */
+/** Concise user-facing profile error. Technical details stay in diagnostics. */
 export function formatProfileSaveError(err: unknown): string {
   if (!(err instanceof AppwriteException)) {
-    return err instanceof Error ? err.message : 'Unknown error'
-  }
-
-  const raw = `Appwrite ${err.code} (${err.type || 'error'}): ${err.message}`
-
-  if (err.code === 401 && err.message.toLowerCase().includes('create')) {
-    return [
-      raw,
-      '',
-      'Creating a document ALWAYS needs collection-level "Create" permission.',
-      'Fix in Appwrite Console → Databases → your collection → Settings → Permissions:',
-      'add role "Users" and check Create. Then sign out and back in.',
-      'See docs/appwrite/profiles.md',
-    ].join('\n')
+    return err instanceof Error && err.message.startsWith('First profile save')
+      ? 'Your profile is missing required information. Review each setup step and try again.'
+      : 'We couldn’t save your profile. Check your connection and try again.'
   }
 
   if (err.code === 401) {
-    return `${raw}\n\nYour session may have expired. Sign out and sign in again.`
+    return 'Your session expired. Sign out, sign in again, and retry.'
   }
-
-  if (err.code === 404) {
-    return `${raw}\n\nCheck EXPO_PUBLIC_APPWRITE_DATABASE_ID / _PROFILES_COLLECTION_ID in .env.`
-  }
-
-  if (err.type === 'relationship_value_invalid') {
-    return [
-      raw,
-      '',
-      'A collection attribute is type Relationship, but the app sent plain text.',
-      'Common cause: "meals" links to meal documents — not diet labels.',
-      'The app no longer writes to "meals". If another field fails, check attribute types in Console.',
-    ].join('\n')
-  }
-
-  return raw
+  return 'We couldn’t save your profile. Check your connection and try again.'
 }
 
 const CREATE_FIELD_KEYS: (keyof ProfileCreate)[] = [
@@ -383,6 +357,21 @@ export async function updateProfile(userId: string, data: Partial<ProfileFields>
   }
 
   return res
+}
+
+export async function deleteProfile(userId: string): Promise<void> {
+  await assertAuthenticatedUserId(userId)
+  try {
+    await databases.deleteDocument({
+      databaseId: DATABASE_ID,
+      collectionId: USER_PROFILES_COLLECTION_ID,
+      documentId: userId,
+    })
+  } catch (err) {
+    if (!isDocumentNotFound(err)) throw err
+  } finally {
+    clearProfileCache()
+  }
 }
 
 export async function getProfile(userId: string): Promise<ProfileDocument | null> {

@@ -4,9 +4,9 @@ import { SwipeableRow } from '@/components/SwipeableRow';
 import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { useAuth } from '@/lib/AuthContext';
-import { calculateStreak, calculateXP } from '@/lib/gamification';
+import { showApiError } from '@/lib/apiErrors';
 import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
-import { getTodayMeals, listHistoricMeals, type MealDocument } from '@/lib/meals';
+import { getTodayMeals, type MealDocument } from '@/lib/meals';
 import { panelSpring, quickTiming } from '@/lib/motion';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import { createTask, deleteTask, listTasks, setTaskDone } from '@/lib/tasks';
@@ -52,11 +52,10 @@ const MENU_HEIGHT = 140
 
 type DashboardData = {
   today: MealDocument[]
-  history: MealDocument[]
   profile: ProfileDocument | null
 }
 
-const emptyData: DashboardData = { today: [], history: [], profile: null }
+const emptyData: DashboardData = { today: [], profile: null }
 
 function total(meals: MealDocument[], key: 'kcal' | 'protein' | 'carbs' | 'fat' | 'fluid') {
   return meals.reduce((sum, meal) => sum + (meal[key] ?? 0), 0)
@@ -92,6 +91,8 @@ export default function DashboardScreen() {
   const { compact, gutter } = useAppLayout()
   const [data, setData] = useState<DashboardData>(emptyData)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [fabOpen, setFabOpen] = useState(false)
   const [personalQuests, setPersonalQuests] = useState<PersonalQuest[]>([])
   const [dismissedQuestKeys, setDismissedQuestKeys] = useState<string[]>([])
@@ -100,21 +101,22 @@ export default function DashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      void reloadKey
       let active = true
       if (!user?.$id) {
         setLoading(false)
         return
       }
       setLoading(true)
+      setLoadError(null)
       Promise.all([
         getTodayMeals(user.$id),
-        listHistoricMeals(user.$id, 100),
         getProfile(user.$id),
         listTasks(user.$id),
       ])
-        .then(([today, history, profile, tasks]) => {
+        .then(([today, profile, tasks]) => {
           if (!active) return
-          setData({ today, history, profile })
+          setData({ today, profile })
           setPersonalQuests(
             tasks.map((task) => ({
               id: task.$id,
@@ -123,10 +125,13 @@ export default function DashboardScreen() {
             })),
           )
         })
-        .catch((error) => console.warn('[Dashboard] load failed', error))
+        .catch((error) => {
+          console.warn('[Dashboard] load failed', error)
+          if (active) setLoadError('Today’s record could not be refreshed. Check your connection and try again.')
+        })
         .finally(() => active && setLoading(false))
       return () => { active = false }
-    }, [user]),
+    }, [reloadKey, user?.$id]),
   )
 
   const totals = useMemo(() => ({
@@ -159,14 +164,6 @@ export default function DashboardScreen() {
     [goalProgress, formatWeight],
   )
 
-  const allMeals = [...data.today, ...data.history]
-  const streak = calculateStreak(allMeals)
-  const xp = calculateXP({
-    meals: data.today.length,
-    water: Math.floor(totals.fluid / 250),
-    calorieTargetHit: totals.kcal >= targets.kcal * 0.9 && totals.kcal <= targets.kcal * 1.1,
-    proteinTargetHit: totals.protein >= targets.protein,
-  })
   const quests = [
     { key: 'meals', label: 'Log three meals', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
     { key: 'protein', label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
@@ -214,12 +211,20 @@ export default function DashboardScreen() {
       .catch((error) => {
         console.warn('[Dashboard] create task failed', error)
         setPersonalQuests((prev) => prev.filter((q) => q.id !== optimisticId))
+        showApiError(error, 'appwrite')
       })
   }, [taskDraft, user])
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>
+    return (
+      <View accessibilityState={{ busy: true }} style={styles.centered}>
+        <ActivityIndicator color={colors.brand} />
+        <Text style={styles.stateText}>Preparing today’s record…</Text>
+      </View>
+    )
   }
+
+  const energyBalance = Math.round(targets.kcal - totals.kcal)
 
   return (
     <View style={styles.screen}>
@@ -234,22 +239,34 @@ export default function DashboardScreen() {
           description="A clear view of today’s nutrition and routines."
         />
 
-        <View accessibilityLabel={`${streak} day streak. Level ${xp.level}, ${xp.xpInCurrentLevel} of ${xp.xpNeeded} experience points.`} style={styles.gameStrip}>
-          <View style={styles.gameMetric}>
-            <Ionicons name="flame-outline" size={20} color={colors.streakColor} />
-            <Text style={styles.gameValue}>{streak}</Text>
-            <Text style={styles.gameLabel}>day streak</Text>
+        {loadError ? (
+          <View accessibilityLiveRegion="polite" style={styles.errorNotice}>
+            <Ionicons name="cloud-offline-outline" size={20} color={colors.danger} />
+            <Text style={styles.errorNoticeText}>{loadError}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading today"
+              hitSlop={8}
+              onPress={() => setReloadKey((key) => key + 1)}
+              style={({ pressed }) => [styles.errorRetry, pressed && { opacity: 0.65 }]}
+            >
+              <Text style={styles.errorRetryText}>RETRY</Text>
+            </Pressable>
           </View>
-          <View style={styles.gameMetric}>
-            <Ionicons name="sparkles-outline" size={20} color={colors.xpAccent} />
-            <Text style={styles.gameValue}>Level {xp.level}</Text>
-            <Text style={styles.gameLabel}>{xp.xpInCurrentLevel} / {xp.xpNeeded} XP</Text>
-            <Text style={styles.levelHint}>XP reflects completed daily actions</Text>
-          </View>
-        </View>
+        ) : null}
 
         <View style={styles.heroCard}>
-          <Text style={styles.sectionTitle}>Energy</Text>
+          <View style={styles.heroHeader}>
+            <View style={styles.heroTitleCopy}>
+              <Text style={styles.eyebrow}>DAILY BALANCE</Text>
+              <Text style={styles.sectionTitle}>Energy</Text>
+            </View>
+            <Text style={styles.heroMeta}>
+              {energyBalance >= 0
+                ? `${energyBalance.toLocaleString()} kcal remaining`
+                : `${Math.abs(energyBalance).toLocaleString()} kcal over target`}
+            </Text>
+          </View>
           <RadialGauge
             value={totals.kcal}
             max={targets.kcal}
@@ -276,18 +293,26 @@ export default function DashboardScreen() {
         </View>
 
         {goalProgress ? (
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View>
+          <View style={styles.goalProgressCard}>
+            <View style={styles.goalProgressHeader}>
+              <View style={styles.goalProgressTitle}>
                 <Text style={styles.eyebrow}>GOAL</Text>
                 <Text style={styles.sectionTitle}>{goalSummary.label}</Text>
               </View>
-              <Text style={styles.sectionMeta}>{goalSummary.progressDisplay}</Text>
+              <View style={styles.goalProgressBadge}>
+                <Text style={styles.goalProgressBadgeText}>{goalSummary.progressDisplay}</Text>
+              </View>
             </View>
             <View style={styles.goalProgressBody}>
-              <View style={styles.goalProgressRow}>
-                <Text style={styles.goalProgressValue}>{goalSummary.targetWeightDisplay}</Text>
-                <Text style={styles.goalProgressValue}>{goalSummary.paceDisplay}</Text>
+              <View style={styles.goalProgressMetrics}>
+                <View style={styles.goalProgressMetric}>
+                  <Text style={styles.goalProgressMetricLabel}>TARGET</Text>
+                  <Text style={styles.goalProgressValue}>{goalSummary.targetWeightDisplay}</Text>
+                </View>
+                <View style={[styles.goalProgressMetric, styles.goalProgressMetricEnd]}>
+                  <Text style={styles.goalProgressMetricLabel}>PACE</Text>
+                  <Text style={styles.goalProgressValue}>{goalSummary.paceDisplay}</Text>
+                </View>
               </View>
               <ProgressBar value={goalProgress.progress * 100} max={100} />
               {goalSummary.weeksDisplay ? (
@@ -335,31 +360,47 @@ export default function DashboardScreen() {
                     transition={{ delay: index * 55, type: 'spring', damping: 22 }}
                     style={[styles.quest, index > 0 && styles.divider]}
                   >
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={quest.done ? `Mark ${quest.label} incomplete` : `Mark ${quest.label} complete`}
-                      disabled={!personalId}
-                      onPress={() => {
-                        if (!personalId || !user?.$id) return
-                        const nextDone = !quest.done
-                        setPersonalQuests((prev) =>
-                          prev.map((q) => (q.id === personalId ? { ...q, done: nextDone } : q)),
-                        )
-                        if (personalId.startsWith('temp-')) return
-                        void setTaskDone(user.$id, personalId, nextDone).catch((error) => {
-                          console.warn('[Dashboard] update task failed', error)
+                    {personalId ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={quest.done ? `Mark ${quest.label} incomplete` : `Mark ${quest.label} complete`}
+                        onPress={() => {
+                          if (!user?.$id) return
+                          const nextDone = !quest.done
                           setPersonalQuests((prev) =>
-                            prev.map((q) => (q.id === personalId ? { ...q, done: !nextDone } : q)),
+                            prev.map((q) => (q.id === personalId ? { ...q, done: nextDone } : q)),
                           )
-                        })
-                      }}
-                      hitSlop={8}
-                      style={[styles.checkTarget, !personalId && styles.checkTargetDisabled]}
-                    >
-                      <View style={[styles.check, quest.done && styles.checkDone]}>
-                        {quest.done && <Ionicons name="checkmark" size={15} color={colors.onAccent} />}
+                          if (personalId.startsWith('temp-')) return
+                          void setTaskDone(user.$id, personalId, nextDone).catch((error) => {
+                            console.warn('[Dashboard] update task failed', error)
+                            setPersonalQuests((prev) =>
+                              prev.map((q) => (q.id === personalId ? { ...q, done: !nextDone } : q)),
+                            )
+                          })
+                        }}
+                        hitSlop={8}
+                        style={styles.checkTarget}
+                      >
+                        <View style={[styles.check, quest.done && styles.checkDone]}>
+                          {quest.done && <Ionicons name="checkmark" size={15} color={colors.onAccent} />}
+                        </View>
+                      </Pressable>
+                    ) : (
+                      // Built-in indicators update from your logs and are not tappable.
+                      <View
+                        accessibilityLabel={quest.done ? `${quest.label}: complete` : `${quest.label}: in progress`}
+                        style={styles.checkTarget}
+                      >
+                        <View
+                          style={[
+                            styles.check,
+                            quest.done ? styles.checkDone : styles.checkAuto,
+                          ]}
+                        >
+                          {quest.done && <Ionicons name="checkmark" size={15} color={colors.onAccent} />}
+                        </View>
                       </View>
-                    </Pressable>
+                    )}
                     <Text style={[styles.questText, quest.done && styles.questDone]}>{quest.label}</Text>
                     <Text style={styles.questProgress}>{quest.progress}</Text>
                   </MotionView>
@@ -369,24 +410,8 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Goals</Text>
-          <Text style={styles.sectionMeta}>Routines</Text>
-        </View>
-        <View style={[styles.goalGrid, compact && styles.goalGridCompact]}>
-          <GoalCard
-            title="Training plan"
-            subtitle="Push, pull and legs"
-            icon="barbell-outline"
-            onPress={() => router.push('/workouts')}
-          />
-          <GoalCard
-            title="Wellbeing"
-            subtitle="Medication rhythm"
-            icon="medical-outline"
-            onPress={() => router.push('/meds')}
-          />
-        </View>
+        {/* Placeholder planners ( workouts / meds ) are development-only previews
+            and intentionally have no production navigation entry points. */}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Today’s logs</Text>
@@ -401,7 +426,7 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.card}>
           {data.today.length === 0 ? (
-            <Text style={styles.empty}>No meals yet. Your first log starts today’s run.</Text>
+            <Text style={styles.empty}>No meals to display.</Text>
           ) : data.today.map((meal, index) => (
             <View key={meal.$id} style={[styles.mealRow, index > 0 && styles.divider]}>
               <View>
@@ -420,6 +445,7 @@ export default function DashboardScreen() {
         onDismiss={closeFab}
         onLogFood={handleLogFood}
         onCreateTask={handleCreateTask}
+        bottomInset={insets.bottom}
       />
 
       <Modal
@@ -428,7 +454,7 @@ export default function DashboardScreen() {
         animationType="fade"
         onRequestClose={() => setTaskModalVisible(false)}
       >
-        <View style={styles.taskBackdrop}>
+        <View accessibilityViewIsModal style={styles.taskBackdrop}>
           <Pressable
             accessibilityLabel="Dismiss"
             style={StyleSheet.absoluteFill}
@@ -473,45 +499,20 @@ export default function DashboardScreen() {
   )
 }
 
-function GoalCard({
-  title,
-  subtitle,
-  icon,
-  onPress,
-}: {
-  title: string
-  subtitle: string
-  icon: keyof typeof Ionicons.glyphMap
-  onPress: () => void
-}) {
-  const { colors } = useTheme()
-  const styles = useThemedStyles(makeStyles)
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${title}. ${subtitle}`}
-      onPress={onPress}
-      style={({ pressed }) => [styles.goalCard, pressed && { opacity: 0.78 }]}
-    >
-      <View style={styles.goalIcon}><Ionicons name={icon} size={22} color={colors.success} /></View>
-      <Text style={styles.goalTitle}>{title}</Text>
-      <Text style={styles.goalSubtitle}>{subtitle}</Text>
-    </Pressable>
-  )
-}
-
 function DashboardFab({
   open,
   onToggle,
   onDismiss,
   onLogFood,
   onCreateTask,
+  bottomInset,
 }: {
   open: boolean
   onToggle: () => void
   onDismiss: () => void
   onLogFood: () => void
   onCreateTask: () => void
+  bottomInset: number
 }) {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
@@ -568,7 +569,7 @@ function DashboardFab({
         />
       </Animated.View>
 
-      <View pointerEvents="box-none" style={styles.fabAnchor}>
+      <View pointerEvents="box-none" style={[styles.fabAnchor, { bottom: Math.max(bottomInset + 72, 80) }]}>
         <View style={styles.fabPressWrap}>
           <Animated.View style={[styles.fabShell, shellStyle]}>
             <Pressable
@@ -636,16 +637,26 @@ const stylesStatic = StyleSheet.create({
 
 const makeStyles = (c: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.background },
-  content: { paddingBottom: 132, gap: 16, alignSelf: 'center', width: '100%', maxWidth: 680 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
-  eyebrow: { ...typography.labelSmall, color: c.brand },
-  gameStrip: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
-  gameMetric: { flex: 1, minHeight: 50, paddingVertical: 10, paddingHorizontal: 12, borderRadius: borderRadius.md, backgroundColor: c.surface, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 },
-  gameValue: { ...typography.label, color: c.text, fontWeight: '500' },
-  gameLabel: { ...typography.labelSmall, color: c.textMuted, marginLeft: 'auto' },
-  levelHint: { ...typography.labelTiny, color: c.textFaint, width: '100%', paddingLeft: 27 },
-  heroCard: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.lg, padding: 16, alignItems: 'center', gap: 12 },
-  sectionTitle: { ...typography.headline, color: c.text },
+  content: { paddingBottom: 140, gap: 20, alignSelf: 'center', width: '100%', maxWidth: 720 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: c.background },
+  stateText: { ...typography.body, color: c.textMuted },
+  eyebrow: { ...typography.overline, color: c.brand },
+  errorNotice: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, borderLeftWidth: 2, borderLeftColor: c.danger, backgroundColor: c.dangerSoft },
+  errorNoticeText: { ...typography.bodySmall, color: c.textMuted, flex: 1 },
+  errorRetry: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  errorRetryText: { ...typography.overline, color: c.danger },
+  gameStrip: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, paddingVertical: 12 },
+  gameMetric: { flex: 1, minHeight: 44, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  gameMetricDivider: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: c.borderStrong },
+  gameIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: c.brandSoft },
+  gameCopy: { flex: 1, gap: 1 },
+  gameValue: { ...typography.body, color: c.text, fontWeight: '600' },
+  gameLabel: { ...typography.overline, color: c.textMuted, fontSize: 9 },
+  heroCard: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, borderRadius: borderRadius.lg, padding: 20, alignItems: 'center', gap: 14 },
+  heroHeader: { width: '100%', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
+  heroTitleCopy: { flex: 1, minWidth: 0 },
+  heroMeta: { ...typography.labelSmall, color: c.textMuted, textAlign: 'right', flexShrink: 1 },
+  sectionTitle: { ...typography.metric, color: c.text },
   macroStrip: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, paddingTop: 14, width: '100%', gap: 16 },
   macroStripCompact: { gap: 8 },
   macroCell: { flex: 1, alignItems: 'center', gap: 5 },
@@ -653,26 +664,28 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   macroLabel: { ...typography.labelSmall, color: c.textMuted },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.borderStrong, paddingBottom: 7 },
   sectionMeta: { ...typography.labelSmall, color: c.textMuted },
-  card: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.md, paddingHorizontal: 16 },
-  goalProgressBody: { paddingVertical: 16, gap: 10 },
-  goalProgressRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  goalProgressValue: { ...typography.body, color: c.text, fontWeight: '600' },
-  goalProgressMeta: { ...typography.labelSmall, color: c.textMuted, textAlign: 'right' },
+  card: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.lg, paddingHorizontal: 18 },
+  goalProgressCard: { backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderLeftWidth: 3, borderColor: c.border, borderLeftColor: c.brand, borderRadius: borderRadius.lg, padding: 18, gap: 16 },
+  goalProgressHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  goalProgressTitle: { flex: 1, gap: 3 },
+  goalProgressBadge: { minWidth: 46, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 999, backgroundColor: c.brandSoft, alignItems: 'center' },
+  goalProgressBadgeText: { ...typography.labelSmall, color: c.brand, fontWeight: '700' },
+  goalProgressBody: { gap: 12 },
+  goalProgressMetrics: { flexDirection: 'row', gap: 16 },
+  goalProgressMetric: { flex: 1, gap: 3 },
+  goalProgressMetricEnd: { alignItems: 'flex-end' },
+  goalProgressMetricLabel: { ...typography.labelTiny, color: c.textFaint, letterSpacing: 0.7 },
+  goalProgressValue: { ...typography.label, color: c.text, fontWeight: '600' },
+  goalProgressMeta: { ...typography.labelSmall, color: c.textMuted },
   quest: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12 },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
   checkTarget: { width: 44, height: 44, marginHorizontal: -10, alignItems: 'center', justifyContent: 'center' },
-  checkTargetDisabled: { opacity: 0.8 },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: c.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  checkAuto: { borderStyle: 'dashed', borderColor: c.textFaint },
   checkDone: { backgroundColor: c.success, borderColor: c.success },
   questText: { ...typography.body, color: c.text, flex: 1 },
   questDone: { color: c.textMuted, textDecorationLine: 'line-through' },
   questProgress: { ...typography.labelSmall, color: c.success },
-  goalGrid: { flexDirection: 'row', gap: 12 },
-  goalGridCompact: { flexDirection: 'column' },
-  goalCard: { flex: 1, minHeight: 120, backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, borderRadius: borderRadius.md, padding: 14, gap: 8 },
-  goalIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: c.brandSoft, alignItems: 'center', justifyContent: 'center' },
-  goalTitle: { ...typography.body, color: c.text, fontWeight: '600' },
-  goalSubtitle: { ...typography.labelSmall, color: c.textMuted, flex: 1 },
   link: { ...typography.labelSmall, color: c.accent },
   empty: { ...typography.body, color: c.textMuted, paddingVertical: 24, textAlign: 'center' },
   mealRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -687,7 +700,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   fabAnchor: {
     position: 'absolute',
     right: 16,
-    bottom: 80,
     width: MENU_WIDTH,
     height: MENU_HEIGHT,
     zIndex: 50,
@@ -795,13 +807,15 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     marginTop: 4,
   },
   taskActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
-  taskBtnGhost: { paddingVertical: 10, paddingHorizontal: 14 },
+  taskBtnGhost: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 14, justifyContent: 'center' },
   taskBtnGhostText: { ...typography.label, color: c.textMuted },
   taskBtn: {
+    minHeight: 44,
     backgroundColor: c.brand,
     borderRadius: borderRadius.pill,
     paddingVertical: 10,
     paddingHorizontal: 18,
+    justifyContent: 'center',
   },
   taskBtnText: { ...typography.label, color: c.onBrand, fontWeight: '500' },
 })

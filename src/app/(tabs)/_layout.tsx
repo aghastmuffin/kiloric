@@ -13,7 +13,8 @@ function TabNavigator() {
   const { activeFontFamily } = useFontPreferences();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { compact } = useAppLayout();
+  const { compact, fontScale } = useAppLayout();
+  const tabBarHeight = 64 + Math.min(18, Math.max(0, (fontScale - 1) * 18));
   const navigationFontStyle = {
     fontFamily: activeFontFamily ?? FONT_FAMILY,
   };
@@ -24,7 +25,7 @@ function TabNavigator() {
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarActiveBackgroundColor: 'transparent',
+        tabBarActiveBackgroundColor: colors.brandSoft,
         headerStyle: {
           backgroundColor: colors.surfaceMuted,
         },
@@ -33,49 +34,49 @@ function TabNavigator() {
         headerTitleStyle: { ...navigationFontStyle, fontWeight: '600', fontSize: 17 },
         tabBarHideOnKeyboard: true,
         tabBarAllowFontScaling: true,
-        tabBarIconStyle: { marginBottom: -1 },
+        tabBarIconStyle: { marginBottom: 0 },
         tabBarLabelStyle: {
-          fontFamily: FONT_FAMILY,
-          fontSize: compact ? 11 : 12,
-          lineHeight: 15,
+          fontFamily: activeFontFamily ?? FONT_FAMILY,
+          fontSize: compact ? 10 : 11,
+          lineHeight: 14,
           fontWeight: '600',
-          letterSpacing: 0,
+          letterSpacing: 0.15,
         },
         tabBarItemStyle: {
-          minHeight: 48,
+          minHeight: tabBarHeight - 12,
           borderRadius: 14,
-          marginHorizontal: 2,
-          marginVertical: 3,
+          marginHorizontal: 3,
+          marginVertical: 5,
         },
         tabBarStyle: {
           position: 'absolute',
-          width: '92%',
-          maxWidth: 560,
+          width: '94%',
+          maxWidth: 620,
           ...Platform.select({
             web: {
               left: '50%',
               transform: [{ translateX: '-50%' }],
             } as never,
             default: {
-              left: '4%',
-              right: '4%',
+              left: '3%',
+              right: '3%',
             },
           }),
-          bottom: Math.max(insets.bottom, 8),
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          paddingHorizontal: 6,
+          bottom: Math.max(insets.bottom, 10),
+          backgroundColor: colors.surfaceMuted,
+          borderColor: colors.borderStrong,
+          paddingHorizontal: 7,
           paddingTop: 1,
           paddingBottom: 1,
           borderWidth: StyleSheet.hairlineWidth,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderRadius: 22,
-          height: 60,
+          borderRadius: 20,
+          height: tabBarHeight,
           shadowColor: colors.text,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.08,
-          shadowRadius: 16,
-          elevation: 6,
+          shadowOffset: { width: 0, height: 5 },
+          shadowOpacity: 0.1,
+          shadowRadius: 18,
+          elevation: 5,
         },
       }}
     >
@@ -85,7 +86,7 @@ function TabNavigator() {
           title: 'Today',
           tabBarAccessibilityLabel: 'Today, dashboard',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} color={color} size={22} />
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} color={color} size={21} />
           ),
         }}
       />
@@ -95,7 +96,7 @@ function TabNavigator() {
           title: 'Log',
           tabBarAccessibilityLabel: 'Log food and meals',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'book' : 'book-outline'} color={color} size={22} />
+            <Ionicons name={focused ? 'book' : 'book-outline'} color={color} size={21} />
           ),
         }}
       />
@@ -105,7 +106,7 @@ function TabNavigator() {
           title: 'Stats',
           tabBarAccessibilityLabel: 'Stats and progress',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} color={color} size={22} />
+            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} color={color} size={21} />
           ),
         }}
       />
@@ -115,7 +116,7 @@ function TabNavigator() {
           title: 'You',
           tabBarAccessibilityLabel: 'Your account and settings',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={22} />
+            <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={21} />
           ),
         }}
       />
