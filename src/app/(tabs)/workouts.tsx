@@ -6,6 +6,7 @@ import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
+import { triggerNotificationHaptic, triggerSelectionHaptic } from '@/lib/haptics'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -81,11 +82,19 @@ export default function WorkoutsScreen() {
   )
 
   const selectPillar = (id: Pillar['id']) => {
+    triggerSelectionHaptic()
     setSelectedPillar(id)
   }
 
   const toggleExercise = (id: string) => {
     const key = `${selectedPillar}-${id}`
+    triggerSelectionHaptic()
+    const willBeComplete = exercises.every(
+      (e) => (e.id === id ? !completed[key] : completed[`${selectedPillar}-${e.id}`]),
+    )
+    if (willBeComplete && !isComplete) {
+      triggerNotificationHaptic('success')
+    }
     setCompleted((current) => ({ ...current, [key]: !current[key] }))
   }
 
@@ -148,6 +157,8 @@ export default function WorkoutsScreen() {
               >
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={`${pillar.title} workout pillar`}
+                  accessibilityHint={`Switch workout focus to ${pillar.title}`}
                   accessibilityState={{ selected: active }}
                   onPress={() => selectPillar(pillar.id)}
                   style={({ pressed }) => [
@@ -206,6 +217,7 @@ export default function WorkoutsScreen() {
                   <Pressable
                     accessibilityRole="checkbox"
                     accessibilityLabel={`Mark ${exercise.name} complete`}
+                    accessibilityHint={done ? 'Unchecks this exercise' : 'Marks this exercise as completed'}
                     accessibilityState={{ checked: done }}
                     hitSlop={8}
                     onPress={() => toggleExercise(exercise.id)}
@@ -219,6 +231,8 @@ export default function WorkoutsScreen() {
                 </View>
                 <Pressable
                   accessibilityRole="checkbox"
+                  accessibilityLabel={`${exercise.name}, ${exercise.detail}`}
+                  accessibilityHint={done ? 'Unchecks this exercise' : 'Marks this exercise as completed'}
                   accessibilityState={{ checked: done }}
                   onPress={() => toggleExercise(exercise.id)}
                   style={({ pressed }) => [styles.exerciseCopy, pressed && styles.pressed]}
