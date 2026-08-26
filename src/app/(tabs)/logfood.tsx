@@ -1,32 +1,32 @@
 import { authenticatedRequest } from '@/components/apiUtils';
 import {
-    LogFoodMultiView,
-    macrosFromProduct,
-    type ContributePayload,
-    type SearchResult,
+  LogFoodMultiView,
+  macrosFromProduct,
+  type ContributePayload,
+  type SearchResult,
 } from '@/components/LogFoodMultiView';
 import { LogItemDragRow } from '@/components/LogItemDragRow';
 import { MotionView } from '@/components/MotionView';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { AppScreenHeader } from '@/components/ui/AppScreenHeader';
-import { useAuth } from '@/lib/AuthContext';
 import { showApiError } from '@/lib/apiErrors';
+import { useAuth } from '@/lib/AuthContext';
 import {
-    favoritesUserKey,
-    loadFavoriteFoods,
-    toggleFavoriteFood,
-    type FavoriteFood,
+  favoritesUserKey,
+  loadFavoriteFoods,
+  toggleFavoriteFood,
+  type FavoriteFood,
 } from '@/lib/foodFavorites';
 import { fetchMealItemPreview, type MealItemPreview } from '@/lib/mealItemPreview';
 import {
-    addProductToMeal,
-    getTodayMeals,
-    listHistoricMeals,
-    MEAL_TYPE_OPTIONS,
-    moveProductBetweenMeals,
-    removeProductFromMeal,
-    type MealDocument,
-    type MealType,
+  addProductToMeal,
+  getTodayMeals,
+  listHistoricMeals,
+  MEAL_TYPE_OPTIONS,
+  moveProductBetweenMeals,
+  removeProductFromMeal,
+  type MealDocument,
+  type MealType,
 } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay';
@@ -43,19 +43,19 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    LayoutAnimation,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    UIManager,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  UIManager,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -662,7 +662,7 @@ export default function LogFoodScreen() {
         >
           <AppScreenHeader
             overline="Food log"
-            title="Add food"
+            title={`Add food for ${selectedMealType}`}
             description="Search, scan a barcode, or choose something you’ve logged before."
           />
           <MotionView
