@@ -12,26 +12,69 @@ export type FavoriteFood = {
   savedAt: string
 }
 
-export async function loadFavoriteFoods(): Promise<FavoriteFood[]> {
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (item): item is FavoriteFood =>
-        !!item &&
-        typeof item === 'object' &&
-        typeof (item as FavoriteFood).barcode === 'string' &&
-        typeof (item as FavoriteFood).title === 'string',
-    )
-  } catch {
-    return []
-  }
+let favoritesCache: FavoriteFood[] | null = null
+let inflightLoadFavorites: Promise<FavoriteFood[]> | null = null
+let cacheGeneration = 0
+
+function parseFavoriteFoods(raw: string | null): FavoriteFood[] {
+  if (!raw) return []
+  const parsed = JSON.parse(raw) as unknown
+  if (!Array.isArray(parsed)) return []
+  return parsed.filter(
+    (item): item is FavoriteFood =>
+      !!item &&
+      typeof item === 'object' &&
+      typeof (item as FavoriteFood).barcode === 'string' &&
+      typeof (item as FavoriteFood).title === 'string',
+  )
+}
+
+export function clearFavoriteFoodsCache(): void {
+  cacheGeneration += 1
+  favoritesCache = null
+  inflightLoadFavorites = null
+}
+
+export function loadFavoriteFoods(): Promise<FavoriteFood[]> {
+  if (favoritesCache !== null) return Promise.resolve(favoritesCache)
+  if (inflightLoadFavorites) return inflightLoadFavorites
+
+  const generation = cacheGeneration
+  let loadedSuccessfully = false
+  const request = AsyncStorage.getItem(STORAGE_KEY)
+    .then((raw) => {
+      const entries = parseFavoriteFoods(raw)
+      loadedSuccessfully = true
+      return entries
+    })
+    .catch(() => [])
+
+  inflightLoadFavorites = request
+  request
+    .then((entries) => {
+      if (
+        loadedSuccessfully &&
+        cacheGeneration === generation &&
+        inflightLoadFavorites === request
+      ) {
+        favoritesCache = entries
+      }
+    })
+    .finally(() => {
+      if (inflightLoadFavorites === request) inflightLoadFavorites = null
+    })
+
+  return request
 }
 
 export async function saveFavoriteFoods(favorites: FavoriteFood[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(favorites.slice(0, 40)))
+  const entries = favorites.slice(0, 40)
+  const generation = cacheGeneration
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+  if (cacheGeneration !== generation) return
+  cacheGeneration += 1
+  favoritesCache = entries
+  inflightLoadFavorites = null
 }
 
 export async function toggleFavoriteFood(food: Omit<FavoriteFood, 'savedAt'>): Promise<FavoriteFood[]> {

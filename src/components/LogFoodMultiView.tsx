@@ -1,6 +1,7 @@
 import { MotionView } from '@/components/MotionView'
 import { SwipeableRow } from '@/components/SwipeableRow'
 import type { FavoriteFood } from '@/lib/foodFavorites'
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
 import { isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/lib/ordsNormalize'
 import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
@@ -466,6 +467,9 @@ export function LogFoodMultiView({
         </View>
         <View style={styles.mealSelectWrap}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Choose meal. Currently ${selectedMealType}`}
+            accessibilityState={{ expanded: mealPickerOpen }}
             onPress={onToggleMealPicker}
             style={({ pressed }) => [styles.mealSelect, pressed && styles.pressed]}
           >
@@ -481,7 +485,12 @@ export function LogFoodMultiView({
               {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type) => (
                 <Pressable
                   key={type}
-                  onPress={() => onSelectMealType(type)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: type === selectedMealType }}
+                  onPress={() => {
+                    if (type !== selectedMealType) triggerSelectionHaptic()
+                    onSelectMealType(type)
+                  }}
                   style={({ pressed }) => [
                     styles.mealMenuItem,
                     type === selectedMealType && styles.mealMenuItemSelected,

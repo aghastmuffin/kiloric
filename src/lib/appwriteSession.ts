@@ -1,10 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { client } from './appwrite'
 import type { Models } from 'react-native-appwrite'
+import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
+import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
 import { clearTasksCache } from './tasks'
+import { clearWaterCache } from './water'
 
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID ?? 'default'
 
@@ -17,14 +20,21 @@ export function applyAppwriteSession(sessionSecret: string): void {
   client.setSession(sessionSecret)
 }
 
-export async function persistAppwriteSession(session: Models.Session): Promise<void> {
-  if (!session.secret) return
-  applyAppwriteSession(session.secret)
-  await AsyncStorage.setItem(sessionStorageKey(), session.secret)
+function clearSessionCaches(): void {
   clearCachedToken()
   clearProfileCache()
   clearRecentFoodsCache()
   clearTasksCache()
+  clearTodayMealsCache()
+  clearFavoriteFoodsCache()
+  clearWaterCache()
+}
+
+export async function persistAppwriteSession(session: Models.Session): Promise<void> {
+  clearSessionCaches()
+  if (!session.secret) return
+  applyAppwriteSession(session.secret)
+  await AsyncStorage.setItem(sessionStorageKey(), session.secret)
 }
 
 export async function restoreAppwriteSession(): Promise<boolean> {
@@ -36,9 +46,6 @@ export async function restoreAppwriteSession(): Promise<boolean> {
 
 export async function clearAppwriteSession(): Promise<void> {
   client.setSession('')
+  clearSessionCaches()
   await AsyncStorage.removeItem(sessionStorageKey())
-  clearCachedToken()
-  clearProfileCache()
-  clearRecentFoodsCache()
-  clearTasksCache()
 }

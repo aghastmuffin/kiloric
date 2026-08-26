@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { SegmentedControl as ExpoSegmentedControl } from '@expo/ui/community/segmented-control'
 import type { StyleProp, ViewStyle } from 'react-native'
@@ -30,7 +31,11 @@ export function ThemedSegmentedControl({
       enabled={enabled}
       appearance={scheme}
       tintColor={colors.brand}
-      onChange={(event) => onChange(event.nativeEvent.selectedSegmentIndex)}
+      onChange={(event) => {
+        const index = event.nativeEvent.selectedSegmentIndex
+        if (index !== selectedIndex) triggerSelectionHaptic()
+        onChange(index)
+      }}
       style={style}
     />
   )

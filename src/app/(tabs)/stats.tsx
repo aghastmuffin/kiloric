@@ -46,19 +46,10 @@ function dayKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function makeDays(meals: MealDocument[], count: number): DayTotal[] {
-  const totals = new Map<string, { kcal: number; hasLog: boolean }>()
-  for (const meal of meals) {
-    const date = new Date(meal.$createdAt)
-    if (Number.isNaN(date.getTime())) continue
-    const key = dayKey(date)
-    const previous = totals.get(key) ?? { kcal: 0, hasLog: false }
-    totals.set(key, {
-      kcal: previous.kcal + (typeof meal.kcal === 'number' ? Math.max(0, meal.kcal) : 0),
-      hasLog: true,
-    })
-  }
-
+function makeDays(
+  totals: Map<string, { kcal: number; hasLog: boolean }>,
+  count: number,
+): DayTotal[] {
   const today = new Date()
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (count - 1 - index))
@@ -266,9 +257,24 @@ export default function StatsScreen() {
     }, [authLoading, reloadKey, user?.$id]),
   )
 
+  const mealTotalsByDay = useMemo(() => {
+    const totals = new Map<string, { kcal: number; hasLog: boolean }>()
+    for (const meal of data.meals) {
+      const date = new Date(meal.$createdAt)
+      if (Number.isNaN(date.getTime())) continue
+      const key = dayKey(date)
+      const previous = totals.get(key) ?? { kcal: 0, hasLog: false }
+      totals.set(key, {
+        kcal: previous.kcal + (typeof meal.kcal === 'number' ? Math.max(0, meal.kcal) : 0),
+        hasLog: true,
+      })
+    }
+    return totals
+  }, [data.meals])
+
   const days = useMemo(
-    () => makeDays(data.meals, period === 'week' ? 7 : 30),
-    [data.meals, period],
+    () => makeDays(mealTotalsByDay, period === 'week' ? 7 : 30),
+    [mealTotalsByDay, period],
   )
   const goal = data.profile?.target_kcal && data.profile.target_kcal > 0
     ? data.profile.target_kcal

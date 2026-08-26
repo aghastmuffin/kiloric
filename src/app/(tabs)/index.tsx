@@ -96,7 +96,6 @@ export default function DashboardScreen() {
   const [personalQuests, setPersonalQuests] = useState<PersonalQuest[]>([])
   const [dismissedQuestKeys, setDismissedQuestKeys] = useState<string[]>([])
   const [taskModalVisible, setTaskModalVisible] = useState(false)
-  const [taskDraft, setTaskDraft] = useState('')
 
   useFocusEffect(
     useCallback(() => {
@@ -159,15 +158,17 @@ export default function DashboardScreen() {
     [goalProgress, formatWeight],
   )
 
-  const allMeals = [...data.today, ...data.history]
-  const streak = calculateStreak(allMeals)
-  const xp = calculateXP({
+  const streak = useMemo(
+    () => calculateStreak([...data.today, ...data.history]),
+    [data.history, data.today],
+  )
+  const xp = useMemo(() => calculateXP({
     meals: data.today.length,
     water: Math.floor(totals.fluid / 250),
     calorieTargetHit: totals.kcal >= targets.kcal * 0.9 && totals.kcal <= targets.kcal * 1.1,
     proteinTargetHit: totals.protein >= targets.protein,
-  })
-  const quests = [
+  }), [data.today.length, targets.kcal, targets.protein, totals.fluid, totals.kcal, totals.protein])
+  const quests = useMemo(() => [
     { key: 'meals', label: 'Log three meals', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
     { key: 'protein', label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
     { key: 'hydrate', label: 'Hydrate with intention', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
@@ -178,7 +179,15 @@ export default function DashboardScreen() {
       progress: q.done ? 'Done' : 'Open',
       id: q.id,
     })),
-  ].filter((quest) => !dismissedQuestKeys.includes(quest.key))
+  ].filter((quest) => !dismissedQuestKeys.includes(quest.key)), [
+    data.today.length,
+    dismissedQuestKeys,
+    personalQuests,
+    targets.fluid,
+    targets.protein,
+    totals.fluid,
+    totals.protein,
+  ])
 
   const closeFab = useCallback(() => setFabOpen(false), [])
   const toggleFab = useCallback(() => {
@@ -193,17 +202,14 @@ export default function DashboardScreen() {
 
   const handleCreateTask = useCallback(() => {
     setFabOpen(false)
-    setTaskDraft('')
     setTaskModalVisible(true)
   }, [])
 
-  const submitTask = useCallback(() => {
-    const label = taskDraft.trim()
-    if (!label || !user?.$id) return
+  const submitTask = useCallback((label: string) => {
+    if (!user?.$id) return
     const optimisticId = `temp-${Date.now()}`
     setPersonalQuests((prev) => [...prev, { id: optimisticId, label, done: false }])
     setTaskModalVisible(false)
-    setTaskDraft('')
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     void createTask(user.$id, { title: label })
       .then((task) => {
@@ -215,7 +221,7 @@ export default function DashboardScreen() {
         console.warn('[Dashboard] create task failed', error)
         setPersonalQuests((prev) => prev.filter((q) => q.id !== optimisticId))
       })
-  }, [taskDraft, user])
+  }, [user])
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>
@@ -422,54 +428,84 @@ export default function DashboardScreen() {
         onCreateTask={handleCreateTask}
       />
 
-      <Modal
+      <CreateTaskModal
         visible={taskModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setTaskModalVisible(false)}
-      >
-        <View style={styles.taskBackdrop}>
-          <Pressable
-            accessibilityLabel="Dismiss"
-            style={StyleSheet.absoluteFill}
-            onPress={() => setTaskModalVisible(false)}
+        onClose={() => setTaskModalVisible(false)}
+        onSubmit={submitTask}
+      />
+    </View>
+  )
+}
+
+function CreateTaskModal({
+  visible,
+  onClose,
+  onSubmit,
+}: {
+  visible: boolean
+  onClose: () => void
+  onSubmit: (label: string) => void
+}) {
+  const { colors } = useTheme()
+  const styles = useThemedStyles(makeStyles)
+  const [taskDraft, setTaskDraft] = useState('')
+
+  const close = useCallback(() => {
+    setTaskDraft('')
+    onClose()
+  }, [onClose])
+
+  const submit = useCallback(() => {
+    const label = taskDraft.trim()
+    if (!label) return
+    setTaskDraft('')
+    onSubmit(label)
+  }, [onSubmit, taskDraft])
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
+      <View style={styles.taskBackdrop}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss"
+          style={StyleSheet.absoluteFill}
+          onPress={close}
+        />
+        <View accessibilityViewIsModal style={styles.taskCard}>
+          <Text style={styles.taskTitle}>Create task</Text>
+          <Text style={styles.taskHint}>Add a personal action for today.</Text>
+          <TextInput
+            value={taskDraft}
+            onChangeText={setTaskDraft}
+            placeholder="e.g. Evening stretch"
+            placeholderTextColor={colors.textFaint}
+            accessibilityLabel="Task name"
+            style={styles.taskInput}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={submit}
           />
-          <View style={styles.taskCard}>
-            <Text style={styles.taskTitle}>Create task</Text>
-            <Text style={styles.taskHint}>Add a personal action for today.</Text>
-            <TextInput
-              value={taskDraft}
-              onChangeText={setTaskDraft}
-              placeholder="e.g. Evening stretch"
-              placeholderTextColor={colors.textFaint}
-              accessibilityLabel="Task name"
-              style={styles.taskInput}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={submitTask}
-            />
-            <View style={styles.taskActions}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setTaskModalVisible(false)}
-                style={({ pressed }) => [styles.taskBtnGhost, pressed && { opacity: 0.7 }]}
-              >
-                <Text style={styles.taskBtnGhostText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !taskDraft.trim() }}
-                disabled={!taskDraft.trim()}
-                onPress={submitTask}
-                style={({ pressed }) => [styles.taskBtn, pressed && { opacity: 0.85 }]}
-              >
-                <Text style={styles.taskBtnText}>Add</Text>
-              </Pressable>
-            </View>
+          <View style={styles.taskActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={close}
+              style={({ pressed }) => [styles.taskBtnGhost, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={styles.taskBtnGhostText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !taskDraft.trim() }}
+              disabled={!taskDraft.trim()}
+              onPress={submit}
+              style={({ pressed }) => [styles.taskBtn, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.taskBtnText}>Add</Text>
+            </Pressable>
           </View>
         </View>
-      </Modal>
-    </View>
+      </View>
+    </Modal>
   )
 }
 
