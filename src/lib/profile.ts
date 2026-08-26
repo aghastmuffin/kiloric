@@ -1,5 +1,5 @@
-import { account, databases } from '@/lib/appwrite'
-import type { FitnessGoal } from '@/lib/nutrition'
+import { account, databases } from './appwrite'
+import type { FitnessGoal } from './nutrition'
 import { AppwriteException, Permission, Role, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -386,6 +386,9 @@ export async function updateProfile(userId: string, data: Partial<ProfileFields>
 }
 
 export async function getProfile(userId: string): Promise<ProfileDocument | null> {
+  // Assert user ownership before retrieving profile document to prevent BOLA/IDOR vulnerabilities
+  await assertAuthenticatedUserId(userId)
+
   // 1. Check if we have a valid, unexpired cached profile for this user
   if (cachedProfile && cachedProfile.userId === userId && cachedProfile.expiresAt > Date.now()) {
     return cachedProfile.profile
