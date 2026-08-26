@@ -1,20 +1,52 @@
 import type { MealDocument } from '@/lib/meals'
 
+/**
+ * Formats a Date object into a YYYY-MM-DD local date string.
+ * Optimized to avoid String.prototype.padStart string allocations.
+ */
 function localDateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const mStr = month < 10 ? `0${month}` : `${month}`
+  const dStr = day < 10 ? `0${day}` : `${day}`
+  return `${date.getFullYear()}-${mStr}-${dStr}`
 }
 
+/**
+ * Calculates consecutive daily meal logging streak ending today or yesterday.
+ *
+ * Performance optimizations:
+ * 1. Early return for empty meal arrays.
+ * 2. Single-pass for loop populates Set without intermediate array allocation from Array.map.
+ * 3. Local variable caching of current cursor date key prevents redundant re-computations inside loop checks.
+ */
 export function calculateStreak(meals: MealDocument[]): number {
-  const dates = new Set(meals.map((meal) => localDateKey(new Date(meal.$createdAt))))
-  const cursor = new Date()
+  if (meals.length === 0) return 0
 
-  if (!dates.has(localDateKey(cursor))) cursor.setDate(cursor.getDate() - 1)
+  const dates = new Set<string>()
+  for (let i = 0; i < meals.length; i++) {
+    const meal = meals[i]
+    if (meal?.$createdAt) {
+      dates.add(localDateKey(new Date(meal.$createdAt)))
+    }
+  }
+
+  const cursor = new Date()
+  let key = localDateKey(cursor)
+
+  // If no meals were logged today, check if streak is active starting yesterday
+  if (!dates.has(key)) {
+    cursor.setDate(cursor.getDate() - 1)
+    key = localDateKey(cursor)
+  }
 
   let streak = 0
-  while (dates.has(localDateKey(cursor))) {
+  while (dates.has(key)) {
     streak += 1
     cursor.setDate(cursor.getDate() - 1)
+    key = localDateKey(cursor)
   }
+
   return streak
 }
 

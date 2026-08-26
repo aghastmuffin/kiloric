@@ -34,3 +34,8 @@
 **Learning:** Returning cached data before running session validation (`authenticatedUserId`) creates a Broken Object Level Authorization (BOLA) vulnerability. At the same time, declaring fetch helpers as `async function` breaks strict promise identity (`p1 === p2`) in tests because the JS runtime wraps returned promises. Wrapping the execution in a synchronous function returning `authenticatedUserId(userId).then(...)` guarantees both session ownership checks and strict Promise reference identity for concurrent deduplication.
 
 **Action:** Always run authentication checks inside the deduplicated Promise chain before resolving cached data, and use non-async functions returning explicit Promises to maintain reference identity for deduplication.
+
+## 2025-05-22 - Date Key Caching and Allocation-Free Iteration in Gamification Streaks
+**Learning:** Gamification algorithms like `calculateStreak` called during component render can cause noticeable CPU overhead and garbage collection pressure when processing meal histories. Creating intermediate arrays via `Array.prototype.map`, invoking `.padStart(2, '0')` per date string, and repeatedly calling date-formatting helpers inside loop condition checks (`while (dates.has(localDateKey(cursor)))`) re-evaluates string formatting multiple times per day. Caching the key locally during cursor decrement and populating sets in a single-pass `for` loop eliminates redundant object allocations and reduces V8 execution time.
+
+**Action:** In date-processing loops, always compute and store date keys once per cursor state change instead of re-evaluating string conversion helpers in loop condition expressions, and avoid `padStart` allocations with direct number check branching.
