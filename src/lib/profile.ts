@@ -1,6 +1,7 @@
-import { account, databases } from './appwrite'
-import type { FitnessGoal } from './nutrition'
 import { AppwriteException, Permission, Role, type Models } from 'react-native-appwrite'
+import { account, databases } from './appwrite'
+import { useAuth } from './AuthContext'
+import type { FitnessGoal } from './nutrition'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
 const USER_PROFILES_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID!
@@ -125,8 +126,15 @@ export function logAppwriteError(context: string, err: unknown): void {
         2,
       ),
     )
+    if (err.type === "user_blocked") {
+      useAuth().signOut().then(() => {
+        console.log("[profile] User is blocked. Signed out.")
+      }).catch((signOutErr) => {
+        console.error("[profile] Error signing out after user blocked:", signOutErr)
+      })
+    }
     return
-  }
+  } 
   console.error(`[profile] ${context} failed →`, err)
 }
 
