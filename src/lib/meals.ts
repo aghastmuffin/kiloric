@@ -54,6 +54,13 @@ function isMealsConfigMissing(): boolean {
   return !DATABASE_ID || !MEALS_COLLECTION_ID
 }
 
+function mealOwnerId(owner: unknown): string | null {
+  if (typeof owner === 'string') return owner.trim() || null
+  if (!owner || typeof owner !== 'object' || !('$id' in owner)) return null
+  const id = (owner as { $id?: unknown }).$id
+  return typeof id === 'string' ? id.trim() || null : null
+}
+
 export function normalizeMealWritePayload(data: Partial<MealFields>): Partial<MealFields> {
   const normalized: Partial<MealFields> = {}
 
@@ -213,7 +220,7 @@ export async function moveProductBetweenMeals(
 
   const sourceMeal = await getMeal(sourceMealId)
   if (!sourceMeal) throw new Error('Source meal not found.')
-  if (sourceMeal.owner !== sessionUserId) {
+  if (mealOwnerId(sourceMeal.owner) !== sessionUserId) {
     throw new Error('Unauthorized: You can only move products from your own meals.')
   }
 
@@ -358,6 +365,31 @@ export async function createMeal(input: CreateMealInput): Promise<MealDocument> 
   }
 }
 
+export async function deleteMeal(userId: string, mealId: string): Promise<void> {
+  if (isMealsConfigMissing()) {
+    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+  }
+
+  const sessionUserId = await assertActiveSession()
+  if (userId !== sessionUserId) {
+    throw new Error('Unauthorized: You can only delete your own meals.')
+  }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,35}$/.test(mealId)) throw new Error('Invalid meal ID.')
+
+  const existingMeal = await getMeal(mealId)
+  if (!existingMeal) throw new Error('Meal not found.')
+  if (mealOwnerId(existingMeal.owner) !== sessionUserId) {
+    throw new Error('Unauthorized: You can only delete your own meals.')
+  }
+
+  await databases.deleteDocument({
+    databaseId: DATABASE_ID,
+    collectionId: MEALS_COLLECTION_ID,
+    documentId: mealId,
+  })
+  clearTodayMealsCache(sessionUserId)
+}
+
 export async function getMeal(mealId: string): Promise<MealDocument | null> {
   if (isMealsConfigMissing()) return null
 
@@ -366,6 +398,7 @@ export async function getMeal(mealId: string): Promise<MealDocument | null> {
       databaseId: DATABASE_ID,
       collectionId: MEALS_COLLECTION_ID,
       documentId: mealId,
+      queries: [Query.select(['*', 'owner.$id'])],
     })
   } catch (err) {
     if (err instanceof AppwriteException && err.code === 404) return null
@@ -387,7 +420,7 @@ export async function updateMeal(
   if (!existingMeal) {
     throw new Error('Meal not found.')
   }
-  if (existingMeal.owner !== sessionUserId) {
+  if (mealOwnerId(existingMeal.owner) !== sessionUserId) {
     throw new Error('Unauthorized: You can only update your own meals.')
   }
 
@@ -438,18 +471,25 @@ const inflightTodayMealsPromises: { [userId: string]: Promise<MealDocument[]> } 
 const cachedHistoricMeals = new Map<string, MealsCacheEntry>()
 const inflightHistoricMealsPromises = new Map<string, Promise<MealDocument[]>>()
 
-/** Clear cached meal reads for a user after mutations or logout. */
-export function clearTodayMealsCache(userId: string): void {
-  delete cachedTodayMeals[userId]
-  delete inflightTodayMealsPromises[userId]
+/** Clear cached meal reads for a user (or all users) after mutations or logout. */
+export function clearTodayMealsCache(userId?: string): void {
+  if (userId) {
+    delete cachedTodayMeals[userId]
+    delete inflightTodayMealsPromises[userId]
 
-  const prefix = `${userId}:`
-  for (const key of cachedHistoricMeals.keys()) {
-    if (key.startsWith(prefix)) cachedHistoricMeals.delete(key)
+    const prefix = `${userId}:`
+    for (const key of cachedHistoricMeals.keys()) {
+      if (key.startsWith(prefix)) cachedHistoricMeals.delete(key)
+    }
+    for (const key of inflightHistoricMealsPromises.keys()) {
+      if (key.startsWith(prefix)) inflightHistoricMealsPromises.delete(key)
+    }
+    return
   }
-  for (const key of inflightHistoricMealsPromises.keys()) {
-    if (key.startsWith(prefix)) inflightHistoricMealsPromises.delete(key)
-  }
+  for (const key of Object.keys(cachedTodayMeals)) delete cachedTodayMeals[key]
+  for (const key of Object.keys(inflightTodayMealsPromises)) delete inflightTodayMealsPromises[key]
+  cachedHistoricMeals.clear()
+  inflightHistoricMealsPromises.clear()
 }
 
 /** Fetch today's meals (Mirrors the fallback logic in listHistoricMeals to bypass missing index errors) */

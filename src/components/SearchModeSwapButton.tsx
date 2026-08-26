@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -34,13 +35,17 @@ export function SearchModeSwapButton({ current }: Props) {
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const { target, icon, label } = SWAP_CONFIG[current]
-  const bottomOffset =  insets.bottom + 18 //match right offset
+  const bottomOffset = insets.bottom + 18
 
   return (
       <Pressable
           accessibilityRole="button"
           accessibilityLabel={label}
-          onPress={() => router.push(target === 'scan' ? '/cameraview' : '/logfood')}
+          accessibilityHint={current === 'scan' ? 'Opens text search' : 'Opens the barcode scanner'}
+          onPress={() => {
+            triggerSelectionHaptic()
+            router.push(target === 'scan' ? '/cameraview' : '/logfood')
+          }}
           style={({ pressed }) => [
             styles.button,
             { bottom: bottomOffset },

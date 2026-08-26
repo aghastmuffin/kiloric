@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -73,7 +74,11 @@ export function ThemedSegmentedControl({
       enabled={enabled}
       appearance={scheme}
       tintColor={colors.brand}
-      onChange={(event) => onChange(event.nativeEvent.selectedSegmentIndex)}
+      onChange={(event) => {
+        const index = event.nativeEvent.selectedSegmentIndex
+        if (index !== selectedIndex) triggerSelectionHaptic()
+        onChange(index)
+      }}
       style={style}
     />
   )

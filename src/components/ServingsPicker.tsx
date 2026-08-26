@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { SERVING_PRESETS, formatServings, isServingPreset, parseServingsInput } from '@/lib/servings'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
@@ -50,9 +51,10 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
       setCustomError('Enter a number between 0 and 100.')
       return
     }
+    if (parsed !== servings) triggerSelectionHaptic()
     onChange(parsed)
     closeCustom()
-  }, [closeCustom, customDraft, onChange])
+  }, [closeCustom, customDraft, onChange, servings])
 
   return (
     <View style={styles.root}>
@@ -67,7 +69,11 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               accessibilityState={{ selected }}
               accessibilityLabel={`${formatServings(preset)} servings`}
               disabled={disabled}
-              onPress={() => onChange(preset)}
+              onPress={() => {
+                if (selected) return
+                triggerSelectionHaptic()
+                onChange(preset)
+              }}
               style={({ pressed }) => [
                 styles.option,
                 selected && styles.optionSelected,
@@ -87,6 +93,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
           accessibilityLabel={
             isCustom ? `Custom: ${formatServings(servings)} servings` : 'Custom servings'
           }
+          accessibilityHint="Opens an input for a custom serving quantity"
           disabled={disabled}
           onPress={openCustom}
           style={({ pressed }) => [
@@ -105,8 +112,13 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
 
       <Modal visible={customVisible} transparent animationType="fade" onRequestClose={closeCustom}>
         <View style={styles.modalRoot}>
-          <Pressable style={styles.modalBackdrop} onPress={closeCustom} />
-          <View style={styles.modalCard}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss custom servings"
+            style={styles.modalBackdrop}
+            onPress={closeCustom}
+          />
+          <View accessibilityViewIsModal style={styles.modalCard}>
             <Text style={styles.modalTitle}>Custom servings</Text>
             <Text style={styles.modalHint}>Enter how many servings you had (e.g. 0.5, 1.25, 3).</Text>
             <TextInput
@@ -118,15 +130,19 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
               placeholder="e.g. 1.25"
               placeholderTextColor={colors.textMuted}
+              accessibilityLabel="Custom serving quantity"
               style={styles.input}
               autoFocus
               selectTextOnFocus
               onSubmitEditing={applyCustom}
             />
-            {customError ? <Text style={styles.errorText}>{customError}</Text> : null}
+            {customError ? (
+              <Text accessibilityLiveRegion="polite" style={styles.errorText}>{customError}</Text>
+            ) : null}
             <View style={styles.modalActions}>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Cancel custom serving input"
                 onPress={closeCustom}
                 style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
               >
@@ -134,6 +150,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               </Pressable>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Apply custom serving quantity"
                 onPress={applyCustom}
                 style={({ pressed }) => [
                   styles.modalButton,
@@ -207,7 +224,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 24,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: c.overlay,
   },
   modalCard: {

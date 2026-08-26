@@ -30,6 +30,15 @@ export function ProgressRing({ value, max, label, unit = '', size = 176, color }
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
   const progress = max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0
+  const accessibleValue = Number.isFinite(value) ? value : 0
+  const hasAccessibilityRange = Number.isFinite(max) && max > 0
+  const accessibilityMax = hasAccessibilityRange ? max : undefined
+  const accessibilityNow = hasAccessibilityRange
+    ? Math.min(max, Math.max(0, accessibleValue))
+    : undefined
+  const accessibilityText = hasAccessibilityRange
+    ? `${Math.round(accessibleValue)} of ${Math.round(max)}${unit ? ` ${unit}` : ''}`
+    : `${Math.round(accessibleValue)}${unit ? ` ${unit}` : ''}`
   const complete = progress >= 1
   const stroke = color ?? (complete ? colors.success : colors.accent)
 
@@ -75,7 +84,17 @@ export function ProgressRing({ value, max, label, unit = '', size = 176, color }
   return (
     <Animated.View
       style={[styles.root, { width: size, height: size }, containerAnimatedStyle]}
-      accessibilityLabel={`${label}: ${Math.round(value)} of ${Math.round(max)} ${unit}`}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityValue={{
+        ...(hasAccessibilityRange ? { min: 0, max: accessibilityMax, now: accessibilityNow } : {}),
+        text: accessibilityText,
+      }}
+      accessibilityLabel={label}
+      aria-valuemin={hasAccessibilityRange ? 0 : undefined}
+      aria-valuemax={accessibilityMax}
+      aria-valuenow={accessibilityNow}
+      aria-valuetext={accessibilityText}
     >
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
         <Circle

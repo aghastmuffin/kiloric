@@ -76,6 +76,7 @@ beforeAll(async () => {
 describe('water', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    waterModule.clearWaterCache()
   })
 
   it('groups entries into local calendar days', () => {
@@ -98,6 +99,81 @@ describe('water', () => {
         { amount_ml: Number.NaN },
       ]),
     ).toBe(750)
+  })
+
+  describe('listWaterEntries cache', () => {
+    it('caches successful reads and deduplicates concurrent requests', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      let resolveRead!: (value: { documents: unknown[] }) => void
+      mockListDocuments.mockReturnValueOnce(new Promise((resolve) => {
+        resolveRead = resolve
+      }))
+
+      const date = new Date(2026, 6, 9)
+      const first = waterModule.listWaterEntries('user-123', date)
+      const second = waterModule.listWaterEntries('user-123', date)
+      expect(first).toBe(second)
+
+      const entries = [{ $id: 'water-1', owner: 'user-123', amount_ml: 250 }]
+      resolveRead({ documents: entries })
+      await expect(first).resolves.toEqual(entries)
+      await expect(waterModule.listWaterEntries('user-123', date)).resolves.toEqual(entries)
+      expect(mockListDocuments).toHaveBeenCalledTimes(1)
+    })
+
+    it('isolates calendar days and expires entries after 15 seconds', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockListDocuments.mockResolvedValue({ documents: [] })
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000)
+
+      try {
+        await waterModule.listWaterEntries('user-123', new Date(2026, 6, 9))
+        await waterModule.listWaterEntries('user-123', new Date(2026, 6, 10))
+        expect(mockListDocuments).toHaveBeenCalledTimes(2)
+
+        now.mockReturnValue(16_001)
+        await waterModule.listWaterEntries('user-123', new Date(2026, 6, 9))
+        expect(mockListDocuments).toHaveBeenCalledTimes(3)
+      } finally {
+        now.mockRestore()
+      }
+    })
+
+    it('invalidates cached reads after successful mutations', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockListDocuments.mockResolvedValue({ documents: [] })
+      mockCreateDocument.mockResolvedValue({ $id: 'water-2', owner: 'user-123', amount_ml: 500 })
+      const date = new Date(2026, 6, 9)
+
+      await waterModule.listWaterEntries('user-123', date)
+      await waterModule.addWaterEntry('user-123', 500, date)
+      await waterModule.listWaterEntries('user-123', date)
+
+      expect(mockListDocuments).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not let a cleared in-flight request repopulate the cache', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      let resolveStale!: (value: { documents: unknown[] }) => void
+      const staleRead = new Promise<{ documents: unknown[] }>((resolve) => {
+        resolveStale = resolve
+      })
+      const freshEntries = [{ $id: 'water-fresh', owner: 'user-123', amount_ml: 500 }]
+      mockListDocuments
+        .mockReturnValueOnce(staleRead)
+        .mockResolvedValueOnce({ documents: freshEntries })
+      const date = new Date(2026, 6, 9)
+
+      const staleRequest = waterModule.listWaterEntries('user-123', date)
+      waterModule.clearWaterCache()
+      const freshRequest = waterModule.listWaterEntries('user-123', date)
+      resolveStale({ documents: [{ $id: 'water-stale', owner: 'user-123', amount_ml: 250 }] })
+
+      await staleRequest
+      await expect(freshRequest).resolves.toEqual(freshEntries)
+      await expect(waterModule.listWaterEntries('user-123', date)).resolves.toEqual(freshEntries)
+      expect(mockListDocuments).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('deleteWaterEntry BOLA / IDOR protection', () => {
@@ -129,6 +205,9 @@ describe('water', () => {
 
     it('successfully deletes water entry when user is the owner', async () => {
       mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockListDocuments
+        .mockResolvedValueOnce({ documents: [{ $id: 'water-doc-1', owner: 'user-123', amount_ml: 250 }] })
+        .mockResolvedValueOnce({ documents: [] })
       mockGetDocument.mockResolvedValue({
         $id: 'water-doc-1',
         owner: 'user-123',
@@ -136,7 +215,10 @@ describe('water', () => {
       })
       mockDeleteDocument.mockResolvedValue({})
 
+      const date = new Date(2026, 6, 9)
+      await waterModule.listWaterEntries('user-123', date)
       await waterModule.deleteWaterEntry('user-123', 'water-doc-1')
+      await waterModule.listWaterEntries('user-123', date)
 
       expect(mockGetDocument).toHaveBeenCalledTimes(1)
       expect(mockDeleteDocument).toHaveBeenCalledWith({
@@ -144,6 +226,7 @@ describe('water', () => {
         collectionId: 'test-water-col',
         documentId: 'water-doc-1',
       })
+      expect(mockListDocuments).toHaveBeenCalledTimes(2)
     })
   })
 })

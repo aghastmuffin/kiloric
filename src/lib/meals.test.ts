@@ -75,6 +75,7 @@ vi.mock('react-native-appwrite', () => {
       equal: (key: string, val: any) => `equal:${key}:${val}`,
       greaterThanEqual: (key: string, val: any) => `gte:${key}:${val}`,
       lessThan: (key: string, val: any) => `lt:${key}:${val}`,
+      select: (fields: string[]) => `select:${fields.join(',')}`,
       orderDesc: (key: string) => `orderDesc:${key}`,
       limit: (val: number) => `limit:${val}`,
       offset: (val: number) => `offset:${val}`,
@@ -96,7 +97,7 @@ beforeAll(async () => {
 describe('meals caching & deduplication', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mealsModule.clearTodayMealsCache('user-123')
+    mealsModule.clearTodayMealsCache()
   })
 
   it('getTodayMeals returns meals and caches them', async () => {
@@ -222,6 +223,43 @@ describe('meals caching & deduplication', () => {
     ])
   })
 
+  it('clearTodayMealsCache without a user purges every cached account', async () => {
+    mockListDocuments
+      .mockResolvedValueOnce({ documents: [{ $id: 'meal-a', owner: 'user-123' }] })
+      .mockResolvedValueOnce({ documents: [{ $id: 'meal-b', owner: 'user-456' }] })
+      .mockResolvedValueOnce({ documents: [{ $id: 'meal-a2', owner: 'user-123' }] })
+      .mockResolvedValueOnce({ documents: [{ $id: 'meal-b2', owner: 'user-456' }] })
+
+    await mealsModule.getTodayMeals('user-123')
+    await mealsModule.getTodayMeals('user-456')
+    mealsModule.clearTodayMealsCache()
+    await mealsModule.getTodayMeals('user-123')
+    await mealsModule.getTodayMeals('user-456')
+
+    expect(mockListDocuments).toHaveBeenCalledTimes(4)
+  })
+
+  it('does not let a cleared in-flight request repopulate the meal cache', async () => {
+    let resolveStale!: (value: { documents: unknown[] }) => void
+    const staleDatabaseRead = new Promise<{ documents: unknown[] }>((resolve) => {
+      resolveStale = resolve
+    })
+    const freshMeals = [{ $id: 'meal-fresh', owner: 'user-123', kcal: 900 }]
+    mockListDocuments
+      .mockReturnValueOnce(staleDatabaseRead)
+      .mockResolvedValueOnce({ documents: freshMeals })
+
+    const staleRequest = mealsModule.getTodayMeals('user-123')
+    mealsModule.clearTodayMealsCache()
+    const freshRequest = mealsModule.getTodayMeals('user-123')
+    resolveStale({ documents: [{ $id: 'meal-stale', owner: 'user-123', kcal: 100 }] })
+
+    await staleRequest
+    await expect(freshRequest).resolves.toEqual(freshMeals)
+    await expect(mealsModule.getTodayMeals('user-123')).resolves.toEqual(freshMeals)
+    expect(mockListDocuments).toHaveBeenCalledTimes(2)
+  })
+
   it('mutations invalidate cached entries', async () => {
     const mockMeals = [{ $id: 'meal-4', owner: 'user-123', kcal: 800 }]
     mockListDocuments.mockResolvedValue({ documents: mockMeals })
@@ -282,7 +320,7 @@ describe('meals authorization checks', () => {
 
   it('updateMeal allows updating if current user is the owner', async () => {
     mockGetAccount.mockResolvedValue({ $id: 'user-123' })
-    mockGetDocument.mockResolvedValue({ $id: 'meal-1', owner: 'user-123', kcal: 500 })
+    mockGetDocument.mockResolvedValue({ $id: 'meal-1', owner: { $id: 'user-123' }, kcal: 500 })
     mockUpdateDocument.mockResolvedValue({ $id: 'meal-1', owner: 'user-123', kcal: 600 })
 
     const res = await mealsModule.updateMeal('meal-1', { kcal: 600 })
@@ -318,5 +356,50 @@ describe('meals authorization checks', () => {
         { kcal: 100, protein: 5, carbs: 10, fat: 2 }
       )
     ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
+  })
+
+  describe('deleteMeal', () => {
+    it('deletes a meal owned by the authenticated user relationship', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-123', owner: { $id: 'user-123' } })
+      mockDeleteDocument.mockResolvedValue({})
+      mockListDocuments
+        .mockResolvedValueOnce({ documents: [{ $id: 'meal-123', owner: 'user-123' }] })
+        .mockResolvedValueOnce({ documents: [] })
+
+      await mealsModule.getTodayMeals('user-123')
+      await mealsModule.deleteMeal('user-123', 'meal-123')
+      await mealsModule.getTodayMeals('user-123')
+
+      expect(mockDeleteDocument).toHaveBeenCalledWith({
+        databaseId: 'test-db',
+        collectionId: 'test-col',
+        documentId: 'meal-123',
+      })
+      expect(mockListDocuments).toHaveBeenCalledTimes(2)
+    })
+
+    it('rejects mismatched sessions, invalid IDs, and other owners', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(mealsModule.deleteMeal('user-456', 'meal-123')).rejects.toThrow(
+        'Unauthorized: You can only delete your own meals.',
+      )
+      await expect(mealsModule.deleteMeal('user-123', 'invalid/meal!')).rejects.toThrow(
+        'Invalid meal ID.',
+      )
+      await expect(mealsModule.deleteMeal('user-123', '-invalid')).rejects.toThrow(
+        'Invalid meal ID.',
+      )
+      await expect(mealsModule.deleteMeal('user-123', 'a'.repeat(37))).rejects.toThrow(
+        'Invalid meal ID.',
+      )
+
+      mockGetDocument.mockResolvedValue({ $id: 'meal-123', owner: { $id: 'user-456' } })
+      await expect(mealsModule.deleteMeal('user-123', 'meal-123')).rejects.toThrow(
+        'Unauthorized: You can only delete your own meals.',
+      )
+      expect(mockDeleteDocument).not.toHaveBeenCalled()
+    })
   })
 })

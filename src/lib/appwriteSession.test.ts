@@ -3,10 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { Models } from 'react-native-appwrite'
 import { client } from './appwrite'
+import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
+import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
 import { clearTasksCache } from './tasks'
+import { clearWaterCache } from './water'
 import { clearAppwriteSession, persistAppwriteSession } from './appwriteSession'
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -28,6 +31,14 @@ vi.mock('./getAccessToken', () => ({
   getAccessToken: vi.fn(),
 }))
 
+vi.mock('./foodFavorites', () => ({
+  clearFavoriteFoodsCache: vi.fn(),
+}))
+
+vi.mock('./meals', () => ({
+  clearTodayMealsCache: vi.fn(),
+}))
+
 vi.mock('./profile', () => ({
   clearProfileCache: vi.fn(),
   getProfile: vi.fn(),
@@ -39,6 +50,10 @@ vi.mock('./recentFoods', () => ({
 
 vi.mock('./tasks', () => ({
   clearTasksCache: vi.fn(),
+}))
+
+vi.mock('./water', () => ({
+  clearWaterCache: vi.fn(),
 }))
 
 describe('appwriteSession cache clearing', () => {
@@ -79,7 +94,9 @@ describe('appwriteSession cache clearing', () => {
       mfaUpdatedAt: '',
     } satisfies Models.Session
 
-    await persistAppwriteSession(mockSession)
+    await persistAppwriteSession(
+      mockSession as unknown as Parameters<typeof persistAppwriteSession>[0],
+    )
 
     expect(client.setSession).toHaveBeenCalledWith('my-session-secret')
     expect(AsyncStorage.setItem).toHaveBeenCalled()
@@ -87,6 +104,23 @@ describe('appwriteSession cache clearing', () => {
     expect(clearProfileCache).toHaveBeenCalled()
     expect(clearRecentFoodsCache).toHaveBeenCalled()
     expect(clearTasksCache).toHaveBeenCalled()
+    expect(clearTodayMealsCache).toHaveBeenCalledWith()
+    expect(clearFavoriteFoodsCache).toHaveBeenCalled()
+    expect(clearWaterCache).toHaveBeenCalledWith()
+  })
+
+  it('clears caches for secretless web sessions before returning', async () => {
+    await persistAppwriteSession({
+      userId: 'user-123',
+      secret: '',
+    } as unknown as Parameters<typeof persistAppwriteSession>[0])
+
+    expect(client.setSession).not.toHaveBeenCalled()
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled()
+    expect(clearCachedToken).toHaveBeenCalled()
+    expect(clearTodayMealsCache).toHaveBeenCalledWith()
+    expect(clearFavoriteFoodsCache).toHaveBeenCalled()
+    expect(clearWaterCache).toHaveBeenCalledWith()
   })
 
   it('clearAppwriteSession should clear client session, remove from storage, and clear caches', async () => {
@@ -98,5 +132,8 @@ describe('appwriteSession cache clearing', () => {
     expect(clearProfileCache).toHaveBeenCalled()
     expect(clearRecentFoodsCache).toHaveBeenCalled()
     expect(clearTasksCache).toHaveBeenCalled()
+    expect(clearTodayMealsCache).toHaveBeenCalledWith()
+    expect(clearFavoriteFoodsCache).toHaveBeenCalled()
+    expect(clearWaterCache).toHaveBeenCalledWith()
   })
 })

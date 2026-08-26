@@ -333,10 +333,10 @@ export default function AdditionsScreen() {
               {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type: MealType) => (
                 <Pressable
                   key={type}
-                  accessibilityRole="menuitem"
+                  accessibilityRole="button"
                   accessibilityState={{ selected: type === selectedMealType }}
                   onPress={() => {
-                    void Haptics.selectionAsync()
+                    if (type !== selectedMealType) void Haptics.selectionAsync()
                     void setSelectedMealType(type)
                     setMealPickerOpen(false)
                   }}
