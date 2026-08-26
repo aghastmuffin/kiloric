@@ -16,7 +16,7 @@ import {
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, memo, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -149,7 +149,9 @@ function PeriodToggle({
   )
 }
 
-function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | null; period: Period }) {
+// Memoize EnergyChart to prevent expensive chart re-renders when parent state
+// (such as reloadKey, error state, or profile snapshots) updates without changing days/goal/period.
+const EnergyChart = memo(function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | null; period: Period }) {
   const { colors } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const maxValue = Math.max(goal ?? 0, ...days.map((day) => day.kcal), 1)
@@ -246,7 +248,7 @@ function EnergyChart({ days, goal, period }: { days: DayTotal[]; goal: number | 
       </View>
     </View>
   )
-}
+})
 
 export default function StatsScreen() {
   const { user, loading: authLoading } = useAuth()

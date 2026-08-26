@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { client } from '@/lib/appwrite'
+import { client } from './appwrite'
 import type { Models } from 'react-native-appwrite'
 import { clearCachedToken } from './getAccessToken'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
+import { clearTasksCache } from './tasks'
 
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID ?? 'default'
 
@@ -23,6 +24,7 @@ export async function persistAppwriteSession(session: Models.Session): Promise<v
   clearCachedToken()
   clearProfileCache()
   clearRecentFoodsCache()
+  clearTasksCache()
 }
 
 export async function restoreAppwriteSession(): Promise<boolean> {
@@ -38,4 +40,5 @@ export async function clearAppwriteSession(): Promise<void> {
   clearCachedToken()
   clearProfileCache()
   clearRecentFoodsCache()
+  clearTasksCache()
 }
