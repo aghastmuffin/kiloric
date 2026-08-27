@@ -135,3 +135,4 @@ For any inquiries, requests for data deletion, or updates on your user data, ple
 - **Email:** [`data_privacy@taeson.co`](mailto:data_privacy@taeson.co)
 - **Subject Requirement:** Must include **`CalCount`** in the subject line (e.g., `CalCount - Data Privacy Request`), to ensure the security of our customer base, the same email must issue this request, OR proof of ownership must be provided.
 - **Organization:** Taeson Co.
+- IN COMPLIANCE WITH REIGONAL FEDERAL LAW TAESONCO'S SERVICES ARE NOT AVAILABLE IN THE FOLLOWING COUNTRIES: KOREA, REPUBLIC OF; RUSSIA, FEDERATION; NAM, SOCIALIST REPUBLIC OF VIET; KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF; BRAZIL, FEDERAL REPUBLIC OF; ARABIA, KINGDOM OF SAUDI; CHINA, REPUBLIC OF.
