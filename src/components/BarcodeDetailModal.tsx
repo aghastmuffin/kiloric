@@ -1,5 +1,6 @@
 import ImageViewer from '@/components/ImageViewer';
 import { showApiError } from '@/lib/apiErrors';
+import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics';
 import { useAuth } from '@/lib/AuthContext';
 import { appendMealBarcode } from '@/lib/mealItemsStorage';
 import { addProductToMeal } from '@/lib/meals';
@@ -294,13 +295,17 @@ export default function BarcodeDetailModal({
               <Text style={styles.errorText}>{error}</Text>
               {barcode ? (
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Add this product to database"
+                  accessibilityHint="Navigates to the food contribution screen for this barcode"
                   style={styles.contributeButton}
                   onPress={() => {
-                    onClose()
+                    triggerSelectionHaptic();
+                    onClose();
                     router.push({
                       pathname: '/contribute-food',
                       params: { code: barcode, query: barcode },
-                    })
+                    });
                   }}
                 >
                   <Text style={styles.contributeButtonText}>Add this product</Text>
@@ -354,8 +359,14 @@ export default function BarcodeDetailModal({
                 </View>
 
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Load image from Open Food Facts"
+                  accessibilityHint="Fetches product image from Open Food Facts API"
                   style={[styles.yellowButton, isLoadingImage && styles.buttonDisabled]}
-                  onPress={handleLoadImage}
+                  onPress={() => {
+                    triggerSelectionHaptic();
+                    handleLoadImage();
+                  }}
                   disabled={isLoadingImage}
                 >
                   {isLoadingImage ? (
@@ -369,20 +380,49 @@ export default function BarcodeDetailModal({
           ) : null}
 
           <View style={[styles.footer, compact && styles.footerCompact]}>
-            <Pressable accessibilityRole="button" style={[styles.redButton, compact && styles.footerButtonCompact]} onPress={handleClose}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={confirmMode ? 'No, scan again' : 'Close details'}
+              accessibilityHint={confirmMode ? 'Dismisses current barcode and reopens scanner' : 'Closes product details view'}
+              style={({ pressed }) => [
+                styles.redButton,
+                compact && styles.footerButtonCompact,
+                pressed && styles.buttonPressed,
+              ]}
+              onPress={() => {
+                triggerSelectionHaptic();
+                handleClose();
+              }}
+            >
               <Text style={styles.footerButtonText}>
                 {confirmMode ? 'No, scan again' : 'Close'}
               </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={
+                mealAdded
+                  ? 'Item added'
+                  : confirmMode
+                    ? user
+                      ? 'Yes, add to meals'
+                      : 'Yes, add locally'
+                    : user
+                      ? 'Add to meals'
+                      : 'Add locally'
+              }
+              accessibilityHint="Adds this food product to your logged meal"
               accessibilityState={{ disabled: !canPressAdd }}
-              style={[
+              style={({ pressed }) => [
                 styles.greenButton,
                 compact && styles.footerButtonCompact,
                 !canPressAdd && styles.buttonDisabled,
+                pressed && canPressAdd && styles.buttonPressed,
               ]}
-              onPress={handleAddToMeals}
+              onPress={() => {
+                triggerImpactHaptic();
+                handleAddToMeals();
+              }}
               disabled={!canPressAdd}
             >
               {isAddingMeal ? (
@@ -567,6 +607,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.85,
   },
   buttonDisabled: {
     opacity: 0.6,
