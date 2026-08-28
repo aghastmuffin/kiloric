@@ -1,6 +1,7 @@
 import { ThemedSegmentedControl } from '@/components/ThemedSegmentedControl';
 import { useApiBackendPreferences } from '@/lib/ApiBackendPreferencesContext';
 import type { ApiBackendChoice } from '@/lib/apiBackendPreferences';
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -18,6 +19,7 @@ export function ApiBackendPreferencePicker() {
   async function handleIndexChange(index: number) {
     const choice = BACKEND_OPTIONS[index]
     if (!choice || choice === apiBackend || saving) return
+    triggerSelectionHaptic()
     setSaving(true)
     try {
       await setApiBackend(choice)
@@ -28,7 +30,9 @@ export function ApiBackendPreferencePicker() {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.label}>Food data source</Text>
+      <Text accessibilityRole="header" style={styles.label}>
+        Food data source
+      </Text>
       <Text style={styles.hint}>
         Oracle ORDS looks up products by barcode and name search. Legacy FastAPI is deprecated and
         may be removed later.
@@ -40,7 +44,7 @@ export function ApiBackendPreferencePicker() {
         enabled={!saving}
       />
       {apiBackend === 'legacy' ? (
-        <Text style={styles.warning}>
+        <Text accessibilityRole="alert" style={styles.warning}>
           Legacy backend is deprecated. Prefer Oracle ORDS when possible.
         </Text>
       ) : null}
