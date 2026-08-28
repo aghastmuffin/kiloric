@@ -40,3 +40,8 @@
 **Vulnerability:** Missing document ownership assertion in `setTaskDone` and `deleteTask` allowed authenticated users to modify or delete tasks belonging to other users if they supplied the target `taskId`.
 **Learning:** Performing document-level updates/deletions relying solely on client-provided IDs without first retrieving the document and comparing its `userId` (owner) property against the active session's ID introduces severe BOLA/IDOR vulnerabilities.
 **Prevention:** Always retrieve the target document using a dedicated getter (e.g. `getTask`) and verify that `document.userId === sessionUserId` before executing mutating operations.
+
+## 2026-08-09 - [Broken Object Level Authorization / IDOR on Account Data Purging]
+**Vulnerability:** Missing session ownership verification in `purgeAccountData` allowed an authenticated user to purge another user's documents, food contributions, photos, and profile if they knew or supplied another user's `userId`.
+**Learning:** Utility and administrative data purging routines called during user account lifecycle events must strictly verify that the target `userId` matches the authenticated session user ID to prevent BOLA/IDOR exploitation.
+**Prevention:** Always assert active session user ID match (`assertAuthenticatedUserId(userId)`) at the start of account data deletion procedures before executing batch deletion operations.
