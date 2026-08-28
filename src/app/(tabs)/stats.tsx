@@ -35,6 +35,8 @@ type StatsData = {
 type DayTotal = {
   key: string
   date: Date
+  fullDateLabel: string
+  axisLabel: string
   kcal: number
   hasLog: boolean
 }
@@ -48,15 +50,22 @@ function dayKey(date: Date): string {
 
 function makeDays(
   totals: Map<string, { kcal: number; hasLog: boolean }>,
-  count: number,
+  period: Period,
 ): DayTotal[] {
+  const count = period === 'week' ? 7 : 30
   const today = new Date()
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (count - 1 - index))
     const total = totals.get(dayKey(date))
+    // Pre-compute formatted date strings matching active period once per useMemo computation to avoid
+    // repeating expensive ICU locale conversions inside render loops for chart bars and axis labels.
     return {
       key: dayKey(date),
       date,
+      fullDateLabel: date.toLocaleDateString(),
+      axisLabel: period === 'week'
+        ? date.toLocaleDateString(undefined, { weekday: 'short' })
+        : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
       kcal: total?.kcal ?? 0,
       hasLog: total?.hasLog ?? false,
     }
@@ -205,8 +214,8 @@ const EnergyChart = memo(function EnergyChart({ days, goal, period }: { days: Da
                     accessible
                     accessibilityRole="text"
                     accessibilityLabel={day.hasLog
-                      ? `${day.date.toLocaleDateString()}: ${Math.round(day.kcal)} kilocalories recorded`
-                      : `${day.date.toLocaleDateString()}: no meals logged`}
+                      ? `${day.fullDateLabel}: ${Math.round(day.kcal)} kilocalories recorded`
+                      : `${day.fullDateLabel}: no meals logged`}
                     style={styles.barColumn}
                   >
                     {day.hasLog ? (
@@ -229,9 +238,7 @@ const EnergyChart = memo(function EnergyChart({ days, goal, period }: { days: Da
                   index === axisDays.length - 1 && styles.axisLabelLast,
                 ]}
               >
-                {period === 'week'
-                  ? day.date.toLocaleDateString(undefined, { weekday: 'short' })
-                  : day.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                {day.axisLabel}
               </Text>
             ))}
           </View>
@@ -303,7 +310,7 @@ export default function StatsScreen() {
   }, [data.meals])
 
   const days = useMemo(
-    () => makeDays(mealTotalsByDay, period === 'week' ? 7 : 30),
+    () => makeDays(mealTotalsByDay, period),
     [mealTotalsByDay, period],
   )
   const goal = data.profile?.target_kcal && data.profile.target_kcal > 0
