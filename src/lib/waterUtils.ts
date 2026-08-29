@@ -5,11 +5,17 @@ export function localDayBounds(date = new Date()): { start: Date; end: Date } {
   return { start, end }
 }
 
+/**
+ * ⚡ Bolt: Optimized total water summation using a single-pass `for` loop.
+ * Eliminates per-element callback stack allocations and Array.prototype.reduce overhead.
+ */
 export function totalWaterMl(entries: readonly { amount_ml: number }[]): number {
-  return entries.reduce((sum, entry) => {
-    if (!Number.isFinite(entry.amount_ml) || entry.amount_ml < 25 || entry.amount_ml > 4000) {
-      return sum
+  let sum = 0
+  for (let i = 0; i < entries.length; i++) {
+    const ml = entries[i].amount_ml
+    if (Number.isFinite(ml) && ml >= 25 && ml <= 4000) {
+      sum += Math.round(ml)
     }
-    return sum + Math.round(entry.amount_ml)
-  }, 0)
+  }
+  return sum
 }
