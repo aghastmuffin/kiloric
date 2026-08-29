@@ -1,11 +1,11 @@
-import { databases, storage } from '@/lib/appwrite'
+import { databases, storage } from './appwrite'
 import {
   FOOD_CONTRIBUTIONS_COLLECTION_ID,
   FOOD_IMAGES_BUCKET_ID,
   FOODS_DATABASE_ID,
   type FoodContributionDocument,
-} from '@/lib/foodContributions'
-import { deleteProfile } from '@/lib/profile'
+} from './foodContributions'
+import { assertAuthenticatedUserId, deleteProfile } from './profile'
 import { Query } from 'react-native-appwrite'
 
 const MAIN_DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -73,6 +73,7 @@ async function deleteContributions(userId: string): Promise<void> {
 }
 
 export async function purgeAccountData(userId: string): Promise<void> {
+  await assertAuthenticatedUserId(userId)
   await deleteContributions(userId)
   for (const target of OWNED_COLLECTIONS) {
     await deleteOwnedDocuments(userId, target)
