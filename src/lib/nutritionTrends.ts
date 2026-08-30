@@ -17,21 +17,33 @@ export type EnergyTrend = {
 /**
  * Compares equally sized, chronologically adjacent logged-day windows.
  * Missing days are never treated as zero calories; confidence exposes incomplete logging.
+ *
+ * ⚡ Bolt: Optimized to single-pass filtering and index pointer arithmetic for window sums,
+ * eliminating redundant Array.prototype.filter, slice, and reduce allocations on stats renders.
  */
 export function calculateEnergyTrend(
   days: DailyEnergyPoint[],
   windowSize = 7,
 ): EnergyTrend {
-  const logged = days.filter((day) => day.hasLog && Number.isFinite(day.kcal) && day.kcal >= 0)
-  const averageKcal = logged.length
-    ? logged.reduce((sum, day) => sum + day.kcal, 0) / logged.length
-    : null
-  const completeness = days.length ? logged.length / days.length : 0
+  const loggedKcal: number[] = []
+  let totalKcal = 0
+
+  for (let i = 0; i < days.length; i++) {
+    const day = days[i]
+    if (day.hasLog && Number.isFinite(day.kcal) && day.kcal >= 0) {
+      loggedKcal.push(day.kcal)
+      totalKcal += day.kcal
+    }
+  }
+
+  const loggedCount = loggedKcal.length
+  const averageKcal = loggedCount > 0 ? totalKcal / loggedCount : null
+  const completeness = days.length > 0 ? loggedCount / days.length : 0
   const confidence = completeness >= 0.8 ? 'high' : completeness >= 0.5 ? 'medium' : 'low'
 
-  if (logged.length < 4) {
+  if (loggedCount < 4) {
     return {
-      loggedDays: logged.length,
+      loggedDays: loggedCount,
       averageKcal,
       recentAverageKcal: null,
       previousAverageKcal: null,
@@ -42,20 +54,29 @@ export function calculateEnergyTrend(
     }
   }
 
-  const sampleSize = Math.min(windowSize, Math.floor(logged.length / 2))
-  const recent = logged.slice(-sampleSize)
-  const previous = logged.slice(-sampleSize * 2, -sampleSize)
-  const mean = (values: DailyEnergyPoint[]) =>
-    values.reduce((sum, day) => sum + day.kcal, 0) / values.length
-  const recentAverageKcal = mean(recent)
-  const previousAverageKcal = mean(previous)
+  const sampleSize = Math.min(windowSize, Math.floor(loggedCount / 2))
+
+  let recentSum = 0
+  const recentStart = loggedCount - sampleSize
+  for (let i = recentStart; i < loggedCount; i++) {
+    recentSum += loggedKcal[i]
+  }
+
+  let previousSum = 0
+  const previousStart = loggedCount - sampleSize * 2
+  for (let i = previousStart; i < recentStart; i++) {
+    previousSum += loggedKcal[i]
+  }
+
+  const recentAverageKcal = recentSum / sampleSize
+  const previousAverageKcal = previousSum / sampleSize
   const changeKcal = recentAverageKcal - previousAverageKcal
   const changePercent = previousAverageKcal > 0 ? (changeKcal / previousAverageKcal) * 100 : null
   // Changes smaller than 5% (or 75 kcal when the baseline is tiny) are noise, not a trend.
   const steadyThreshold = Math.max(75, previousAverageKcal * 0.05)
 
   return {
-    loggedDays: logged.length,
+    loggedDays: loggedCount,
     averageKcal,
     recentAverageKcal,
     previousAverageKcal,

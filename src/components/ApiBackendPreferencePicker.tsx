@@ -42,6 +42,8 @@ export function ApiBackendPreferencePicker() {
         selectedIndex={Math.max(0, BACKEND_OPTIONS.indexOf(apiBackend))}
         onChange={handleIndexChange}
         enabled={!saving}
+        accessibilityLabel="Food data source selection"
+        accessibilityHint="Selects the API backend server for food lookup"
       />
       {apiBackend === 'legacy' ? (
         <Text accessibilityRole="alert" style={styles.warning}>

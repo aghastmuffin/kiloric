@@ -99,7 +99,8 @@ export function parseUserBlockedDetails(err: unknown): UserBlockedDetails {
   if (err instanceof Error) {
     return {
       message: err.message || 'The current user account has been blocked.',
-      details: err.stack || err.message,
+      // Avoid exposing internal call stack traces in error details to prevent information disclosure
+      details: err.message || 'The current user account has been blocked.',
     }
   }
 
