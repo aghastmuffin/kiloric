@@ -32,11 +32,13 @@
 **Vulnerability:** Missing document resource ownership verification on deleting water entries (`deleteWaterEntry`), allowing an authenticated user to delete another user's water log if they knew or guessed the document ID.
 **Learning:** Invoking document deletion endpoints directly with a document ID without verifying that the record's `owner` field matches the authenticated session user ID creates a horizontal privilege escalation vulnerability.
 **Prevention:** Retrieve the target document first using `databases.getDocument` and strictly assert that `entry.owner === sessionUserId` before executing `databases.deleteDocument`.
-**Vulnerability:** Horizontal privilege escalation (BOLA/IDOR) on meal updates and transfers, permitting any authenticated user to potentially modify or steal meals belonging to other users if they know the document ID.
-**Learning:** Even if the database layer has security policies, client-side/API transport layers must enforce strict ownership checks as a key defense-in-depth layer to prevent invalid network requests from reaching the server or abusing permissive security configurations.
-**Prevention:** Always assert and verify that the owner ID of a fetched resource document matches the active authenticated session user ID prior to performing any mutating database queries (such as updates or deletes).
 
 ## 2026-08-08 - [Broken Object Level Authorization / IDOR on Task Mutations]
 **Vulnerability:** Missing document ownership assertion in `setTaskDone` and `deleteTask` allowed authenticated users to modify or delete tasks belonging to other users if they supplied the target `taskId`.
 **Learning:** Performing document-level updates/deletions relying solely on client-provided IDs without first retrieving the document and comparing its `userId` (owner) property against the active session's ID introduces severe BOLA/IDOR vulnerabilities.
 **Prevention:** Always retrieve the target document using a dedicated getter (e.g. `getTask`) and verify that `document.userId === sessionUserId` before executing mutating operations.
+
+## 2026-08-09 - [Broken Object Level Authorization / IDOR on Account Data Purge]
+**Vulnerability:** Missing authorization validation in `purgeAccountData` allowed any authenticated user to trigger deletion of another user's account documents, contributions, and profile by specifying their `userId`.
+**Learning:** High-impact data purging functions must assert active session user ID ownership at the entry point of the function before listing or deleting owned database documents.
+**Prevention:** Call `await assertAuthenticatedUserId(userId)` at the beginning of data purging routines to guarantee only the resource owner can trigger deletion of their account records.
