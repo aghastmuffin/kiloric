@@ -19,6 +19,8 @@ type ThemedSegmentedControlProps = {
   onChange: (index: number) => void
   enabled?: boolean
   style?: StyleProp<ViewStyle>
+  accessibilityLabel?: string
+  accessibilityHint?: string
 }
 
 /**
@@ -31,13 +33,20 @@ export function ThemedSegmentedControl({
   onChange,
   enabled = true,
   style,
+  accessibilityLabel,
+  accessibilityHint,
 }: ThemedSegmentedControlProps) {
   const { colors, scheme } = useTheme()
   const styles = useThemedStyles(makeStyles)
 
   if (Platform.OS === 'web') {
     return (
-      <View accessibilityRole="radiogroup" style={[styles.control, style]}>
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
+        style={[styles.control, style]}
+      >
         {values.map((value, index) => {
           const selected = index === selectedIndex
           return (
@@ -45,6 +54,7 @@ export function ThemedSegmentedControl({
               key={value}
               aria-checked={selected}
               accessibilityRole="radio"
+              accessibilityLabel={accessibilityLabel ? `${accessibilityLabel}: ${value}` : value}
               accessibilityState={{ checked: selected, disabled: !enabled }}
               disabled={!enabled}
               onPress={() => onChange(index)}
