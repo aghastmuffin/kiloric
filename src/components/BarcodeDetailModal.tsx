@@ -8,6 +8,7 @@ import { isOrdsPresent, ORDS_FIELD_PRIORITY } from '@/lib/ordsNormalize';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -294,8 +295,12 @@ export default function BarcodeDetailModal({
               <Text style={styles.errorText}>{error}</Text>
               {barcode ? (
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Add this product to database"
+                  accessibilityHint="Navigates to the food contribution screen for this barcode"
                   style={styles.contributeButton}
                   onPress={() => {
+                    triggerSelectionHaptic()
                     onClose()
                     router.push({
                       pathname: '/contribute-food',
@@ -354,8 +359,14 @@ export default function BarcodeDetailModal({
                 </View>
 
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Load image from Open Food Facts"
+                  accessibilityHint="Fetches product image from Open Food Facts API"
                   style={[styles.yellowButton, isLoadingImage && styles.buttonDisabled]}
-                  onPress={handleLoadImage}
+                  onPress={() => {
+                    triggerSelectionHaptic()
+                    void handleLoadImage()
+                  }}
                   disabled={isLoadingImage}
                 >
                   {isLoadingImage ? (
@@ -369,7 +380,16 @@ export default function BarcodeDetailModal({
           ) : null}
 
           <View style={[styles.footer, compact && styles.footerCompact]}>
-            <Pressable accessibilityRole="button" style={[styles.redButton, compact && styles.footerButtonCompact]} onPress={handleClose}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={confirmMode ? 'No, scan again' : 'Close details'}
+              accessibilityHint={confirmMode ? 'Dismisses current barcode and reopens scanner' : 'Closes product details view'}
+              style={({ pressed }) => [styles.redButton, compact && styles.footerButtonCompact, pressed && styles.buttonPressed]}
+              onPress={() => {
+                triggerSelectionHaptic()
+                handleClose()
+              }}
+            >
               <Text style={styles.footerButtonText}>
                 {confirmMode ? 'No, scan again' : 'Close'}
               </Text>
@@ -377,12 +397,28 @@ export default function BarcodeDetailModal({
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ disabled: !canPressAdd }}
-              style={[
+              accessibilityLabel={
+                mealAdded
+                  ? 'Item added'
+                  : confirmMode
+                    ? user
+                      ? 'Yes, add to meals'
+                      : 'Yes, add locally'
+                    : user
+                      ? 'Add to meals'
+                      : 'Add locally'
+              }
+              accessibilityHint="Adds this food product to your logged meal"
+              style={({ pressed }) => [
                 styles.greenButton,
                 compact && styles.footerButtonCompact,
                 !canPressAdd && styles.buttonDisabled,
+                pressed && canPressAdd && styles.buttonPressed,
               ]}
-              onPress={handleAddToMeals}
+              onPress={() => {
+                triggerImpactHaptic()
+                void handleAddToMeals()
+              }}
               disabled={!canPressAdd}
             >
               {isAddingMeal ? (
@@ -570,6 +606,9 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  buttonPressed: {
+    opacity: 0.85,
   },
   footer: {
     flexDirection: 'row',
