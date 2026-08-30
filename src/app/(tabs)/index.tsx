@@ -61,13 +61,17 @@ function total(meals: MealDocument[], key: 'kcal' | 'protein' | 'carbs' | 'fat' 
   return meals.reduce((sum, meal) => sum + (meal[key] ?? 0), 0)
 }
 
-function ProgressBar({ value, max }: { value: number; max: number }) {
+function ProgressBar({ value, max, label }: { value: number; max: number; label?: string }) {
   const { colors } = useTheme()
   const pct = Math.min(100, Math.max(0, (value / Math.max(1, max)) * 100))
+  const roundedPct = Math.round(pct)
+  const accessibilityLabel = label ? `${label}: ${roundedPct}%` : `${roundedPct}% progress`
+
   return (
     <View
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max, now: Math.min(max, Math.max(0, value)) }}
+      accessibilityLabel={accessibilityLabel}
       style={[stylesStatic.track, { backgroundColor: colors.progressTrail }]}
     >
       <MotionView
@@ -291,7 +295,7 @@ export default function DashboardScreen() {
               <View key={label} style={styles.macroCell}>
                 <Text style={styles.macroLabel}>{label}</Text>
                 <Text style={styles.macroValue}>{Math.round(value)} / {Math.round(max)} g</Text>
-                <ProgressBar value={value} max={max} />
+                <ProgressBar value={value} max={max} label={label} />
               </View>
             ))}
           </View>
@@ -319,7 +323,7 @@ export default function DashboardScreen() {
                   <Text style={styles.goalProgressValue}>{goalSummary.paceDisplay}</Text>
                 </View>
               </View>
-              <ProgressBar value={goalProgress.progress * 100} max={100} />
+              <ProgressBar value={goalProgress.progress * 100} max={100} label={goalSummary.label} />
               {goalSummary.weeksDisplay ? (
                 <Text style={styles.goalProgressMeta}>{goalSummary.weeksDisplay}</Text>
               ) : null}
