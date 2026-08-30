@@ -360,9 +360,8 @@ export default function StatsScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 18, paddingHorizontal: gutter }]}
       >
         <AppScreenHeader
-          overline="Progress"
-          title="Trends"
-          description="Understand your nutrition over time, with incomplete days clearly identified."
+          title="Your progress"
+          description="See how your nutrition changes over time. Days without logs stay separate from zero intake."
         />
 
         <PeriodToggle period={period} onChange={setPeriod} />
@@ -394,10 +393,9 @@ export default function StatsScreen() {
             <View style={styles.reportSection}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeadingCopy}>
-                  <Text style={styles.sectionKicker}>{period === 'week' ? 'LAST 7 DAYS' : 'LAST 30 DAYS'}</Text>
-                  <Text accessibilityRole="header" style={styles.sectionTitle}>Energy report</Text>
+                  <Text accessibilityRole="header" style={styles.sectionTitle}>{period === 'week' ? 'Last 7 days' : 'Last 30 days'}</Text>
                 </View>
-                <Text style={styles.sectionMeta}>RECORDED INTAKE</Text>
+                <Text style={styles.sectionMeta}>Energy</Text>
               </View>
               <View style={styles.metricLedger}>
                 <View style={styles.detailMetric}>
@@ -421,7 +419,7 @@ export default function StatsScreen() {
               <View style={styles.insightCopy}>
                 <View style={styles.insightKickerRow}>
                   <Ionicons name="sparkles-outline" size={16} color={colors.brand} />
-                  <Text style={styles.sectionKicker}>RULE-BASED INSIGHT</Text>
+                  <Text style={styles.sectionKicker}>Summary</Text>
                 </View>
                 <Text accessibilityRole="header" style={styles.insightTitle}>{insight.title}</Text>
                 <Text style={styles.insightBody}>{insight.body}</Text>
@@ -431,7 +429,6 @@ export default function StatsScreen() {
             <View style={styles.journalSection}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeadingCopy}>
-                  <Text style={styles.sectionKicker}>LOGGED-DAY TREND</Text>
                   <Text accessibilityRole="header" style={styles.sectionTitle}>
                     {energyTrend.direction === 'insufficient'
                       ? 'More complete days needed'
@@ -461,7 +458,6 @@ export default function StatsScreen() {
         <View style={styles.journalSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeadingCopy}>
-              <Text style={styles.sectionKicker}>PROFILE SNAPSHOT</Text>
               <Text accessibilityRole="header" style={styles.sectionTitle}>Weight</Text>
             </View>
             <Ionicons name="scale-outline" size={22} color={colors.success} />
