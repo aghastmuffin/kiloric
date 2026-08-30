@@ -42,8 +42,11 @@ type DayTotal = {
 const EMPTY_DATA: StatsData = { meals: [], profile: null }
 const CHART_HEIGHT = 174
 
+// Fast zero-padded YYYY-MM-DD date key formatting without String().padStart allocations
 function dayKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const m = date.getMonth() + 1
+  const d = date.getDate()
+  return `${date.getFullYear()}-${m < 10 ? '0' : ''}${m}-${d < 10 ? '0' : ''}${d}`
 }
 
 function makeDays(
@@ -51,16 +54,23 @@ function makeDays(
   count: number,
 ): DayTotal[] {
   const today = new Date()
-  return Array.from({ length: count }, (_, index) => {
-    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (count - 1 - index))
-    const total = totals.get(dayKey(date))
-    return {
-      key: dayKey(date),
+  const todayYear = today.getFullYear()
+  const todayMonth = today.getMonth()
+  const todayDate = today.getDate()
+
+  const days = new Array<DayTotal>(count)
+  for (let index = 0; index < count; index++) {
+    const date = new Date(todayYear, todayMonth, todayDate - (count - 1 - index))
+    const key = dayKey(date)
+    const total = totals.get(key)
+    days[index] = {
+      key,
       date,
       kcal: total?.kcal ?? 0,
       hasLog: total?.hasLog ?? false,
     }
-  })
+  }
+  return days
 }
 
 function getInsight(days: DayTotal[], goal: number | null): { title: string; body: string } {
