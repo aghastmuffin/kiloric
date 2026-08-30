@@ -14,7 +14,7 @@ function TabNavigator() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { compact, fontScale } = useAppLayout();
-  const tabBarHeight = 64 + Math.min(18, Math.max(0, (fontScale - 1) * 18));
+  const tabBarHeight = 68 + Math.min(18, Math.max(0, (fontScale - 1) * 18));
   const navigationFontStyle = {
     fontFamily: activeFontFamily ?? FONT_FAMILY,
   };
@@ -34,7 +34,7 @@ function TabNavigator() {
         headerTitleStyle: { ...navigationFontStyle, fontWeight: '600', fontSize: 17 },
         tabBarHideOnKeyboard: true,
         tabBarAllowFontScaling: true,
-        tabBarIconStyle: { marginBottom: 0 },
+        tabBarIconStyle: { marginBottom: 1 },
         tabBarLabelStyle: {
           fontFamily: activeFontFamily ?? FONT_FAMILY,
           fontSize: compact ? 10 : 11,
@@ -44,9 +44,9 @@ function TabNavigator() {
         },
         tabBarItemStyle: {
           minHeight: tabBarHeight - 12,
-          borderRadius: 14,
-          marginHorizontal: 3,
-          marginVertical: 5,
+          borderRadius: 16,
+          marginHorizontal: 2,
+          marginVertical: 6,
         },
         tabBarStyle: {
           position: 'absolute',
@@ -65,17 +65,17 @@ function TabNavigator() {
           bottom: Math.max(insets.bottom, 10),
           backgroundColor: colors.surfaceMuted,
           borderColor: colors.borderStrong,
-          paddingHorizontal: 7,
+          paddingHorizontal: 6,
           paddingTop: 1,
           paddingBottom: 1,
           borderWidth: StyleSheet.hairlineWidth,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderRadius: 20,
+          borderRadius: 24,
           height: tabBarHeight,
           shadowColor: colors.text,
           shadowOffset: { width: 0, height: 5 },
-          shadowOpacity: 0.1,
-          shadowRadius: 18,
+          shadowOpacity: 0.14,
+          shadowRadius: 24,
           elevation: 5,
         },
       }}

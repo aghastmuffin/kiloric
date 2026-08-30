@@ -1,6 +1,7 @@
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { setHasSkippedSignIn } from '@/components/ProfileGate';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
+import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext';
 import { showApiError } from '@/lib/apiErrors';
 import { isValidEmail, isValidPassword } from '@/lib/authValidation';
@@ -120,6 +121,7 @@ export function AccountSignInFlow() {
             style={styles.screen}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+            <NoiseOverlay />
             <ScrollView
                 contentContainerStyle={[
                     styles.container,
@@ -357,16 +359,17 @@ const makeStyles = (c: ThemeColors) =>
             maxWidth: 620,
             alignSelf: 'center',
             paddingHorizontal: 20,
+            position: 'relative',
         },
         heroMark: {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 10,
-            marginBottom: 28,
+            marginBottom: 44,
         },
         heroRule: {
-            width: 40,
-            height: 2,
+            width: 28,
+            height: 1,
             backgroundColor: c.brand,
         },
         heroMarkText: {
@@ -382,6 +385,7 @@ const makeStyles = (c: ThemeColors) =>
             ...typography.display,
             color: c.text,
             marginBottom: 10,
+            maxWidth: 480,
         },
         subtitle: {
             ...typography.body,
@@ -427,11 +431,11 @@ const makeStyles = (c: ThemeColors) =>
             backgroundColor: c.surface,
             color: c.text,
             ...typography.body,
-            borderRadius: 6,
+            borderRadius: 14,
             paddingHorizontal: 16,
             paddingVertical: 14,
             marginBottom: 16,
-            borderWidth: 1,
+            borderWidth: StyleSheet.hairlineWidth,
             borderColor: c.border,
         },
         card: {
@@ -481,7 +485,7 @@ const makeStyles = (c: ThemeColors) =>
             alignItems: 'center',
             justifyContent: 'center',
             marginTop: 12,
-            borderWidth: 1.5,
+            borderWidth: StyleSheet.hairlineWidth,
             borderColor: c.accent,
         },
         buttonText: {
@@ -516,8 +520,8 @@ const makeStyles = (c: ThemeColors) =>
             bottom: 0,
             paddingHorizontal: 20,
             paddingTop: 12,
-            backgroundColor: c.background,
-            borderTopWidth: 1,
+            backgroundColor: c.surfaceMuted,
+            borderTopWidth: StyleSheet.hairlineWidth,
             borderTopColor: c.border,
         },
         footerContent: {
@@ -540,12 +544,12 @@ const makeStyles = (c: ThemeColors) =>
         },
         footerSecondary: {
             flex: 1,
-            borderRadius: 8,
+            borderRadius: 999,
             paddingVertical: 14,
             minHeight: 48,
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 1.5,
+            borderWidth: StyleSheet.hairlineWidth,
             borderColor: c.border,
         },
         footerSecondaryText: {

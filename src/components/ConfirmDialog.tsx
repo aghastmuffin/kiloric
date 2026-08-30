@@ -1,6 +1,7 @@
 import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { OnboardingColors } from '@/lib/theme/tokens'
+import { typography } from '@/lib/theme/typography'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import { useCallback, useEffect } from 'react'
 import {
@@ -91,6 +92,8 @@ export function ConfirmDialog({
         </Animated.View>
 
         <Animated.View style={[styles.card, cardStyle]}>
+          <View style={[styles.dialogMark, { backgroundColor: destructive ? onboardingColors.danger : onboardingColors.accent }]} />
+          <Text style={styles.kicker}>{destructive ? 'PLEASE REVIEW' : 'CALCOUNT'}</Text>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
 
@@ -152,12 +155,12 @@ const makeStyles = (c: OnboardingColors) => StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     backgroundColor: c.surface,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: c.border,
     paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 18,
+    paddingTop: 26,
+    paddingBottom: 20,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -175,16 +178,24 @@ const makeStyles = (c: OnboardingColors) => StyleSheet.create({
   },
   title: {
     color: c.text,
-    fontSize: 20,
-    fontWeight: '700',
+    ...typography.headline,
     marginBottom: 10,
-    textAlign: 'center',
+  },
+  dialogMark: {
+    width: 28,
+    height: 2,
+    marginBottom: 12,
+  },
+  kicker: {
+    ...typography.overline,
+    color: c.textMuted,
+    marginBottom: 5,
   },
   message: {
     color: c.textSoft,
     fontSize: 15,
     lineHeight: 22,
-    textAlign: 'center',
+    textAlign: 'left',
     marginBottom: 22,
   },
   actions: {

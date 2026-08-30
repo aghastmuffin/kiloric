@@ -97,23 +97,27 @@ export function ThemedSegmentedControl({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     control: {
-      backgroundColor: c.surface,
-      borderRadius: 10,
+      backgroundColor: c.surfaceAlt,
+      borderRadius: 999,
       flexDirection: 'row',
       gap: 2,
-      padding: 2,
+      padding: 3,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
       width: '100%',
     },
     segment: {
       alignItems: 'center',
-      borderRadius: 8,
+      borderRadius: 999,
       flex: 1,
       justifyContent: 'center',
       minHeight: 36,
       paddingHorizontal: 10,
     },
     segmentSelected: {
-      backgroundColor: c.brand,
+      backgroundColor: c.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.borderStrong,
     },
     segmentPressed: {
       opacity: 0.72,
@@ -125,7 +129,7 @@ const makeStyles = (c: ThemeColors) =>
       textAlign: 'center',
     },
     labelSelected: {
-      color: c.onBrand,
+      color: c.brand,
       fontWeight: '700',
     },
   })
