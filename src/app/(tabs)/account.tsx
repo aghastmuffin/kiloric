@@ -264,7 +264,6 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
       <View style={styles.panel}>
         <View style={styles.identityHeader}>
           <View style={styles.identityCopy}>
-            <Text style={styles.eyebrow}>PERSONAL RECORD</Text>
             <Text accessibilityRole="header" style={styles.title}>{displayName}</Text>
             <Text style={styles.subtitle}>{user.email}</Text>
           </View>
@@ -281,8 +280,7 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
         <View style={styles.goalsSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeadingCopy}>
-              <Text style={styles.eyebrow}>CURRENT DIRECTION</Text>
-              <Text accessibilityRole="header" style={styles.sectionTitle}>Goals and focus</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Your goals</Text>
             </View>
           </View>
 
@@ -314,7 +312,7 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
             </View>
           ) : (
             <>
-              <Text style={styles.focusLabel}>CURRENT FOCUS</Text>
+              <Text style={styles.focusLabel}>Goal</Text>
               <Text style={styles.goalText}>{goal}</Text>
               <View style={styles.goalMetricRow}>
                 {goalMetrics.map((metric) => (
@@ -351,8 +349,7 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
 
         <View style={styles.dailySection}>
           <View style={styles.sectionHeadingCopy}>
-            <Text style={styles.eyebrow}>TODAY AT A GLANCE</Text>
-            <Text accessibilityRole="header" style={styles.sectionTitle}>Daily record</Text>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>Today</Text>
           </View>
           <View style={styles.statRow}>
             <View

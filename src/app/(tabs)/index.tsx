@@ -167,11 +167,11 @@ export default function DashboardScreen() {
     [goalProgress, formatWeight],
   )
 
-  const quests = useMemo(
+  const checklist = useMemo(
     () => [
-    { key: 'meals', label: 'Log three meals', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
+    { key: 'meals', label: 'Log 3 meals', done: data.today.length >= 3, progress: `${Math.min(data.today.length, 3)}/3` },
     { key: 'protein', label: 'Meet your protein target', done: totals.protein >= targets.protein, progress: `${Math.round(totals.protein)}/${targets.protein}g` },
-    { key: 'hydrate', label: 'Hydrate with intention', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
+    { key: 'hydrate', label: 'Reach your water target', done: totals.fluid >= targets.fluid, progress: `${Math.round(totals.fluid)}/${targets.fluid}ml` },
     ...personalQuests.map((q) => ({
       key: q.id,
       label: q.label,
@@ -228,7 +228,7 @@ export default function DashboardScreen() {
     return (
       <View accessibilityState={{ busy: true }} style={styles.centered}>
         <ActivityIndicator color={colors.brand} />
-        <Text style={styles.stateText}>Preparing today’s record…</Text>
+        <Text style={styles.stateText}>Loading today…</Text>
       </View>
     )
   }
@@ -243,9 +243,8 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <AppScreenHeader
-          overline="Today"
           title={new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-          description="A clear view of today’s nutrition and routines."
+          description="Here’s what you’ve logged today and what’s left."
         />
 
         {loadError ? (
@@ -267,7 +266,6 @@ export default function DashboardScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View style={styles.heroTitleCopy}>
-              <Text style={styles.eyebrow}>DAILY BALANCE</Text>
               <Text style={styles.sectionTitle}>Energy</Text>
             </View>
             <Text style={styles.heroMeta}>
@@ -305,7 +303,6 @@ export default function DashboardScreen() {
           <View style={styles.goalProgressCard}>
             <View style={styles.goalProgressHeader}>
               <View style={styles.goalProgressTitle}>
-                <Text style={styles.eyebrow}>GOAL</Text>
                 <Text style={styles.sectionTitle}>{goalSummary.label}</Text>
               </View>
               <View style={styles.goalProgressBadge}>
@@ -332,14 +329,14 @@ export default function DashboardScreen() {
         ) : null}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today’s plan</Text>
-          <Text style={styles.sectionMeta}>{quests.filter((q) => q.done).length}/{quests.length}</Text>
+          <Text style={styles.sectionTitle}>Daily checklist</Text>
+          <Text style={styles.sectionMeta}>{checklist.filter((item) => item.done).length}/{checklist.length}</Text>
         </View>
         <View style={styles.card}>
-          {quests.length === 0 ? (
-            <Text style={styles.empty}>No quests for today.</Text>
+          {checklist.length === 0 ? (
+            <Text style={styles.empty}>Your checklist is clear for today.</Text>
           ) : (
-            quests.map((quest, index) => {
+            checklist.map((quest, index) => {
               const personalId = 'id' in quest ? quest.id : null
               return (
                 <SwipeableRow
@@ -423,19 +420,19 @@ export default function DashboardScreen() {
             and intentionally have no production navigation entry points. */}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today’s logs</Text>
+          <Text style={styles.sectionTitle}>Meals today</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Organise today's logs"
+            accessibilityLabel="View and edit today's meals"
             hitSlop={10}
             onPress={() => router.push('/logfood')}
           >
-            <Text style={styles.link}>ORGANISE</Text>
+            <Text style={styles.link}>VIEW ALL</Text>
           </Pressable>
         </View>
         <View style={styles.card}>
           {data.today.length === 0 ? (
-            <Text style={styles.empty}>No meals to display.</Text>
+            <Text style={styles.empty}>No meals logged yet. Tap + to add food.</Text>
           ) : data.today.map((meal, index) => (
             <View key={meal.$id} style={[styles.mealRow, index > 0 && styles.divider]}>
               <View>
@@ -501,14 +498,14 @@ function CreateTaskModal({
           onPress={close}
         />
         <View accessibilityViewIsModal style={styles.taskCard}>
-          <Text style={styles.taskTitle}>Create task</Text>
-          <Text style={styles.taskHint}>Add a personal action for today.</Text>
+          <Text style={styles.taskTitle}>Add to your checklist</Text>
+          <Text style={styles.taskHint}>What would you like to remember today?</Text>
           <TextInput
             value={taskDraft}
             onChangeText={setTaskDraft}
             placeholder="e.g. Evening stretch"
             placeholderTextColor={colors.textFaint}
-            accessibilityLabel="Task name"
+            accessibilityLabel="Checklist item"
             style={styles.taskInput}
             autoFocus
             returnKeyType="done"
@@ -652,14 +649,14 @@ function DashboardFab({
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Create task"
+                accessibilityLabel="Add checklist item"
                 onPress={onCreateTask}
                 style={({ pressed }) => [styles.fabMenuItem, pressed && styles.fabMenuItemPressed]}
               >
                 <View style={styles.fabMenuIcon}>
                   <Ionicons name="checkbox-outline" size={18} color={colors.accent} />
                 </View>
-                <Text style={styles.fabMenuItemText}>Create task</Text>
+                <Text style={styles.fabMenuItemText}>Checklist item</Text>
               </Pressable>
             </Animated.View>
           </Animated.View>

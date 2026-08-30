@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 type AppScreenHeaderProps = {
-  overline: string
+  overline?: string
   title: string
   description: string
   accessory?: ReactNode
@@ -24,10 +24,12 @@ export function AppScreenHeader({ overline, title, description, accessory }: App
       style={styles.root}
     >
       {accessory ? <View style={styles.accessory}>{accessory}</View> : null}
-      <View style={styles.overlineRow}>
-        <Text style={styles.overline}>{overline}</Text>
-        <View style={styles.overlineRule} />
-      </View>
+      {overline ? (
+        <View style={styles.overlineRow}>
+          <Text style={styles.overline}>{overline}</Text>
+          <View style={styles.overlineRule} />
+        </View>
+      ) : null}
       <Text accessibilityRole="header" style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
     </MotionView>
