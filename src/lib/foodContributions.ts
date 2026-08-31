@@ -39,11 +39,13 @@ export type FoodContributionPhoto = {
 
 export type FoodContributionInput = FoodContributionFieldsInput & {
   photo: FoodContributionPhoto
+  additionalPhotos?: FoodContributionPhoto[]
 }
 
 export type FoodContributionResult = {
   id: string
   photoFileId: string
+  photoFileIds: string[]
   status: string
 }
 
@@ -99,34 +101,29 @@ export async function submitFoodContribution(
     throw new Error('A photo is required when adding a new food.')
   }
 
-  const mime = guessMime(input.photo.uri, input.photo.mimeType)
-  if (mime !== 'image/jpeg' && mime !== 'image/png' && mime !== 'image/jpg') {
-    throw new Error('Photo must be a JPG or PNG.')
+  const uploadedFiles: Models.File[] = []
+  for (const [index, photo] of [input.photo, ...(input.additionalPhotos ?? [])].entries()) {
+    const mime = guessMime(photo.uri, photo.mimeType)
+    if (mime !== 'image/jpeg' && mime !== 'image/png' && mime !== 'image/jpg') {
+      throw new Error('Photos must be JPG or PNG files.')
+    }
+    const normalizedMime = mime === 'image/jpg' ? 'image/jpeg' : mime
+    const size = await resolveFileSize(photo.uri, photo.fileSize)
+    if (size > 10_000_000) throw new Error('Each photo must be 10 MB or smaller.')
+    const uploaded = await storage.createFile({
+      bucketId: BUCKET_ID,
+      fileId: ID.unique(),
+      file: {
+        name: `${index + 1}-${guessFileName(photo.uri, photo.fileName, normalizedMime)}`,
+        type: normalizedMime,
+        size,
+        uri: photo.uri,
+      },
+      permissions: [Permission.read(Role.user(owner)), Permission.update(Role.user(owner)), Permission.delete(Role.user(owner))],
+    })
+    uploadedFiles.push(uploaded)
   }
-  const normalizedMime = mime === 'image/jpg' ? 'image/jpeg' : mime
-  const name = guessFileName(input.photo.uri, input.photo.fileName, normalizedMime)
-  const size = await resolveFileSize(input.photo.uri, input.photo.fileSize)
-
-  if (size > 10_000_000) {
-    throw new Error('Photo must be 10 MB or smaller.')
-  }
-
-  const fileId = ID.unique()
-  const uploaded = await storage.createFile({
-    bucketId: BUCKET_ID,
-    fileId,
-    file: {
-      name,
-      type: normalizedMime,
-      size,
-      uri: input.photo.uri,
-    },
-    permissions: [
-      Permission.read(Role.user(owner)),
-      Permission.update(Role.user(owner)),
-      Permission.delete(Role.user(owner)),
-    ],
-  })
+  const uploaded = uploadedFiles[0]
 
   const payload = buildContributionPayload({
     owner,
@@ -134,7 +131,10 @@ export async function submitFoodContribution(
     product_name: input.product_name,
     code: input.code,
     source_query: input.source_query,
-    fields: input.fields,
+    fields: {
+      ...input.fields,
+      ...(uploadedFiles.length > 1 ? { image_url: `appwrite-files://${uploadedFiles.map((file) => file.$id).join(',')}` } : {}),
+    },
   })
 
   try {
@@ -153,11 +153,12 @@ export async function submitFoodContribution(
     return {
       id: doc.$id,
       photoFileId: uploaded.$id,
+      photoFileIds: uploadedFiles.map((file) => file.$id),
       status: doc.status ?? 'pending',
     }
   } catch (error) {
     try {
-      await storage.deleteFile({ bucketId: BUCKET_ID, fileId: uploaded.$id })
+      await Promise.all(uploadedFiles.map((file) => storage.deleteFile({ bucketId: BUCKET_ID, fileId: file.$id })))
     } catch {
       // ignore cleanup failure
     }
