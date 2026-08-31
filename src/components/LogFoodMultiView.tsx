@@ -741,7 +741,7 @@ const ResultCard = memo(
         ) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={needsLabelPhoto ? `Add a label photo for ${title}` : `Edit details for ${title}`}
+          accessibilityLabel={needsLabelPhoto ? `Help complete ${title}` : `Edit details for ${title}`}
           onPress={onImprove}
           style={({ pressed }) => [
             styles.actionChip,
@@ -755,13 +755,13 @@ const ResultCard = memo(
             color={colors.accent}
           />
           <Text style={styles.actionChipText}>
-            {needsLabelPhoto ? 'Snap label photo' : 'Add / change details'}
+            {needsLabelPhoto ? 'Help complete product' : 'Add / change details'}
           </Text>
         </Pressable>
       </View>
       {needsLabelPhoto ? (
         <Text style={styles.photoHint}>
-          Unknown details — photograph the nutrition facts and ingredients list.
+          Some details are missing. We’ll guide you through three quick product photos.
         </Text>
       ) : null}
     </View>

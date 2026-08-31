@@ -19,6 +19,7 @@ The client module [`src/lib/foodContributions.ts`](../../src/lib/foodContributio
 ```ts
 submitFoodContribution(userId, {
   photo: { uri, mimeType?, fileName?, fileSize? },
+  additionalPhotos?: [{ uri, mimeType?, fileName?, fileSize? }],
   product_name: string,   // required
   code?: string,          // barcode, optional
   source_query?: string,  // what the user searched/scanned
@@ -34,7 +35,7 @@ UI screens must **not** import the Appwrite SDK — only this module.
 
 | Field | Required |
 | --- | --- |
-| Photo (jpg/png, ≤10 MB) | yes (new food) |
+| Photos (jpg/png, ≤10 MB each) | yes (new food) |
 | `product_name` | yes |
 | `code` (barcode) | no (prefilled from scan when available) |
 | All other OFF identity / `*_100g` nutrients | no |
@@ -50,6 +51,10 @@ Identity / metadata:
 - `allergens`, `traces_tags`, `image_url`, `nova_group`, `nutriscore_grade`, `ecoscore_grade`
 - `carbon_footprint_100g` ← OFF `carbon-footprint_100g`
 - `additives_n`
+
+`photo_file_id` remains the primary evidence image. When a contribution includes additional
+product views, `image_url` stores their linked Appwrite file IDs using the internal
+`appwrite-files://` scheme so moderation and account deletion can treat the set as one submission.
 
 Nutrients (all doubles, `_100g`):
 

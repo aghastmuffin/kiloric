@@ -56,10 +56,14 @@ async function deleteContributions(userId: string): Promise<void> {
     if (response.documents.length === 0) return
     await Promise.all(
       response.documents.map(async (document) => {
-        if (document.photo_file_id) {
+        const linkedIds = document.image_url?.startsWith('appwrite-files://')
+          ? document.image_url.slice('appwrite-files://'.length).split(',').filter(Boolean)
+          : []
+        const photoIds = [...new Set([document.photo_file_id, ...linkedIds].filter(Boolean))]
+        for (const fileId of photoIds) {
           await storage.deleteFile({
             bucketId: FOOD_IMAGES_BUCKET_ID,
-            fileId: document.photo_file_id,
+            fileId,
           })
         }
         await databases.deleteDocument({

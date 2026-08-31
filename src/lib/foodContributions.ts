@@ -45,7 +45,6 @@ export type FoodContributionInput = FoodContributionFieldsInput & {
 export type FoodContributionResult = {
   id: string
   photoFileId: string
-  photoFileIds: string[]
   status: string
 }
 
@@ -56,6 +55,7 @@ export type FoodContributionDocument = Models.Document & {
   product_name: string
   source_query?: string | null
   code?: string | null
+  image_url?: string | null
 }
 
 function guessMime(uri: string, mimeType?: string | null): string {
@@ -153,7 +153,6 @@ export async function submitFoodContribution(
     return {
       id: doc.$id,
       photoFileId: uploaded.$id,
-      photoFileIds: uploadedFiles.map((file) => file.$id),
       status: doc.status ?? 'pending',
     }
   } catch (error) {
