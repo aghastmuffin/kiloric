@@ -20,9 +20,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function parseNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string' && value.trim()) {
+  if (typeof value === 'string') {
     const trimmed = value.trim()
-    if (/^unknown$/i.test(trimmed)) return null
+    if (trimmed.length === 0) return null
+    if (trimmed.length === 7 && trimmed.toLowerCase() === 'unknown') return null
     const parsed = Number.parseFloat(trimmed)
     return Number.isFinite(parsed) ? parsed : null
   }
@@ -31,7 +32,9 @@ function parseNumber(value: unknown): number | null {
 
 /** ORDS sentinel for empty cells. */
 export function isOrdsUnknown(value: unknown): boolean {
-  return typeof value === 'string' && /^unknown$/i.test(value.trim())
+  if (typeof value !== 'string') return false
+  const trimmed = value.trim()
+  return trimmed.length === 7 && trimmed.toLowerCase() === 'unknown'
 }
 
 /** True when a value is usable (not null/empty/Unknown). */
@@ -39,7 +42,8 @@ export function isOrdsPresent(value: unknown): boolean {
   if (value === null || value === undefined) return false
   if (typeof value === 'string') {
     const trimmed = value.trim()
-    return trimmed.length > 0 && !/^unknown$/i.test(trimmed)
+    if (trimmed.length === 0) return false
+    return !(trimmed.length === 7 && trimmed.toLowerCase() === 'unknown')
   }
   if (typeof value === 'number') return Number.isFinite(value)
   if (typeof value === 'boolean') return true
@@ -194,10 +198,14 @@ export const ORDS_FIELD_PRIORITY = [
   'updated_timestamp',
 ] as const
 
+const NUTRIENT_ALIASES_ENTRIES = Object.entries(NUTRIENT_ALIASES)
+
 /** Strip Unknown sentinels; keep real zeros and other scalars. */
 export function scrubOrdsProduct(item: Record<string, unknown>): Record<string, unknown> {
   const scrubbed: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(item)) {
+  for (const key in item) {
+    if (!Object.prototype.hasOwnProperty.call(item, key)) continue
+    const value = item[key]
     if (!isOrdsPresent(value)) continue
     scrubbed[key] = typeof value === 'string' ? value.trim() : value
   }
@@ -210,11 +218,17 @@ export function normalizeOrdsProduct(item: Record<string, unknown>): Record<stri
   const nutriments: Record<string, number> = {}
   const aliases: Record<string, number> = {}
 
-  for (const [sourceKey, aliasKeys] of Object.entries(NUTRIENT_ALIASES)) {
+  for (let i = 0; i < NUTRIENT_ALIASES_ENTRIES.length; i++) {
+    const entry = NUTRIENT_ALIASES_ENTRIES[i]
+    const sourceKey = entry[0]
+    const aliasKeys = entry[1]
+
     const numeric = parseNumber(scrubbed[sourceKey])
     if (numeric == null) continue
+
     nutriments[sourceKey] = numeric
-    for (const alias of aliasKeys) {
+    for (let j = 0; j < aliasKeys.length; j++) {
+      const alias = aliasKeys[j]
       nutriments[alias] = numeric
       aliases[alias] = numeric
     }
