@@ -496,24 +496,26 @@ export function clearTodayMealsCache(userId?: string): void {
 export function getTodayMeals(userId: string): Promise<MealDocument[]> {
   if (isMealsConfigMissing()) return Promise.resolve([])
 
-  // 1. Check if we have a valid, unexpired cached meals for this user
-  const cached = cachedTodayMeals[userId]
-  if (cached && cached.expiresAt > Date.now()) {
-    return Promise.resolve(cached.meals)
-  }
-
-  // 2. Check if a fetch is already in progress for this same user (Deduplication)
   const inflight = inflightTodayMealsPromises[userId]
   if (inflight) {
     return inflight
   }
 
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayStartISO = todayStart.toISOString()
+  const currentPromise = assertActiveSession().then(async (sessionUserId) => {
+    if (userId !== sessionUserId) {
+      throw new Error('Unauthorized: You can only view your own meals.')
+    }
 
-  // 3. Create the fetch promise
-  const currentPromise = (async () => {
+    // 1. Check if we have a valid, unexpired cached meals for this user
+    const cached = cachedTodayMeals[userId]
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.meals
+    }
+
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const todayStartISO = todayStart.toISOString()
+
     try {
       const response = await databases.listDocuments<MealDocument>({
         databaseId: DATABASE_ID,
@@ -547,7 +549,7 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
         throw new Error(formatMealError(fallbackErr))
       }
     }
-  })()
+  })
 
   // Store the inflight promise
   inflightTodayMealsPromises[userId] = currentPromise
@@ -578,20 +580,25 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
   if (isMealsConfigMissing()) return Promise.resolve([])
 
   const cacheKey = `${userId}:${limit}:${offset}`
-  const cached = cachedHistoricMeals.get(cacheKey)
-  if (cached && cached.expiresAt > Date.now()) {
-    return Promise.resolve(cached.meals)
-  }
-  cachedHistoricMeals.delete(cacheKey)
 
   const inflight = inflightHistoricMealsPromises.get(cacheKey)
   if (inflight) return inflight
 
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayStartISO = todayStart.toISOString()
+  const currentPromise = assertActiveSession().then(async (sessionUserId) => {
+    if (userId !== sessionUserId) {
+      throw new Error('Unauthorized: You can only view your own meals.')
+    }
 
-  const currentPromise = (async () => {
+    const cached = cachedHistoricMeals.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.meals
+    }
+    cachedHistoricMeals.delete(cacheKey)
+
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const todayStartISO = todayStart.toISOString()
+
     try {
       const response = await databases.listDocuments<MealDocument>({
         databaseId: DATABASE_ID,
@@ -630,7 +637,7 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
         throw new Error(formatMealError(fallbackErr))
       }
     }
-  })()
+  })
 
   inflightHistoricMealsPromises.set(cacheKey, currentPromise)
   currentPromise
