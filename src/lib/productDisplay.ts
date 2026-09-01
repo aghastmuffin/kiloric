@@ -55,12 +55,27 @@ function getNestedValue(data: Record<string, unknown>, key: string): unknown {
   return undefined
 }
 
-function formatLabel(key: string): string {
-  return key
+// Bolt Optimization: In-memory cache for formatted product labels.
+// Prevents redundant 4x regex replacement operations and intermediate string allocations
+// on every food fact rendering and barcode detail display pass.
+const FORMATTED_LABEL_CACHE = new Map<string, string>()
+
+export function formatLabel(key: string): string {
+  const cached = FORMATTED_LABEL_CACHE.get(key)
+  if (cached !== undefined) return cached
+
+  const formatted = key
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b\w/g, (char) => char.toUpperCase())
+
+  FORMATTED_LABEL_CACHE.set(key, formatted)
+  return formatted
+}
+
+export function clearFormattedLabelCache(): void {
+  FORMATTED_LABEL_CACHE.clear()
 }
 
 function formatValue(value: unknown): string {
