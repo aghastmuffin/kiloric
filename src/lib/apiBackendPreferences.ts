@@ -77,9 +77,18 @@ export function resolveBackendRequest(
 
   const [path] = logicalEndpoint.split('?')
 
+  // Security defense: Safely decode URI components to prevent unhandled URIError crashes (DoS) from malformed input
+  const safeDecode = (val: string): string => {
+    try {
+      return decodeURIComponent(val)
+    } catch {
+      return val
+    }
+  }
+
   const barcodeMatch = path.match(/^\/api\/barcode\/(.+)$/i)
   if (barcodeMatch) {
-    const code = decodeURIComponent(barcodeMatch[1])
+    const code = safeDecode(barcodeMatch[1])
     return {
       url: `${ORDS_BACKEND_URL}/code?code=${encodeURIComponent(code)}`,
       requiresAuth: false,
@@ -88,7 +97,7 @@ export function resolveBackendRequest(
 
   const productMatch = path.match(/^\/api\/product\/(.+)$/i)
   if (productMatch) {
-    const code = decodeURIComponent(productMatch[1])
+    const code = safeDecode(productMatch[1])
     return {
       url: `${ORDS_BACKEND_URL}/code?code=${encodeURIComponent(code)}`,
       requiresAuth: false,
@@ -97,7 +106,7 @@ export function resolveBackendRequest(
 
   const fuzzyMatch = path.match(/^\/api\/fuzzy\/(.+)$/i)
   if (fuzzyMatch) {
-    const query = decodeURIComponent(fuzzyMatch[1])
+    const query = safeDecode(fuzzyMatch[1])
     const params = new URLSearchParams()
     params.set('search_arg', query)
 
