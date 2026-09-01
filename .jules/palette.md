@@ -9,3 +9,7 @@
 ## 2025-08-11 - [Dynamic Initial State Synchronization & Tactile Haptic Feedback]
 **Learning:** For date-based or dynamic calendar lists, hardcoding a static initial selection state (such as `'mon'`) instead of computing it dynamically (such as `DAYS[0].key`) leads to visual incoherence where no calendar item is selected upon initial screen mount. Furthermore, state transitions on checklists, segment selectors, and rating buttons benefit immensely from physical, safety-wrapped haptic feedback (`triggerSelectionHaptic`), which transforms flat digital taps into tactile game-like interactions.
 **Action:** Always synchronize initial state keys with dynamically generated collection bounds, and embed haptic feedback on discrete state-switching interactions to enhance mechanical satisfaction.
+
+## 2025-09-01 - [Modal Dialog Alert Accessibility & Async Loading Feedback]
+**Learning:** Confirmation modal cards (e.g. `ConfirmDialog`) require `accessibilityRole="alertdialog"` and `accessibilityViewIsModal={true}` to inform screen readers of their modal alert nature upon display. In addition, action buttons within async dialogs must provide dynamic `accessibilityLabel` descriptions (indicating loading state) and `accessibilityState={{ disabled, busy }}` to ensure screen readers communicate in-flight processing cleanly to users.
+**Action:** Set `accessibilityRole="alertdialog"` and `accessibilityViewIsModal={true}` on dialog containers, and convey loading state via `accessibilityLabel` and `accessibilityState` on action buttons.

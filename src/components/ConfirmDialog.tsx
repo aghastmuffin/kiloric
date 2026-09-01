@@ -90,13 +90,19 @@ export function ConfirmDialog({
           />
         </Animated.View>
 
-        <Animated.View style={[styles.card, cardStyle]}>
+        <Animated.View
+          accessibilityRole="alertdialog"
+          accessibilityViewIsModal={true}
+          style={[styles.card, cardStyle]}
+        >
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
 
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={cancelLabel}
+              accessibilityHint="Dismisses the dialog"
               disabled={loading}
               onPress={handleCancel}
               style={({ pressed }) => [
@@ -111,6 +117,9 @@ export function ConfirmDialog({
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={loading ? `${confirmLabel}, loading` : confirmLabel}
+              accessibilityHint={destructive ? `Permanently performs action: ${title}` : `Confirms action: ${title}`}
+              accessibilityState={{ disabled: loading, busy: loading }}
               disabled={loading}
               onPress={handleConfirm}
               style={({ pressed }) => [
