@@ -97,7 +97,13 @@ export default function ContributeFoodScreen() {
     </View>
     <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: gutter, paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.intro}><Text accessibilityRole="header" style={styles.title}>Three quick photos, then you’re done.</Text><Text style={styles.description}>We’ll use the package to fill in what’s missing. For now, just make each view clear and readable.</Text></View>
-      <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 3, now: complete }} style={styles.progressBlock}>
+      <View
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityValue={{ min: 0, max: 3, now: complete }}
+        accessibilityLabel={`Photo progress: ${complete} of 3 photos completed`}
+        style={styles.progressBlock}
+      >
         <View style={styles.progressLabels}><Text style={styles.progressCount}>{complete} of 3 photos</Text><Text style={styles.progressStatus}>{photosComplete ? 'Ready to send' : 'A little more to go'}</Text></View>
         <View style={styles.track}><View style={[styles.fill, { width: `${Math.round((complete / 3) * 100)}%` }]} /></View>
       </View>
