@@ -1,8 +1,14 @@
-import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
-import { DEFAULT_SERVINGS } from '@/lib/servings'
+import { DEFAULT_SERVINGS } from './servings'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+export const MEAL_TYPE_OPTIONS = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Other'] as const
+export type MealType = (typeof MEAL_TYPE_OPTIONS)[number]
+
 const STORAGE_KEY = '@calcount/meal_barcodes'
+
+// In-memory cache for meal barcodes store to eliminate redundant AsyncStorage reads and JSON parsing.
+let mealBarcodesCache: MealBarcodesStore | null = null
+let inflightLoadMealBarcodes: Promise<MealBarcodesStore> | null = null
 
 export type MealItemEntry = {
   barcode: string
@@ -10,6 +16,12 @@ export type MealItemEntry = {
 }
 
 export type MealBarcodesStore = Record<MealType, MealItemEntry[]>
+
+/** Clear in-memory meal barcodes cache to prevent stale state across sessions or tests. */
+export function clearMealBarcodesCache(): void {
+  mealBarcodesCache = null
+  inflightLoadMealBarcodes = null
+}
 
 function emptyStore(): MealBarcodesStore {
   return {
@@ -56,15 +68,39 @@ function normalizeStore(raw: unknown): MealBarcodesStore {
   return store
 }
 
-export async function loadMealBarcodes(): Promise<MealBarcodesStore> {
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY)
-    if (!raw) return emptyStore()
-    return normalizeStore(JSON.parse(raw))
-  } catch (err) {
-    console.error('[mealItemsStorage] load failed', err)
-    return emptyStore()
+export function loadMealBarcodes(): Promise<MealBarcodesStore> {
+  // 1. Return in-memory cache if available
+  if (mealBarcodesCache) {
+    return Promise.resolve(mealBarcodesCache)
   }
+
+  // 2. Return pending in-flight promise to deduplicate concurrent requests
+  if (inflightLoadMealBarcodes) {
+    return inflightLoadMealBarcodes
+  }
+
+  inflightLoadMealBarcodes = (async () => {
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY)
+      if (!raw) {
+        const store = emptyStore()
+        mealBarcodesCache = store
+        return store
+      }
+      const store = normalizeStore(JSON.parse(raw))
+      mealBarcodesCache = store
+      return store
+    } catch (err) {
+      console.error('[mealItemsStorage] load failed', err)
+      const store = emptyStore()
+      mealBarcodesCache = store
+      return store
+    } finally {
+      inflightLoadMealBarcodes = null
+    }
+  })()
+
+  return inflightLoadMealBarcodes
 }
 
 export async function appendMealBarcode(
@@ -76,19 +112,26 @@ export async function appendMealBarcode(
   if (!trimmed) return loadMealBarcodes()
 
   const store = await loadMealBarcodes()
-  store[type] = [...store[type], { barcode: trimmed, servings }]
+  const updatedStore: MealBarcodesStore = {
+    ...store,
+    [type]: [...store[type], { barcode: trimmed, servings }],
+  }
+
+  // Synchronously update memory cache to serve subsequent reads instantly
+  mealBarcodesCache = updatedStore
 
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store))
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedStore))
   } catch (err) {
     console.error('[mealItemsStorage] save failed', err)
   }
 
-  return store
+  return updatedStore
 }
 
 export async function clearMealBarcodes(): Promise<MealBarcodesStore> {
   const store = emptyStore()
+  mealBarcodesCache = store
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store))
   } catch (err) {
@@ -105,12 +148,17 @@ export async function removeMealBarcode(
   const items = [...store[type]]
   if (index >= 0 && index < items.length) {
     items.splice(index, 1)
-    store[type] = items
+    const updatedStore: MealBarcodesStore = {
+      ...store,
+      [type]: items,
+    }
+    mealBarcodesCache = updatedStore
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store))
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedStore))
     } catch (err) {
       console.error('[mealItemsStorage] remove failed', err)
     }
+    return updatedStore
   }
   return store
 }
@@ -127,13 +175,17 @@ export async function updateMealItemServings(
   if (index < 0 || index >= items.length) return store
 
   items[index] = { ...items[index], servings }
-  store[type] = items
+  const updatedStore: MealBarcodesStore = {
+    ...store,
+    [type]: items,
+  }
+  mealBarcodesCache = updatedStore
 
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store))
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedStore))
   } catch (err) {
     console.error('[mealItemsStorage] update servings failed', err)
   }
 
-  return store
+  return updatedStore
 }

@@ -3,6 +3,7 @@ import { client } from './appwrite'
 import type { Models } from 'react-native-appwrite'
 import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
+import { clearMealBarcodesCache } from './mealItemsStorage'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
@@ -28,6 +29,7 @@ function clearSessionCaches(): void {
   clearTodayMealsCache()
   clearFavoriteFoodsCache()
   clearWaterCache()
+  clearMealBarcodesCache()
 }
 
 export async function persistAppwriteSession(session: Models.Session): Promise<void> {
