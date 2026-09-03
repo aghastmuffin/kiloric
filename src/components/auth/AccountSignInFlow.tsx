@@ -2,6 +2,7 @@ import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { setHasSkippedSignIn } from '@/components/ProfileGate';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext';
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { showApiError } from '@/lib/apiErrors';
 import { isValidEmail, isValidPassword } from '@/lib/authValidation';
 import { useTheme } from '@/lib/theme/ThemeContext';
@@ -188,9 +189,13 @@ export function AccountSignInFlow() {
                         <View style={styles.card}>
                             <Pressable
                                 accessibilityLabel="Sign-in preferences"
+                                accessibilityHint="Toggles appearance settings like theme and typography"
                                 accessibilityRole="button"
                                 accessibilityState={{ expanded: settingsExpanded }}
-                                onPress={() => setSettingsExpanded((current) => !current)}
+                                onPress={() => {
+                                    triggerSelectionHaptic()
+                                    setSettingsExpanded((current) => !current)
+                                }}
                                 style={styles.header}
                             >
                                 <View style={styles.settingsHeaderRow}>
