@@ -298,7 +298,7 @@ export async function removeProductFromMeal(
   const sessionUserId = await assertActiveSession()
   const meal = await getMeal(mealId)
   if (!meal) throw new Error('Meal not found.')
-  if (meal.owner !== sessionUserId) {
+  if (mealOwnerId(meal.owner) !== sessionUserId) {
     throw new Error('Unauthorized: You can only remove products from your own meals.')
   }
 

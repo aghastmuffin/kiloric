@@ -301,6 +301,39 @@ describe('meals caching & deduplication', () => {
       expect(mockUpdateDocument).not.toHaveBeenCalled()
       expect(mockDeleteDocument).not.toHaveBeenCalled()
     })
+
+    it('removeProductFromMeal fails if user is not the owner of the meal', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-9', owner: { $id: 'user-456' }, items: ['1234'] }) // different owner!
+
+      await expect(
+        mealsModule.removeProductFromMeal('meal-9', '1234', { kcal: 100, protein: 10, carbs: 20, fat: 5 })
+      ).rejects.toThrow('Unauthorized: You can only remove products from your own meals.')
+
+      expect(mockUpdateDocument).not.toHaveBeenCalled()
+      expect(mockDeleteDocument).not.toHaveBeenCalled()
+    })
+
+    it('removeProductFromMeal succeeds if user is the owner of the meal', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-9', owner: { $id: 'user-123' }, items: ['1234', '5678'], kcal: 200, protein: 20, carbs: 40, fat: 10 })
+      mockUpdateDocument.mockResolvedValue({ $id: 'meal-9', owner: { $id: 'user-123' }, items: ['5678'], kcal: 100, protein: 10, carbs: 20, fat: 5 })
+
+      await mealsModule.removeProductFromMeal('meal-9', '1234', { kcal: 100, protein: 10, carbs: 20, fat: 5 })
+
+      expect(mockUpdateDocument).toHaveBeenCalledWith({
+        databaseId: 'test-db',
+        collectionId: 'test-col',
+        documentId: 'meal-9',
+        data: {
+          items: ['5678'],
+          kcal: 100,
+          protein: 10,
+          carbs: 20,
+          fat: 5,
+        },
+      })
+    })
   })
 })
 
