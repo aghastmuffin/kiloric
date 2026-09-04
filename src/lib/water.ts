@@ -125,6 +125,7 @@ export async function addWaterEntry(
 
 export async function deleteWaterEntry(userId: string, documentId: string): Promise<void> {
   const sessionUserId = await authenticatedUserId(userId)
+  // Input validation: ensure documentId format is valid before database lookup
   if (!/^[a-zA-Z0-9._-]{1,64}$/.test(documentId)) throw new Error('Invalid water entry.')
 
   // Defense in depth: Verify document ownership to prevent BOLA/IDOR vulnerabilities

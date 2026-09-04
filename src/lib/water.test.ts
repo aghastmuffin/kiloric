@@ -177,6 +177,17 @@ describe('water', () => {
   })
 
   describe('deleteWaterEntry BOLA / IDOR protection', () => {
+    it('throws error when provided an invalid documentId format', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        waterModule.deleteWaterEntry('user-123', 'invalid/doc/id!')
+      ).rejects.toThrow('Invalid water entry.')
+
+      expect(mockGetDocument).not.toHaveBeenCalled()
+      expect(mockDeleteDocument).not.toHaveBeenCalled()
+    })
+
     it('throws error if current authenticated user does not match requested userId', async () => {
       mockGetAccount.mockResolvedValue({ $id: 'user-123' })
 
