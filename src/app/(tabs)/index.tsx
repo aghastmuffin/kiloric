@@ -9,6 +9,7 @@ import { calculateGoalProgress, formatGoalProgress } from '@/lib/goals';
 import { getTodayMeals, type MealDocument } from '@/lib/meals';
 import { panelSpring, quickTiming } from '@/lib/motion';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
+import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics';
 import { createTask, deleteTask, listTasks, setTaskDone } from '@/lib/tasks';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
@@ -346,6 +347,7 @@ export default function DashboardScreen() {
                     icon: 'trash-outline',
                     destructive: true,
                     onPress: () => {
+                      triggerImpactHaptic()
                       if (personalId) {
                         setPersonalQuests((prev) => prev.filter((q) => q.id !== personalId))
                         if (user?.$id && !personalId.startsWith('temp-')) {
@@ -368,10 +370,12 @@ export default function DashboardScreen() {
                   >
                     {personalId ? (
                       <Pressable
-                        accessibilityRole="button"
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: quest.done }}
                         accessibilityLabel={quest.done ? `Mark ${quest.label} incomplete` : `Mark ${quest.label} complete`}
                         onPress={() => {
                           if (!user?.$id) return
+                          triggerSelectionHaptic()
                           const nextDone = !quest.done
                           setPersonalQuests((prev) =>
                             prev.map((q) => (q.id === personalId ? { ...q, done: nextDone } : q)),
@@ -521,10 +525,15 @@ function CreateTaskModal({
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              accessibilityHint="Adds item to your daily checklist"
               accessibilityState={{ disabled: !taskDraft.trim() }}
               disabled={!taskDraft.trim()}
               onPress={submit}
-              style={({ pressed }) => [styles.taskBtn, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [
+                styles.taskBtn,
+                !taskDraft.trim() && styles.taskBtnDisabled,
+                pressed && { opacity: 0.85 },
+              ]}
             >
               <Text style={styles.taskBtnText}>Add</Text>
             </Pressable>
@@ -853,5 +862,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 18,
     justifyContent: 'center',
   },
+  taskBtnDisabled: { opacity: 0.45 },
   taskBtnText: { ...typography.label, color: c.onBrand, fontWeight: '500' },
 })
