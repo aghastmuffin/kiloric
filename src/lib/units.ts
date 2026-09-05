@@ -127,8 +127,16 @@ export function normalizeStoredTargetWeightKg(
   return roundMetric(storedTarget)
 }
 
+const METRIC_SUFFIX = ' · units:metric'
+const IMPERIAL_SUFFIX = ' · units:imperial'
+
 export function appendDisplayUnitsToGoalPlain(goalPlain: string, displayUnits: DisplayUnits): string {
-  const base = goalPlain.replace(/ · units:(metric|imperial)$/, '')
+  let base = goalPlain
+  if (goalPlain.endsWith(METRIC_SUFFIX)) {
+    base = goalPlain.slice(0, -METRIC_SUFFIX.length)
+  } else if (goalPlain.endsWith(IMPERIAL_SUFFIX)) {
+    base = goalPlain.slice(0, -IMPERIAL_SUFFIX.length)
+  }
   return `${base} · units:${displayUnits}`
 }
 
@@ -137,13 +145,22 @@ export function appendDisplayUnitsToMeals(mealsLabel: string, displayUnits: Disp
   return appendDisplayUnitsToGoalPlain(mealsLabel, displayUnits)
 }
 
+/**
+ * Parses user display units preference from goal_plain metadata.
+ * Uses fast string `.endsWith()` checks instead of regex pattern matching
+ * to eliminate per-call RegExp allocations and V8 match array creations.
+ */
 export function parseDisplayUnitsPreference(
   goalPlain: string | null | undefined,
   country: string | null | undefined,
 ): DisplayUnits {
-  const match = goalPlain?.match(/ · units:(metric|imperial)$/)
-  if (match?.[1] === 'metric' || match?.[1] === 'imperial') {
-    return match[1]
+  if (goalPlain) {
+    if (goalPlain.endsWith(METRIC_SUFFIX)) {
+      return 'metric'
+    }
+    if (goalPlain.endsWith(IMPERIAL_SUFFIX)) {
+      return 'imperial'
+    }
   }
   return defaultDisplayUnits(country)
 }
