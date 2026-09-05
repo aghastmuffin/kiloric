@@ -496,13 +496,7 @@ export function clearTodayMealsCache(userId?: string): void {
 export function getTodayMeals(userId: string): Promise<MealDocument[]> {
   if (isMealsConfigMissing()) return Promise.resolve([])
 
-  // 1. Check if we have a valid, unexpired cached meals for this user
-  const cached = cachedTodayMeals[userId]
-  if (cached && cached.expiresAt > Date.now()) {
-    return Promise.resolve(cached.meals)
-  }
-
-  // 2. Check if a fetch is already in progress for this same user (Deduplication)
+  // Check if a fetch is already in progress for this same user (Deduplication)
   const inflight = inflightTodayMealsPromises[userId]
   if (inflight) {
     return inflight
@@ -512,14 +506,23 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
   todayStart.setHours(0, 0, 0, 0)
   const todayStartISO = todayStart.toISOString()
 
-  // 3. Create the fetch promise
-  const currentPromise = (async () => {
+  // Always verify active session and ownership before returning cached or fetched meals (BOLA protection)
+  const currentPromise = assertActiveSession().then(async (sessionUserId) => {
+    if (userId !== sessionUserId) {
+      throw new Error('Unauthorized: You can only access your own meals.')
+    }
+
+    const cached = cachedTodayMeals[sessionUserId]
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.meals
+    }
+
     try {
       const response = await databases.listDocuments<MealDocument>({
         databaseId: DATABASE_ID,
         collectionId: MEALS_COLLECTION_ID,
         queries: [
-          Query.equal('owner', userId),
+          Query.equal('owner', sessionUserId),
           Query.greaterThanEqual('$createdAt', todayStartISO),
         ],
       })
@@ -537,7 +540,7 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
           databaseId: DATABASE_ID,
           collectionId: MEALS_COLLECTION_ID,
           queries: [
-            Query.equal('owner', userId),
+            Query.equal('owner', sessionUserId),
             Query.limit(5000),
           ],
         })
@@ -547,7 +550,7 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
         throw new Error(formatMealError(fallbackErr))
       }
     }
-  })()
+  })
 
   // Store the inflight promise
   inflightTodayMealsPromises[userId] = currentPromise
@@ -578,12 +581,6 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
   if (isMealsConfigMissing()) return Promise.resolve([])
 
   const cacheKey = `${userId}:${limit}:${offset}`
-  const cached = cachedHistoricMeals.get(cacheKey)
-  if (cached && cached.expiresAt > Date.now()) {
-    return Promise.resolve(cached.meals)
-  }
-  cachedHistoricMeals.delete(cacheKey)
-
   const inflight = inflightHistoricMealsPromises.get(cacheKey)
   if (inflight) return inflight
 
@@ -591,13 +588,24 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
   todayStart.setHours(0, 0, 0, 0)
   const todayStartISO = todayStart.toISOString()
 
-  const currentPromise = (async () => {
+  // Always verify active session and ownership before returning cached or queried historic meals (BOLA protection)
+  const currentPromise = assertActiveSession().then(async (sessionUserId) => {
+    if (userId !== sessionUserId) {
+      throw new Error('Unauthorized: You can only access your own meals.')
+    }
+
+    const cached = cachedHistoricMeals.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.meals
+    }
+    cachedHistoricMeals.delete(cacheKey)
+
     try {
       const response = await databases.listDocuments<MealDocument>({
         databaseId: DATABASE_ID,
         collectionId: MEALS_COLLECTION_ID,
         queries: [
-          Query.equal('owner', userId),
+          Query.equal('owner', sessionUserId),
           Query.lessThan('$createdAt', todayStartISO),
           Query.orderDesc('$createdAt'),
           Query.limit(limit),
@@ -617,7 +625,7 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
           databaseId: DATABASE_ID,
           collectionId: MEALS_COLLECTION_ID,
           queries: [
-            Query.equal('owner', userId),
+            Query.equal('owner', sessionUserId),
             Query.limit(5000),
           ],
         })
@@ -630,7 +638,7 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
         throw new Error(formatMealError(fallbackErr))
       }
     }
-  })()
+  })
 
   inflightHistoricMealsPromises.set(cacheKey, currentPromise)
   currentPromise

@@ -97,6 +97,7 @@ beforeAll(async () => {
 describe('meals caching & deduplication', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
     mealsModule.clearTodayMealsCache()
   })
 
@@ -224,6 +225,12 @@ describe('meals caching & deduplication', () => {
   })
 
   it('clearTodayMealsCache without a user purges every cached account', async () => {
+    mockGetAccount
+      .mockResolvedValueOnce({ $id: 'user-123' })
+      .mockResolvedValueOnce({ $id: 'user-456' })
+      .mockResolvedValueOnce({ $id: 'user-123' })
+      .mockResolvedValueOnce({ $id: 'user-456' })
+
     mockListDocuments
       .mockResolvedValueOnce({ documents: [{ $id: 'meal-a', owner: 'user-123' }] })
       .mockResolvedValueOnce({ documents: [{ $id: 'meal-b', owner: 'user-456' }] })
@@ -307,6 +314,24 @@ describe('meals caching & deduplication', () => {
 describe('meals authorization checks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('getTodayMeals throws error if requested user ID does not match active session ID (BOLA prevention)', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+    await expect(mealsModule.getTodayMeals('user-456')).rejects.toThrow(
+      'Unauthorized: You can only access your own meals.',
+    )
+    expect(mockListDocuments).not.toHaveBeenCalled()
+  })
+
+  it('listHistoricMeals throws error if requested user ID does not match active session ID (BOLA prevention)', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+    await expect(mealsModule.listHistoricMeals('user-456')).rejects.toThrow(
+      'Unauthorized: You can only access your own meals.',
+    )
+    expect(mockListDocuments).not.toHaveBeenCalled()
   })
 
   it('updateMeal throws error if current user is not the owner', async () => {
