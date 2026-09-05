@@ -280,6 +280,7 @@ export default function DashboardScreen() {
             size={192}
             strokeWidth={10}
             color={colors.accent}
+            successColor={colors.success}
             backgroundColor={colors.progressTrail}
             textColor={colors.accent}
             mutedColor={colors.textMuted}

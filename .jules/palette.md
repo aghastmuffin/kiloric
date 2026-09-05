@@ -9,3 +9,7 @@
 ## 2025-08-11 - [Dynamic Initial State Synchronization & Tactile Haptic Feedback]
 **Learning:** For date-based or dynamic calendar lists, hardcoding a static initial selection state (such as `'mon'`) instead of computing it dynamically (such as `DAYS[0].key`) leads to visual incoherence where no calendar item is selected upon initial screen mount. Furthermore, state transitions on checklists, segment selectors, and rating buttons benefit immensely from physical, safety-wrapped haptic feedback (`triggerSelectionHaptic`), which transforms flat digital taps into tactile game-like interactions.
 **Action:** Always synchronize initial state keys with dynamically generated collection bounds, and embed haptic feedback on discrete state-switching interactions to enhance mechanical satisfaction.
+
+## 2025-08-12 - [Cross-Platform Web ARIA & Goal Completion Pulse on Radial Progress]
+**Learning:** React Native `accessibilityValue` and `accessibilityLabel` must be paired with explicit web `aria-value*` attributes (`aria-valuemin`, `aria-valuemax`, `aria-valuenow`, `aria-valuetext`) on progressbar views to guarantee complete screen reader readout in web environments. Additionally, pairing spring scale celebrations (`celebrationSpring`) with dynamic success color overrides (`successColor`) on progress completion converts static progress charts into rewarding gamified achievements.
+**Action:** Provide explicit web `aria-*` progress props and goal completion spring pulse transitions on all visual gauge and progress indicators.
