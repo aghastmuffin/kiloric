@@ -8,7 +8,7 @@ import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
+import { triggerImpactHaptic, triggerNotificationHaptic, triggerSelectionHaptic } from '@/lib/haptics'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMemo, useState } from 'react'
@@ -59,9 +59,10 @@ export default function ContributeFoodScreen() {
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
     setPhotos((current) => ({ ...current, [kind]: { uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName, fileSize: asset.fileSize } }))
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    triggerNotificationHaptic('success')
   }
   function promptPhoto(kind: PhotoKind) {
+    triggerSelectionHaptic()
     const title = STEPS.find((step) => step.key === kind)?.title ?? 'Product photo'
     Alert.alert(title, 'Take a new photo or choose one you already have.', [
       { text: 'Take photo', onPress: () => void choosePhoto(kind, 'camera') },
@@ -77,7 +78,7 @@ export default function ContributeFoodScreen() {
       const fields: Partial<Record<OffNumberField, string | number>> = {}
       for (const [key, value] of Object.entries(numbers)) if (value?.trim()) fields[key as OffNumberField] = value.trim()
       await submitFoodContribution(user.$id, { photo: photos.ingredients!, additionalPhotos: [photos.barcode!, photos.front!], product_name: productName, code: code.trim() || null, source_query: initialQuery || code.trim() || productName.trim(), fields })
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setSubmitted(true)
+      triggerNotificationHaptic('success'); setSubmitted(true)
     } catch (error) { console.error('Could not submit food contribution', error); showApiError(error, 'appwrite') } finally { setSubmitting(false) }
   }
 
@@ -86,18 +87,18 @@ export default function ContributeFoodScreen() {
       <View style={styles.successIcon}><Ionicons name="checkmark" size={30} color={colors.onBrand} /></View>
       <Text accessibilityRole="header" style={styles.successTitle}>Thank you.</Text>
       <Text style={styles.successCopy}>Your photos are ready for review. They’ll help make this product easier to find and log.</Text>
-      <Pressable accessibilityRole="button" onPress={() => router.back()} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}><Text style={styles.primaryButtonText}>Back to food log</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityHint="Navigates back to the food logging screen" onPress={() => { triggerSelectionHaptic(); router.back() }} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}><Text style={styles.primaryButtonText}>Back to food log</Text></Pressable>
     </MotionView>
   </View>
 
   return <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <View style={[styles.nav, { paddingTop: insets.top + 4, paddingHorizontal: gutter }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back to food log" onPress={() => router.back()} style={({ pressed }) => [styles.back, pressed && styles.pressed]}><Ionicons name="chevron-back" size={22} color={colors.accent} /><Text style={styles.backText}>Log food</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Back to food log" accessibilityHint="Navigates back to the food logging screen" onPress={() => { triggerSelectionHaptic(); router.back() }} style={({ pressed }) => [styles.back, pressed && styles.pressed]}><Ionicons name="chevron-back" size={22} color={colors.accent} /><Text style={styles.backText}>Log food</Text></Pressable>
       <Text numberOfLines={1} style={styles.navTitle}>Help complete this food</Text><View style={styles.navSide} />
     </View>
     <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: gutter, paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.intro}><Text accessibilityRole="header" style={styles.title}>Three quick photos, then you’re done.</Text><Text style={styles.description}>We’ll use the package to fill in what’s missing. For now, just make each view clear and readable.</Text></View>
-      <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 3, now: complete }} style={styles.progressBlock}>
+      <View accessibilityRole="progressbar" accessibilityLabel="Photo contribution progress" accessibilityValue={{ min: 0, max: 3, now: complete, text: `${complete} of 3 photos completed` }} style={styles.progressBlock}>
         <View style={styles.progressLabels}><Text style={styles.progressCount}>{complete} of 3 photos</Text><Text style={styles.progressStatus}>{photosComplete ? 'Ready to send' : 'A little more to go'}</Text></View>
         <View style={styles.track}><View style={[styles.fill, { width: `${Math.round((complete / 3) * 100)}%` }]} /></View>
       </View>
@@ -112,7 +113,7 @@ export default function ContributeFoodScreen() {
         </MotionView>
       })}</View>
       {!initialName ? <View style={styles.nameNote}><Ionicons name="information-circle-outline" size={19} color={colors.accent} /><Text style={styles.nameNoteText}>We still need the product name. You can add it under manual details.</Text></View> : null}
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: manual }} onPress={() => setManual((value) => !value)} style={({ pressed }) => [styles.manualToggle, pressed && styles.pressed]}><Ionicons name="create-outline" size={19} color={colors.accent} /><Text style={styles.manualToggleText}>Manually enter details</Text><Ionicons name={manual ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: manual }} accessibilityHint="Toggles manual entry fields for product details" onPress={() => { triggerSelectionHaptic(); setManual((value) => !value) }} style={({ pressed }) => [styles.manualToggle, pressed && styles.pressed]}><Ionicons name="create-outline" size={19} color={colors.accent} /><Text style={styles.manualToggleText}>Manually enter details</Text><Ionicons name={manual ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} /></Pressable>
       {manual ? <MotionView from={{ opacity: 0, translateY: -6 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 180 }} style={styles.manualPanel}>
         <Text style={styles.manualTitle}>Product details</Text><Text style={styles.manualHint}>Add only what you can verify on the package.</Text>
         <View style={[styles.fieldGrid, compact && styles.fieldGridCompact]}>
@@ -122,7 +123,7 @@ export default function ContributeFoodScreen() {
         </View>
       </MotionView> : null}
       <View style={styles.submitBlock}><Text style={styles.reviewNote}>{ready ? 'Photos are reviewed before the product appears in search.' : `${3 - complete} photo${3 - complete === 1 ? '' : 's'} remaining.`}</Text>
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ready || submitting }} disabled={!ready || submitting} onPress={() => void submit()} style={({ pressed }) => [styles.primaryButton, (!ready || submitting) && styles.primaryButtonDisabled, pressed && styles.pressed]}>{submitting ? <ActivityIndicator color={colors.onBrand} /> : <><Ionicons name="paper-plane-outline" size={19} color={colors.onBrand} /><Text style={styles.primaryButtonText}>Send photos</Text></>}</Pressable>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ready || submitting }} accessibilityHint="Submits contribution photos and details for review" disabled={!ready || submitting} onPress={() => { triggerImpactHaptic(); void submit() }} style={({ pressed }) => [styles.primaryButton, (!ready || submitting) && styles.primaryButtonDisabled, pressed && styles.pressed]}>{submitting ? <ActivityIndicator color={colors.onBrand} /> : <><Ionicons name="paper-plane-outline" size={19} color={colors.onBrand} /><Text style={styles.primaryButtonText}>Send photos</Text></>}</Pressable>
       </View>
     </ScrollView>
   </KeyboardAvoidingView>
