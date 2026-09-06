@@ -34,3 +34,8 @@
 **Learning:** Returning cached data before running session validation (`authenticatedUserId`) creates a Broken Object Level Authorization (BOLA) vulnerability. At the same time, declaring fetch helpers as `async function` breaks strict promise identity (`p1 === p2`) in tests because the JS runtime wraps returned promises. Wrapping the execution in a synchronous function returning `authenticatedUserId(userId).then(...)` guarantees both session ownership checks and strict Promise reference identity for concurrent deduplication.
 
 **Action:** Always run authentication checks inside the deduplicated Promise chain before resolving cached data, and use non-async functions returning explicit Promises to maintain reference identity for deduplication.
+
+## 2025-05-22 - O(1) Priority Rank Map for Field Sorting
+**Learning:** Calling `Array.prototype.indexOf` inside sort comparators (such as sorting product detail fields in `LogFoodMultiView`, `BarcodeDetailModal`, and `Additions`) results in $O(N \cdot K)$ linear array scans during sorting loops. Pre-populating a module-level `Map<string, number>` eliminates array scan overhead and turns field rank comparisons into constant $O(1)$ lookups.
+
+**Action:** When sorting elements by priority from a fixed rank array, map priority ranks into a module-level `Map` and query ranks with `Map.prototype.get` inside sort comparators.
