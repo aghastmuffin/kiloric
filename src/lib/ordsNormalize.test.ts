@@ -1,9 +1,11 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, expect, it } from 'vitest'
 import {
+  getOrdsFieldRank,
   isOrdsPresent,
   normalizeOrdsProduct,
   normalizeOrdsResponse,
+  ORDS_FIELD_PRIORITY,
   productHasUnknownDetails,
 } from './ordsNormalize'
 
@@ -56,6 +58,13 @@ describe('ordsNormalize', () => {
     expect(result.items).toHaveLength(2)
     expect(result.items[0].product_name).toBe('High')
     expect(result.items[0].energy_kcal).toBe(20)
+  })
+
+  it('returns O(1) field priority ranks for known and unknown ORDS fields', () => {
+    expect(getOrdsFieldRank('product_name')).toBe(0)
+    expect(getOrdsFieldRank('brands')).toBe(1)
+    expect(getOrdsFieldRank('updated_timestamp')).toBe(ORDS_FIELD_PRIORITY.length - 1)
+    expect(getOrdsFieldRank('non_existent_field')).toBe(ORDS_FIELD_PRIORITY.length)
   })
 
   it('flags products with unknown / missing label fields', () => {
