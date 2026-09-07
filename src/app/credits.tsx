@@ -1,4 +1,5 @@
 import { AppScreenHeader } from '@/components/ui/AppScreenHeader'
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
@@ -36,6 +37,7 @@ export default function CreditsScreen() {
   }
 
   const handleAvatarPress = () => {
+    triggerSelectionHaptic()
     setTapCount((count) => {
       const next = count + 1
       if (next >= 10) {
