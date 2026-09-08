@@ -42,3 +42,8 @@
 **Vulnerability:** Missing authorization validation in `purgeAccountData` allowed any authenticated user to trigger deletion of another user's account documents, contributions, and profile by specifying their `userId`.
 **Learning:** High-impact data purging functions must assert active session user ID ownership at the entry point of the function before listing or deleting owned database documents.
 **Prevention:** Call `await assertAuthenticatedUserId(userId)` at the beginning of data purging routines to guarantee only the resource owner can trigger deletion of their account records.
+
+## 2026-08-10 - [Safe URI Decoding for Backend Request Resolution]
+**Vulnerability:** Unhandled `URIError` exception when resolving requests with malformed percent-encoding or unescaped `%` characters in user query or barcode parameters.
+**Learning:** Unwrapped `decodeURIComponent` calls on raw or partially encoded endpoint path segments cause uncaught `URIError` crashes (e.g., when searching for "milk 2%" or "100% juice"), leading to application crashes and denial of service.
+**Prevention:** Wrap `decodeURIComponent` calls in a safe helper (`try ... catch`) that gracefully falls back to the original string on malformed URI inputs.

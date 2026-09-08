@@ -60,6 +60,14 @@ export function getBackendBaseUrl(choice: ApiBackendChoice): string {
   return choice === 'ords' ? ORDS_BACKEND_URL : LEGACY_BACKEND_URL
 }
 
+function safeDecodeURIComponent(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
 /**
  * Map the app's stable logical paths onto the selected backend URL.
  * Call sites keep using `/api/barcode/:code`, `/api/fuzzy/:query`, `/api/product/:code`.
@@ -79,7 +87,7 @@ export function resolveBackendRequest(
 
   const barcodeMatch = path.match(/^\/api\/barcode\/(.+)$/i)
   if (barcodeMatch) {
-    const code = decodeURIComponent(barcodeMatch[1])
+    const code = safeDecodeURIComponent(barcodeMatch[1])
     return {
       url: `${ORDS_BACKEND_URL}/code?code=${encodeURIComponent(code)}`,
       requiresAuth: false,
@@ -88,7 +96,7 @@ export function resolveBackendRequest(
 
   const productMatch = path.match(/^\/api\/product\/(.+)$/i)
   if (productMatch) {
-    const code = decodeURIComponent(productMatch[1])
+    const code = safeDecodeURIComponent(productMatch[1])
     return {
       url: `${ORDS_BACKEND_URL}/code?code=${encodeURIComponent(code)}`,
       requiresAuth: false,
@@ -97,7 +105,7 @@ export function resolveBackendRequest(
 
   const fuzzyMatch = path.match(/^\/api\/fuzzy\/(.+)$/i)
   if (fuzzyMatch) {
-    const query = decodeURIComponent(fuzzyMatch[1])
+    const query = safeDecodeURIComponent(fuzzyMatch[1])
     const params = new URLSearchParams()
     params.set('search_arg', query)
 
