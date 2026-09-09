@@ -57,10 +57,6 @@ type DashboardData = {
 
 const emptyData: DashboardData = { today: [], profile: null }
 
-function total(meals: MealDocument[], key: 'kcal' | 'protein' | 'carbs' | 'fat' | 'fluid') {
-  return meals.reduce((sum, meal) => sum + (meal[key] ?? 0), 0)
-}
-
 function ProgressBar({ value, max, label }: { value: number; max: number; label?: string }) {
   const { colors } = useTheme()
   const pct = Math.min(100, Math.max(0, (value / Math.max(1, max)) * 100))
@@ -137,13 +133,24 @@ export default function DashboardScreen() {
     }, [reloadKey, user?.$id]),
   )
 
-  const totals = useMemo(() => ({
-    kcal: total(data.today, 'kcal'),
-    protein: total(data.today, 'protein'),
-    carbs: total(data.today, 'carbs'),
-    fat: total(data.today, 'fat'),
-    fluid: total(data.today, 'fluid'),
-  }), [data.today])
+  // ⚡ Bolt: Single-pass for loop over today's meals eliminates 5 separate Array.prototype.reduce allocations and callback stack overhead
+  const totals = useMemo(() => {
+    let kcal = 0
+    let protein = 0
+    let carbs = 0
+    let fat = 0
+    let fluid = 0
+    const meals = data.today
+    for (let i = 0; i < meals.length; i++) {
+      const m = meals[i]
+      kcal += m.kcal ?? 0
+      protein += m.protein ?? 0
+      carbs += m.carbs ?? 0
+      fat += m.fat ?? 0
+      fluid += m.fluid ?? 0
+    }
+    return { kcal, protein, carbs, fat, fluid }
+  }, [data.today])
 
   const targets = {
     kcal: data.profile?.target_kcal ?? 2000,
