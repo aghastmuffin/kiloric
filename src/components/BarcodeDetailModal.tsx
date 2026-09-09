@@ -350,10 +350,15 @@ export default function BarcodeDetailModal({
                   {imageUri ? (
                     <ImageViewer
                       imgSource={{ uri: imageUri }}
+                      accessibilityLabel="Product photo from Open Food Facts"
                       style={[styles.productImage, compact && styles.productImageCompact]}
                     />
                   ) : (
-                    <ImageViewer imgSource={PlaceholderImage} style={[styles.productImage, compact && styles.productImageCompact]} />
+                    <ImageViewer
+                      imgSource={PlaceholderImage}
+                      accessibilityLabel="Placeholder product image"
+                      style={[styles.productImage, compact && styles.productImageCompact]}
+                    />
                   )}
                   {imageError ? <Text style={styles.imageErrorText}>{imageError}</Text> : null}
                 </View>
