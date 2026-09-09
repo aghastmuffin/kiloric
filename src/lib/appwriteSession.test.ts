@@ -9,6 +9,7 @@ import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
 import { clearTasksCache } from './tasks'
+import { clearMealBarcodes } from './mealItemsStorage'
 import { clearWaterCache } from './water'
 import { clearAppwriteSession, persistAppwriteSession } from './appwriteSession'
 
@@ -54,6 +55,10 @@ vi.mock('./tasks', () => ({
 
 vi.mock('./water', () => ({
   clearWaterCache: vi.fn(),
+}))
+
+vi.mock('./mealItemsStorage', () => ({
+  clearMealBarcodes: vi.fn(() => Promise.resolve({})),
 }))
 
 describe('appwriteSession cache clearing', () => {
@@ -107,6 +112,7 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearMealBarcodes).toHaveBeenCalled()
   })
 
   it('clears caches for secretless web sessions before returning', async () => {
@@ -121,6 +127,7 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearMealBarcodes).toHaveBeenCalled()
   })
 
   it('clearAppwriteSession should clear client session, remove from storage, and clear caches', async () => {
@@ -135,5 +142,6 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearMealBarcodes).toHaveBeenCalled()
   })
 })
