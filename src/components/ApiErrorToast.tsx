@@ -1,5 +1,5 @@
 import type { ApiErrorSource } from '@/lib/apiErrors'
-import { triggerNotificationHaptic } from '@/lib/haptics'
+import { triggerNotificationHaptic, triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -100,6 +100,8 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
   return (
     <View style={styles.overlay} pointerEvents="box-none">
       <Animated.View
+        accessibilityRole="alert"
+        accessibilityLiveRegion="assertive"
         style={[styles.toast, { marginTop: insets.top + 8 }, animatedStyle]}
       >
         <View style={styles.iconWrap}>
@@ -114,8 +116,12 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Dismiss error"
+          accessibilityHint="Closes this error notification"
           hitSlop={8}
-          onPress={animateOut}
+          onPress={() => {
+            triggerSelectionHaptic()
+            animateOut()
+          }}
           style={styles.dismissButton}
         >
           <Ionicons name="close" size={20} color={colors.textMuted} />
