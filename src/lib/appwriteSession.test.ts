@@ -5,6 +5,7 @@ import type { Models } from 'react-native-appwrite'
 import { client } from './appwrite'
 import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
+import { clearMealItemPreviewCache } from './mealItemPreview'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
@@ -33,6 +34,11 @@ vi.mock('./getAccessToken', () => ({
 
 vi.mock('./foodFavorites', () => ({
   clearFavoriteFoodsCache: vi.fn(),
+}))
+
+vi.mock('./mealItemPreview', () => ({
+  clearMealItemPreviewCache: vi.fn(),
+  fetchMealItemPreview: vi.fn(),
 }))
 
 vi.mock('./meals', () => ({
@@ -92,10 +98,10 @@ describe('appwriteSession cache clearing', () => {
       factors: [],
       secret: 'my-session-secret',
       mfaUpdatedAt: '',
-    } satisfies Models.Session
+    }
 
     await persistAppwriteSession(
-      mockSession as unknown as Parameters<typeof persistAppwriteSession>[0],
+      mockSession as unknown as Models.Session,
     )
 
     expect(client.setSession).toHaveBeenCalledWith('my-session-secret')
@@ -107,13 +113,14 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearMealItemPreviewCache).toHaveBeenCalled()
   })
 
   it('clears caches for secretless web sessions before returning', async () => {
     await persistAppwriteSession({
       userId: 'user-123',
       secret: '',
-    } as unknown as Parameters<typeof persistAppwriteSession>[0])
+    } as unknown as Models.Session)
 
     expect(client.setSession).not.toHaveBeenCalled()
     expect(AsyncStorage.setItem).not.toHaveBeenCalled()
@@ -121,6 +128,7 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearMealItemPreviewCache).toHaveBeenCalled()
   })
 
   it('clearAppwriteSession should clear client session, remove from storage, and clear caches', async () => {
@@ -135,5 +143,6 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearMealItemPreviewCache).toHaveBeenCalled()
   })
 })

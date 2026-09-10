@@ -3,14 +3,14 @@ import {
   formatOracleError,
   isApiRequestError,
   showApiError,
-} from '@/lib/apiErrors'
-import { getCachedResponse, getCacheTtl, normalizeCacheKey, setCachedResponse } from '@/lib/apiCache'
+} from '../lib/apiErrors'
+import { getCachedResponse, getCacheTtl, normalizeCacheKey, setCachedResponse } from '../lib/apiCache'
 import {
   resolveApiBackendChoice,
   resolveBackendRequest,
-} from '@/lib/apiBackendPreferences'
-import { getAccessToken } from '@/lib/getAccessToken'
-import { normalizeOrdsResponse } from '@/lib/ordsNormalize'
+} from '../lib/apiBackendPreferences'
+import { getAccessToken } from '../lib/getAccessToken'
+import { normalizeOrdsResponse } from '../lib/ordsNormalize'
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>
@@ -128,4 +128,4 @@ export const authenticatedRequest = async (
   }
 }
 
-export { account } from '@/lib/appwrite'
+export { account } from '../lib/appwrite'

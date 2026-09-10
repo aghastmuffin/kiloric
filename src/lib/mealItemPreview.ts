@@ -1,9 +1,9 @@
-import { authenticatedRequest } from '@/components/apiUtils'
-import { resolveApiBackendChoice } from '@/lib/apiBackendPreferences'
-import { getCachedResponse } from '@/lib/apiCache'
-import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
-import type { MealType } from '@/lib/meals'
-import { getProductTitle, getQuickProductFacts } from '@/lib/productDisplay'
+import { authenticatedRequest } from '../components/apiUtils'
+import { resolveApiBackendChoice } from './apiBackendPreferences'
+import { getCachedResponse } from './apiCache'
+import { buildMealInputFromProduct } from './mealFromProduct'
+import type { MealType } from './meals'
+import { getProductTitle, getQuickProductFacts } from './productDisplay'
 
 export type MealItemPreview = {
   barcode: string
@@ -13,6 +13,15 @@ export type MealItemPreview = {
   protein: number | null
   carbs: number | null
   fat: number | null
+}
+
+const previewCache = new Map<string, MealItemPreview>()
+const inflightPreviewPromises = new Map<string, Promise<MealItemPreview>>()
+
+/** Clear the in-memory meal item preview cache and pending inflight promises. */
+export function clearMealItemPreviewCache(): void {
+  previewCache.clear()
+  inflightPreviewPromises.clear()
 }
 
 function unwrapProductData(data: Record<string, unknown>): Record<string, unknown> {
@@ -25,10 +34,10 @@ function unwrapProductData(data: Record<string, unknown>): Record<string, unknow
   return data
 }
 
-export async function fetchMealItemPreview(
+async function doFetchMealItemPreview(
   barcode: string,
-  mealType: MealType = 'Breakfast',
-  servings = 1,
+  mealType: MealType,
+  servings: number,
 ): Promise<MealItemPreview> {
   const endpoint = `/api/barcode/${encodeURIComponent(barcode)}`
   let data: Record<string, unknown> | null = null
@@ -76,4 +85,41 @@ export async function fetchMealItemPreview(
     carbs: input.carbs ?? null,
     fat: input.fat ?? null,
   }
+}
+
+export function fetchMealItemPreview(
+  barcode: string,
+  mealType: MealType = 'Breakfast',
+  servings = 1,
+): Promise<MealItemPreview> {
+  const cacheKey = `${barcode}:${mealType}:${servings}`
+
+  // 1. Check in-memory cache
+  const cached = previewCache.get(cacheKey)
+  if (cached) {
+    return Promise.resolve(cached)
+  }
+
+  // 2. Check inflight promises for request deduplication
+  const inflight = inflightPreviewPromises.get(cacheKey)
+  if (inflight) {
+    return inflight
+  }
+
+  const currentPromise = (async () => {
+    try {
+      const result = await doFetchMealItemPreview(barcode, mealType, servings)
+      if (inflightPreviewPromises.get(cacheKey) === currentPromise) {
+        previewCache.set(cacheKey, result)
+      }
+      return result
+    } finally {
+      if (inflightPreviewPromises.get(cacheKey) === currentPromise) {
+        inflightPreviewPromises.delete(cacheKey)
+      }
+    }
+  })()
+
+  inflightPreviewPromises.set(cacheKey, currentPromise)
+  return currentPromise
 }
