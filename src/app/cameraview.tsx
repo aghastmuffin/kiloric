@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
@@ -174,6 +175,8 @@ export default function CameraScannerScreen() {
           </Text>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={openSystemSettings ? 'Open settings' : 'Allow camera'}
+            accessibilityHint={openSystemSettings ? 'Opens system settings to allow camera permission' : 'Requests camera permission to scan product barcodes'}
             onPress={() => void (openSystemSettings ? Linking.openSettings() : requestPermission())}
             style={({ pressed }) => [styles.permissionButton, pressed && styles.pressed]}
           >
@@ -187,6 +190,7 @@ export default function CameraScannerScreen() {
   }
 
   function toggleCameraFacing() {
+    triggerSelectionHaptic();
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
@@ -265,6 +269,7 @@ export default function CameraScannerScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Switch between front and back camera"
+          accessibilityHint="Switches between front and back camera"
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
           onPress={toggleCameraFacing}
         >
