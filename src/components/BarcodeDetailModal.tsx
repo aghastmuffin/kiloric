@@ -5,6 +5,7 @@ import { appendMealBarcode } from '@/lib/mealItemsStorage';
 import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { isOrdsPresent, ORDS_FIELD_PRIORITY } from '@/lib/ordsNormalize';
+import { formatLabel } from '@/lib/productDisplay';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -44,13 +45,6 @@ type Props = {
   confirmMode?: boolean;
 };
 
-function formatLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '—';
