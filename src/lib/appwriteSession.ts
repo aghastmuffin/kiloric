@@ -3,6 +3,7 @@ import { client } from './appwrite'
 import type { Models } from 'react-native-appwrite'
 import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
+import { clearMealBarcodes } from './mealItemsStorage'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
@@ -28,6 +29,9 @@ function clearSessionCaches(): void {
   clearTodayMealsCache()
   clearFavoriteFoodsCache()
   clearWaterCache()
+  void clearMealBarcodes().catch((err) => {
+    console.error('[appwriteSession] failed to clear meal barcodes', err)
+  })
 }
 
 export async function persistAppwriteSession(session: Models.Session): Promise<void> {
