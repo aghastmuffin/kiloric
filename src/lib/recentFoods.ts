@@ -5,6 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 const STORAGE_PREFIX = '@calcount/recent_foods:'
 const MAX_RECENTS = 30
 
+/** Maximum string length limits to prevent storage bloat, memory leaks, and DoS attacks */
+const MAX_ID_LENGTH = 256
+const MAX_TITLE_LENGTH = 256
+const MAX_BARCODE_LENGTH = 128
+const MAX_QUERY_LENGTH = 256
+
 // In-memory cache for recent food entries per userKey to prevent redundant AsyncStorage I/O reads.
 const recentFoodsCache = new Map<string, RecentFoodEntry[]>()
 const inflightRequests = new Map<string, Promise<RecentFoodEntry[]>>()
@@ -102,15 +108,21 @@ export async function recordRecentFood(
   userKey: string,
   entry: Omit<RecentFoodEntry, 'usedAt'> & { usedAt?: string },
 ): Promise<void> {
-  const id = entry.id.trim()
+  // Enforce defense-in-depth length limits on input strings to mitigate DoS and storage exhaustion
+  const id = entry.id.trim().slice(0, MAX_ID_LENGTH)
   if (!id) return
+
+  const barcode = entry.barcode ? entry.barcode.trim().slice(0, MAX_BARCODE_LENGTH) || null : null
+  const query = entry.query ? entry.query.trim().slice(0, MAX_QUERY_LENGTH) || null : null
+  const rawTitle = entry.title.trim()
+  const title = (rawTitle ? rawTitle.slice(0, MAX_TITLE_LENGTH) : id)
 
   const existing = await listRecentFoods(userKey)
   const next: RecentFoodEntry = {
     id,
-    barcode: entry.barcode,
-    query: entry.query,
-    title: entry.title.trim() || id,
+    barcode,
+    query,
+    title,
     kcal: entry.kcal,
     usedAt: entry.usedAt ?? new Date().toISOString(),
   }

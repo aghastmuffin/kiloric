@@ -113,4 +113,31 @@ describe('recentFoods with in-memory caching and request deduplication', () => {
     const items = await listRecentFoods(userKey)
     expect(items).toHaveLength(0)
   })
+
+  it('truncates oversized input strings to max length limits for security defense-in-depth', async () => {
+    const userKey = 'user-5'
+    const longId = 'a'.repeat(300)
+    const longTitle = 'b'.repeat(300)
+    const longBarcode = 'c'.repeat(200)
+    const longQuery = 'd'.repeat(300)
+
+    await recordRecentFood(userKey, {
+      id: longId,
+      title: longTitle,
+      barcode: longBarcode,
+      query: longQuery,
+      kcal: 200,
+    })
+
+    const items = await listRecentFoods(userKey)
+    expect(items).toHaveLength(1)
+    expect(items[0].id).toHaveLength(256)
+    expect(items[0].id).toBe('a'.repeat(256))
+    expect(items[0].title).toHaveLength(256)
+    expect(items[0].title).toBe('b'.repeat(256))
+    expect(items[0].barcode).toHaveLength(128)
+    expect(items[0].barcode).toBe('c'.repeat(128))
+    expect(items[0].query).toHaveLength(256)
+    expect(items[0].query).toBe('d'.repeat(256))
+  })
 })
