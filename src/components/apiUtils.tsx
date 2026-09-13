@@ -3,14 +3,20 @@ import {
   formatOracleError,
   isApiRequestError,
   showApiError,
-} from '@/lib/apiErrors'
-import { getCachedResponse, getCacheTtl, normalizeCacheKey, setCachedResponse } from '@/lib/apiCache'
+} from '../lib/apiErrors'
+import {
+  getCachedResponse,
+  getCacheTtl,
+  getMemoryCachedResponse,
+  normalizeCacheKey,
+  setCachedResponse,
+} from '../lib/apiCache'
 import {
   resolveApiBackendChoice,
   resolveBackendRequest,
-} from '@/lib/apiBackendPreferences'
-import { getAccessToken } from '@/lib/getAccessToken'
-import { normalizeOrdsResponse } from '@/lib/ordsNormalize'
+} from '../lib/apiBackendPreferences'
+import { getAccessToken } from '../lib/getAccessToken'
+import { normalizeOrdsResponse } from '../lib/ordsNormalize'
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>
@@ -79,19 +85,29 @@ export const authenticatedRequest = async (
 
   if (cacheTtl !== null) {
     const choice = await resolveApiBackendChoice()
-    const cached = await getCachedResponse(endpoint, choice)
-    if (cached !== null) {
-      return cached
+
+    // 1. Check synchronous in-memory cache first to avoid microtask delay
+    const memCached = getMemoryCachedResponse(endpoint, choice)
+    if (memCached !== null) {
+      return memCached
     }
 
+    // 2. Check inflight deduplication map BEFORE starting disk/network work to prevent duplicate requests
     const cacheKey = normalizeCacheKey(endpoint, choice)
     const inflight = inflightRequests.get(cacheKey)
     if (inflight) {
       return inflight
     }
 
+    // 3. Create inflight promise for disk fallback + network fetch
     const promise = (async () => {
       try {
+        // Check persistent disk storage (AsyncStorage)
+        const diskCached = await getCachedResponse(endpoint, choice)
+        if (diskCached !== null) {
+          return diskCached
+        }
+
         const data = await performBackendRequest(endpoint, options)
         if (data !== null && data !== undefined) {
           // Persistence happens in the background so callers get network data immediately.
@@ -128,4 +144,4 @@ export const authenticatedRequest = async (
   }
 }
 
-export { account } from '@/lib/appwrite'
+export { account } from '../lib/appwrite'

@@ -34,3 +34,8 @@
 **Learning:** Returning cached data before running session validation (`authenticatedUserId`) creates a Broken Object Level Authorization (BOLA) vulnerability. At the same time, declaring fetch helpers as `async function` breaks strict promise identity (`p1 === p2`) in tests because the JS runtime wraps returned promises. Wrapping the execution in a synchronous function returning `authenticatedUserId(userId).then(...)` guarantees both session ownership checks and strict Promise reference identity for concurrent deduplication.
 
 **Action:** Always run authentication checks inside the deduplicated Promise chain before resolving cached data, and use non-async functions returning explicit Promises to maintain reference identity for deduplication.
+
+## 2025-05-22 - Inflight Request Deduplication Before Disk Read & Synchronous Memory Caching
+**Learning:** Checking inflight request promise maps *after* async disk checks (`AsyncStorage.getItem`) leaves a race window where concurrent calls pass through before the inflight promise is registered. Checking synchronous in-memory cache first and registering inflight deduplication promises *before* async disk I/O eliminates duplicate disk reads and duplicate network requests. Additionally, using fast `.startsWith()` string matching instead of RegExp instantiation speeds up cache key normalization on high-frequency API paths.
+
+**Action:** Check synchronous memory cache and set inflight promise references before awaiting async disk storage operations, and use string operations instead of regexes for URL/key normalization.

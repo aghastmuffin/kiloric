@@ -1,4 +1,4 @@
-import { account } from '@/lib/appwrite'
+import { account } from './appwrite'
 
 let cachedToken: { jwt: string; expiresAt: number } | null = null
 let inflightPromise: Promise<string | null> | null = null

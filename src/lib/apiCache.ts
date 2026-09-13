@@ -104,24 +104,41 @@ export function normalizeCacheKey(endpoint: string, backend?: string): string {
   const [path, query = ''] = endpoint.split('?')
 
   let base: string
-  const barcodeMatch = path.match(/^\/api\/barcode\/(.+)$/i)
-  if (barcodeMatch) {
-    base = `/api/barcode/${decodePathSegment(barcodeMatch[1])}`
+  // Use fast startsWith string operations to avoid RegExp allocation overhead
+  const lowerPath = path.toLowerCase()
+  if (lowerPath.startsWith('/api/barcode/')) {
+    base = `/api/barcode/${decodePathSegment(path.slice(13))}`
+  } else if (lowerPath.startsWith('/api/product/')) {
+    base = `/api/product/${decodePathSegment(path.slice(13))}`
+  } else if (lowerPath.startsWith('/api/fuzzy/')) {
+    base = `/api/fuzzy/${decodePathSegment(path.slice(11)).toLowerCase()}`
   } else {
-    const productMatch = path.match(/^\/api\/product\/(.+)$/i)
-    if (productMatch) {
-      base = `/api/product/${decodePathSegment(productMatch[1])}`
-    } else {
-      const fuzzyMatch = path.match(/^\/api\/fuzzy\/(.+)$/i)
-      if (fuzzyMatch) {
-        base = `/api/fuzzy/${decodePathSegment(fuzzyMatch[1]).toLowerCase()}`
-      } else {
-        base = path + (query ? `?${query}` : '')
-      }
-    }
+    base = path + (query ? `?${query}` : '')
   }
 
   return backend ? `${backend}:${base}` : base
+}
+
+/** Clear all in-memory API response cache entries. */
+export function clearApiMemoryCache(): void {
+  memoryCache.clear()
+}
+
+/** Synchronously retrieve response from in-memory cache if available and fresh. */
+export function getMemoryCachedResponse(
+  endpoint: string,
+  backend?: string,
+): unknown | null {
+  const cacheKey = normalizeCacheKey(endpoint, backend)
+  const memoryEntry = memoryCache.get(cacheKey)
+  if (memoryEntry) {
+    if (isFresh(memoryEntry)) {
+      setMemoryEntry(cacheKey, memoryEntry)
+      return memoryEntry.data
+    }
+    memoryCache.delete(cacheKey)
+  }
+  return null
 }
 
 export function getCacheTtl(endpoint: string): number | null {
@@ -150,16 +167,12 @@ export async function getCachedResponse(
   endpoint: string,
   backend?: string,
 ): Promise<unknown | null> {
-  const cacheKey = normalizeCacheKey(endpoint, backend)
-  const memoryEntry = memoryCache.get(cacheKey)
-  if (memoryEntry) {
-    if (isFresh(memoryEntry)) {
-      setMemoryEntry(cacheKey, memoryEntry)
-      return memoryEntry.data
-    }
-    memoryCache.delete(cacheKey)
+  const mem = getMemoryCachedResponse(endpoint, backend)
+  if (mem !== null) {
+    return mem
   }
 
+  const cacheKey = normalizeCacheKey(endpoint, backend)
   try {
     const raw = await AsyncStorage.getItem(storageKey(cacheKey))
     if (!raw) return null
