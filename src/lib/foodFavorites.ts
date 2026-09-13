@@ -21,17 +21,31 @@ function storageKey(userKey: string): string {
   return `${STORAGE_PREFIX}${userKey}`
 }
 
+/**
+ * Sanitize favorite food properties and enforce strict length bounds
+ * to prevent DoS, memory leaks, and AsyncStorage storage exhaustion attacks.
+ */
+function sanitizeFavoriteFood(food: FavoriteFood): FavoriteFood {
+  return {
+    ...food,
+    barcode: (food.barcode ?? '').trim().slice(0, 128),
+    title: (food.title ?? '').trim().slice(0, 256) || 'Favorite Food',
+  }
+}
+
 function parseFavoriteFoods(raw: string | null): FavoriteFood[] {
   if (!raw) return []
   const parsed = JSON.parse(raw) as unknown
   if (!Array.isArray(parsed)) return []
-  return parsed.filter(
-    (item): item is FavoriteFood =>
-      !!item &&
-      typeof item === 'object' &&
-      typeof (item as FavoriteFood).barcode === 'string' &&
-      typeof (item as FavoriteFood).title === 'string',
-  )
+  return parsed
+    .filter(
+      (item): item is FavoriteFood =>
+        !!item &&
+        typeof item === 'object' &&
+        typeof (item as FavoriteFood).barcode === 'string' &&
+        typeof (item as FavoriteFood).title === 'string',
+    )
+    .map(sanitizeFavoriteFood)
 }
 
 type UserCacheState = {
@@ -122,7 +136,8 @@ export async function saveFavoriteFoods(
 ): Promise<void> {
   const userKey = typeof userKeyOrFavorites === 'string' ? userKeyOrFavorites : 'local'
   const favorites = Array.isArray(userKeyOrFavorites) ? userKeyOrFavorites : (maybeFavorites ?? [])
-  const entries = favorites.slice(0, 40)
+  // Sanitize entries to enforce input length limits and prevent DoS / storage bloat
+  const entries = favorites.slice(0, 40).map(sanitizeFavoriteFood)
   const cache = getUserCache(userKey)
   const generation = cache.generation
 
@@ -139,11 +154,15 @@ export async function toggleFavoriteFood(
 ): Promise<FavoriteFood[]> {
   const userKey = typeof userKeyOrFood === 'string' ? userKeyOrFood : 'local'
   const food = typeof userKeyOrFood === 'object' ? userKeyOrFood : maybeFood!
+  const sanitizedBarcode = (food.barcode ?? '').trim().slice(0, 128)
+  const sanitizedTitle = (food.title ?? '').trim().slice(0, 256) || 'Favorite Food'
+  const sanitizedFood = { ...food, barcode: sanitizedBarcode, title: sanitizedTitle }
+
   const current = await loadFavoriteFoods(userKey)
-  const exists = current.some((item) => item.barcode === food.barcode)
+  const exists = current.some((item) => item.barcode === sanitizedFood.barcode)
   const next = exists
-    ? current.filter((item) => item.barcode !== food.barcode)
-    : [{ ...food, savedAt: new Date().toISOString() }, ...current]
+    ? current.filter((item) => item.barcode !== sanitizedFood.barcode)
+    : [{ ...sanitizedFood, savedAt: new Date().toISOString() }, ...current]
   await saveFavoriteFoods(userKey, next)
   return next
 }

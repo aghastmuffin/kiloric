@@ -121,4 +121,23 @@ describe('food favorites cache', () => {
     expect(AsyncStorage.getItem).toHaveBeenCalledTimes(1)
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2)
   })
+
+  it('truncates excessively long title and barcode input fields to prevent DoS/storage bloat', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(null)
+
+    const oversizedFood = {
+      barcode: 'B'.repeat(300),
+      title: 'T'.repeat(500),
+      protein: 10,
+      carbs: 10,
+      fat: 10,
+      kcal: 100,
+    }
+
+    const result = await toggleFavoriteFood(oversizedFood)
+    expect(result[0].barcode).toHaveLength(128)
+    expect(result[0].barcode).toBe('B'.repeat(128))
+    expect(result[0].title).toHaveLength(256)
+    expect(result[0].title).toBe('T'.repeat(256))
+  })
 })
