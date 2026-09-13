@@ -35,6 +35,8 @@ import type { Models } from 'react-native-appwrite';
 import Animated, {
     FadeIn,
     FadeOut,
+    useAnimatedStyle,
+    withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -117,6 +119,10 @@ export function SettingsDrop() {
     setExpanded((prev) => !prev);
   };
 
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: withTiming(expanded ? '180deg' : '0deg', { duration: 200 }) }],
+  }));
+
   return (
       <Animated.View style={styles.preferencesSection}>
         <Pressable
@@ -137,11 +143,13 @@ export function SettingsDrop() {
                 <Text accessibilityRole="header" style={styles.sectionTitle}>Settings</Text>
               </View>
             </View>
-            <Ionicons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              style={styles.settingsIcon}
-            />
+            <Animated.View style={chevronStyle}>
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                style={styles.settingsIcon}
+              />
+            </Animated.View>
           </View>
         </Pressable>
 
