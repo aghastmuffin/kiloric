@@ -42,3 +42,8 @@
 **Vulnerability:** Missing authorization validation in `purgeAccountData` allowed any authenticated user to trigger deletion of another user's account documents, contributions, and profile by specifying their `userId`.
 **Learning:** High-impact data purging functions must assert active session user ID ownership at the entry point of the function before listing or deleting owned database documents.
 **Prevention:** Call `await assertAuthenticatedUserId(userId)` at the beginning of data purging routines to guarantee only the resource owner can trigger deletion of their account records.
+
+## 2026-08-10 - [Broken Object Level Authorization / IDOR on Meal Document Queries]
+**Vulnerability:** Missing authorization validation on `getTodayMeals` and `listHistoricMeals`, allowing an authenticated session to query and read another user's today or historic meal documents if they supplied the target `userId`.
+**Learning:** Read functions that accept a user ID parameter must enforce session identity assertion at the service boundary just as mutating functions do, preventing horizontal privilege escalation and unauthorized read access to meal data.
+**Prevention:** Always invoke `assertAuthenticatedUserId(userId)` or verify session user ID identity before executing document queries on user-scoped resources.

@@ -97,6 +97,7 @@ beforeAll(async () => {
 describe('meals caching & deduplication', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetAccount.mockImplementation(async () => ({ $id: 'user-123' }))
     mealsModule.clearTodayMealsCache()
   })
 
@@ -224,16 +225,22 @@ describe('meals caching & deduplication', () => {
   })
 
   it('clearTodayMealsCache without a user purges every cached account', async () => {
-    mockListDocuments
-      .mockResolvedValueOnce({ documents: [{ $id: 'meal-a', owner: 'user-123' }] })
-      .mockResolvedValueOnce({ documents: [{ $id: 'meal-b', owner: 'user-456' }] })
-      .mockResolvedValueOnce({ documents: [{ $id: 'meal-a2', owner: 'user-123' }] })
-      .mockResolvedValueOnce({ documents: [{ $id: 'meal-b2', owner: 'user-456' }] })
+    mockGetAccount.mockImplementation(async () => ({ $id: 'user-123' }))
+    mockListDocuments.mockResolvedValue({ documents: [{ $id: 'meal-a', owner: 'user-123' }] })
+    await mealsModule.getTodayMeals('user-123')
 
-    await mealsModule.getTodayMeals('user-123')
+    mockGetAccount.mockImplementation(async () => ({ $id: 'user-456' }))
+    mockListDocuments.mockResolvedValue({ documents: [{ $id: 'meal-b', owner: 'user-456' }] })
     await mealsModule.getTodayMeals('user-456')
+
     mealsModule.clearTodayMealsCache()
+
+    mockGetAccount.mockImplementation(async () => ({ $id: 'user-123' }))
+    mockListDocuments.mockResolvedValue({ documents: [{ $id: 'meal-a2', owner: 'user-123' }] })
     await mealsModule.getTodayMeals('user-123')
+
+    mockGetAccount.mockImplementation(async () => ({ $id: 'user-456' }))
+    mockListDocuments.mockResolvedValue({ documents: [{ $id: 'meal-b2', owner: 'user-456' }] })
     await mealsModule.getTodayMeals('user-456')
 
     expect(mockListDocuments).toHaveBeenCalledTimes(4)
@@ -300,6 +307,26 @@ describe('meals caching & deduplication', () => {
 
       expect(mockUpdateDocument).not.toHaveBeenCalled()
       expect(mockDeleteDocument).not.toHaveBeenCalled()
+    })
+
+    it('getTodayMeals fails if user ID does not match active session', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.getTodayMeals('user-456')
+      ).rejects.toThrow('Unauthorized: You can only view or manage your own meals.')
+
+      expect(mockListDocuments).not.toHaveBeenCalled()
+    })
+
+    it('listHistoricMeals fails if user ID does not match active session', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.listHistoricMeals('user-456', 20)
+      ).rejects.toThrow('Unauthorized: You can only view or manage your own meals.')
+
+      expect(mockListDocuments).not.toHaveBeenCalled()
     })
   })
 })
