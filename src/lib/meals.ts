@@ -145,6 +145,14 @@ async function assertActiveSession(): Promise<string> {
   }
 }
 
+async function assertAuthenticatedUserId(expectedUserId: string): Promise<string> {
+  const sessionUserId = await assertActiveSession()
+  if (sessionUserId !== expectedUserId) {
+    throw new Error('Unauthorized: You can only view or manage your own meals.')
+  }
+  return sessionUserId
+}
+
 /** Add a scanned product to today's meal bucket for `mealType` (one doc per type per day). */
 export async function addProductToMeal(
     ownerId: string,
@@ -514,12 +522,13 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
 
   // 3. Create the fetch promise
   const currentPromise = (async () => {
+    const sessionUserId = await assertAuthenticatedUserId(userId)
     try {
       const response = await databases.listDocuments<MealDocument>({
         databaseId: DATABASE_ID,
         collectionId: MEALS_COLLECTION_ID,
         queries: [
-          Query.equal('owner', userId),
+          Query.equal('owner', sessionUserId),
           Query.greaterThanEqual('$createdAt', todayStartISO),
         ],
       })
@@ -537,7 +546,7 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
           databaseId: DATABASE_ID,
           collectionId: MEALS_COLLECTION_ID,
           queries: [
-            Query.equal('owner', userId),
+            Query.equal('owner', sessionUserId),
             Query.limit(5000),
           ],
         })
@@ -592,12 +601,13 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
   const todayStartISO = todayStart.toISOString()
 
   const currentPromise = (async () => {
+    const sessionUserId = await assertAuthenticatedUserId(userId)
     try {
       const response = await databases.listDocuments<MealDocument>({
         databaseId: DATABASE_ID,
         collectionId: MEALS_COLLECTION_ID,
         queries: [
-          Query.equal('owner', userId),
+          Query.equal('owner', sessionUserId),
           Query.lessThan('$createdAt', todayStartISO),
           Query.orderDesc('$createdAt'),
           Query.limit(limit),
@@ -617,7 +627,7 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
           databaseId: DATABASE_ID,
           collectionId: MEALS_COLLECTION_ID,
           queries: [
-            Query.equal('owner', userId),
+            Query.equal('owner', sessionUserId),
             Query.limit(5000),
           ],
         })
