@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
@@ -187,6 +188,7 @@ export default function CameraScannerScreen() {
   }
 
   function toggleCameraFacing() {
+    triggerSelectionHaptic();
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
@@ -225,6 +227,27 @@ export default function CameraScannerScreen() {
           <View style={styles.maskRow} />
         </View>
       </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Close scanner"
+        accessibilityHint="Returns to food log"
+        onPress={() => {
+          triggerSelectionHaptic();
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)/logfood');
+          }
+        }}
+        style={({ pressed }) => [
+          styles.closeButton,
+          { top: Math.max(insets.top + spacing.sm, spacing.md), left: gutter },
+          pressed && styles.pressed,
+        ]}
+      >
+        <Ionicons name="close" size={24} color="#FFFFFF" />
+      </Pressable>
 
       <View style={styles.guidance} pointerEvents="none">
         <Text style={styles.guidanceEyebrow}>SCAN A FOOD BARCODE</Text>
@@ -390,6 +413,18 @@ const makeStyles = (c: ThemeColors) =>
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.5,
       shadowRadius: 3,
+    },
+    closeButton: {
+      position: 'absolute',
+      zIndex: 5,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
     },
     guidance: {
       position: 'absolute',
