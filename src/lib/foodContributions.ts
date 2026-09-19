@@ -165,6 +165,54 @@ export async function submitFoodContribution(
   }
 }
 
+/**
+ * Delete a food contribution document and its associated storage files after
+ * verifying that the requesting session user matches the document owner (BOLA/IDOR protection).
+ */
+export async function deleteFoodContribution(userId: string, contributionId: string): Promise<void> {
+  const owner = await authenticatedUserId(userId)
+
+  if (!/^[a-zA-Z0-9._-]{1,64}$/.test(contributionId)) {
+    throw new Error('Invalid food contribution ID.')
+  }
+
+  const doc = await databases.getDocument<FoodContributionDocument>({
+    databaseId: FOODS_DATABASE_ID,
+    collectionId: COLLECTION_ID,
+    documentId: contributionId,
+  })
+
+  if (!doc) {
+    throw new Error('Food contribution not found.')
+  }
+
+  if (doc.owner !== owner) {
+    throw new Error('Unauthorized: You can only delete your own food contributions.')
+  }
+
+  const linkedIds = doc.image_url?.startsWith('appwrite-files://')
+    ? doc.image_url.slice('appwrite-files://'.length).split(',').filter(Boolean)
+    : []
+  const photoIds = [...new Set([doc.photo_file_id, ...linkedIds].filter(Boolean))]
+
+  for (const fileId of photoIds) {
+    try {
+      await storage.deleteFile({
+        bucketId: BUCKET_ID,
+        fileId,
+      })
+    } catch {
+      // Ignore cleanup error if file was already removed
+    }
+  }
+
+  await databases.deleteDocument({
+    databaseId: FOODS_DATABASE_ID,
+    collectionId: COLLECTION_ID,
+    documentId: contributionId,
+  })
+}
+
 export {
   FOODS_DATABASE_ID,
   COLLECTION_ID as FOOD_CONTRIBUTIONS_COLLECTION_ID,

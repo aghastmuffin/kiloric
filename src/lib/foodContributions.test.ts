@@ -7,11 +7,13 @@ import {
   STRING_OFF_FIELDS,
 } from './foodContributionFields'
 
-const { mockAccountGet, mockCreateFile, mockDeleteFile, mockCreateDocument } = vi.hoisted(() => ({
+const { mockAccountGet, mockCreateFile, mockDeleteFile, mockCreateDocument, mockGetDocument, mockDeleteDocument } = vi.hoisted(() => ({
   mockAccountGet: vi.fn(),
   mockCreateFile: vi.fn(),
   mockDeleteFile: vi.fn(),
   mockCreateDocument: vi.fn(),
+  mockGetDocument: vi.fn(),
+  mockDeleteDocument: vi.fn(),
 }))
 
 vi.mock('./appwrite', () => ({
@@ -20,7 +22,11 @@ vi.mock('./appwrite', () => ({
     createFile: mockCreateFile,
     deleteFile: mockDeleteFile,
   },
-  databases: { createDocument: mockCreateDocument },
+  databases: {
+    createDocument: mockCreateDocument,
+    getDocument: mockGetDocument,
+    deleteDocument: mockDeleteDocument,
+  },
 }))
 
 vi.mock('react-native-appwrite', () => ({
@@ -180,5 +186,58 @@ describe('submitFoodContribution authorization', () => {
       photoFileId: 'file-123',
       status: 'pending',
     })
+  })
+})
+
+describe('deleteFoodContribution authorization & input validation', () => {
+  it('rejects mismatched session user ID', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'user-123' })
+    const { deleteFoodContribution } = await import('./foodContributions')
+
+    await expect(deleteFoodContribution('user-999', 'contrib-123')).rejects.toThrow(
+      'You can only submit contributions as yourself.',
+    )
+  })
+
+  it('rejects invalid contributionId format', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'user-123' })
+    const { deleteFoodContribution } = await import('./foodContributions')
+
+    await expect(deleteFoodContribution('user-123', 'invalid/id')).rejects.toThrow(
+      'Invalid food contribution ID.',
+    )
+  })
+
+  it('rejects deletion when document owner does not match session user ID (BOLA check)', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValueOnce({
+      $id: 'contrib-123',
+      owner: 'other-user-456',
+      photo_file_id: 'file-1',
+    })
+    const { deleteFoodContribution } = await import('./foodContributions')
+
+    await expect(deleteFoodContribution('user-123', 'contrib-123')).rejects.toThrow(
+      'Unauthorized: You can only delete your own food contributions.',
+    )
+    expect(mockDeleteDocument).not.toHaveBeenCalled()
+  })
+
+  it('deletes document and storage files when user matches document owner', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'user-123' })
+    mockGetDocument.mockResolvedValueOnce({
+      $id: 'contrib-123',
+      owner: 'user-123',
+      photo_file_id: 'file-1',
+      image_url: 'appwrite-files://file-2,file-3',
+    })
+    mockDeleteFile.mockResolvedValue({})
+    mockDeleteDocument.mockResolvedValue({})
+    const { deleteFoodContribution } = await import('./foodContributions')
+
+    await deleteFoodContribution('user-123', 'contrib-123')
+
+    expect(mockDeleteFile).toHaveBeenCalledTimes(3)
+    expect(mockDeleteDocument).toHaveBeenCalledTimes(1)
   })
 })
