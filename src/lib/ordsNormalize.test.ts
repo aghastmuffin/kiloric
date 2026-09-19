@@ -1,9 +1,11 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, expect, it } from 'vitest'
 import {
+  getOrdsFieldRank,
   isOrdsPresent,
   normalizeOrdsProduct,
   normalizeOrdsResponse,
+  ORDS_FIELD_PRIORITY,
   productHasUnknownDetails,
 } from './ordsNormalize'
 
@@ -90,5 +92,12 @@ describe('ordsNormalize', () => {
       saturated_fat_100g: '2',
     })
     expect(productHasUnknownDetails(complete)).toBe(false)
+  })
+
+  it('returns O(1) field priority ranks matching ORDS_FIELD_PRIORITY order', () => {
+    expect(getOrdsFieldRank('product_name')).toBe(0)
+    expect(getOrdsFieldRank('brands')).toBe(1)
+    expect(getOrdsFieldRank('energy_kcal_100g')).toBe(ORDS_FIELD_PRIORITY.indexOf('energy_kcal_100g'))
+    expect(getOrdsFieldRank('non_existent_custom_field')).toBe(ORDS_FIELD_PRIORITY.length)
   })
 })
