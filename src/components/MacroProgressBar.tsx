@@ -8,9 +8,10 @@ import { panelTiming } from '@/lib/motion';
 type MacroProgressBarProps = {
   progress: number; // 0 to 1
   gradientColors: [string, string];
+  label?: string;
 }
 
-export function MacroProgressBar({ progress, gradientColors }: MacroProgressBarProps) {
+export function MacroProgressBar({ progress, gradientColors, label }: MacroProgressBarProps) {
   const { colors } = useTheme();
   const gradId = `grad-${gradientColors[0].replace('#', '')}-${gradientColors[1].replace('#', '')}`;
   const animatedProgress = useSharedValue(0);
@@ -33,7 +34,7 @@ export function MacroProgressBar({ progress, gradientColors }: MacroProgressBarP
       accessible={true}
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 100, now: nowPercentage }}
-      accessibilityLabel={`${nowPercentage}% progress`}
+      accessibilityLabel={label ? `${label}: ${nowPercentage}%` : `${nowPercentage}% progress`}
     >
       <Animated.View style={[styles.fill, animatedStyle]}>
         <Svg width="100%" height={8}>
