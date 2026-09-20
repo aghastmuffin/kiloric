@@ -199,3 +199,8 @@ export async function setCachedResponse(
     console.warn('[apiCache] write failed', err)
   }
 }
+
+/** Clear all in-memory API cached responses to prevent session staining and data leakage on logout. */
+export function clearApiMemoryCache(): void {
+  memoryCache.clear()
+}

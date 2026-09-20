@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { client } from './appwrite'
 import type { Models } from 'react-native-appwrite'
+import { clearApiMemoryCache } from './apiCache'
 import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
 import { clearTodayMealsCache } from './meals'
@@ -28,6 +29,7 @@ function clearSessionCaches(): void {
   clearTodayMealsCache()
   clearFavoriteFoodsCache()
   clearWaterCache()
+  clearApiMemoryCache()
 }
 
 export async function persistAppwriteSession(session: Models.Session): Promise<void> {
