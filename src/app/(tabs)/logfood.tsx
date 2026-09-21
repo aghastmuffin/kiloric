@@ -403,42 +403,63 @@ export default function LogFoodScreen() {
     }, [loadToday]),
   )
 
-  const sections = useMemo<LogSection[]>(() => {
-    return MEAL_TYPE_OPTIONS.map((type) => {
-      const mealsForType = todayMeals.filter((meal) => meal.type === type)
-      const items: LogItem[] = []
-      let kcal = 0
+  // Single-pass computation of sections and daily calorie total to avoid repeated array filter traversals and iterator allocations
+  const { sections, dailyKcal } = useMemo(() => {
+    const sectionMap = new Map<MealType, { kcal: number; items: LogItem[] }>()
+    for (const type of MEAL_TYPE_OPTIONS) {
+      sectionMap.set(type, { kcal: 0, items: [] })
+    }
 
-      for (const meal of mealsForType) {
-        kcal += meal.kcal ?? 0
-        for (const [index, barcode] of (meal.items ?? []).entries()) {
-          const key = `${meal.$id}-${index}-${barcode}`
-          const preview = previews[key] ?? {
-            barcode,
-            title: `Barcode: ${barcode}`,
-            facts: [],
-            kcal: null,
-            protein: null,
-            carbs: null,
-            fat: null,
+    let totalKcal = 0
+
+    for (const meal of todayMeals) {
+      const mealKcal = meal.kcal ?? 0
+      totalKcal += mealKcal
+
+      const type = (meal.type ?? 'Other') as MealType
+      const section = sectionMap.get(type) ?? sectionMap.get('Other')
+      if (section) {
+        section.kcal += mealKcal
+
+        const items = meal.items
+        if (items) {
+          for (let index = 0; index < items.length; index++) {
+            const barcode = items[index]
+            const key = `${meal.$id}-${index}-${barcode}`
+            const preview = previews[key] ?? {
+              barcode,
+              title: `Barcode: ${barcode}`,
+              facts: [],
+              kcal: null,
+              protein: null,
+              carbs: null,
+              fat: null,
+            }
+            section.items.push({
+              ...preview,
+              mealId: meal.$id,
+              sourceType: type,
+              loggedAt: meal.$createdAt,
+            })
           }
-          items.push({
-            ...preview,
-            mealId: meal.$id,
-            sourceType: type,
-            loggedAt: meal.$createdAt,
-          })
         }
       }
+    }
 
-      return { type, kcal, items }
-    }).filter((section) => section.items.length > 0 || section.kcal > 0)
+    const resultSections: LogSection[] = []
+    for (const type of MEAL_TYPE_OPTIONS) {
+      const sec = sectionMap.get(type)
+      if (sec && (sec.items.length > 0 || sec.kcal > 0)) {
+        resultSections.push({
+          type,
+          kcal: sec.kcal,
+          items: sec.items,
+        })
+      }
+    }
+
+    return { sections: resultSections, dailyKcal: totalKcal }
   }, [previews, todayMeals])
-
-  const dailyKcal = useMemo(
-    () => todayMeals.reduce((sum, meal) => sum + (meal.kcal ?? 0), 0),
-    [todayMeals],
-  )
 
   const recentFoods = useMemo(() => {
     const seen = new Set<string>()
