@@ -1,3 +1,4 @@
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
@@ -101,6 +102,15 @@ export default function CameraScannerScreen() {
     }, [resetScanState]),
   );
 
+  const handleClose = useCallback(() => {
+    triggerSelectionHaptic();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/logfood');
+    }
+  }, [router]);
+
   const handleBarcodeScanned = useCallback(
     async ({ data }: { data: string }) => {
       const barcode = data.trim();
@@ -187,6 +197,7 @@ export default function CameraScannerScreen() {
   }
 
   function toggleCameraFacing() {
+    triggerSelectionHaptic();
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
@@ -226,7 +237,19 @@ export default function CameraScannerScreen() {
         </View>
       </View>
 
-      <View style={styles.guidance} pointerEvents="none">
+      <View style={[styles.closeContainer, { top: Math.max(insets.top + spacing.xs, spacing.md) }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close scanner"
+          accessibilityHint="Returns to food log"
+          style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+          onPress={handleClose}
+        >
+          <Ionicons name="close" size={22} color="#FFFFFF" />
+        </Pressable>
+      </View>
+
+      <View style={[styles.guidance, { top: Math.max(insets.top + spacing.xs, spacing.md) }]} pointerEvents="none">
         <Text style={styles.guidanceEyebrow}>SCAN A FOOD BARCODE</Text>
         <Text style={styles.guidanceText}>Hold the code inside the frame</Text>
       </View>
@@ -390,6 +413,19 @@ const makeStyles = (c: ThemeColors) =>
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.5,
       shadowRadius: 3,
+    },
+    closeContainer: {
+      position: 'absolute',
+      left: spacing.lg,
+      zIndex: 10,
+    },
+    closeButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     guidance: {
       position: 'absolute',

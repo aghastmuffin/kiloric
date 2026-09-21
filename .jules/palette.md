@@ -9,3 +9,7 @@
 ## 2025-08-11 - [Dynamic Initial State Synchronization & Tactile Haptic Feedback]
 **Learning:** For date-based or dynamic calendar lists, hardcoding a static initial selection state (such as `'mon'`) instead of computing it dynamically (such as `DAYS[0].key`) leads to visual incoherence where no calendar item is selected upon initial screen mount. Furthermore, state transitions on checklists, segment selectors, and rating buttons benefit immensely from physical, safety-wrapped haptic feedback (`triggerSelectionHaptic`), which transforms flat digital taps into tactile game-like interactions.
 **Action:** Always synchronize initial state keys with dynamically generated collection bounds, and embed haptic feedback on discrete state-switching interactions to enhance mechanical satisfaction.
+
+## 2025-03-02 - [Overlay Scanner Manual Exit & Safe Area Inset Positioning]
+**Learning:** Full-screen overlay camera views require an explicit manual exit/close button with descriptive accessibility attributes (`accessibilityRole="button"`, `accessibilityLabel="Close scanner"`, `accessibilityHint="Returns to food log"`) positioned dynamically using safe area top insets (`insets.top`) to avoid status bar overlap and ensure users on all platforms have a clear exit route.
+**Action:** Always provide explicit close buttons on overlay camera/scanner screens with safe area inset positioning and tactile haptic feedback on tap.
