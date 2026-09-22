@@ -8,6 +8,7 @@ import { clearCachedToken } from './getAccessToken'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
+import { clearSearchPreferencesCache } from './searchPreferences'
 import { clearTasksCache } from './tasks'
 import { clearWaterCache } from './water'
 import { clearAppwriteSession, persistAppwriteSession } from './appwriteSession'
@@ -46,6 +47,10 @@ vi.mock('./profile', () => ({
 
 vi.mock('./recentFoods', () => ({
   clearRecentFoodsCache: vi.fn(),
+}))
+
+vi.mock('./searchPreferences', () => ({
+  clearSearchPreferencesCache: vi.fn(),
 }))
 
 vi.mock('./tasks', () => ({
@@ -107,6 +112,7 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearSearchPreferencesCache).toHaveBeenCalled()
   })
 
   it('clears caches for secretless web sessions before returning', async () => {
@@ -121,6 +127,7 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearSearchPreferencesCache).toHaveBeenCalled()
   })
 
   it('clearAppwriteSession should clear client session, remove from storage, and clear caches', async () => {
@@ -135,5 +142,6 @@ describe('appwriteSession cache clearing', () => {
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
+    expect(clearSearchPreferencesCache).toHaveBeenCalled()
   })
 })

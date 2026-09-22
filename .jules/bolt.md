@@ -34,3 +34,8 @@
 **Learning:** Returning cached data before running session validation (`authenticatedUserId`) creates a Broken Object Level Authorization (BOLA) vulnerability. At the same time, declaring fetch helpers as `async function` breaks strict promise identity (`p1 === p2`) in tests because the JS runtime wraps returned promises. Wrapping the execution in a synchronous function returning `authenticatedUserId(userId).then(...)` guarantees both session ownership checks and strict Promise reference identity for concurrent deduplication.
 
 **Action:** Always run authentication checks inside the deduplicated Promise chain before resolving cached data, and use non-async functions returning explicit Promises to maintain reference identity for deduplication.
+
+## 2025-05-22 - Generation Counter Guard for In-Flight Storage Reads
+**Learning:** When adding in-memory caching and request deduplication to persistent storage getters (`loadDefaultSearchMode`), an in-flight read request started before a write (`saveDefaultSearchMode`) could complete afterwards and overwrite newer memory state with stale data. Tracking a `cacheGeneration` counter increments on write/clear mutations and allows the in-flight read handler to discard stale responses before updating memory state.
+
+**Action:** Use a `cacheGeneration` counter for in-flight storage reads to prevent concurrent writes from being overwritten by stale background reads.
