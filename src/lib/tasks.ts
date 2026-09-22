@@ -153,6 +153,7 @@ export async function createTask(
 
 export async function getTask(taskId: string): Promise<TaskDocument | null> {
   if (!TASKS_DATABASE_ID || !TASKS_COLLECTION_ID) return null
+  if (!/^[a-zA-Z0-9._-]{1,64}$/.test(taskId)) return null
   try {
     return (await databases.getDocument({
       databaseId: TASKS_DATABASE_ID,
