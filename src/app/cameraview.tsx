@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, CameraType, useCameraPermissions, type BarcodeType } from 'expo-camera';
 import * as Device from 'expo-device';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { SearchModeSwapButton } from '@/components/SearchModeSwapButton';
 import { useCallback, useState, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -141,6 +142,7 @@ export default function CameraScannerScreen() {
             device, or supported web browser.
           </Text>
         </View>
+        <SearchModeSwapButton current="scan" />
       </View>
     );
   }
@@ -153,6 +155,7 @@ export default function CameraScannerScreen() {
           <Text style={styles.stateTitle}>Checking camera access</Text>
           <Text style={styles.message}>Preparing the barcode scanner…</Text>
         </View>
+        <SearchModeSwapButton current="scan" />
       </View>
     );
   }
@@ -182,6 +185,7 @@ export default function CameraScannerScreen() {
             </Text>
           </Pressable>
         </View>
+        <SearchModeSwapButton current="scan" />
       </View>
     );
   }
@@ -261,18 +265,20 @@ export default function CameraScannerScreen() {
       )}
 
       {!cameraError && !detailLoading ? (
-      <View style={[styles.buttonContainer, { bottom: Math.max(insets.bottom, spacing.lg) }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Switch between front and back camera"
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-          onPress={toggleCameraFacing}
-        >
-          <Ionicons name="camera-reverse-outline" size={20} color={colors.text} />
-          <Text style={styles.buttonText}>Flip camera</Text>
-        </Pressable>
-      </View>
+        <View style={[styles.buttonContainer, { bottom: Math.max(insets.bottom, spacing.lg) }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Switch between front and back camera"
+            style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+            onPress={toggleCameraFacing}
+          >
+            <Ionicons name="camera-reverse-outline" size={20} color={colors.text} />
+            <Text style={styles.buttonText}>Flip camera</Text>
+          </Pressable>
+        </View>
       ) : null}
+
+      <SearchModeSwapButton current="scan" />
     </View>
   );
 }
