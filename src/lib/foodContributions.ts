@@ -101,6 +101,17 @@ export async function submitFoodContribution(
     throw new Error('A photo is required when adding a new food.')
   }
 
+  // Early input validation: validate payload schema prior to file uploads
+  // to avoid creating orphaned files in storage if payload validation fails.
+  buildContributionPayload({
+    owner,
+    photo_file_id: 'validation_placeholder',
+    product_name: input.product_name,
+    code: input.code,
+    source_query: input.source_query,
+    fields: input.fields,
+  })
+
   const uploadedFiles: Models.File[] = []
   for (const [index, photo] of [input.photo, ...(input.additionalPhotos ?? [])].entries()) {
     const mime = guessMime(photo.uri, photo.mimeType)

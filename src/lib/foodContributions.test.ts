@@ -148,7 +148,22 @@ describe('buildContributionPayload', () => {
   })
 })
 
-describe('submitFoodContribution authorization', () => {
+describe('submitFoodContribution authorization and early validation', () => {
+  it('validates payload and rejects invalid inputs before creating storage files', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'session-user-123' })
+    const { submitFoodContribution } = await import('./foodContributions')
+
+    await expect(
+      submitFoodContribution('session-user-123', {
+        product_name: '   ', // invalid empty product name
+        photo: { uri: 'file://photo.jpg', fileSize: 100 },
+      }),
+    ).rejects.toThrow('Product name is required.')
+
+    expect(mockCreateFile).not.toHaveBeenCalled()
+    expect(mockCreateDocument).not.toHaveBeenCalled()
+  })
+
   it('rejects a mismatched authenticated user before writing', async () => {
     mockAccountGet.mockResolvedValueOnce({ $id: 'session-user-123' })
     const { submitFoodContribution } = await import('./foodContributions')
