@@ -3,7 +3,7 @@ import { SwipeableRow } from '@/components/SwipeableRow'
 import type { FavoriteFood } from '@/lib/foodFavorites'
 import { triggerSelectionHaptic } from '@/lib/haptics'
 import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
-import { isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/lib/ordsNormalize'
+import { getOrdsFieldRank, isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'
 import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
@@ -156,7 +156,6 @@ const TITLE_SKIP = new Set([
   'label',
 ])
 
-const FIELD_PRIORITY = [...ORDS_FIELD_PRIORITY]
 
 function formatLabel(key: string): string {
   return key
@@ -232,10 +231,8 @@ function scalarEntries(source: SearchResult): [string, unknown][] {
     entries.push([key, value])
   }
   return entries.sort(([a], [b]) => {
-    const rankA = (FIELD_PRIORITY as readonly string[]).indexOf(a)
-    const rankB = (FIELD_PRIORITY as readonly string[]).indexOf(b)
-    const scoreA = rankA === -1 ? FIELD_PRIORITY.length : rankA
-    const scoreB = rankB === -1 ? FIELD_PRIORITY.length : rankB
+    const scoreA = getOrdsFieldRank(a)
+    const scoreB = getOrdsFieldRank(b)
     if (scoreA !== scoreB) return scoreA - scoreB
     return a.localeCompare(b)
   })
