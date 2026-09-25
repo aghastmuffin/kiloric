@@ -391,7 +391,7 @@ export default function ConfigScreen() {
           macroGrams: { protein: activeTargetProtein, carbs: activeTargetCarbs, fat: activeTargetFat },
           dailyFluid: activeDailyFluid,
         },
-      });
+      }, user.$id);
 
       allowLeaveRef.current = true;
       if (isRequired) {

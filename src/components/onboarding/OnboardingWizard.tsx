@@ -568,7 +568,7 @@ export function OnboardingWizard() {
           },
           dailyFluid: plan.dailyFluid,
         },
-      })
+      }, user.$id)
 
       allowLeaveRef.current = true
       setSaveError(null)
