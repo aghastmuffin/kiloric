@@ -377,21 +377,24 @@ export default function ConfigScreen() {
         goal_start_date: goalState.startDate,
         goal_estimated_weeks: goalState.estimatedWeeks,
       });
-      await savePlanPreferences({
-        ...planPreferencesFromUser(user),
-        sex,
-        activity,
-        goal,
-        pace,
-        diet,
-        targetWeightKg: finalTargetWeight,
-        displayUnits,
-        overrides: {
-          targetKcal: activeTargetKcal,
-          macroGrams: { protein: activeTargetProtein, carbs: activeTargetCarbs, fat: activeTargetFat },
-          dailyFluid: activeDailyFluid,
+      await savePlanPreferences(
+        {
+          ...planPreferencesFromUser(user),
+          sex,
+          activity,
+          goal,
+          pace,
+          diet,
+          targetWeightKg: finalTargetWeight,
+          displayUnits,
+          overrides: {
+            targetKcal: activeTargetKcal,
+            macroGrams: { protein: activeTargetProtein, carbs: activeTargetCarbs, fat: activeTargetFat },
+            dailyFluid: activeDailyFluid,
+          },
         },
-      });
+        user.$id,
+      );
 
       allowLeaveRef.current = true;
       if (isRequired) {
