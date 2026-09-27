@@ -42,3 +42,8 @@
 **Vulnerability:** Missing authorization validation in `purgeAccountData` allowed any authenticated user to trigger deletion of another user's account documents, contributions, and profile by specifying their `userId`.
 **Learning:** High-impact data purging functions must assert active session user ID ownership at the entry point of the function before listing or deleting owned database documents.
 **Prevention:** Call `await assertAuthenticatedUserId(userId)` at the beginning of data purging routines to guarantee only the resource owner can trigger deletion of their account records.
+
+## 2026-08-10 - [Broken Object Level Authorization / IDOR on Plan Preference Mutations]
+**Vulnerability:** `loadPlanPreferences` and `savePlanPreferences` fetched and updated user account preferences without validating that the targeted context user ID matched the active session's user ID.
+**Learning:** Reading or writing account-level preference objects relying purely on implicit active sessions without checking expected ownership IDs can lead to session drift or horizontal privilege escalation.
+**Prevention:** Accept an optional `expectedUserId` parameter in plan preference functions and assert that `activeUser.$id === expectedUserId` before completing operations.
