@@ -1,0 +1,3 @@
+## 2025-05-18 - Accessibility attributes for custom progress bar tracks
+**Learning:** Custom progress bar track views built with `View` and `MotionView` lack native screen reader support unless explicit accessibility attributes (`accessible={true}`, `accessibilityRole="progressbar"`, `accessibilityValue`, `accessibilityLabel`) are attached to the track container.
+**Action:** When creating or editing custom progress bars across app tabs, ensure the container `View` has `accessible={true}`, `accessibilityRole="progressbar"`, `accessibilityValue={{ min, max, now }}`, and a descriptive `accessibilityLabel`.
