@@ -403,15 +403,30 @@ export default function LogFoodScreen() {
     }, [loadToday]),
   )
 
-  const sections = useMemo<LogSection[]>(() => {
-    return MEAL_TYPE_OPTIONS.map((type) => {
-      const mealsForType = todayMeals.filter((meal) => meal.type === type)
-      const items: LogItem[] = []
-      let kcal = 0
+  // ⚡ Bolt: Consolidated single-pass computation for sections and dailyKcal.
+  // Replaces 5 separate todayMeals.filter(...) traversals and dailyKcal.reduce(...)
+  // with a single O(N) loop using a Map, eliminating intermediate array allocations.
+  const { sections, dailyKcal } = useMemo(() => {
+    const sectionMap = new Map<MealType, LogSection>()
+    for (const type of MEAL_TYPE_OPTIONS) {
+      sectionMap.set(type, { type, kcal: 0, items: [] })
+    }
 
-      for (const meal of mealsForType) {
-        kcal += meal.kcal ?? 0
-        for (const [index, barcode] of (meal.items ?? []).entries()) {
+    let totalKcal = 0
+    for (const meal of todayMeals) {
+      const mealKcal = meal.kcal ?? 0
+      totalKcal += mealKcal
+      const type = (meal.type ?? 'Other') as MealType
+      let section = sectionMap.get(type)
+      if (!section) {
+        section = sectionMap.get('Other')
+      }
+      if (section) {
+        section.kcal += mealKcal
+
+        const items = meal.items ?? []
+        for (let index = 0; index < items.length; index++) {
+          const barcode = items[index]
           const key = `${meal.$id}-${index}-${barcode}`
           const preview = previews[key] ?? {
             barcode,
@@ -422,7 +437,7 @@ export default function LogFoodScreen() {
             carbs: null,
             fat: null,
           }
-          items.push({
+          section.items.push({
             ...preview,
             mealId: meal.$id,
             sourceType: type,
@@ -430,15 +445,18 @@ export default function LogFoodScreen() {
           })
         }
       }
+    }
 
-      return { type, kcal, items }
-    }).filter((section) => section.items.length > 0 || section.kcal > 0)
+    const filteredSections: LogSection[] = []
+    for (const type of MEAL_TYPE_OPTIONS) {
+      const section = sectionMap.get(type)
+      if (section && (section.items.length > 0 || section.kcal > 0)) {
+        filteredSections.push(section)
+      }
+    }
+
+    return { sections: filteredSections, dailyKcal: totalKcal }
   }, [previews, todayMeals])
-
-  const dailyKcal = useMemo(
-    () => todayMeals.reduce((sum, meal) => sum + (meal.kcal ?? 0), 0),
-    [todayMeals],
-  )
 
   const recentFoods = useMemo(() => {
     const seen = new Set<string>()
