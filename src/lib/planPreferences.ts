@@ -1,4 +1,4 @@
-import { account } from '@/lib/appwrite'
+import { account } from './appwrite'
 import {
   DIET_MACRO_PERCENTAGES,
   NUTRITION_FORMULA_VERSION,
@@ -7,9 +7,9 @@ import {
   type FitnessGoal,
   type GoalPace,
   type Sex,
-} from '@/lib/nutrition'
-import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
-import type { DisplayUnits } from '@/lib/units'
+} from './nutrition'
+import { MEAL_TYPE_OPTIONS, type MealType } from './meals'
+import type { DisplayUnits } from './units'
 import type { Models } from 'react-native-appwrite'
 
 export type MealSlotPreference = {
@@ -151,16 +151,28 @@ export function planPreferencesFromUser(
   return normalizePlanPreferences(prefs[PREFS_KEY])
 }
 
-export async function loadPlanPreferences(): Promise<PlanPreferences> {
+function verifyUserOwnership(
+  user: Models.User<Models.Preferences>,
+  expectedUserId?: string,
+): void {
+  if (expectedUserId && user.$id !== expectedUserId) {
+    throw new Error('Unauthorized: You can only view or manage your own plan preferences.')
+  }
+}
+
+export async function loadPlanPreferences(expectedUserId?: string): Promise<PlanPreferences> {
   const user = await account.get()
+  verifyUserOwnership(user, expectedUserId)
   return planPreferencesFromUser(user)
 }
 
 export async function savePlanPreferences(
   preferences: PlanPreferences,
+  expectedUserId?: string,
 ): Promise<PlanPreferences> {
   const normalized = normalizePlanPreferences(preferences)
   const user = await account.get()
+  verifyUserOwnership(user, expectedUserId)
   await account.updatePrefs({
     prefs: {
       ...(user.prefs as Record<string, unknown>),
