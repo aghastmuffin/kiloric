@@ -194,7 +194,18 @@ export default function MedsScreen() {
               <Text style={styles.countValue}>{doneCount}/{SCHEDULE.length}</Text>
             </View>
           </View>
-          <View style={styles.progressTrack}>
+          <View
+            style={styles.progressTrack}
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityValue={{
+              min: 0,
+              max: 100,
+              now: progress,
+              text: `${doneCount} of ${SCHEDULE.length} moments completed`,
+            }}
+            accessibilityLabel="Daily moments progress"
+          >
             <MotionView
               animate={{ width: `${progress}%` }}
               transition={{ type: 'timing', duration: 380 }}
