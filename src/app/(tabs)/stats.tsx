@@ -80,9 +80,18 @@ function makeDays(
   return days
 }
 
-function getInsight(days: DayTotal[], goal: number | null): { title: string; body: string } {
-  const logged = days.filter((day) => day.hasLog)
-  if (logged.length === 0) {
+/**
+ * Generates actionable insight copy based on pre-calculated single-pass day analysis.
+ * Accepts pre-computed metrics to eliminate redundant array filter/reduce passes.
+ */
+function getInsight(
+  daysCount: number,
+  loggedCount: number,
+  onTargetCount: number,
+  averageKcal: number,
+  goal: number | null,
+): { title: string; body: string } {
+  if (loggedCount === 0) {
     return {
       title: 'Start with one honest log',
       body: 'There is not enough meal data for a pattern yet. Logging a full day will make this view useful.',
@@ -91,34 +100,32 @@ function getInsight(days: DayTotal[], goal: number | null): { title: string; bod
 
   if (!goal) {
     return {
-      title: logged.length >= days.length * 0.7 ? 'Your logging rhythm is taking shape' : 'Build a steadier baseline',
-      body: `You logged meals on ${logged.length} of ${days.length} days. Set an energy goal to add goal-based guidance.`,
+      title: loggedCount >= daysCount * 0.7 ? 'Your logging rhythm is taking shape' : 'Build a steadier baseline',
+      body: `You logged meals on ${loggedCount} of ${daysCount} days. Set an energy goal to add goal-based guidance.`,
     }
   }
 
-  const average = logged.reduce((sum, day) => sum + day.kcal, 0) / logged.length
-  const onTarget = logged.filter((day) => Math.abs(day.kcal - goal) <= goal * 0.15).length
-  if (onTarget >= Math.max(2, logged.length * 0.7)) {
+  if (onTargetCount >= Math.max(2, loggedCount * 0.7)) {
     return {
       title: 'Your energy intake looks steady',
-      body: `${onTarget} of ${logged.length} logged days landed within 15% of your daily goal. Keep the routine repeatable.`,
+      body: `${onTargetCount} of ${loggedCount} logged days landed within 15% of your daily goal. Keep the routine repeatable.`,
     }
   }
-  if (average > goal * 1.15) {
+  if (averageKcal > goal * 1.15) {
     return {
       title: 'Logged days are trending above goal',
-      body: `Your logged-day average is ${Math.round(average - goal)} kcal above goal. Look for the meals driving the gap.`,
+      body: `Your logged-day average is ${Math.round(averageKcal - goal)} kcal above goal. Look for the meals driving the gap.`,
     }
   }
-  if (average < goal * 0.85) {
+  if (averageKcal < goal * 0.85) {
     return {
       title: 'Logged days are landing below goal',
-      body: `Your logged-day average is ${Math.round(goal - average)} kcal below goal. Check that your logs are complete before adjusting intake.`,
+      body: `Your logged-day average is ${Math.round(goal - averageKcal)} kcal below goal. Check that your logs are complete before adjusting intake.`,
     }
   }
   return {
     title: 'The average is close; the days vary',
-    body: `Your logged-day average is within 15% of goal, with ${onTarget} individual days in range. Aim for a more even rhythm.`,
+    body: `Your logged-day average is within 15% of goal, with ${onTargetCount} individual days in range. Aim for a more even rhythm.`,
   }
 }
 
@@ -324,11 +331,31 @@ export default function StatsScreen() {
   const goal = data.profile?.target_kcal && data.profile.target_kcal > 0
     ? data.profile.target_kcal
     : null
-  const loggedDays = days.filter((day) => day.hasLog).length
-  const onTargetDays = goal
-    ? days.filter((day) => day.hasLog && Math.abs(day.kcal - goal) <= goal * 0.15).length
-    : 0
-  const insight = getInsight(days, goal)
+
+  // Single-pass loop over `days` calculates logged count, on-target count, and average kcal
+  // in O(N) time without allocating multiple intermediate arrays from Array.prototype.filter.
+  const { loggedDays, onTargetDays, averageKcal } = useMemo(() => {
+    let logged = 0
+    let onTarget = 0
+    let totalKcal = 0
+    for (let i = 0; i < days.length; i++) {
+      const day = days[i]
+      if (day.hasLog) {
+        logged++
+        totalKcal += day.kcal
+        if (goal && Math.abs(day.kcal - goal) <= goal * 0.15) {
+          onTarget++
+        }
+      }
+    }
+    const average = logged > 0 ? totalKcal / logged : 0
+    return { loggedDays: logged, onTargetDays: onTarget, averageKcal: average }
+  }, [days, goal])
+
+  const insight = useMemo(
+    () => getInsight(days.length, loggedDays, onTargetDays, averageKcal, goal),
+    [days.length, loggedDays, onTargetDays, averageKcal, goal],
+  )
   const energyTrend = useMemo(() => calculateEnergyTrend(days), [days])
 
   const weightSnapshot = useMemo(() => {
