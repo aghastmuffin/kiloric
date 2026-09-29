@@ -98,6 +98,9 @@ describe('meals caching & deduplication', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mealsModule.clearTodayMealsCache()
+    mockGetAccount.mockImplementation((userId?: string) =>
+      Promise.resolve({ $id: userId || 'user-123' }),
+    )
   })
 
   it('getTodayMeals returns meals and caches them', async () => {
@@ -230,10 +233,14 @@ describe('meals caching & deduplication', () => {
       .mockResolvedValueOnce({ documents: [{ $id: 'meal-a2', owner: 'user-123' }] })
       .mockResolvedValueOnce({ documents: [{ $id: 'meal-b2', owner: 'user-456' }] })
 
+    mockGetAccount.mockResolvedValueOnce({ $id: 'user-123' })
     await mealsModule.getTodayMeals('user-123')
+    mockGetAccount.mockResolvedValueOnce({ $id: 'user-456' })
     await mealsModule.getTodayMeals('user-456')
     mealsModule.clearTodayMealsCache()
+    mockGetAccount.mockResolvedValueOnce({ $id: 'user-123' })
     await mealsModule.getTodayMeals('user-123')
+    mockGetAccount.mockResolvedValueOnce({ $id: 'user-456' })
     await mealsModule.getTodayMeals('user-456')
 
     expect(mockListDocuments).toHaveBeenCalledTimes(4)
@@ -279,6 +286,26 @@ describe('meals caching & deduplication', () => {
   })
 
   describe('BOLA/IDOR defense-in-depth checks', () => {
+    it('getTodayMeals fails if user is requesting meals for another account', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.getTodayMeals('user-456')
+      ).rejects.toThrow('Unauthorized: You can only view or manage your own meals.')
+
+      expect(mockListDocuments).not.toHaveBeenCalled()
+    })
+
+    it('listHistoricMeals fails if user is requesting meals for another account', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.listHistoricMeals('user-456')
+      ).rejects.toThrow('Unauthorized: You can only view or manage your own meals.')
+
+      expect(mockListDocuments).not.toHaveBeenCalled()
+    })
+
     it('updateMeal fails if user is not the owner', async () => {
       mockGetAccount.mockResolvedValue({ $id: 'user-123' })
       mockGetDocument.mockResolvedValue({ $id: 'meal-7', owner: 'user-456', kcal: 500 }) // different owner!
@@ -297,6 +324,18 @@ describe('meals caching & deduplication', () => {
       await expect(
         mealsModule.moveProductBetweenMeals('user-123', 'meal-8', '1234', 'Lunch', { kcal: 100, protein: 10, carbs: 20, fat: 5 })
       ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
+
+      expect(mockUpdateDocument).not.toHaveBeenCalled()
+      expect(mockDeleteDocument).not.toHaveBeenCalled()
+    })
+
+    it('removeProductFromMeal fails if user is not the owner', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockGetDocument.mockResolvedValue({ $id: 'meal-9', owner: 'user-456', items: ['1234'] }) // different owner!
+
+      await expect(
+        mealsModule.removeProductFromMeal('meal-9', '1234', { kcal: 100, protein: 10, carbs: 20, fat: 5 })
+      ).rejects.toThrow('Unauthorized: You can only remove products from your own meals.')
 
       expect(mockUpdateDocument).not.toHaveBeenCalled()
       expect(mockDeleteDocument).not.toHaveBeenCalled()
