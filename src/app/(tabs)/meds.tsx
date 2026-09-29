@@ -10,7 +10,7 @@ import { Redirect } from 'expo-router'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { triggerSelectionHaptic } from '@/lib/haptics'
+import { triggerNotificationHaptic, triggerSelectionHaptic } from '@/lib/haptics'
 
 type ScheduleItem = {
   id: string
@@ -103,6 +103,12 @@ export default function MedsScreen() {
   const toggleItem = (id: string) => {
     const key = `${selectedDay}-${id}`
     triggerSelectionHaptic()
+    const willBeComplete = SCHEDULE.every(
+      (item) => (item.id === id ? !completed[key] : completed[`${selectedDay}-${item.id}`]),
+    )
+    if (willBeComplete && doneCount < SCHEDULE.length) {
+      triggerNotificationHaptic('success')
+    }
     setCompleted((current) => ({ ...current, [key]: !current[key] }))
   }
 
@@ -194,7 +200,13 @@ export default function MedsScreen() {
               <Text style={styles.countValue}>{doneCount}/{SCHEDULE.length}</Text>
             </View>
           </View>
-          <View style={styles.progressTrack}>
+          <View
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 0, max: SCHEDULE.length, now: doneCount }}
+            accessibilityLabel={`Daily schedule progress: ${doneCount} of ${SCHEDULE.length} completed`}
+            style={styles.progressTrack}
+          >
             <MotionView
               animate={{ width: `${progress}%` }}
               transition={{ type: 'timing', duration: 380 }}

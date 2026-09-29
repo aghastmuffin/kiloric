@@ -206,7 +206,13 @@ export default function WorkoutsScreen() {
             <Text style={styles.progressLabel}>MOVES</Text>
           </View>
         </View>
-        <View style={styles.progressTrack}>
+        <View
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityValue={{ min: 0, max: exercises.length, now: completedCount }}
+          accessibilityLabel={`Session progress: ${completedCount} of ${exercises.length} moves completed`}
+          style={styles.progressTrack}
+        >
           <MotionView
             animate={{ width: `${progress}%` }}
             transition={{ type: 'timing', duration: 380 }}
