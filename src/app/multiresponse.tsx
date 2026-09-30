@@ -6,6 +6,7 @@ import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
+import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -125,7 +126,11 @@ function ObjectCard({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`View full details for ${title}`}
-              onPress={() => onViewMore(barcode)}
+              accessibilityHint="Opens complete product nutrition and metadata details"
+              onPress={() => {
+                triggerSelectionHaptic();
+                onViewMore(barcode);
+              }}
               style={({ pressed }) => [styles.secondaryAction, pressed && styles.pressed]}
             >
               <Ionicons name="eye-outline" size={17} color={colors.accent} />
@@ -136,9 +141,13 @@ function ObjectCard({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`${isAdded ? 'Added' : 'Add'} ${title}`}
+              accessibilityHint="Adds this item to your active meal log"
               accessibilityState={{ disabled: isAdding || isAdded }}
               disabled={isAdding || isAdded}
-              onPress={() => onAdd(item, index)}
+              onPress={() => {
+                triggerImpactHaptic();
+                onAdd(item, index);
+              }}
               style={({ pressed }) => [
                 styles.primaryAction,
                 isAdded && styles.primaryActionDone,
@@ -204,7 +213,16 @@ function EmptyContributeState({
       <Text style={styles.emptyStateTitle}>{title}</Text>
       <Text style={styles.emptyStateSubtitle}>{subtitle}</Text>
       {onContribute ? (
-        <Pressable style={styles.contributeButton} onPress={onContribute} accessibilityRole="button">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add this product"
+          accessibilityHint="Navigates to food contribution to upload photos of this item"
+          onPress={() => {
+            triggerSelectionHaptic();
+            onContribute();
+          }}
+          style={styles.contributeButton}
+        >
           <Text style={styles.contributeButtonText}>Add this product</Text>
         </Pressable>
       ) : null}
