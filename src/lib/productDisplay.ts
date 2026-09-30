@@ -55,12 +55,29 @@ function getNestedValue(data: Record<string, unknown>, key: string): unknown {
   return undefined
 }
 
-function formatLabel(key: string): string {
-  return key
+/**
+ * Module-level cache for formatted product labels.
+ * Product property keys (e.g., energy_kcal_100g, proteins_100g) are finite and frequently looked up.
+ * Caching eliminates 4 regex transformations per key lookup across list items and product detail cards.
+ */
+export const FORMATTED_LABEL_CACHE = new Map<string, string>()
+
+/**
+ * Formats a raw property key into a human-readable title-cased label.
+ * Uses `FORMATTED_LABEL_CACHE` to avoid repeated regex operations on hot paths.
+ */
+export function formatLabel(key: string): string {
+  const cached = FORMATTED_LABEL_CACHE.get(key)
+  if (cached !== undefined) return cached
+
+  const formatted = key
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b\w/g, (char) => char.toUpperCase())
+
+  FORMATTED_LABEL_CACHE.set(key, formatted)
+  return formatted
 }
 
 function formatValue(value: unknown): string {

@@ -1,5 +1,6 @@
 import ImageViewer from '@/components/ImageViewer';
 import { showApiError } from '@/lib/apiErrors';
+import { formatLabel } from '@/lib/productDisplay';
 import { useAuth } from '@/lib/AuthContext';
 import { appendMealBarcode } from '@/lib/mealItemsStorage';
 import { addProductToMeal } from '@/lib/meals';
@@ -43,14 +44,6 @@ type Props = {
   /** Scan flow: ask “Is this correct?” with Yes / No, scan again actions. */
   confirmMode?: boolean;
 };
-
-function formatLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '—';

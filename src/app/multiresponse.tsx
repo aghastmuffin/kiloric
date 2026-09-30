@@ -3,6 +3,7 @@ import BarcodeDetailModal from '@/components/BarcodeDetailModal';
 import { MotionView } from '@/components/MotionView';
 import { useAuth } from '@/lib/AuthContext';
 import { addProductToMeal } from '@/lib/meals';
+import { formatLabel } from '@/lib/productDisplay';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
@@ -18,13 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TITLE_KEYS = ['name', 'title', 'food_name', 'product_name', 'description', 'label'];
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean'];
-
-function formatLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '—';

@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { addProductToMeal, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
 import { isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/lib/ordsNormalize'
-import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
+import { formatLabel, getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
 import { takeSearchResult } from '@/lib/searchResultStore'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useAppLayout } from '@/lib/theme/layout'
@@ -84,14 +84,6 @@ const TITLE_SKIP = new Set(['name', 'title', 'food_name', 'product_name', 'descr
 function paramString(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? ''
   return value ?? ''
-}
-
-function formatLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 function formatValue(value: unknown): string {

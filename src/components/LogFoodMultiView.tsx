@@ -4,7 +4,7 @@ import type { FavoriteFood } from '@/lib/foodFavorites'
 import { triggerSelectionHaptic } from '@/lib/haptics'
 import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
 import { isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/lib/ordsNormalize'
-import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
+import { formatLabel, getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
@@ -157,14 +157,6 @@ const TITLE_SKIP = new Set([
 ])
 
 const FIELD_PRIORITY = [...ORDS_FIELD_PRIORITY]
-
-function formatLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '—'
