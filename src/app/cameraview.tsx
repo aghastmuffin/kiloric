@@ -1,3 +1,5 @@
+import { SearchModeSwapButton } from '@/components/SearchModeSwapButton';
+import { triggerSelectionHaptic } from '@/lib/haptics';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
@@ -127,9 +129,27 @@ export default function CameraScannerScreen() {
     [router, scanned],
   );
 
+  const handleExit = useCallback(() => {
+    triggerSelectionHaptic();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/logfood');
+    }
+  }, [router]);
+
   if (Platform.OS === 'ios' && !Device.isDevice) {
     return (
       <View style={styles.container}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close scanner"
+          accessibilityHint="Returns to food log"
+          onPress={handleExit}
+          style={[styles.closeButton, { top: Math.max(insets.top, spacing.md) }]}
+        >
+          <Ionicons name="close" size={22} color={colors.text} />
+        </Pressable>
         <View style={[styles.statePanel, { marginHorizontal: gutter }]}>
           <View style={styles.stateIcon}>
             <Ionicons name="phone-portrait-outline" size={26} color={colors.brand} />
@@ -141,6 +161,7 @@ export default function CameraScannerScreen() {
             device, or supported web browser.
           </Text>
         </View>
+        <SearchModeSwapButton current="scan" />
       </View>
     );
   }
@@ -148,11 +169,21 @@ export default function CameraScannerScreen() {
   if (!permission) {
     return (
       <View style={styles.container}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close scanner"
+          accessibilityHint="Returns to food log"
+          onPress={handleExit}
+          style={[styles.closeButton, { top: Math.max(insets.top, spacing.md) }]}
+        >
+          <Ionicons name="close" size={22} color={colors.text} />
+        </Pressable>
         <View style={[styles.statePanel, { marginHorizontal: gutter }]}>
           <ActivityIndicator color={colors.brand} />
           <Text style={styles.stateTitle}>Checking camera access</Text>
           <Text style={styles.message}>Preparing the barcode scanner…</Text>
         </View>
+        <SearchModeSwapButton current="scan" />
       </View>
     );
   }
@@ -161,6 +192,15 @@ export default function CameraScannerScreen() {
     const openSystemSettings = !permission.canAskAgain && Platform.OS !== 'web';
     return (
       <View style={styles.container}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close scanner"
+          accessibilityHint="Returns to food log"
+          onPress={handleExit}
+          style={[styles.closeButton, { top: Math.max(insets.top, spacing.md) }]}
+        >
+          <Ionicons name="close" size={22} color={colors.text} />
+        </Pressable>
         <View style={[styles.statePanel, { marginHorizontal: gutter }]}>
           <View style={styles.stateIcon}>
             <Ionicons name="camera-outline" size={27} color={colors.brand} />
@@ -182,11 +222,13 @@ export default function CameraScannerScreen() {
             </Text>
           </Pressable>
         </View>
+        <SearchModeSwapButton current="scan" />
       </View>
     );
   }
 
   function toggleCameraFacing() {
+    triggerSelectionHaptic();
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
@@ -225,6 +267,16 @@ export default function CameraScannerScreen() {
           <View style={styles.maskRow} />
         </View>
       </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Close scanner"
+        accessibilityHint="Returns to food log"
+        onPress={handleExit}
+        style={[styles.closeButton, { top: Math.max(insets.top, spacing.md) }]}
+      >
+        <Ionicons name="close" size={22} color="#FFFFFF" />
+      </Pressable>
 
       <View style={styles.guidance} pointerEvents="none">
         <Text style={styles.guidanceEyebrow}>SCAN A FOOD BARCODE</Text>
@@ -273,6 +325,8 @@ export default function CameraScannerScreen() {
         </Pressable>
       </View>
       ) : null}
+
+      <SearchModeSwapButton current="scan" />
     </View>
   );
 }
@@ -283,6 +337,17 @@ const makeStyles = (c: ThemeColors) =>
       flex: 1,
       justifyContent: 'center',
       backgroundColor: c.background,
+    },
+    closeButton: {
+      position: 'absolute',
+      left: spacing.lg,
+      zIndex: 10,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     statePanel: {
       maxWidth: 480,
