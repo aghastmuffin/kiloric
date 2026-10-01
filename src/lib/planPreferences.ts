@@ -1,4 +1,4 @@
-import { account } from '@/lib/appwrite'
+import { account } from './appwrite'
 import {
   DIET_MACRO_PERCENTAGES,
   NUTRITION_FORMULA_VERSION,
@@ -7,9 +7,9 @@ import {
   type FitnessGoal,
   type GoalPace,
   type Sex,
-} from '@/lib/nutrition'
-import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
-import type { DisplayUnits } from '@/lib/units'
+} from './nutrition'
+import { MEAL_TYPE_OPTIONS, type MealType } from './meals'
+import type { DisplayUnits } from './units'
 import type { Models } from 'react-native-appwrite'
 
 export type MealSlotPreference = {
@@ -134,7 +134,7 @@ export function normalizePlanPreferences(value: unknown): PlanPreferences {
     pace: ['gentle', 'moderate', 'aggressive'].includes(raw.pace ?? '')
       ? (raw.pace as GoalPace)
       : defaults.pace,
-    diet: Object.hasOwn(DIET_MACRO_PERCENTAGES, raw.diet ?? '')
+    diet: raw.diet && Object.prototype.hasOwnProperty.call(DIET_MACRO_PERCENTAGES, raw.diet)
       ? (raw.diet as DietStyle)
       : defaults.diet,
     targetWeightKg: finiteInRange(raw.targetWeightKg, 30, 500) ? raw.targetWeightKg : null,
@@ -151,16 +151,23 @@ export function planPreferencesFromUser(
   return normalizePlanPreferences(prefs[PREFS_KEY])
 }
 
-export async function loadPlanPreferences(): Promise<PlanPreferences> {
+export async function loadPlanPreferences(expectedUserId?: string): Promise<PlanPreferences> {
   const user = await account.get()
+  if (expectedUserId && user.$id !== expectedUserId) {
+    throw new Error('You can only view or manage your own plan preferences.')
+  }
   return planPreferencesFromUser(user)
 }
 
 export async function savePlanPreferences(
   preferences: PlanPreferences,
+  expectedUserId?: string,
 ): Promise<PlanPreferences> {
   const normalized = normalizePlanPreferences(preferences)
   const user = await account.get()
+  if (expectedUserId && user.$id !== expectedUserId) {
+    throw new Error('You can only view or manage your own plan preferences.')
+  }
   await account.updatePrefs({
     prefs: {
       ...(user.prefs as Record<string, unknown>),
