@@ -140,6 +140,13 @@ describe('tasks BOLA / IDOR security tests', () => {
     )
     expect(mockListDocuments).not.toHaveBeenCalled()
   })
+
+  it('getTask returns null for malformed task IDs without calling database', async () => {
+    expect(await tasksModule.getTask('invalid/task!')).toBeNull()
+    expect(await tasksModule.getTask('../path/traversal')).toBeNull()
+    expect(await tasksModule.getTask('a'.repeat(65))).toBeNull()
+    expect(mockGetDocument).not.toHaveBeenCalled()
+  })
 })
 
 describe('tasks caching and deduplication tests', () => {
