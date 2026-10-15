@@ -8,7 +8,7 @@ import { MotionView } from '@/components/MotionView'
 import { useAuth } from '@/lib/AuthContext'
 import { addProductToMeal, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
-import { isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/lib/ordsNormalize'
+import { getOrdsFieldRank, isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/lib/ordsNormalize'
 import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
 import { takeSearchResult } from '@/lib/searchResultStore'
 import { useTheme } from '@/lib/theme/ThemeContext'
@@ -126,10 +126,8 @@ function productColumns(source: SearchResult): [string, unknown][] {
     entries.push([key, value])
   }
   return entries.sort(([a], [b]) => {
-    const rankA = (ORDS_FIELD_PRIORITY as readonly string[]).indexOf(a)
-    const rankB = (ORDS_FIELD_PRIORITY as readonly string[]).indexOf(b)
-    const scoreA = rankA === -1 ? ORDS_FIELD_PRIORITY.length : rankA
-    const scoreB = rankB === -1 ? ORDS_FIELD_PRIORITY.length : rankB
+    const scoreA = getOrdsFieldRank(a)
+    const scoreB = getOrdsFieldRank(b)
     if (scoreA !== scoreB) return scoreA - scoreB
     return a.localeCompare(b)
   })

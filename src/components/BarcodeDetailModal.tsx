@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { appendMealBarcode } from '@/lib/mealItemsStorage';
 import { addProductToMeal } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
-import { isOrdsPresent, ORDS_FIELD_PRIORITY } from '@/lib/ordsNormalize';
+import { getOrdsFieldRank, isOrdsPresent, ORDS_FIELD_PRIORITY } from '@/lib/ordsNormalize';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
@@ -113,10 +113,8 @@ function resolveImageUrl(data: Record<string, unknown>, barcode: string): string
 
 function sortEntries(entries: [string, unknown][]): [string, unknown][] {
   return [...entries].sort(([keyA], [keyB]) => {
-    const indexA = FIELD_PRIORITY.indexOf(keyA);
-    const indexB = FIELD_PRIORITY.indexOf(keyB);
-    const rankA = indexA === -1 ? FIELD_PRIORITY.length : indexA;
-    const rankB = indexB === -1 ? FIELD_PRIORITY.length : indexB;
+    const rankA = getOrdsFieldRank(keyA);
+    const rankB = getOrdsFieldRank(keyB);
     if (rankA !== rankB) return rankA - rankB;
     return keyA.localeCompare(keyB);
   });

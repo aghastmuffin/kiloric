@@ -194,6 +194,19 @@ export const ORDS_FIELD_PRIORITY = [
   'updated_timestamp',
 ] as const
 
+/** Module-level O(1) hash map for field priority lookup. */
+const ORDS_FIELD_PRIORITY_MAP = new Map<string, number>(
+  ORDS_FIELD_PRIORITY.map((key, index) => [key, index]),
+)
+
+/**
+ * ⚡ Bolt: Fast O(1) rank lookup for product field priority sorting.
+ * Replaces linear Array.prototype.indexOf searches during product entry sorting.
+ */
+export function getOrdsFieldRank(key: string): number {
+  return ORDS_FIELD_PRIORITY_MAP.get(key) ?? ORDS_FIELD_PRIORITY.length
+}
+
 /** Strip Unknown sentinels; keep real zeros and other scalars. */
 export function scrubOrdsProduct(item: Record<string, unknown>): Record<string, unknown> {
   const scrubbed: Record<string, unknown> = {}
