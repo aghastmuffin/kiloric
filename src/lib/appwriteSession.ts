@@ -6,6 +6,7 @@ import { clearCachedToken } from './getAccessToken'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearRecentFoodsCache } from './recentFoods'
+import { clearMealTypePreferencesCache } from './mealTypePreferences'
 import { clearTasksCache } from './tasks'
 import { clearWaterCache } from './water'
 
@@ -28,6 +29,7 @@ function clearSessionCaches(): void {
   clearTodayMealsCache()
   clearFavoriteFoodsCache()
   clearWaterCache()
+  clearMealTypePreferencesCache()
 }
 
 export async function persistAppwriteSession(session: Models.Session): Promise<void> {
