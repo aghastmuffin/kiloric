@@ -1,6 +1,8 @@
-import { account, databases } from './appwrite'
+import { databases } from './appwrite'
+import { startOfLocalDay } from './dates'
 import { buildMealInputFromProduct } from './mealFromProduct'
 import { logAppwriteError } from './profile'
+import { getSessionUserId } from './sessionAuth'
 import { AppwriteException, ID, Permission, Role, Query, type Models } from 'react-native-appwrite'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
@@ -137,8 +139,7 @@ function validateMealPatchPayload(data: Partial<MealFields>): string | null {
 
 async function assertActiveSession(): Promise<string> {
   try {
-    const me = await account.get()
-    return me.$id
+    return await getSessionUserId()
   } catch (err) {
     logAppwriteError('account.get (meal session check)', err)
     throw new Error('No active Appwrite session. Sign in before logging a meal.')
@@ -521,8 +522,7 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
       return cached.meals
     }
 
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
+    const todayStart = startOfLocalDay()
     const todayStartISO = todayStart.toISOString()
 
     try {
@@ -599,8 +599,7 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
     }
     cachedHistoricMeals.delete(cacheKey)
 
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
+    const todayStart = startOfLocalDay()
     const todayStartISO = todayStart.toISOString()
 
     try {

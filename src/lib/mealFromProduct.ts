@@ -1,21 +1,6 @@
 import type { CreateMealInput, MealType } from './meals'
+import { getNestedValue } from './productDisplay'
 import { scaleNutrient } from './servings'
-
-function getNestedValue(data: Record<string, unknown>, key: string): unknown {
-  if (key in data) return data[key]
-
-  const nutriments = data.nutriments
-  if (nutriments && typeof nutriments === 'object' && !Array.isArray(nutriments)) {
-    const n = nutriments as Record<string, unknown>
-    if (key in n) return n[key]
-    if (key === 'calories' && 'energy-kcal' in n) return n['energy-kcal']
-    if (key === 'calories' && 'energy_kcal' in n) return n.energy_kcal
-    if (key === 'protein' && 'proteins' in n) return n.proteins
-    if (key === 'carbs' && 'carbohydrates' in n) return n.carbohydrates
-  }
-
-  return undefined
-}
 
 function parseNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value

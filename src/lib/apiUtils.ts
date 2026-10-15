@@ -94,7 +94,6 @@ export const authenticatedRequest = async (
       try {
         const data = await performBackendRequest(endpoint, options)
         if (data !== null && data !== undefined) {
-          // Persistence happens in the background so callers get network data immediately.
           void setCachedResponse(endpoint, data, cacheTtl, choice).catch((err) => {
             console.warn('[apiUtils] background cache persistence failed', err)
           })
@@ -127,5 +126,3 @@ export const authenticatedRequest = async (
     throw new ApiRequestError(message)
   }
 }
-
-export { account } from '@/lib/appwrite'

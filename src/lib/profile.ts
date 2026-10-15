@@ -1,5 +1,6 @@
 import { AppwriteException, Permission, Role, type Models } from 'react-native-appwrite'
-import { account, databases } from './appwrite'
+import { databases } from './appwrite'
+import { getSessionUserId } from './sessionAuth'
 import { isUserBlockedError, notifyUserBlocked } from './userBlocked'
 import type { FitnessGoal } from './nutrition'
 
@@ -287,12 +288,6 @@ let inflightProfileUserId: string | null = null
 export async function createProfile(userId: string, data: ProfileCreate) {
   await assertAuthenticatedUserId(userId)
 
-  console.log('[profile] createDocument →', {
-    databaseId: DATABASE_ID,
-    collectionId: USER_PROFILES_COLLECTION_ID,
-    documentId: userId,
-  })
-
   // Invalidate any existing profile cache for this user
   if (cachedProfile && cachedProfile.userId === userId) {
     cachedProfile = null
@@ -320,9 +315,7 @@ export async function createProfile(userId: string, data: ProfileCreate) {
  */
 export async function assertActiveSession(): Promise<string> {
   try {
-    const me = await account.get()
-    console.log('[profile] active session for', me.$id)
-    return me.$id
+    return await getSessionUserId()
   } catch (err) {
     logAppwriteError('account.get (session check)', err)
     throw new Error(
@@ -485,7 +478,6 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
     if (Object.keys(optionalPayload).length === 0) {
       return created
     }
-    console.log('[profile] patching optional fields →', Object.keys(optionalPayload))
     return await updateProfile(userId, optionalPayload)
   } catch (err) {
     logAppwriteError('createProfile', err)

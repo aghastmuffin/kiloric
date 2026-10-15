@@ -1,7 +1,8 @@
-import { isOrdsPresent } from './ordsNormalize'
+import { getOrdsFieldRank, isOrdsPresent } from './ordsNormalize'
 
 const TITLE_KEYS = ['product_name', 'name', 'title', 'food_name', 'brands', 'brand']
 const BARCODE_KEYS = ['code', 'barcode', 'barcode_id', 'upc', 'ean']
+const UNWRAP_KEYS = ['product', 'product_data', 'data'] as const
 
 const QUICK_FACT_KEYS = [
   'calories',
@@ -39,7 +40,99 @@ const NUMERIC_FACT_KEYS = new Set([
   'sugars_100g',
 ])
 
-function getNestedValue(data: Record<string, unknown>, key: string): unknown {
+export const PRODUCT_HIDDEN_KEYS = new Set([
+  'product',
+  'product_data',
+  'data',
+  'nutriments',
+  'images',
+  'selected_images',
+  'image',
+  'image_small_url',
+  'image_thumb_url',
+  'image_front_url',
+  'image_front_small_url',
+  'image_front_thumb_url',
+  'image_nutrition_url',
+  'image_ingredients_url',
+  'languages',
+  'languages_codes',
+  'lang',
+  'states',
+  'states_tags',
+  'states_hierarchy',
+  'entry_dates_tags',
+  'last_modified_t',
+  'created_t',
+  'last_updated_t',
+  'completeness',
+  'rev',
+  'schema_version',
+  'interface_version_created',
+  'interface_version_modified',
+  'calories',
+  'energy-kcal',
+  'energy_kcal',
+  'energy-kj',
+  'energy_kj',
+  'proteins',
+  'protein',
+  'carbohydrates',
+  'carbs',
+  'fat',
+  'fiber',
+  'fibre',
+  'sugars',
+  'sugar',
+  'sodium',
+  'saturated-fat',
+  'saturated_fat',
+  'trans-fat',
+  'trans_fat',
+  'monounsaturated-fat',
+  'monounsaturated_fat',
+  'polyunsaturated-fat',
+  'polyunsaturated_fat',
+  'added-sugars',
+  'added_sugars',
+  'vitamin-a',
+  'vitamin_a',
+  'vitamin-c',
+  'vitamin_c',
+  'vitamin-d',
+  'vitamin_d',
+  'vitamin-b12',
+  'vitamin_b12',
+  'calcium',
+  'iron',
+  'potassium',
+  'magnesium',
+  'caffeine',
+  'taurine',
+  'carbon-footprint',
+  'carbon_footprint',
+])
+
+export const PRODUCT_TITLE_SKIP = new Set([
+  'name',
+  'title',
+  'food_name',
+  'product_name',
+  'description',
+  'label',
+])
+
+export function unwrapProduct(item: Record<string, unknown>): Record<string, unknown> {
+  for (const key of UNWRAP_KEYS) {
+    const value = item[key]
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>
+    }
+  }
+  return item
+}
+
+export function getNestedValue(data: Record<string, unknown>, key: string): unknown {
   if (key in data) return data[key]
 
   const nutriments = data.nutriments
@@ -55,7 +148,7 @@ function getNestedValue(data: Record<string, unknown>, key: string): unknown {
   return undefined
 }
 
-function formatLabel(key: string): string {
+export function formatProductLabel(key: string): string {
   return key
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
@@ -63,9 +156,15 @@ function formatLabel(key: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-function formatValue(value: unknown): string {
+export function formatProductValue(value: unknown): string {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' || typeof item === 'number' ? String(item) : null))
+      .filter(Boolean)
+      .join(', ') || '—'
+  }
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
@@ -107,6 +206,22 @@ export function getBarcodeFromProduct(data: Record<string, unknown>): string | n
   return null
 }
 
+export function listProductColumns(source: Record<string, unknown>): [string, unknown][] {
+  const entries: [string, unknown][] = []
+  for (const [key, value] of Object.entries(source)) {
+    if (PRODUCT_HIDDEN_KEYS.has(key) || PRODUCT_TITLE_SKIP.has(key)) continue
+    if (!isOrdsPresent(value)) continue
+    if (typeof value === 'object' && !Array.isArray(value)) continue
+    entries.push([key, value])
+  }
+  return entries.sort(([a], [b]) => {
+    const scoreA = getOrdsFieldRank(a)
+    const scoreB = getOrdsFieldRank(b)
+    if (scoreA !== scoreB) return scoreA - scoreB
+    return a.localeCompare(b)
+  })
+}
+
 export function getQuickProductFacts(
   data: Record<string, unknown>,
   options?: { limit?: number; servings?: number },
@@ -122,10 +237,10 @@ export function getQuickProductFacts(
     if (typeof rawValue === 'object') continue
 
     const value = scaleFactValue(rawValue, key, servings)
-    const label = formatLabel(key)
+    const label = formatProductLabel(key)
     if (seen.has(label)) continue
     seen.add(label)
-    facts.push({ label, value: formatValue(value) })
+    facts.push({ label, value: formatProductValue(value) })
     if (facts.length >= limit) break
   }
 

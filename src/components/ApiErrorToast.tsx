@@ -79,16 +79,20 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
   }, [opacity, translateY])
 
   useEffect(() => {
-    if (!error) return
+    if (!error) return undefined
 
     triggerNotificationHaptic('error')
     setVisible(error)
     animateIn()
-    clearTimer()
-    timerRef.current = setTimeout(animateOut, AUTO_DISMISS_MS)
 
-    return clearTimer
-  }, [animateIn, animateOut, clearTimer, error])
+    const timeoutId = setTimeout(animateOut, AUTO_DISMISS_MS)
+    timerRef.current = timeoutId
+
+    return () => {
+      clearTimeout(timeoutId)
+      if (timerRef.current === timeoutId) timerRef.current = null
+    }
+  }, [animateIn, animateOut, error])
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

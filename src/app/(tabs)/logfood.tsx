@@ -1,4 +1,4 @@
-import { authenticatedRequest } from '@/components/apiUtils';
+import { authenticatedRequest } from '@/lib/apiUtils';
 import {
   LogFoodMultiView,
   macrosFromProduct,
@@ -29,7 +29,7 @@ import {
   type MealType,
 } from '@/lib/meals';
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext';
-import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay';
+import { getBarcodeFromProduct, getProductTitle, unwrapProduct } from '@/lib/productDisplay';
 import { getProfile } from '@/lib/profile';
 import { storeSearchResult } from '@/lib/searchResultStore';
 import { useAppLayout } from '@/lib/theme/layout';
@@ -57,7 +57,6 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -100,16 +99,6 @@ function formatClockSafe(iso: string): string {
   return `${hours}:${minutes}`
 }
 
-function unwrapProduct(item: SearchResult): SearchResult {
-  for (const key of ['product', 'product_data', 'data']) {
-    const value = item[key]
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value as SearchResult
-    }
-  }
-  return item
-}
-
 function servingLabel(facts: { label: string; value: string }[], fallback: string): string {
   const preferred = facts.find((fact) => {
     const label = fact.label.toLowerCase()
@@ -130,59 +119,12 @@ function buildContributeRouteParams(
 
   const code = payload?.code ?? (looksLikeBarcode ? fallbackQuery : undefined)
   if (code) params.code = code
+  if (!payload) return params
 
-  const stringMap: [keyof ContributePayload, string][] = [
-    ['product_name', 'product_name'],
-    ['brands', 'brands'],
-    ['categories', 'categories'],
-    ['quantity', 'quantity'],
-    ['serving_size', 'serving_size'],
-    ['serving_quantity', 'serving_quantity'],
-    ['allergens', 'allergens'],
-    ['traces_tags', 'traces_tags'],
-    ['nutriscore_grade', 'nutriscore_grade'],
-    ['ecoscore_grade', 'ecoscore_grade'],
-    ['proteins_100g', 'proteins_100g'],
-    ['carbohydrates_100g', 'carbohydrates_100g'],
-    ['fat_100g', 'fat_100g'],
-    ['fiber_100g', 'fiber_100g'],
-    ['sugars_100g', 'sugars_100g'],
-    ['polyols_100g', 'polyols_100g'],
-    ['sodium_100g', 'sodium_100g'],
-    ['cholesterol_100g', 'cholesterol_100g'],
-    ['calcium_100g', 'calcium_100g'],
-    ['iron_100g', 'iron_100g'],
-    ['potassium_100g', 'potassium_100g'],
-    ['magnesium_100g', 'magnesium_100g'],
-    ['caffeine_100g', 'caffeine_100g'],
-    ['taurine_100g', 'taurine_100g'],
-    ['nova_group', 'nova_group'],
-    ['additives_n', 'additives_n'],
-  ]
-
-  for (const [from, to] of stringMap) {
-    const value = payload?.[from]
-    if (typeof value === 'string' && value.trim()) params[to] = value.trim()
-  }
-
-  const hyphenMap: [keyof ContributePayload, string][] = [
-    ['energy-kcal_100g', 'energy_kcal_100g'],
-    ['energy-kj_100g', 'energy_kj_100g'],
-    ['added-sugars_100g', 'added_sugars_100g'],
-    ['saturated-fat_100g', 'saturated_fat_100g'],
-    ['trans-fat_100g', 'trans_fat_100g'],
-    ['monounsaturated-fat_100g', 'monounsaturated_fat_100g'],
-    ['polyunsaturated-fat_100g', 'polyunsaturated_fat_100g'],
-    ['vitamin-a_100g', 'vitamin_a_100g'],
-    ['vitamin-c_100g', 'vitamin_c_100g'],
-    ['vitamin-d_100g', 'vitamin_d_100g'],
-    ['vitamin-b12_100g', 'vitamin_b12_100g'],
-    ['carbon-footprint_100g', 'carbon_footprint_100g'],
-  ]
-
-  for (const [from, to] of hyphenMap) {
-    const value = payload?.[from]
-    if (typeof value === 'string' && value.trim()) params[to] = value.trim()
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === 'query' || key === 'code') continue
+    if (typeof value !== 'string' || !value.trim()) continue
+    params[key.replace(/-/g, '_')] = value.trim()
   }
 
   return params
@@ -310,18 +252,31 @@ export default function LogFoodScreen() {
         loadFavoriteFoods(user.$id),
       ])
 
-      const nextPreviews: Record<string, MealItemPreview> = {}
+      const uniqueBarcodes = new Map<string, MealType>()
+      for (const meal of meals) {
+        const mealType = (meal.type ?? 'Other') as MealType
+        for (const barcode of meal.items ?? []) {
+          if (barcode && !uniqueBarcodes.has(barcode)) {
+            uniqueBarcodes.set(barcode, mealType)
+          }
+        }
+      }
+
+      const uniquePreviews = new Map<string, MealItemPreview>()
       await Promise.all(
-        meals.flatMap((meal) =>
-          (meal.items ?? []).map(async (barcode, index) => {
-            const key = `${meal.$id}-${index}-${barcode}`
-            nextPreviews[key] = await fetchMealItemPreview(
-              barcode,
-              (meal.type ?? 'Other') as MealType,
-            )
-          }),
-        ),
+        Array.from(uniqueBarcodes, async ([barcode, mealType]) => {
+          uniquePreviews.set(barcode, await fetchMealItemPreview(barcode, mealType))
+        }),
       )
+
+      const nextPreviews: Record<string, MealItemPreview> = {}
+      for (const meal of meals) {
+        const items = meal.items ?? []
+        for (let index = 0; index < items.length; index++) {
+          const preview = uniquePreviews.get(items[index])
+          if (preview) nextPreviews[`${meal.$id}-${index}-${items[index]}`] = preview
+        }
+      }
       if (requestId !== mealLoadRequestIdRef.current) return
       setTodayMeals(meals)
       setHistoricMeals(history)
@@ -667,7 +622,7 @@ export default function LogFoodScreen() {
   const showResults = hasSearched
 
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <View style={styles.root}>
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -923,7 +878,7 @@ export default function LogFoodScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </GestureHandlerRootView>
+    </View>
   )
 }
 

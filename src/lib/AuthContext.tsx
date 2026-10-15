@@ -5,10 +5,7 @@ import {
     persistAppwriteSession,
     restoreAppwriteSession,
 } from '@/lib/appwriteSession';
-import { clearFoodFavoritesCache } from '@/lib/foodFavorites';
-import { clearProfileCache } from '@/lib/profile';
-import { clearRecentFoodsCache } from '@/lib/recentFoods';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { ID, type Models } from 'react-native-appwrite';
 
@@ -83,9 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearUserState = useCallback(async () => {
     await clearAppwriteSession()
-    clearProfileCache()
-    clearRecentFoodsCache()
-    clearFoodFavoritesCache()
     setUser(null)
   }, [])
 
@@ -119,22 +113,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearUserState()
   }, [clearUserState, user])
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        signIn,
-        signUp,
-        signOut,
-        sendPasswordReset,
-        confirmPasswordReset,
-        deleteAccount,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      sendPasswordReset,
+      confirmPasswordReset,
+      deleteAccount,
+    }),
+    [confirmPasswordReset, deleteAccount, loading, sendPasswordReset, signIn, signOut, signUp, user],
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(): AuthContextValue {

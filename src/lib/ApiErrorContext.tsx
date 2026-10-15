@@ -1,6 +1,6 @@
 import { ApiErrorToast, type ApiErrorToastPayload } from '@/components/ApiErrorToast'
 import { registerApiErrorListener } from '@/lib/apiErrors'
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 type ApiErrorContextValue = {
   showError: (payload: Omit<ApiErrorToastPayload, 'id'>) => void
@@ -27,8 +27,10 @@ export function ApiErrorProvider({ children }: { children: React.ReactNode }) {
     setError(null)
   }, [])
 
+  const value = useMemo(() => ({ showError }), [showError])
+
   return (
-    <ApiErrorContext.Provider value={{ showError }}>
+    <ApiErrorContext.Provider value={value}>
       {children}
       <ApiErrorToast error={error} onDismiss={handleDismiss} />
     </ApiErrorContext.Provider>

@@ -5,7 +5,7 @@ import {
   setCachedApiBackendChoice,
   type ApiBackendChoice,
 } from '@/lib/apiBackendPreferences'
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 type ApiBackendPreferencesContextValue = {
   apiBackend: ApiBackendChoice
@@ -38,8 +38,13 @@ export function ApiBackendPreferencesProvider({ children }: { children: React.Re
     }
   }, [])
 
+  const value = useMemo(
+    () => ({ apiBackend, loading, setApiBackend }),
+    [apiBackend, loading, setApiBackend],
+  )
+
   return (
-    <ApiBackendPreferencesContext.Provider value={{ apiBackend, loading, setApiBackend }}>
+    <ApiBackendPreferencesContext.Provider value={value}>
       {children}
     </ApiBackendPreferencesContext.Provider>
   )

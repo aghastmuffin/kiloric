@@ -1,9 +1,9 @@
-import { authenticatedRequest } from '@/components/apiUtils'
+import { authenticatedRequest } from '@/lib/apiUtils'
 import { resolveApiBackendChoice } from '@/lib/apiBackendPreferences'
 import { getCachedResponse } from '@/lib/apiCache'
 import { buildMealInputFromProduct } from '@/lib/mealFromProduct'
 import type { MealType } from '@/lib/meals'
-import { getProductTitle, getQuickProductFacts } from '@/lib/productDisplay'
+import { getProductTitle, getQuickProductFacts, unwrapProduct } from '@/lib/productDisplay'
 
 export type MealItemPreview = {
   barcode: string
@@ -15,20 +15,24 @@ export type MealItemPreview = {
   fat: number | null
 }
 
-function unwrapProductData(data: Record<string, unknown>): Record<string, unknown> {
-  if ('data' in data && data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
-    return data.data as Record<string, unknown>
+const inflightPreviews = new Map<string, Promise<MealItemPreview>>()
+
+function emptyPreview(barcode: string): MealItemPreview {
+  return {
+    barcode,
+    title: `Barcode: ${barcode}`,
+    facts: [],
+    kcal: null,
+    protein: null,
+    carbs: null,
+    fat: null,
   }
-  if ('product' in data && data.product && typeof data.product === 'object' && !Array.isArray(data.product)) {
-    return data.product as Record<string, unknown>
-  }
-  return data
 }
 
-export async function fetchMealItemPreview(
+async function loadMealItemPreview(
   barcode: string,
-  mealType: MealType = 'Breakfast',
-  servings = 1,
+  mealType: MealType,
+  servings: number,
 ): Promise<MealItemPreview> {
   const endpoint = `/api/barcode/${encodeURIComponent(barcode)}`
   let data: Record<string, unknown> | null = null
@@ -46,19 +50,9 @@ export async function fetchMealItemPreview(
     }
   }
 
-  if (!data) {
-    return {
-      barcode,
-      title: `Barcode: ${barcode}`,
-      facts: [],
-      kcal: null,
-      protein: null,
-      carbs: null,
-      fat: null,
-    }
-  }
+  if (!data) return emptyPreview(barcode)
 
-  const actualData = unwrapProductData(data)
+  const actualData = unwrapProduct(data)
   const input = buildMealInputFromProduct('preview', actualData, mealType, barcode, servings)
   const displayFacts = [...getQuickProductFacts(actualData, { servings })]
 
@@ -76,4 +70,20 @@ export async function fetchMealItemPreview(
     carbs: input.carbs ?? null,
     fat: input.fat ?? null,
   }
+}
+
+export async function fetchMealItemPreview(
+  barcode: string,
+  mealType: MealType = 'Breakfast',
+  servings = 1,
+): Promise<MealItemPreview> {
+  const key = `${barcode}:${mealType}:${servings}`
+  const inflight = inflightPreviews.get(key)
+  if (inflight) return inflight
+
+  const promise = loadMealItemPreview(barcode, mealType, servings).finally(() => {
+    inflightPreviews.delete(key)
+  })
+  inflightPreviews.set(key, promise)
+  return promise
 }
