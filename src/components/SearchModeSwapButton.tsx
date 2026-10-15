@@ -44,7 +44,13 @@ export function SearchModeSwapButton({ current }: Props) {
           accessibilityHint={current === 'scan' ? 'Opens text search' : 'Opens the barcode scanner'}
           onPress={() => {
             triggerSelectionHaptic()
-            router.push(target === 'scan' ? '/cameraview' : '/logfood')
+            if (target === 'scan') {
+              router.push('/cameraview')
+            } else if (router.canGoBack()) {
+              router.back()
+            } else {
+              router.replace('/(tabs)/logfood')
+            }
           }}
           style={({ pressed }) => [
             styles.button,
