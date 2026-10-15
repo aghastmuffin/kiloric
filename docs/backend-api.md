@@ -8,12 +8,12 @@ Food and barcode data come from a **FastAPI backend**, not Appwrite. The app aut
 https://calcount.taeson.co
 ```
 
-Defined in `src/components/apiUtils.tsx` as `BACKEND_URL`.
+Defined via `src/lib/apiBackendPreferences.ts` and requested through `src/lib/apiUtils.ts`.
 
 ## Authenticated requests
 
 ```ts
-import { authenticatedRequest } from '@/components/apiUtils'
+import { authenticatedRequest } from '@/lib/apiUtils'
 
 const data = await authenticatedRequest('/api/barcode/012345678905')
 const results = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(query)}`)
@@ -37,8 +37,8 @@ const results = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(quer
 
 | Method | Path | Used by |
 |--------|------|---------|
-| GET | `/api/barcode/:code` | `scan` tab, `text_query` (barcode mode), `fooddetail`, `multiresponse` modal |
-| GET | `/api/fuzzy/:query` | `text_query` (text mode) → navigates to `multiresponse` with JSON payload |
+| GET | `/api/barcode/:code` | Log tab, camera scan, product detail (`Additions`) |
+| GET | `/api/fuzzy/:query` | Log tab text search |
 
 Response shapes vary; screens defensively read common keys (`product_name`, `code`, `barcode`, `calories`, etc.).
 

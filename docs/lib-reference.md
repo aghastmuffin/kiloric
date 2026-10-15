@@ -99,12 +99,6 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 ## Preferences (AsyncStorage)
 
-### `searchPreferences.ts`
-
-- Key: `@calcount/default_search_mode`
-- Values: `'scan' | 'text_query'`
-- Default: `'scan'`
-
 ### `fontPreferences.ts`
 
 - Key: `@calcount/app_font_choice`
@@ -119,7 +113,6 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 ### Context wrappers
 
-- `SearchPreferencesContext.tsx` — `useSearchPreferences()`
 - `FontPreferencesContext.tsx` — `useFontPreferences()`
 - `MealTypePreferencesContext.tsx` — `useMealTypePreferences()`
 
@@ -135,11 +128,7 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 ### `appFont.ts`
 
-Module-level `setActiveFontFamily` / `getActiveFontFamily` for the Babel alias shim.
-
-### `applyDefaultFont.ts`
-
-Calls `setActiveFontFamily` when preference changes.
+Module-level `setActiveFontFamily` / `getActiveFontFamily` for the Babel alias shim. `FontPreferencesProvider` calls it when the choice changes.
 
 ### `react-native-with-fonts.tsx`
 
@@ -166,16 +155,6 @@ TTL-based `AsyncStorage` caching for backend requests. Reduces network usage and
 
 ## Meal Logic
 
-### `mealItemsStorage.ts`
-
-Handles **local staging** of meals. When a user taps "Add to meals" from a search result, the barcode and servings are saved here first, allowing them to build a full meal before syncing to Appwrite.
-
-| Function | Purpose |
-|----------|---------|
-| `appendMealBarcode(type, barcode, servings)` | Adds item to local list for that meal type |
-| `loadMealBarcodes()` | Returns `Record<MealType, MealItemEntry[]>` |
-| `clearMealBarcodes()` | Empties all local staged items |
-
 ### `mealFromProduct.ts`
 
 Maps raw API JSON from the FastAPI backend (Oracle) to the `CreateMealInput` shape expected by Appwrite.
@@ -189,8 +168,6 @@ Maps raw API JSON from the FastAPI backend (Oracle) to the `CreateMealInput` sha
 | Function | Purpose |
 |----------|---------|
 | `scaleNutrient(value, servings)` | Multiplies kcal/macros by serving count |
-| `formatServings(n)` | Returns pretty strings like `1½` |
-| `parseServingsInput(str)` | Validates custom decimal input (0–100) |
 
 ---
 
@@ -215,6 +192,6 @@ Maps raw API JSON from the FastAPI backend (Oracle) to the `CreateMealInput` sha
 
 ---
 
-## Re-exports
+## API client
 
-`src/components/apiUtils.tsx` re-exports `account` from `@/lib/appwrite` for convenience alongside `authenticatedRequest`.
+`src/lib/apiUtils.ts` exports `authenticatedRequest` for food lookup backends.

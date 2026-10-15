@@ -28,8 +28,7 @@ Tab layout: `src/app/(tabs)/_layout.tsx`
 
 ```
 ProfileGate                         (redirect incomplete profiles → onboarding)
-└─ SearchPreferencesProvider        (scan vs text_query default tab)
-   └─ Tabs
+└─ Tabs
 ```
 
 ### What each provider does
@@ -39,7 +38,7 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 | `FontPreferencesProvider` | `useFontPreferences()` | System vs custom Redaction font; remounts tree on font change |
 | `ApiErrorProvider` | `useApiError()` | Shows `ApiErrorToast` for Appwrite and backend errors |
 | `AuthProvider` | `useAuth()` | `user`, `loading`, `signIn`, `signUp`, `signOut` |
-| `SearchPreferencesProvider` | `useSearchPreferences()` | Which search tab is visible by default |
+| `MealTypePreferencesProvider` | `useMealTypePreferences()` | Selected meal bucket (Breakfast, Lunch, …) |
 
 ## Navigation
 
@@ -47,15 +46,11 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 
 | Route | Tab visible | Notes |
 |-------|-------------|-------|
-| `index` | Home | Welcome / dev links |
-| `scan` | When default mode is `scan` | Barcode results after camera scan |
-| `text_query` | When default mode is `text_query` | Manual text or barcode lookup |
-| `meals` | Always | Placeholder (under construction) |
-| `account` | Always | Sign in/out, settings, profile link |
-| `about` | Hidden (`href: null`) | About screen, not in tab bar |
-| `basepg` | Hidden | Legacy/base page |
-
-Scan and Manual Search share one tab slot: `SearchPreferencesContext` toggles `href: null` on the inactive tab.
+| `index` | Today | Dashboard: targets, logs, tasks |
+| `logfood` | Log | Search, scan, favorites, and meal logging |
+| `stats` | Stats | History and progress |
+| `account` | You | Sign in/out, settings, profile |
+| `meals` / `workouts` / `meds` / `searchrewrite` | Hidden | Redirects or `__DEV__` previews |
 
 ### Stack screens (`src/app/`)
 
@@ -65,9 +60,8 @@ Scan and Manual Search share one tab slot: `SearchPreferencesContext` toggles `h
 | `onboarding` | Hidden | Multi-step profile + nutrition wizard |
 | `onboard_success` | Hidden | Post-onboarding confirmation |
 | `config` | Profile | Edit saved profile fields |
-| `multiresponse` | Results | List fuzzy-search API results |
-| `fooddetail` | Food Details | Single product detail from backend |
-| `present_n_save` | Confirm Selection | Reserved for save flow (stub) |
+| `Additions` | Hidden | Product detail / add to meal |
+| `contribute-food` | Hidden | Submit a food record |
 | `credits` | — | Credits screen |
 
 ## Auth + profile gate flow
@@ -88,33 +82,14 @@ Logged-out users can still use tabs; only authenticated users with incomplete pr
 ## Barcode scan flow
 
 ```text
-scan tab → Open Camera → /cameraview
+Log tab → Open Camera → /cameraview
   └─ onBarcodeScanned → AsyncStorage 'saved_barcode' → router.back()
-  └─ scan tab useFocusEffect reads storage → authenticatedRequest /api/barcode/:code
+  └─ Log tab useFocusEffect reads storage → authenticatedRequest /api/barcode/:code
 ```
 
-## Meal logging flow (Local staging)
+## Meal logging flow
 
-To improve speed and allow for multi-item logging, CalCount uses a **Local Staging** pattern before syncing to Appwrite.
-
-```text
-Search Result (Scan/Fuzzy)
-  └─ Tap "Add to meals"
-  └─ appendMealBarcode(type, barcode, servings) → AsyncStorage
-
-Meals Tab (Local List)
-  └─ Reads from mealItemsStorage
-  └─ User adjusts servings if needed
-  └─ Tap "Log Meal" (Sync)
-       └─ getTodayMeals() check for existing entries
-       └─ createMeal() or updateMeal() in Appwrite
-       └─ clearMealBarcodes() on success
-```
-
-### Why staging?
-- **Speed:** Zero-latency UI response when adding items.
-- **Batched writes:** Combines multiple items into single Appwrite documents per meal type.
-- **Offline safety:** Items are persisted locally until the user has a connection to sync.
+Search, scan, and favorites on the Log tab write straight to today's Appwrite meal document (`addProductToMeal`). There is no local barcode staging list.
 
 ## Build and deploy
 

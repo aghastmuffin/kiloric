@@ -24,6 +24,7 @@ The `meals`, `workouts`, `meds`, and `searchrewrite` files are hidden routes. Pr
 | `onboard_success.tsx` | `/onboard_success` | Setup completion screen |
 | `reset-password.tsx` | `/reset-password` | Completes Appwrite email recovery links |
 | `cameraview.tsx` | `/cameraview` | Barcode scanner; opened only from an explicit scan action |
+| `Additions.tsx` | `/Additions` | Product detail and add-to-meal |
 | `config.tsx` | `/config` | Profile, goals, nutrition targets, and appearance preferences |
 | `contribute-food.tsx` | `/contribute-food` | Submit a food record for review |
 | `privacy-policy.tsx` | `/privacy-policy` | Privacy and retention policy |
