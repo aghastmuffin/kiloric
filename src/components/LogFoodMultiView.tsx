@@ -435,6 +435,15 @@ export function LogFoodMultiView({
   const { colors } = useTheme()
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
 
+  /**
+   * ⚡ Bolt: Pre-compute a Set of favorite barcodes.
+   * Replaces O(N) Array.prototype.some linear scans per result row with O(1) Set lookups.
+   */
+  const favoriteBarcodesSet = useMemo(
+    () => new Set(favorites.map((f) => f.barcode)),
+    [favorites],
+  )
+
   const toggleExpanded = (index: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setExpanded((current) => ({ ...current, [index]: !current[index] }))
@@ -547,29 +556,28 @@ export function LogFoodMultiView({
             </Pressable>
           </View>
         ) : (
-          results.map((item, index) => (
-            <ResultCard
-              key={`${getBarcodeFromProduct(unwrapProduct(item)) ?? 'row'}-${index}`}
-              item={item}
-              index={index}
-              expanded={Boolean(expanded[index])}
-              status={addStatuses[index]}
-              favorited={(() => {
-                const product = unwrapProduct(item)
-                const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
-                return barcode
-                  ? favorites.some((favorite) => favorite.barcode === barcode)
-                  : false
-              })()}
-              colors={colors}
-              styles={styles}
-              onToggleExpand={() => toggleExpanded(index)}
-              onAdd={() => onAdd(item, index)}
-              onToggleFavorite={() => onToggleFavorite(item)}
-              onOpenDetail={(barcode) => onOpenDetail(barcode, item)}
-              onImprove={() => onContribute(contributeParamsFromProduct(item, searchQuery))}
-            />
-          ))
+          results.map((item, index) => {
+            const product = unwrapProduct(item)
+            const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
+            const favorited = Boolean(barcode && favoriteBarcodesSet.has(barcode))
+            return (
+              <ResultCard
+                key={`${barcode ?? 'row'}-${index}`}
+                item={item}
+                index={index}
+                expanded={Boolean(expanded[index])}
+                status={addStatuses[index]}
+                favorited={favorited}
+                colors={colors}
+                styles={styles}
+                onToggleExpand={() => toggleExpanded(index)}
+                onAdd={() => onAdd(item, index)}
+                onToggleFavorite={() => onToggleFavorite(item)}
+                onOpenDetail={(b) => onOpenDetail(b, item)}
+                onImprove={() => onContribute(contributeParamsFromProduct(item, searchQuery))}
+              />
+            )
+          })
         )}
       </View>
     </MotionView>

@@ -998,6 +998,15 @@ function IdleLogPanels({
         ? 'My Meals'
         : 'Recent Foods'
 
+  /**
+   * ⚡ Bolt: Pre-compute a Set of favorite barcodes for O(1) status lookups
+   * during recent food list rendering.
+   */
+  const favoriteBarcodesSet = useMemo(
+    () => new Set(favorites.map((item) => item.barcode)),
+    [favorites],
+  )
+
   const isDraggingFood = draggingFoodKey !== null
 
   const dropZones = useRef(
@@ -1356,7 +1365,7 @@ function IdleLogPanels({
                 protein={food.protein}
                 fat={food.fat}
                 carbs={food.carbs}
-                favorited={favorites.some((item) => item.barcode === food.barcode)}
+                favorited={favoriteBarcodesSet.has(food.barcode)}
                 styles={styles}
                 colors={colors}
                 findDropTarget={findDropTarget}
