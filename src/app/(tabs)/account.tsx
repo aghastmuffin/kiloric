@@ -21,7 +21,7 @@ import {
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Linking,
@@ -35,6 +35,9 @@ import type { Models } from 'react-native-appwrite';
 import Animated, {
     FadeIn,
     FadeOut,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -111,6 +114,15 @@ export function SettingsDrop() {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
+  const chevronRotation = useSharedValue(0);
+
+  useEffect(() => {
+    chevronRotation.value = withTiming(expanded ? 180 : 0, { duration: 200 });
+  }, [expanded, chevronRotation]);
+
+  const chevronAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${chevronRotation.value}deg` }],
+  }));
 
   const toggle = () => {
     triggerSelectionHaptic();
@@ -137,11 +149,13 @@ export function SettingsDrop() {
                 <Text accessibilityRole="header" style={styles.sectionTitle}>Settings</Text>
               </View>
             </View>
-            <Ionicons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              style={styles.settingsIcon}
-            />
+            <Animated.View style={chevronAnimatedStyle}>
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                style={styles.settingsIcon}
+              />
+            </Animated.View>
           </View>
         </Pressable>
 
