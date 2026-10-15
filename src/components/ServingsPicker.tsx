@@ -37,6 +37,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
 
   const openCustom = useCallback(() => {
     if (disabled) return
+    triggerSelectionHaptic()
     setCustomVisible(true)
   }, [disabled])
 
@@ -68,6 +69,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               accessibilityRole="button"
               accessibilityState={{ selected }}
               accessibilityLabel={`${formatServings(preset)} servings`}
+              accessibilityHint="Selects this serving quantity"
               disabled={disabled}
               onPress={() => {
                 if (selected) return
@@ -143,6 +145,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Cancel custom serving input"
+                accessibilityHint="Closes without saving custom servings"
                 onPress={closeCustom}
                 style={({ pressed }) => [styles.modalButton, pressed && styles.modalButtonPressed]}
               >
@@ -151,6 +154,7 @@ export function ServingsPicker({ servings, onChange, disabled = false }: Props) 
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Apply custom serving quantity"
+                accessibilityHint="Saves custom serving quantity"
                 onPress={applyCustom}
                 style={({ pressed }) => [
                   styles.modalButton,

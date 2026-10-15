@@ -57,7 +57,10 @@ export function ThemedSegmentedControl({
               accessibilityLabel={accessibilityLabel ? `${accessibilityLabel}: ${value}` : value}
               accessibilityState={{ checked: selected, disabled: !enabled }}
               disabled={!enabled}
-              onPress={() => onChange(index)}
+              onPress={() => {
+                if (index !== selectedIndex) triggerSelectionHaptic()
+                onChange(index)
+              }}
               style={({ pressed }) => [
                 styles.segment,
                 selected && styles.segmentSelected,
