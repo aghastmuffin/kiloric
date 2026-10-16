@@ -86,10 +86,23 @@ export function sumMacros(list: readonly Partial<Macros>[]): Macros {
 const KJ_PER_KCAL = 4.184
 /** Pure fat is ~900 kcal / 100 g; anything above that is a kJ value stored in the kcal column. */
 const MAX_KCAL_PER_100G = 900
+/**
+ * Below this Atwater estimate, unlisted energy (alcohol, sugar alcohols) can dominate the label,
+ * so the macro cross-check isn't trustworthy.
+ */
+const MIN_MACRO_KCAL_FOR_CHECK = 15
 
-function kcalPer100g(product: Record<string, unknown>): number {
+function looksLikeKilojoules(kcal: number, macroKcal: number): boolean {
+  if (kcal > MAX_KCAL_PER_100G) return true
+  if (macroKcal < MIN_MACRO_KCAL_FOR_CHECK) return false
+  const ratio = kcal / macroKcal
+  return ratio >= 3.5 && ratio <= 5
+}
+
+function kcalPer100g(product: Record<string, unknown>, macros: Omit<Macros, 'kcal'>): number {
   const kcal = firstNumber(product, ['energy_kcal_100g', 'energy-kcal_100g', 'energy-kcal', 'energy_kcal', 'calories'])
-  if (kcal != null) return kcal > MAX_KCAL_PER_100G ? Math.round(kcal / KJ_PER_KCAL) : kcal
+  const macroKcal = macros.protein * 4 + macros.carbs * 4 + macros.fat * 9
+  if (kcal != null) return looksLikeKilojoules(kcal, macroKcal) ? Math.round(kcal / KJ_PER_KCAL) : kcal
   const kj = firstNumber(product, ['energy_kj_100g', 'energy-kj_100g', 'energy-kj', 'energy_kj'])
   return kj != null ? Math.round(kj / KJ_PER_KCAL) : 0
 }
@@ -101,12 +114,12 @@ export function foodItemFromProduct(raw: Record<string, unknown>): FoodItem {
   const servingGrams = servingQuantity && servingQuantity > 0 ? servingQuantity : 100
   const servingSize = cleanString(product.serving_size)
 
-  const per100g: Macros = {
-    kcal: kcalPer100g(product),
+  const macros = {
     protein: firstNumber(product, ['proteins_100g', 'proteins', 'protein']) ?? 0,
     carbs: firstNumber(product, ['carbohydrates_100g', 'carbohydrates', 'carbs']) ?? 0,
     fat: firstNumber(product, ['fat_100g', 'fat']) ?? 0,
   }
+  const per100g: Macros = { kcal: kcalPer100g(product, macros), ...macros }
 
   const servingLabel = servingSize
     ? `1 serving = ${servingSize}`

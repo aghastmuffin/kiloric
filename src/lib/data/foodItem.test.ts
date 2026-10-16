@@ -40,6 +40,14 @@ describe('foodItemFromProduct', () => {
     expect(foodItemFromProduct({ product_name: 'Oil', energy_kcal_100g: 884 }).perServing.kcal).toBe(884)
     expect(foodItemFromProduct({ product_name: 'Bar', energy_kcal_100g: 'Unknown', energy_kj_100g: 1674 }).perServing.kcal).toBe(400)
   })
+
+  it('detects kilojoules that disagree with the macros', () => {
+    const yogurt = { product_name: 'Yogurt, Greek, plain, nonfat', proteins_100g: 10.3, carbohydrates_100g: 3.6, fat_100g: 0.4 }
+    expect(foodItemFromProduct({ ...yogurt, energy_kcal_100g: 256 }).perServing.kcal).toBe(61)
+    expect(foodItemFromProduct({ ...yogurt, energy_kcal_100g: 59 }).perServing.kcal).toBe(59)
+    expect(foodItemFromProduct({ product_name: 'Light beer', energy_kcal_100g: 29, carbohydrates_100g: 1.6 }).perServing.kcal).toBe(29)
+    expect(foodItemFromProduct({ product_name: 'Fried snack', energy_kcal_100g: 536, proteins_100g: 6.6, carbohydrates_100g: 53, fat_100g: 34 }).perServing.kcal).toBe(536)
+  })
 })
 
 describe('amount helpers', () => {
