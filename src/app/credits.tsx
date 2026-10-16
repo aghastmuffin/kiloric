@@ -5,7 +5,7 @@ import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
-import { useState } from 'react'
+import { useRef } from 'react'
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -19,7 +19,7 @@ export default function CreditsScreen() {
   const styles = useThemedStyles(makeStyles)
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const [, setTapCount] = useState(0)
+  const tapCountRef = useRef(0)
 
   const triggerEasterEgg = () => {
     fetch('https://hackatime.hackclub.com/api/v1/users/levitkbr/project/Sonex')
@@ -36,14 +36,10 @@ export default function CreditsScreen() {
   }
 
   const handleAvatarPress = () => {
-    setTapCount((count) => {
-      const next = count + 1
-      if (next >= 10) {
-        setTimeout(triggerEasterEgg, 0)
-        return 0
-      }
-      return next
-    })
+    tapCountRef.current += 1
+    if (tapCountRef.current < 10) return
+    tapCountRef.current = 0
+    triggerEasterEgg()
   }
 
   return (

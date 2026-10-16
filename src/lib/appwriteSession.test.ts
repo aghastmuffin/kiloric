@@ -7,7 +7,6 @@ import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
-import { clearRecentFoodsCache } from './recentFoods'
 import { clearMealTypePreferencesCache } from './mealTypePreferences'
 import { clearTasksCache } from './tasks'
 import { clearWaterCache } from './water'
@@ -43,10 +42,6 @@ vi.mock('./meals', () => ({
 vi.mock('./profile', () => ({
   clearProfileCache: vi.fn(),
   getProfile: vi.fn(),
-}))
-
-vi.mock('./recentFoods', () => ({
-  clearRecentFoodsCache: vi.fn(),
 }))
 
 vi.mock('./mealTypePreferences', () => ({
@@ -107,7 +102,6 @@ describe('appwriteSession cache clearing', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
-    expect(clearRecentFoodsCache).toHaveBeenCalled()
     expect(clearTasksCache).toHaveBeenCalled()
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
@@ -137,7 +131,6 @@ describe('appwriteSession cache clearing', () => {
     expect(AsyncStorage.removeItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
-    expect(clearRecentFoodsCache).toHaveBeenCalled()
     expect(clearTasksCache).toHaveBeenCalled()
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()

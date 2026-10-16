@@ -5,7 +5,6 @@ import { clearFavoriteFoodsCache } from './foodFavorites'
 import { clearCachedToken } from './getAccessToken'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
-import { clearRecentFoodsCache } from './recentFoods'
 import { clearMealTypePreferencesCache } from './mealTypePreferences'
 import { clearTasksCache } from './tasks'
 import { clearWaterCache } from './water'
@@ -24,7 +23,6 @@ export function applyAppwriteSession(sessionSecret: string): void {
 function clearSessionCaches(): void {
   clearCachedToken()
   clearProfileCache()
-  clearRecentFoodsCache()
   clearTasksCache()
   clearTodayMealsCache()
   clearFavoriteFoodsCache()

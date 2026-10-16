@@ -2,26 +2,9 @@
 
 User settings persisted in AsyncStorage and exposed via React contexts.
 
-## Default search mode
+## Search mode
 
-**Storage:** `@calcount/default_search_mode`  
-**Module:** `src/lib/searchPreferences.ts`  
-**Context:** `SearchPreferencesContext` (wraps tabs in `(tabs)/_layout.tsx`)
-
-| Value | Effect |
-|-------|--------|
-| `scan` | Scan tab visible in tab bar; Manual Search hidden |
-| `text_query` | Manual Search visible; Scan hidden |
-
-Default: `scan`.
-
-### Changing the default
-
-Account tab → **Default search mode** (when logged in). Calls `setDefaultSearchMode(mode)` which updates state and AsyncStorage.
-
-### Temporary swap
-
-`SearchModeSwapButton` on scan/text screens navigates to the other mode without updating the stored preference.
+Scan vs text lookup is a Log-tab action, not a persisted preference. `SearchModeSwapButton` on the camera screen returns to `/logfood` (or pops back) without writing AsyncStorage.
 
 ---
 
@@ -104,11 +87,9 @@ const styles = useThemedStyles((c) => StyleSheet.create({
 ## Provider hooks
 
 ```tsx
-import { useSearchPreferences } from '@/lib/SearchPreferencesContext'
 import { useFontPreferences } from '@/lib/FontPreferencesContext'
 
-const { defaultSearchMode, setDefaultSearchMode, loading } = useSearchPreferences()
 const { fontChoice, setFontChoice, activeFontFamily } = useFontPreferences()
 ```
 
-Both hooks throw if used outside their provider.
+The hook throws if used outside `FontPreferencesProvider`.

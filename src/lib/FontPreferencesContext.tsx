@@ -1,4 +1,4 @@
-import { applyAppFont } from '@/lib/applyDefaultFont'
+import { setActiveFontFamily } from '@/lib/appFont'
 import {
   DEFAULT_FONT_CHOICE,
   loadFontChoice,
@@ -57,7 +57,7 @@ export function FontPreferencesProvider({
 
   useEffect(() => {
     if (!loading) {
-      applyAppFont(activeFontFamily, fontChoice !== 'default')
+      setActiveFontFamily(activeFontFamily, fontChoice !== 'default')
     }
   }, [activeFontFamily, fontChoice, loading])
 
@@ -70,17 +70,20 @@ export function FontPreferencesProvider({
     }
   }, [])
 
+  const value = useMemo(
+    () => ({
+      fontChoice,
+      activeFontFamily,
+      fontRenderKey,
+      loading,
+      customFontLoaded,
+      setFontChoice,
+    }),
+    [activeFontFamily, customFontLoaded, fontChoice, fontRenderKey, loading, setFontChoice],
+  )
+
   return (
-    <FontPreferencesContext.Provider
-      value={{
-        fontChoice,
-        activeFontFamily,
-        fontRenderKey,
-        loading,
-        customFontLoaded,
-        setFontChoice,
-      }}
-    >
+    <FontPreferencesContext.Provider value={value}>
       <Fragment key={fontRenderKey}>{children}</Fragment>
     </FontPreferencesContext.Provider>
   )

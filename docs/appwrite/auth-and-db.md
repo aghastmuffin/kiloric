@@ -120,7 +120,7 @@ const token = await getAccessToken()
 // Authorization: Bearer <token>
 ```
 
-Used in `src/components/apiUtils.tsx` (`authenticatedRequest`).
+Used in `src/lib/apiUtils.ts` (`authenticatedRequest`).
 
 Appwrite Databases do **not** need JWT — they use the session on `client`.
 

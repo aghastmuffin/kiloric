@@ -4,7 +4,7 @@ import {
   saveSelectedMealType,
 } from '@/lib/mealTypePreferences'
 import { type MealType } from '@/lib/meals'
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 type MealTypePreferencesContextValue = {
   selectedMealType: MealType
@@ -33,10 +33,13 @@ export function MealTypePreferencesProvider({ children }: { children: React.Reac
     }
   }, [])
 
+  const value = useMemo(
+    () => ({ selectedMealType, loading, setSelectedMealType }),
+    [loading, selectedMealType, setSelectedMealType],
+  )
+
   return (
-    <MealTypePreferencesContext.Provider
-      value={{ selectedMealType, loading, setSelectedMealType }}
-    >
+    <MealTypePreferencesContext.Provider value={value}>
       {children}
     </MealTypePreferencesContext.Provider>
   )

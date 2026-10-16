@@ -1,4 +1,4 @@
-import { authenticatedRequest } from '@/components/apiUtils'
+import { authenticatedRequest } from '@/lib/apiUtils'
 import {
   contributeParamsFromProduct,
   macrosFromProduct,
@@ -8,8 +8,15 @@ import { MotionView } from '@/components/MotionView'
 import { useAuth } from '@/lib/AuthContext'
 import { addProductToMeal, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
-import { getOrdsFieldRank, isOrdsPresent, ORDS_FIELD_PRIORITY, productHasUnknownDetails } from '@/lib/ordsNormalize'
-import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
+import { isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'
+import {
+  formatProductLabel,
+  formatProductValue,
+  getBarcodeFromProduct,
+  getProductTitle,
+  listProductColumns,
+  unwrapProduct,
+} from '@/lib/productDisplay'
 import { takeSearchResult } from '@/lib/searchResultStore'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useAppLayout } from '@/lib/theme/layout'
@@ -31,106 +38,9 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-const HIDDEN_KEYS = new Set([
-  'product',
-  'product_data',
-  'data',
-  'nutriments',
-  'calories',
-  'energy-kcal',
-  'energy_kcal',
-  'energy-kj',
-  'energy_kj',
-  'proteins',
-  'protein',
-  'carbohydrates',
-  'carbs',
-  'fat',
-  'fiber',
-  'fibre',
-  'sugars',
-  'sugar',
-  'sodium',
-  'saturated-fat',
-  'saturated_fat',
-  'trans-fat',
-  'trans_fat',
-  'monounsaturated-fat',
-  'monounsaturated_fat',
-  'polyunsaturated-fat',
-  'polyunsaturated_fat',
-  'added-sugars',
-  'added_sugars',
-  'vitamin-a',
-  'vitamin_a',
-  'vitamin-c',
-  'vitamin_c',
-  'vitamin-d',
-  'vitamin_d',
-  'vitamin-b12',
-  'vitamin_b12',
-  'calcium',
-  'iron',
-  'potassium',
-  'magnesium',
-  'caffeine',
-  'taurine',
-  'carbon-footprint',
-  'carbon_footprint',
-])
-
-const TITLE_SKIP = new Set(['name', 'title', 'food_name', 'product_name', 'description', 'label'])
-
 function paramString(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? ''
   return value ?? ''
-}
-
-function formatLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => (typeof item === 'string' || typeof item === 'number' ? String(item) : null))
-      .filter(Boolean)
-      .join(', ') || '—'
-  }
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
-}
-
-function unwrapProduct(item: SearchResult): SearchResult {
-  for (const key of ['product', 'product_data', 'data']) {
-    const value = item[key]
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value as SearchResult
-    }
-  }
-  return item
-}
-
-function productColumns(source: SearchResult): [string, unknown][] {
-  const entries: [string, unknown][] = []
-  for (const [key, value] of Object.entries(source)) {
-    if (HIDDEN_KEYS.has(key) || TITLE_SKIP.has(key)) continue
-    if (!isOrdsPresent(value)) continue
-    if (typeof value === 'object' && !Array.isArray(value)) continue
-    entries.push([key, value])
-  }
-  return entries.sort(([a], [b]) => {
-    const scoreA = getOrdsFieldRank(a)
-    const scoreB = getOrdsFieldRank(b)
-    if (scoreA !== scoreB) return scoreA - scoreB
-    return a.localeCompare(b)
-  })
 }
 
 function buildContributeParams(payload: ReturnType<typeof contributeParamsFromProduct>) {
@@ -240,7 +150,7 @@ export default function AdditionsScreen() {
     [barcodeParam, product],
   )
   const macros = useMemo(() => (product ? macrosFromProduct(product) : null), [product])
-  const columns = useMemo(() => (product ? productColumns(product) : []), [product])
+  const columns = useMemo(() => (product ? listProductColumns(product) : []), [product])
   const needsLabelPhoto = useMemo(
     () => (product ? productHasUnknownDetails(product) : false),
     [product],
@@ -440,8 +350,8 @@ export default function AdditionsScreen() {
               ) : (
                 columns.map(([key, value]) => (
                   <View key={key} style={styles.columnRow}>
-                    <Text style={styles.columnLabel}>{formatLabel(key)}</Text>
-                    <Text style={styles.columnValue}>{formatValue(value)}</Text>
+                    <Text style={styles.columnLabel}>{formatProductLabel(key)}</Text>
+                    <Text style={styles.columnValue}>{formatProductValue(value)}</Text>
                   </View>
                 ))
               )}

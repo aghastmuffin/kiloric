@@ -4,7 +4,6 @@ import { AuthProvider } from '@/lib/AuthContext';
 import { FontPreferencesProvider, useFontPreferences } from '@/lib/FontPreferencesContext';
 import { FONT_FAMILY, MONO_FONT_FAMILY, fontAssets } from '@/lib/fonts';
 import { MealTypePreferencesProvider } from '@/lib/MealTypePreferencesContext';
-import { SearchPreferencesProvider } from '@/lib/SearchPreferencesContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { useFonts } from 'expo-font';
@@ -81,40 +80,33 @@ function RootNavigation() {
         <ApiBackendPreferencesProvider>
           <AuthProvider>
             <MealTypePreferencesProvider>
-              <SearchPreferencesProvider>
-                <Stack
-                  screenOptions={{
-                    headerTitleStyle: navigationFontStyle,
-                    headerStyle: { backgroundColor: colors.background },
-                    headerShadowVisible: false,
-                    headerTintColor: colors.brand,
-                    contentStyle: { backgroundColor: colors.background },
-                  }}
-                >
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="cameraview"
-                    options={{ headerShown: true, headerTitle: "Scan barcode" }}
-                  />
-                  <Stack.Screen name="signin" options={{ headerShown: false }} />
-                  <Stack.Screen name="reset-password" options={{ headerShown: true, headerTitle: "Reset password" }} />
-                  <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-                  <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
-                  <Stack.Screen name="Additions" options={{ headerShown: false }} />
-                  <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
-                  <Stack.Screen name="multiresponse" options={{ headerShown: true, headerTitle: "Results" }} />
-                  <Stack.Screen
-                    name="contribute-food"
-                    options={{ headerShown: false }}
-                  />
-                  
-                  <Stack.Screen
-                    name="privacy-policy"
-                    options={{ headerShown: true, headerTitle: "Privacy Policy" }}
-                  />
-                  <Stack.Screen name="credits" options={{ headerShown: true, headerTitle: "Credits" }} />
-                </Stack>
-              </SearchPreferencesProvider>
+              <Stack
+                screenOptions={{
+                  headerTitleStyle: navigationFontStyle,
+                  headerStyle: { backgroundColor: colors.background },
+                  headerShadowVisible: false,
+                  headerTintColor: colors.brand,
+                  contentStyle: { backgroundColor: colors.background },
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="cameraview"
+                  options={{ headerShown: true, headerTitle: "Scan barcode" }}
+                />
+                <Stack.Screen name="signin" options={{ headerShown: false }} />
+                <Stack.Screen name="reset-password" options={{ headerShown: true, headerTitle: "Reset password" }} />
+                <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+                <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
+                <Stack.Screen name="Additions" options={{ headerShown: false }} />
+                <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
+                <Stack.Screen name="contribute-food" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="privacy-policy"
+                  options={{ headerShown: true, headerTitle: "Privacy Policy" }}
+                />
+                <Stack.Screen name="credits" options={{ headerShown: true, headerTitle: "Credits" }} />
+              </Stack>
             </MealTypePreferencesProvider>
           </AuthProvider>
         </ApiBackendPreferencesProvider>

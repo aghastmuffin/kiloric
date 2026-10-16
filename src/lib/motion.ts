@@ -28,7 +28,7 @@ export const revealTiming = {
   easing: Easing.out(Easing.cubic),
 } as const
 
-/** Longer ease used by progress fills (ProgressRing / MacroProgressBar). */
+/** Longer ease used by progress fills. */
 export const panelTiming = {
   duration: 360,
   easing: Easing.out(Easing.cubic),

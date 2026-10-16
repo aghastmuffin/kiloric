@@ -4,12 +4,7 @@ Reusable UI in `src/components/`. Import via `@/components/...`.
 
 ## API and errors
 
-### `apiUtils.tsx`
-
-- `authenticatedRequest(endpoint, options?)` — JWT-authenticated fetch to FastAPI
-- Re-exports `account` from Appwrite
-
-See [backend-api.md](./backend-api.md).
+Food lookup requests live in `src/lib/apiUtils.ts` (`authenticatedRequest`). See [backend-api.md](./backend-api.md).
 
 ### `ApiErrorToast.tsx`
 
@@ -31,17 +26,9 @@ Does not block logged-out users.
 
 ### `SearchModeSwapButton.tsx`
 
-Floating action button on `scan` and `text_query` tabs. Navigates to the alternate search screen without changing the persisted default mode.
+Floating action button on the camera screen. Returns to text search on the Log tab.
 
 Position accounts for tab bar height + safe area inset.
-
-### `BarcodeDetailModal.tsx`
-
-Full-screen modal for structured barcode API JSON. Used from `scan` tab and `multiresponse`.
-
-### `ImageViewer.tsx`
-
-Placeholder image display (uses `assets/images/dark.svg`).
 
 ### `Gague.tsx` (RadialGauge)
 
@@ -75,13 +62,7 @@ Animated modal with confirm/cancel, optional destructive styling and loading sta
 
 Toggle between system font and custom Redaction font. Used on Account tab (logged out and logged in).
 
-### `MealTypePicker.tsx`
-
-Floating selector for the active meal category (Breakfast, Lunch, etc.). Persists selection to `MealTypePreferencesContext`. Used primarily on the **Scan** tab.
-
-### `ServingsPicker.tsx`
-
-Multi-option selector for food portions. Includes presets (1, 1.5, 2) and a "Custom" modal for decimal input.
+Meal type is selected from Log / product-detail UI via `MealTypePreferencesContext`.
 
 ---
 

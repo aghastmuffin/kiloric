@@ -1,13 +1,7 @@
-export function localDayBounds(date = new Date()): { start: Date; end: Date } {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const end = new Date(start)
-  end.setDate(end.getDate() + 1)
-  return { start, end }
-}
+export { localDayBounds, startOfLocalDay } from './dates'
 
 /**
- * ⚡ Bolt: Optimized total water summation using a single-pass `for` loop.
- * Eliminates per-element callback stack allocations and Array.prototype.reduce overhead.
+ * Sum valid water log amounts in a single pass.
  */
 export function totalWaterMl(entries: readonly { amount_ml: number }[]): number {
   let sum = 0

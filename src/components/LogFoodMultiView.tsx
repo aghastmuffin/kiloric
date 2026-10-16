@@ -3,8 +3,15 @@ import { SwipeableRow } from '@/components/SwipeableRow'
 import type { FavoriteFood } from '@/lib/foodFavorites'
 import { triggerSelectionHaptic } from '@/lib/haptics'
 import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
-import { getOrdsFieldRank, isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'
-import { getBarcodeFromProduct, getProductTitle } from '@/lib/productDisplay'
+import { isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'
+import {
+  formatProductLabel,
+  formatProductValue,
+  getBarcodeFromProduct,
+  getProductTitle,
+  listProductColumns,
+  unwrapProduct,
+} from '@/lib/productDisplay'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
@@ -73,120 +80,6 @@ export type ContributePayload = {
   additives_n?: string
 }
 
-const HIDDEN_KEYS = new Set([
-  'product',
-  'product_data',
-  'data',
-  'nutriments',
-  'images',
-  'selected_images',
-  'image',
-  'image_small_url',
-  'image_thumb_url',
-  'image_front_url',
-  'image_front_small_url',
-  'image_front_thumb_url',
-  'image_nutrition_url',
-  'image_ingredients_url',
-  'languages',
-  'languages_codes',
-  'lang',
-  'states',
-  'states_tags',
-  'states_hierarchy',
-  'entry_dates_tags',
-  'last_modified_t',
-  'created_t',
-  'last_updated_t',
-  'completeness',
-  'rev',
-  'schema_version',
-  'interface_version_created',
-  'interface_version_modified',
-  // Alias duplicates — prefer *_100g columns from ORDS
-  'calories',
-  'energy-kcal',
-  'energy_kcal',
-  'energy-kj',
-  'energy_kj',
-  'proteins',
-  'protein',
-  'carbohydrates',
-  'carbs',
-  'fat',
-  'fiber',
-  'fibre',
-  'sugars',
-  'sugar',
-  'sodium',
-  'saturated-fat',
-  'saturated_fat',
-  'trans-fat',
-  'trans_fat',
-  'monounsaturated-fat',
-  'monounsaturated_fat',
-  'polyunsaturated-fat',
-  'polyunsaturated_fat',
-  'added-sugars',
-  'added_sugars',
-  'vitamin-a',
-  'vitamin_a',
-  'vitamin-c',
-  'vitamin_c',
-  'vitamin-d',
-  'vitamin_d',
-  'vitamin-b12',
-  'vitamin_b12',
-  'calcium',
-  'iron',
-  'potassium',
-  'magnesium',
-  'caffeine',
-  'taurine',
-  'carbon-footprint',
-  'carbon_footprint',
-])
-
-const TITLE_SKIP = new Set([
-  'name',
-  'title',
-  'food_name',
-  'product_name',
-  'description',
-  'label',
-])
-
-function formatLabel(key: string): string {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/-/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => (typeof item === 'string' || typeof item === 'number' ? String(item) : null))
-      .filter(Boolean)
-      .join(', ') || '—'
-  }
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
-}
-
-function unwrapProduct(item: SearchResult): SearchResult {
-  for (const key of ['product', 'product_data', 'data']) {
-    const value = item[key]
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value as SearchResult
-    }
-  }
-  return item
-}
-
 function getBrand(item: SearchResult): string {
   for (const key of ['brands', 'brand', 'manufacturer', 'store']) {
     const value = item[key]
@@ -219,22 +112,6 @@ function getCaloriesLabel(item: SearchResult): string {
     return calories.includes('kcal') ? calories : `${calories} kcal`
   }
   return 'Nutrition incomplete'
-}
-
-function scalarEntries(source: SearchResult): [string, unknown][] {
-  const entries: [string, unknown][] = []
-  for (const [key, value] of Object.entries(source)) {
-    if (HIDDEN_KEYS.has(key) || TITLE_SKIP.has(key)) continue
-    if (!isOrdsPresent(value)) continue
-    if (typeof value === 'object' && !Array.isArray(value)) continue
-    entries.push([key, value])
-  }
-  return entries.sort(([a], [b]) => {
-    const scoreA = getOrdsFieldRank(a)
-    const scoreB = getOrdsFieldRank(b)
-    if (scoreA !== scoreB) return scoreA - scoreB
-    return a.localeCompare(b)
-  })
 }
 
 function readString(...candidates: unknown[]): string | undefined {
@@ -617,7 +494,7 @@ const ResultCard = memo(
   const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
   const brand = getBrand(product)
   const calories = getCaloriesLabel(product)
-  const columns = useMemo(() => scalarEntries(product), [product])
+  const columns = useMemo(() => listProductColumns(product), [product])
   const previewColumns = columns.slice(0, expanded ? columns.length : 4)
   const needsLabelPhoto = useMemo(() => productHasUnknownDetails(product), [product])
 
@@ -707,9 +584,9 @@ const ResultCard = memo(
         <View style={styles.columnsBlock}>
           {previewColumns.map(([key, value]) => (
             <View key={key} style={styles.columnRow}>
-              <Text style={styles.columnLabel}>{formatLabel(key)}</Text>
+              <Text style={styles.columnLabel}>{formatProductLabel(key)}</Text>
               <Text style={styles.columnValue} numberOfLines={expanded ? 6 : 2}>
-                {formatValue(value)}
+                {formatProductValue(value)}
               </Text>
             </View>
           ))}
