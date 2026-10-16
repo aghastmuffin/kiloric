@@ -451,10 +451,6 @@ const makeStyles = (c: ThemeColors) =>
       right: 6,
       height: 3,
       opacity: 0.8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.5,
-      shadowRadius: 3,
     },
     guidance: {
       position: 'absolute',

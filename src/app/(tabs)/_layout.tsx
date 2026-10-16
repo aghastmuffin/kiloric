@@ -5,7 +5,7 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,7 +25,7 @@ function TabNavigator() {
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textFaint,
-        tabBarActiveBackgroundColor: colors.brandSoft,
+        tabBarActiveBackgroundColor: 'transparent',
         headerStyle: {
           backgroundColor: colors.surfaceMuted,
         },
@@ -43,40 +43,18 @@ function TabNavigator() {
           letterSpacing: 0.15,
         },
         tabBarItemStyle: {
-          minHeight: tabBarHeight - 12,
-          borderRadius: 14,
-          marginHorizontal: 3,
-          marginVertical: 5,
+          minHeight: 48,
+          borderRadius: 0,
         },
         tabBarStyle: {
-          position: 'absolute',
-          width: '94%',
-          maxWidth: 620,
-          ...Platform.select({
-            web: {
-              left: '50%',
-              transform: [{ translateX: '-50%' }],
-            } as never,
-            default: {
-              left: '3%',
-              right: '3%',
-            },
-          }),
-          bottom: Math.max(insets.bottom, 10),
-          backgroundColor: colors.surfaceMuted,
-          borderColor: colors.borderStrong,
-          paddingHorizontal: 7,
-          paddingTop: 1,
-          paddingBottom: 1,
-          borderWidth: StyleSheet.hairlineWidth,
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderRadius: 20,
-          height: tabBarHeight,
-          shadowColor: colors.text,
-          shadowOffset: { width: 0, height: 5 },
-          shadowOpacity: 0.1,
-          shadowRadius: 18,
-          elevation: 5,
+          height: tabBarHeight + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: 4,
+          elevation: 0,
+          shadowOpacity: 0,
         },
       }}
     >
@@ -86,27 +64,27 @@ function TabNavigator() {
           title: 'Today',
           tabBarAccessibilityLabel: 'Today, dashboard',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} color={color} size={21} />
+            <Ionicons name={focused ? 'today' : 'today-outline'} color={color} size={21} />
           ),
         }}
       />
       <Tabs.Screen
         name="logfood"
         options={{
-          title: 'Log',
-          tabBarAccessibilityLabel: 'Log food and meals',
+          title: 'Add',
+          tabBarAccessibilityLabel: 'Add food and meals',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'book' : 'book-outline'} color={color} size={21} />
+            <Ionicons name={focused ? 'add-circle' : 'add-circle-outline'} color={color} size={21} />
           ),
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
-          title: 'Stats',
-          tabBarAccessibilityLabel: 'Stats and progress',
+          title: 'Trends',
+          tabBarAccessibilityLabel: 'Trends and progress',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} color={color} size={21} />
+            <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} color={color} size={21} />
           ),
         }}
       />
@@ -120,11 +98,6 @@ function TabNavigator() {
           ),
         }}
       />
-      {/* Feature routes kept off the tab bar; opened from Dashboard / Log / Account. */}
-      <Tabs.Screen name="meals" options={{ href: null }} />
-      <Tabs.Screen name="workouts" options={{ href: null }} />
-      <Tabs.Screen name="meds" options={{ href: null }} />
-      <Tabs.Screen name="searchrewrite" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -1,4 +1,3 @@
-import { MotionView } from '@/components/MotionView'
 import { SwipeableRow } from '@/components/SwipeableRow'
 import type { FavoriteFood } from '@/lib/foodFavorites'
 import { triggerSelectionHaptic } from '@/lib/haptics'
@@ -327,12 +326,7 @@ export function LogFoodMultiView({
   }
 
   return (
-    <MotionView
-      from={{ opacity: 0, translateY: 16 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'spring', damping: 20 }}
-      style={styles.section}
-    >
+    <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={styles.resultsHeading}>
           <Pressable
@@ -429,7 +423,7 @@ export function LogFoodMultiView({
               accessibilityRole="button"
             >
               <Ionicons name="add-circle-outline" size={18} color={colors.onAccent} />
-              <Text style={styles.contributeButtonText}>Add this product</Text>
+              <Text style={styles.contributeButtonText}>Add missing info</Text>
             </Pressable>
           </View>
         ) : (
@@ -457,14 +451,14 @@ export function LogFoodMultiView({
           })
         )}
       </View>
-    </MotionView>
+    </View>
   )
 }
 
 const ResultCard = memo(
   function ResultCard({
     item,
-    index,
+    index: _index,
     expanded,
     status,
     favorited,
@@ -490,9 +484,9 @@ const ResultCard = memo(
     onImprove: () => void
   }) {
     const product = useMemo(() => unwrapProduct(item), [item])
-  const title = getProductTitle(product, `Result ${index + 1}`)
-  const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
   const brand = getBrand(product)
+  const title = getProductTitle(product, brand === 'Food database' ? 'Unnamed product' : brand)
+  const barcode = getBarcodeFromProduct(product) ?? getBarcodeFromProduct(item)
   const calories = getCaloriesLabel(product)
   const columns = useMemo(() => listProductColumns(product), [product])
   const previewColumns = columns.slice(0, expanded ? columns.length : 4)
@@ -513,8 +507,7 @@ const ResultCard = memo(
           </Text>
         </View>
         <Text style={styles.resultBrand} numberOfLines={1}>
-          {brand}
-          {barcode ? ` · ${barcode}` : ''}
+          {barcode ? `Barcode · ${barcode}` : brand}
         </Text>
         <View style={styles.badgeRow}>
           <View style={styles.resultBadge}>
@@ -622,7 +615,7 @@ const ResultCard = memo(
         ) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={needsLabelPhoto ? `Help complete ${title}` : `Edit details for ${title}`}
+          accessibilityLabel={`Add missing info for ${title}`}
           onPress={onImprove}
           style={({ pressed }) => [
             styles.actionChip,
@@ -635,9 +628,7 @@ const ResultCard = memo(
             size={15}
             color={colors.accent}
           />
-          <Text style={styles.actionChipText}>
-            {needsLabelPhoto ? 'Help complete product' : 'Add / change details'}
-          </Text>
+          <Text style={styles.actionChipText}>Add missing info</Text>
         </Pressable>
       </View>
       {needsLabelPhoto ? (
@@ -649,11 +640,7 @@ const ResultCard = memo(
   )
 
   return (
-    <MotionView
-      from={{ opacity: 0, translateY: 8 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 240, delay: index * 35 }}
-    >
+    <View>
       {barcode ? (
         <SwipeableRow
           swipeLeft={{
@@ -667,7 +654,7 @@ const ResultCard = memo(
       ) : (
         body
       )}
-    </MotionView>
+    </View>
   )
 },
 )
@@ -745,11 +732,6 @@ const makeStyles = (c: ThemeColors) =>
       borderWidth: 1,
       borderColor: c.border,
       overflow: 'hidden',
-      elevation: 6,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.12,
-      shadowRadius: 10,
     },
     mealMenuItem: {
       minHeight: 44,

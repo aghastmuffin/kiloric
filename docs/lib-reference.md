@@ -99,11 +99,11 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 ## Preferences (AsyncStorage)
 
-### `fontPreferences.ts`
+### `themePreferences.ts`
 
-- Key: `@calcount/app_font_choice`
-- Values: `'default' | 'custom'`
-- Default: `'default'`
+- Key: `@calcount/app_theme_choice`
+- Values: `'night' | 'paper'`
+- Default: `'night'`
 
 ### `mealTypePreferences.ts`
 
@@ -122,8 +122,9 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 ### `fonts.ts`
 
-- `FONT_FAMILY = 'Redaction'`
-- `fontAssets` — maps to `assets/fonts/redaction.otf`
+- `FONT_FAMILY = 'IBMPlexSans'`
+- `HEADLINE_FONT_FAMILY = 'InstrumentSerif'`
+- `MONO_FONT_FAMILY = 'JetBrainsMono'`
 - Loaded in root `_layout.tsx` via `useFonts`
 
 ### `appFont.ts`

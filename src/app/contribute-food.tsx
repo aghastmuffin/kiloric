@@ -93,7 +93,7 @@ export default function ContributeFoodScreen() {
   return <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <View style={[styles.nav, { paddingTop: insets.top + 4, paddingHorizontal: gutter }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Back to food log" onPress={() => router.back()} style={({ pressed }) => [styles.back, pressed && styles.pressed]}><Ionicons name="chevron-back" size={22} color={colors.accent} /><Text style={styles.backText}>Log food</Text></Pressable>
-      <Text numberOfLines={1} style={styles.navTitle}>Help complete this food</Text><View style={styles.navSide} />
+      <Text numberOfLines={1} style={styles.navTitle}>Add missing info</Text><View style={styles.navSide} />
     </View>
     <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: gutter, paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.intro}><Text accessibilityRole="header" style={styles.title}>Three quick photos, then you’re done.</Text><Text style={styles.description}>We’ll use the package to fill in what’s missing. For now, just make each view clear and readable.</Text></View>

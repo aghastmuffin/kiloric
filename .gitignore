@@ -46,4 +46,5 @@ example
 *.log
 
 tasks.json
+.env
 .env.local

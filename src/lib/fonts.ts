@@ -1,9 +1,9 @@
 import {
-  InterTight_300Light,
-  InterTight_400Regular,
-  InterTight_500Medium,
-  InterTight_600SemiBold,
-} from '@expo-google-fonts/inter-tight'
+  IBMPlexSans_400Regular,
+  IBMPlexSans_500Medium,
+  IBMPlexSans_600SemiBold,
+  IBMPlexSans_700Bold,
+} from '@expo-google-fonts/ibm-plex-sans'
 import {
   InstrumentSerif_400Regular,
 } from '@expo-google-fonts/instrument-serif'
@@ -12,19 +12,22 @@ import {
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono'
 
-export const FONT_FAMILY = 'InterTight'
+export const FONT_FAMILY = 'IBMPlexSans'
 export const HEADLINE_FONT_FAMILY = 'InstrumentSerif'
 export const MONO_FONT_FAMILY = 'JetBrainsMono'
 
 export const textFont = { fontFamily: FONT_FAMILY } as const
 export const headlineFont = { fontFamily: HEADLINE_FONT_FAMILY } as const
-export const monoFont = { fontFamily: MONO_FONT_FAMILY } as const
+export const monoFont = {
+  fontFamily: MONO_FONT_FAMILY,
+  fontVariant: ['tabular-nums'] as ('tabular-nums')[],
+}
 
 export const fontAssets = {
-  InterTight: InterTight_400Regular,
-  InterTightLight: InterTight_300Light,
-  InterTightMedium: InterTight_500Medium,
-  InterTightSemiBold: InterTight_600SemiBold,
+  IBMPlexSans: IBMPlexSans_400Regular,
+  IBMPlexSansMedium: IBMPlexSans_500Medium,
+  IBMPlexSansSemiBold: IBMPlexSans_600SemiBold,
+  IBMPlexSansBold: IBMPlexSans_700Bold,
   InstrumentSerif: InstrumentSerif_400Regular,
   JetBrainsMono: JetBrainsMono_400Regular,
   JetBrainsMonoMedium: JetBrainsMono_500Medium,

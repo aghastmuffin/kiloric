@@ -387,7 +387,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   coachTitle: { ...typography.label, color: c.accent },
   coachText: { ...typography.body, color: c.textMuted, fontSize: 14, lineHeight: 20, marginTop: 2 },
   celebration: { alignItems: 'center', overflow: 'hidden', backgroundColor: c.surface, borderWidth: 1, borderColor: c.success, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 30, marginTop: 2 },
-  celebrationHalo: { position: 'absolute', top: 35, width: 74, height: 74, borderRadius: 37, backgroundColor: c.levelGlow },
+  celebrationHalo: { position: 'absolute', top: 35, width: 74, height: 74, borderRadius: 37, backgroundColor: c.brandSoft },
   particle: { position: 'absolute', top: 72, alignSelf: 'center' },
   trophy: { width: 62, height: 62, borderRadius: 31, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   celebrationKicker: { ...typography.labelSmall, color: c.success, fontSize: 10 },

@@ -1,4 +1,3 @@
-import { MotionView } from '@/components/MotionView'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -17,12 +16,7 @@ export function AppScreenHeader({ overline, title, description, accessory }: App
   const styles = useThemedStyles(makeStyles)
 
   return (
-    <MotionView
-      from={{ opacity: 0, translateY: -8 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 240 }}
-      style={styles.root}
-    >
+    <View style={styles.root}>
       {accessory ? <View style={styles.accessory}>{accessory}</View> : null}
       {overline ? (
         <View style={styles.overlineRow}>
@@ -32,7 +26,7 @@ export function AppScreenHeader({ overline, title, description, accessory }: App
       ) : null}
       <Text accessibilityRole="header" style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
-    </MotionView>
+    </View>
   )
 }
 

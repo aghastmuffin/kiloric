@@ -11,18 +11,18 @@ Scan vs text lookup is a Log-tab action, not a persisted preference. `SearchMode
 ## Theme preference
 
 **Storage:** `@calcount/app_theme_choice`
-**Values:** `'ios'` (Adaptive) | `'barebones'` (Original Dark)
+**Values:** `'night'` (Night ledger, default) | `'paper'` (warm light)
 **Module:** `src/lib/theme/themePreferences.ts`
 **Context:** `ThemeProvider` (root `_layout.tsx`)
+
+Stored `'dark'` maps to night and `'light'` maps to paper. Missing or retired values (`ios`, `barebones`) resolve to night. The choice does not follow the system color scheme.
 
 ### Available themes
 
 | Theme | Description |
 |-------|-------------|
-| **iOS** | Follows system light/dark mode. Uses standard iOS-style colors (system blue accent). |
-| **barebones** | Permanently dark theme. Uses the app's original custom palette (#ffd33d amber accent). |
-
-Default: `ios`.
+| **Night** | Default dark ledger. Background `#121110`, rust accent `#E0664E`. |
+| **Paper** | The single light theme. Warm paper, ink accent, rust brand `#A33A2E`. |
 
 ### `useThemedStyles` hook
 
@@ -39,35 +39,20 @@ const styles = useThemedStyles((c) => StyleSheet.create({
 }));
 ```
 
-`onboarding` components use a specialized `useOnboardingStyles` hook for their distinct step-by-step palette.
+Onboarding uses the same theme tokens through `useOnboardingStyles`.
 
 ---
 
-## Font preference
+## Fonts
 
-**Storage:** `@calcount/app_font_choice`  
-**Values:** `'default'` (system) | `'custom'` (Redaction)  
-**Module:** `src/lib/fontPreferences.ts`  
-**Context:** `FontPreferencesProvider` (root `_layout.tsx`)
+There is no font-mode preference. IBM Plex Sans is the body face (`FONT_FAMILY`), Instrument Serif is reserved for screen titles and the large calorie number, and JetBrains Mono with tabular figures is used for other gram and kilocalorie values.
 
-### Custom font asset
-
-- File: `assets/fonts/redaction.otf`
-- Family name: `Redaction` (`FONT_FAMILY` in `fonts.ts`)
-- Loaded with `expo-font` / `useFonts` before app renders
-
-### How custom font applies globally
-
-1. **`FontPreferencesProvider`** sets `activeFontFamily` when choice is `custom` and font loaded.
-2. **`applyAppFont`** updates module state in `appFont.ts`.
-3. **Babel alias** (`babel.config.js`) redirects `react-native` → `src/lib/react-native-with-fonts.tsx`.
-4. That shim wraps **`Text`** and **`TextInput`** to merge `fontFamily` into styles.
-5. Root layout also passes `activeFontFamily` to Expo Router `ThemeProvider` fonts and stack header styles.
-6. Provider uses `<Fragment key={fontRenderKey}>` to remount navigation when font changes.
-
-### Picker UI
-
-`FontPreferencePicker` on Account tab — available logged in or out.
+1. Root layout loads the families with `useFonts`.
+2. **`FontPreferencesProvider`** sets `activeFontFamily` to IBM Plex Sans once those assets load.
+3. **`applyAppFont`** updates module state in `appFont.ts`.
+4. **Babel alias** (`babel.config.js`) redirects `react-native` → `src/lib/react-native-with-fonts.tsx`.
+5. That shim wraps **`Text`** and **`TextInput`** to merge `fontFamily` into styles.
+6. Stack headers use Instrument Serif directly.
 
 ### TypeScript alias
 
@@ -80,7 +65,7 @@ const styles = useThemedStyles((c) => StyleSheet.create({
 | Key | Used by |
 |-----|---------|
 | `saved_barcode` | Camera scan → scan tab result display |
-| `appwrite_session_<projectId>` | Appwrite session secret |
+| `appwrite_session_<projectId>` | Native Appwrite session secret in SecureStore. Web does not persist it. |
 
 ---
 
@@ -89,7 +74,7 @@ const styles = useThemedStyles((c) => StyleSheet.create({
 ```tsx
 import { useFontPreferences } from '@/lib/FontPreferencesContext'
 
-const { fontChoice, setFontChoice, activeFontFamily } = useFontPreferences()
+const { activeFontFamily } = useFontPreferences()
 ```
 
 The hook throws if used outside `FontPreferencesProvider`.

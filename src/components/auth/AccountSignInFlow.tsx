@@ -1,4 +1,3 @@
-import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { setHasSkippedSignIn } from '@/components/ProfileGate';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext';
@@ -214,8 +213,6 @@ export function AccountSignInFlow() {
                             {settingsExpanded && (
                                 <View style={styles.settingsCardInner}>
                                     <ThemePreferencePicker />
-                                    <View style={styles.preferenceDivider} />
-                                    <FontPreferencePicker />
                                 </View>
                             )}
                         </View>

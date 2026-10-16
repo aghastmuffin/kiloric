@@ -27,6 +27,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { buildGoalStateFromPlan } from '@/lib/goals'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
+import { WATER_LOGGING_UI_ENABLED } from '@/lib/water'
 import { COUNTRY_OPTIONS } from '@/lib/countries'
 import {
   ACTIVITY_OPTIONS,
@@ -684,12 +685,12 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              A quick setup so CalCount can personalize calories, macros, and hydration for you.
+              A quick setup so CalCount can personalize calories and macros for you.
             </Text>
             <View style={onboardingStyles.infoCard}>
               <Text style={onboardingStyles.infoCardTitle}>We&apos;ll handle the math</Text>
               <Text style={onboardingStyles.infoCardText}>
-                TDEE, macro targets, weekly pace, and hydration are calculated automatically from
+                TDEE, macro targets, and weekly pace are calculated automatically from
                 your body stats and goals.
               </Text>
             </View>
@@ -936,9 +937,11 @@ export function OnboardingWizard() {
               formatLabel={(value) => `${value} g`}
             />
 
-            <Text style={onboardingStyles.label}>
-              Hydration · {formatFluid(form.displayUnits, plan.dailyFluid)}
-            </Text>
+            {WATER_LOGGING_UI_ENABLED ? (
+              <Text style={onboardingStyles.label}>
+                Hydration · {formatFluid(form.displayUnits, plan.dailyFluid)}
+              </Text>
+            ) : null}
             <Text style={onboardingStyles.hintInline}>TDEE (maintenance): {plan.tdee} kcal</Text>
 
             {renderTargetWeightPicker()}

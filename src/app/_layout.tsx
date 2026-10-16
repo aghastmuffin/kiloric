@@ -2,7 +2,7 @@ import { ApiErrorProvider } from '@/lib/ApiErrorContext';
 import { ApiBackendPreferencesProvider } from '@/lib/ApiBackendPreferencesContext';
 import { AuthProvider } from '@/lib/AuthContext';
 import { FontPreferencesProvider, useFontPreferences } from '@/lib/FontPreferencesContext';
-import { FONT_FAMILY, MONO_FONT_FAMILY, fontAssets } from '@/lib/fonts';
+import { FONT_FAMILY, HEADLINE_FONT_FAMILY, fontAssets } from '@/lib/fonts';
 import { MealTypePreferencesProvider } from '@/lib/MealTypePreferencesContext';
 import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
@@ -25,7 +25,7 @@ function buildNavigationTheme(
     ...base,
     colors: {
       ...base.colors,
-      primary: colors.accent,
+      primary: colors.brand,
       background: colors.background,
       card: colors.surfaceMuted,
       text: colors.text,
@@ -66,11 +66,10 @@ function RootNavigation() {
   );
 
   const navigationFontStyle = {
-    fontFamily: MONO_FONT_FAMILY,
-    fontSize: 11,
+    fontFamily: HEADLINE_FONT_FAMILY,
+    fontSize: 22,
     fontWeight: '400' as const,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase' as const,
+    letterSpacing: -0.3,
   };
 
   return (
@@ -98,8 +97,8 @@ function RootNavigation() {
                 <Stack.Screen name="reset-password" options={{ headerShown: true, headerTitle: "Reset password" }} />
                 <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
                 <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
-                <Stack.Screen name="Additions" options={{ headerShown: false }} />
-                <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
+                  <Stack.Screen name="food/[barcode]" options={{ headerShown: false }} />
+                  <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Goals & body" }} />
                 <Stack.Screen name="contribute-food" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="privacy-policy"

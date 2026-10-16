@@ -1,5 +1,4 @@
 import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
-import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { MotionView } from '@/components/MotionView';
 import {
     NativeDatePicker,
@@ -10,7 +9,6 @@ import { HeightPicker, WeightPicker } from '@/components/onboarding/BodyMetricPi
 import { SelectionCard } from '@/components/onboarding/SelectionCard';
 import { UnitToggle } from '@/components/onboarding/UnitToggle';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
-import { NoiseOverlay } from '@/components/ui/NoiseOverlay';
 import { showApiError } from '@/lib/apiErrors';
 import { isEligibleOnboardingAge, MINIMUM_ONBOARDING_AGE } from '@/lib/ageEligibility';
 import { useAuth } from '@/lib/AuthContext';
@@ -49,10 +47,11 @@ import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { WATER_LOGGING_UI_ENABLED } from '@/lib/water';
 import {
     appendDisplayUnitsToGoalPlain,
-    defaultDisplayUnits,
     formatFluid,
+    defaultDisplayUnits,
     formatPaceRate,
     normalizeStoredMetricsToMetric,
     normalizeStoredTargetWeightKg,
@@ -81,7 +80,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15);
 
-const CONFIG_TABS = ['Profile', 'Body & Goals', 'Targets', 'Preferences'] as const;
+const CONFIG_TABS = ['Profile', 'Goals & body', 'Targets', 'Preferences'] as const;
 
 function parseProfileDate(value?: string): Date {
   if (!value) return DEFAULT_DATE_OF_BIRTH;
@@ -180,7 +179,7 @@ export default function ConfigScreen() {
     navigation.setOptions({
       gestureEnabled: !isRequired,
       headerBackVisible: !isRequired,
-      headerTitle: 'Configuration',
+      headerTitle: 'Goals & body',
     });
   }, [isRequired, navigation]);
 
@@ -288,7 +287,7 @@ export default function ConfigScreen() {
     setDailyFluid(null);
     Alert.alert(
       'Reset to Recommended',
-      'Daily calories, macros, and hydration have been refreshed to match your body and goals.',
+      'Daily calories and macros have been refreshed to match your body and goals.',
     );
   }
 
@@ -428,8 +427,6 @@ export default function ConfigScreen() {
 
   return (
     <View style={styles.screen}>
-      <NoiseOverlay />
-
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -451,11 +448,11 @@ export default function ConfigScreen() {
           <View style={styles.eyebrowRow}>
             <View style={styles.badge}>
               <Ionicons name="settings-sharp" size={12} color={colors.accent} />
-              <Text style={styles.badgeText}>CONFIGURATION</Text>
+              <Text style={styles.badgeText}>Goals & body</Text>
             </View>
             <Text style={styles.emailSubhead}>{user.email}</Text>
           </View>
-          <Text accessibilityRole="header" style={styles.heading}>App & Profile Settings</Text>
+          <Text accessibilityRole="header" style={styles.heading}>Goals & body</Text>
           <Text style={styles.lede}>
             {isRequired
               ? 'Complete your profile setup to personalize your targets and use the app.'
@@ -602,8 +599,7 @@ export default function ConfigScreen() {
           </MotionView>
         )}
 
-        {/* Tab 1: Body & Goals */}
-        {activeTab === 'Body & Goals' && (
+        {activeTab === 'Goals & body' && (
           <MotionView
             key="body-tab"
             from={{ opacity: 0, translateY: 8 }}
@@ -892,27 +888,31 @@ export default function ConfigScreen() {
                 />
               </View>
 
-              <View style={styles.divider} />
+              {WATER_LOGGING_UI_ENABLED ? (
+                <>
+                  <View style={styles.divider} />
+                  <View style={[styles.row, compactLayout && styles.rowCompact]}>
+                    <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
+                      <Text style={styles.fieldLabel}>Daily hydration</Text>
+                      <Text style={styles.fieldHint}>
+                        {formatFluid(displayUnits, activeDailyFluid)}
+                      </Text>
+                    </View>
+                    <Text style={styles.fieldValue}>{activeDailyFluid} ml</Text>
+                    <NativeIntPicker
+                      accessibilityLabel="Daily hydration milliliters"
+                      value={activeDailyFluid}
+                      onChange={(val) => setDailyFluid(val)}
+                      min={500}
+                      max={10000}
+                      step={50}
+                      disabled={saving}
+                      formatLabel={(value) => `${value} ml`}
+                    />
+                  </View>
+                </>
+              ) : null}
 
-              <View style={[styles.row, compactLayout && styles.rowCompact]}>
-                <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
-                  <Text style={styles.fieldLabel}>Daily Hydration</Text>
-                  <Text style={styles.fieldHint}>
-                    {formatFluid(displayUnits, activeDailyFluid)}
-                  </Text>
-                </View>
-                <Text style={styles.fieldValue}>{activeDailyFluid} ml</Text>
-                <NativeIntPicker
-                  accessibilityLabel="Daily hydration milliliters"
-                  value={activeDailyFluid}
-                  onChange={(val) => setDailyFluid(val)}
-                  min={500}
-                  max={10000}
-                  step={50}
-                  disabled={saving}
-                  formatLabel={(value) => `${value} ml`}
-                />
-              </View>
             </View>
 
             <View style={[styles.sectionHeader, { marginTop: 16 }]}>
@@ -961,12 +961,6 @@ export default function ConfigScreen() {
             <View style={styles.card}>
               <View style={styles.verticalRow}>
                 <ThemePreferencePicker />
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.verticalRow}>
-                <FontPreferencePicker />
               </View>
 
               {__DEV__ ? (

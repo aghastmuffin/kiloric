@@ -6,7 +6,8 @@
 - **React Native 0.85** / **React 19**
 - **Appwrite** (`react-native-appwrite`) for auth + databases
 - **FastAPI** backend at `https://calcount.taeson.co` for food/barcode APIs
-- **AsyncStorage** for session persistence and user preferences
+- **expo-secure-store** for the native Appwrite session secret (web relies on the cookie session)
+- **AsyncStorage** for user preferences
 
 Path alias: `@/*` → `src/*` (see `tsconfig.json`).
 
@@ -16,7 +17,7 @@ Root layout: `src/app/_layout.tsx`
 
 ```
 SafeAreaProvider
-└─ FontPreferencesProvider          (custom font choice + navigation theme)
+└─ FontPreferencesProvider          (IBM Plex Sans body face for navigation)
    └─ ThemeProvider (expo-router dark theme)
       └─ ApiErrorProvider          (global error toast)
          └─ AuthProvider           (Appwrite session + user)
@@ -35,7 +36,7 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 
 | Provider | Hook | Purpose |
 |----------|------|---------|
-| `FontPreferencesProvider` | `useFontPreferences()` | System vs custom Redaction font; remounts tree on font change |
+| `FontPreferencesProvider` | `useFontPreferences()` | Applies IBM Plex Sans once the font assets load |
 | `ApiErrorProvider` | `useApiError()` | Shows `ApiErrorToast` for Appwrite and backend errors |
 | `AuthProvider` | `useAuth()` | `user`, `loading`, `signIn`, `signUp`, `signOut` |
 | `MealTypePreferencesProvider` | `useMealTypePreferences()` | Selected meal bucket (Breakfast, Lunch, …) |
@@ -46,11 +47,10 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 
 | Route | Tab visible | Notes |
 |-------|-------------|-------|
-| `index` | Today | Dashboard: targets, logs, tasks |
-| `logfood` | Log | Search, scan, favorites, and meal logging |
-| `stats` | Stats | History and progress |
+| `index` | Today | Targets, checklist, today's meals |
+| `logfood` | Add | Search, scan, favorites, and meal logging |
+| `stats` | Trends | History and progress |
 | `account` | You | Sign in/out, settings, profile |
-| `meals` / `workouts` / `meds` / `searchrewrite` | Hidden | Redirects or `__DEV__` previews |
 
 ### Stack screens (`src/app/`)
 
@@ -59,8 +59,8 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 | `cameraview` | Scan Barcode | Live barcode scanner (`expo-camera`) |
 | `onboarding` | Hidden | Multi-step profile + nutrition wizard |
 | `onboard_success` | Hidden | Post-onboarding confirmation |
-| `config` | Profile | Edit saved profile fields |
-| `Additions` | Hidden | Product detail / add to meal |
+| `config` | Goals & body | Profile, targets, and appearance |
+| `food/[barcode]` | Hidden | Product detail / add to meal |
 | `contribute-food` | Hidden | Submit a food record |
 | `credits` | — | Credits screen |
 
@@ -68,7 +68,7 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 
 ```text
 App launch
-  └─ AuthProvider restores AsyncStorage session → account.get()
+  └─ AuthProvider restores the native SecureStore session, or the web cookie session → account.get()
   └─ ProfileGate (tabs only)
        └─ if user && !isProfileComplete → router.replace('/onboarding')
        └─ else → show tabs

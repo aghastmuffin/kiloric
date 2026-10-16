@@ -1,13 +1,11 @@
 import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
 import { AccountSignInFlow } from '@/components/auth/AccountSignInFlow';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { showApiError } from '@/lib/apiErrors';
 import { useAuth } from '@/lib/AuthContext';
 import { resolveGoalState } from '@/lib/goals';
 import { triggerSelectionHaptic } from '@/lib/haptics';
-import { getTodayMeals, type MealDocument } from '@/lib/meals';
 import { getProfile, type ProfileDocument } from '@/lib/profile';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { useAppLayout } from '@/lib/theme/layout';
@@ -21,7 +19,7 @@ import {
 } from '@/lib/units';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Linking,
@@ -166,7 +164,6 @@ export function SettingsDrop() {
                 style={styles.settingsBody}
             >
               <ThemePreferencePicker />
-              <FontPreferencePicker />
               {__DEV__ ? <ApiBackendPreferencePicker /> : null}
             </Animated.View>
         )}
@@ -184,7 +181,6 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileDocument | null>(null);
-  const [todayMeals, setTodayMeals] = useState<MealDocument[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -195,14 +191,10 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
       let active = true;
       setLoadingProfile(true);
       setProfileError(null);
-      Promise.all([
-        getProfile(user.$id),
-        getTodayMeals(user.$id),
-      ])
-        .then(([nextProfile, today]) => {
+      getProfile(user.$id)
+        .then((nextProfile) => {
           if (!active) return;
           setProfile(nextProfile);
-          setTodayMeals(today);
         })
         .catch((error) => {
           console.warn('[Account] profile summary load failed', error);
@@ -219,10 +211,6 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
     }, [reloadKey, user.$id]),
   );
 
-  const totals = useMemo(
-    () => ({ kcal: todayMeals.reduce((sum, meal) => sum + (meal.kcal ?? 0), 0) }),
-    [todayMeals],
-  );
   const displayName = profile?.username?.trim() || user.name?.trim() || user.email.split('@')[0];
   const goal = profile?.goal_plain?.replace(/ · units:(metric|imperial)$/, '').trim()
     || 'No current focus saved yet.';
@@ -321,7 +309,7 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
                 onPress={() => setReloadKey((key) => key + 1)}
                 style={({ pressed }) => [styles.retryButton, pressed && styles.headerPressed]}
               >
-                <Text style={styles.retryText}>RETRY</Text>
+                <Text style={styles.retryText}>Retry</Text>
               </Pressable>
             </View>
           ) : (
@@ -356,41 +344,9 @@ function LoggedInPanel({ user }: { user: AppwriteUser }) {
               signingOut && styles.buttonDisabled,
             ]}
           >
-            <Text style={styles.editButtonText}>Edit profile & goals</Text>
+            <Text style={styles.editButtonText}>Goals & body</Text>
             <Ionicons name="arrow-forward" size={17} color={colors.brand} />
           </Pressable>
-        </View>
-
-        <View style={styles.dailySection}>
-          <View style={styles.sectionHeadingCopy}>
-            <Text accessibilityRole="header" style={styles.sectionTitle}>Today</Text>
-          </View>
-          <View style={styles.statRow}>
-            <View
-              accessible
-              accessibilityLabel={`Meals today: ${loadingProfile || profileError ? 'unavailable' : todayMeals.length}`}
-              style={styles.statTile}
-            >
-              <View style={styles.statLabelRow}>
-                <Ionicons name="restaurant-outline" size={15} color={colors.success} />
-                <Text style={styles.statLabel}>MEALS</Text>
-              </View>
-              <Text style={styles.statValue}>{loadingProfile || profileError ? 'N/A' : todayMeals.length}</Text>
-            </View>
-            <View
-              accessible
-              accessibilityLabel={`Calories today: ${loadingProfile || profileError ? 'unavailable' : Math.round(totals.kcal)}`}
-              style={styles.statTile}
-            >
-              <View style={styles.statLabelRow}>
-                <Ionicons name="flash-outline" size={15} color={colors.accent} />
-                <Text style={styles.statLabel}>KCAL</Text>
-              </View>
-              <Text style={styles.statValue}>
-                {loadingProfile || profileError ? 'N/A' : Math.round(totals.kcal).toLocaleString()}
-              </Text>
-            </View>
-          </View>
         </View>
 
         <SettingsDrop />
@@ -556,9 +512,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingRight: 12,
   },
   goalMetricValue: {
-    ...typography.bodyLarge,
+    ...typography.numeric,
     color: c.text,
-    fontWeight: '600',
   },
   goalMetricLabel: {
     ...typography.labelTiny,
@@ -616,90 +571,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 10,
   },
   retryText: {
-    ...typography.overline,
+    ...typography.label,
     color: c.danger,
-  },
-  dailySection: {
-    gap: 14,
-  },
-  statRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: c.borderStrong,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: c.border,
-  },
-  statTile: {
-    flexGrow: 1,
-    flexBasis: 88,
-    minHeight: 78,
-    justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: c.border,
-  },
-  statLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  statValue: {
-    ...typography.metric,
-    color: c.text,
-  },
-  statLabel: {
-    ...typography.overline,
-    fontSize: 9,
-    color: c.textMuted,
-  },
-  activitySection: {
-    gap: 10,
-    paddingLeft: 18,
-    paddingVertical: 4,
-    borderLeftWidth: 3,
-    borderLeftColor: c.brand,
-  },
-  activityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  xpHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  levelValue: {
-    ...typography.bodyLarge,
-    color: c.text,
-    fontWeight: '600',
-  },
-  xpValue: {
-    ...typography.labelSmall,
-    color: c.textMuted,
-  },
-  xpTrack: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: c.progressTrail,
-    overflow: 'hidden',
-  },
-  xpFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: c.xpAccent,
-  },
-  xpHint: {
-    ...typography.bodySmall,
-    color: c.textFaint,
-  },
-  activityUnavailable: {
-    ...typography.bodySmall,
-    color: c.textMuted,
   },
   preferencesSection: {
     borderTopWidth: StyleSheet.hairlineWidth,

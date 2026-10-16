@@ -6,14 +6,14 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 
 | File | Route | Description |
 |------|-------|-------------|
-| `(tabs)/index.tsx` | `/` | Today dashboard: nutrition targets, automatic indicators, personal tasks, and recent logs |
-| `(tabs)/logfood.tsx` | `/logfood` | Food search, barcode entry, favorites, history, and meal logging |
-| `(tabs)/stats.tsx` | `/stats` | Nutrition history and progress summaries |
-| `(tabs)/account.tsx` | `/account` | Sign in, account summary, user preferences, privacy controls, and deletion |
+| `(tabs)/index.tsx` | `/` | Today: calorie and macro progress, checklist, and today's meals |
+| `(tabs)/logfood.tsx` | `/logfood` | Add: food search, barcode entry, favorites, history, and meal logging |
+| `(tabs)/stats.tsx` | `/stats` | Trends: nutrition history and progress summaries |
+| `(tabs)/account.tsx` | `/account` | You: sign in, account summary, preferences, privacy controls, and deletion |
 
 `(tabs)/_layout.tsx` applies `ProfileGate`. Signed-in users cannot enter the main tabs until a complete, adult-eligible profile is confirmed.
 
-The `meals`, `workouts`, `meds`, and `searchrewrite` files are hidden routes. Preview planners have no production navigation entry point.
+`/meals` and `/searchrewrite` redirect to `/logfood` through the Expo Router plugin. `src/dev/workouts.tsx` and `src/dev/meds.tsx` are parked previews with no production route.
 
 ## Stack screens
 
@@ -24,8 +24,8 @@ The `meals`, `workouts`, `meds`, and `searchrewrite` files are hidden routes. Pr
 | `onboard_success.tsx` | `/onboard_success` | Setup completion screen |
 | `reset-password.tsx` | `/reset-password` | Completes Appwrite email recovery links |
 | `cameraview.tsx` | `/cameraview` | Barcode scanner; opened only from an explicit scan action |
-| `Additions.tsx` | `/Additions` | Product detail and add-to-meal |
-| `config.tsx` | `/config` | Profile, goals, nutrition targets, and appearance preferences |
+| `food/[barcode].tsx` | `/food/[barcode]` | Product detail and add-to-meal |
+| `config.tsx` | `/config` | Goals & body: profile, nutrition targets, and appearance |
 | `contribute-food.tsx` | `/contribute-food` | Submit a food record for review |
 | `privacy-policy.tsx` | `/privacy-policy` | Privacy and retention policy |
 | `credits.tsx` | `/credits` | Credits and acknowledgements |

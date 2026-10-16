@@ -58,11 +58,11 @@ Used in `config.tsx` and onboarding.
 
 Animated modal with confirm/cancel, optional destructive styling and loading state. Built with `react-native-reanimated`.
 
-### `FontPreferencePicker.tsx`
+### `ThemePreferencePicker.tsx`
 
-Toggle between system font and custom Redaction font. Used on Account tab (logged out and logged in).
+Night or Paper. There is no font picker.
 
-Meal type is selected from Log / product-detail UI via `MealTypePreferencesContext`.
+Meal type is selected from the Add tab and product detail via `MealTypePreferencesContext`.
 
 ---
 

@@ -5,6 +5,9 @@ import { AppwriteException, ID, Permission, Query, Role, type Models } from 'rea
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
 const WATER_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID ?? 'water_logs'
 
+/** Goal and checklist UI stays hidden until a water-logging screen exists. */
+export const WATER_LOGGING_UI_ENABLED = false
+
 export type WaterFields = {
   owner: string
   amount_ml: number

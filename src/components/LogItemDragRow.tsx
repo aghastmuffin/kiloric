@@ -42,7 +42,7 @@ export function LogItemDragRow({
   onDragHover,
   onDragEnd,
 }: Props) {
-  const { colors } = useTheme()
+  const { colors, scheme } = useTheme()
   const translateX = useSharedValue(0)
   const translateY = useSharedValue(0)
   const scale = useSharedValue(1)
@@ -157,11 +157,11 @@ export function LogItemDragRow({
 
   const animatedStyle = useAnimatedStyle(() => ({
     zIndex: active.value ? 40 : 0,
-    elevation: active.value ? 16 : 0,
+    elevation: scheme === 'dark' ? 0 : active.value ? 16 : 0,
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22 * lifting.value,
-    shadowRadius: 14 * lifting.value,
+    shadowOpacity: scheme === 'dark' ? 0 : 0.22 * lifting.value,
+    shadowRadius: scheme === 'dark' ? 0 : 14 * lifting.value,
     transform: [
       { translateX: translateX.value },
       { translateY: translateY.value },

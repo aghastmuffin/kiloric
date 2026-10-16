@@ -3,8 +3,8 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
     "@expo-google-fonts/instrument-serif": "^0.4.1",
-    "@expo-google-fonts/inter-tight": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo/ui": "~56.0.26",
     "@expo/vector-icons": "^15.0.2",
@@ -24,6 +24,7 @@
     "expo-image-picker": "~56.0.24",
     "expo-linking": "~56.0.17",
     "expo-router": "~56.2.19",
+    "expo-secure-store": "~56.0.4",
     "expo-splash-screen": "~56.0.13",
     "expo-status-bar": "~56.0.4",
     "expo-symbols": "~56.0.7",

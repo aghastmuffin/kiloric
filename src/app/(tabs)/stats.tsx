@@ -421,7 +421,7 @@ export default function StatsScreen() {
               onPress={() => setReloadKey((key) => key + 1)}
               style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
             >
-              <Text style={styles.retryText}>RETRY</Text>
+              <Text style={styles.retryText}>Retry</Text>
             </Pressable>
           </View>
         ) : data.meals.length === 0 ? (
@@ -608,8 +608,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   metricLabel: { ...typography.overline, color: c.textFaint, fontSize: 9 },
   scoreValue: { ...typography.display, color: c.text, fontSize: 48, lineHeight: 51 },
-  scoreSuffix: { ...typography.metric, color: c.brand },
-  detailValue: { ...typography.metric, color: c.text },
+  scoreSuffix: { ...typography.numeric, color: c.brand },
+  detailValue: { ...typography.numeric, color: c.text },
   detailSuffix: { ...typography.bodyLarge, color: c.textMuted },
   metricCaption: { ...typography.bodySmall, color: c.textMuted, maxWidth: 540 },
   legendRow: {
@@ -712,7 +712,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   weightMetric: { flex: 1, gap: 4 },
   weightDivider: { width: StyleSheet.hairlineWidth, backgroundColor: c.border, marginHorizontal: 16 },
   weightLabel: { ...typography.overline, color: c.textFaint, fontSize: 9 },
-  weightValue: { ...typography.metric, color: c.text },
+  weightValue: { ...typography.numeric, color: c.text },
   snapshotNote: {
     ...typography.bodySmall,
     color: c.textFaint,
@@ -757,5 +757,5 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   errorTitle: { ...typography.body, color: c.danger, fontWeight: '700' },
   errorMessage: { ...typography.bodySmall, color: c.textMuted },
   retryButton: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },
-  retryText: { ...typography.overline, color: c.accent },
+  retryText: { ...typography.label, color: c.accent },
 })

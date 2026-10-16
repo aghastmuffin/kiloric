@@ -1,3 +1,4 @@
+import { HEADLINE_FONT_FAMILY, MONO_FONT_FAMILY } from '@/lib/fonts';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -117,12 +118,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     valueText: {
-        fontSize: 32,
-        fontWeight: 'bold',
+        fontFamily: HEADLINE_FONT_FAMILY,
+        fontSize: 40,
+        lineHeight: 44,
+        fontWeight: '400',
+        letterSpacing: -0.6,
         color: '#2c3e50',
     },
     maxText: {
-        fontSize: 14,
+        fontFamily: MONO_FONT_FAMILY,
+        fontVariant: ['tabular-nums'],
+        fontSize: 13,
+        lineHeight: 18,
         color: '#7f8c8d',
     },
 });

@@ -1,7 +1,9 @@
 import {
     FONT_FAMILY,
     HEADLINE_FONT_FAMILY,
+    MONO_FONT_FAMILY,
 } from '@/lib/fonts';
+import type { TextStyle } from 'react-native';
 
 export const typography = {
   display: {
@@ -61,12 +63,20 @@ export const typography = {
     fontWeight: '500' as const,
     letterSpacing: 0.15,
   },
+  /** Section titles in the body face. Screen titles use headlineLarge. */
   metric: {
-    fontFamily: HEADLINE_FONT_FAMILY,
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: '400' as const,
+    fontFamily: FONT_FAMILY,
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: '600' as const,
     letterSpacing: -0.35,
+  },
+  /** Gram and kcal figures other than the large calorie total. */
+  numeric: {
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: 15,
+    lineHeight: 20,
+    fontVariant: ['tabular-nums'] as NonNullable<TextStyle['fontVariant']>,
   },
   overline: {
     fontFamily: FONT_FAMILY,
@@ -76,4 +86,4 @@ export const typography = {
     letterSpacing: 1.15,
     textTransform: 'uppercase' as const,
   },
-} as const
+}

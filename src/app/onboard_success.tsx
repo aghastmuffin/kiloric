@@ -1,4 +1,6 @@
 import { useTheme } from '@/lib/theme/ThemeContext'
+import { flatInDark } from '@/lib/theme/shadow'
+import { WATER_LOGGING_UI_ENABLED } from '@/lib/water'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
@@ -27,7 +29,7 @@ const PLAN_PARTS = ['CAL', 'PRO', 'CARB', 'FAT'] as const
 
 export default function OnboardingSuccess() {
   const router = useRouter()
-  const { colors } = useTheme()
+  const { colors, scheme } = useTheme()
   const styles = useThemedStyles(makeStyles)
   const insets = useSafeAreaInsets()
   const { width } = useWindowDimensions()
@@ -122,7 +124,7 @@ export default function OnboardingSuccess() {
           accessibilityLabel="A balanced daily plan for calories, protein, carbohydrates, and fat"
           style={[styles.plateStage, wide && styles.plateStageWide, plateStyle]}
         >
-          <View style={[styles.plate, { width: plateSize, height: plateSize, borderRadius: plateSize / 2 }]}>
+          <View style={[styles.plate, flatInDark(scheme), { width: plateSize, height: plateSize, borderRadius: plateSize / 2 }]}>
             {PLAN_PARTS.map((part, index) => (
               <View
                 key={part}
@@ -154,7 +156,7 @@ export default function OnboardingSuccess() {
           </View>
           <Text accessibilityRole="header" style={styles.title}>Your plan is ready.</Text>
           <Text style={styles.subtitle}>
-            Your calorie, macro, and hydration targets are set. Start with today’s meals and let
+            Your calorie and macro targets are set. Start with today’s meals and let
             the pattern build from there.
           </Text>
 
@@ -167,10 +169,12 @@ export default function OnboardingSuccess() {
               <Text style={styles.ledgerLabel}>MACRO BALANCE</Text>
               <Text style={styles.ledgerValue}>CALCULATED</Text>
             </View>
-            <View style={styles.ledgerRow}>
-              <Text style={styles.ledgerLabel}>HYDRATION</Text>
-              <Text style={styles.ledgerValue}>READY</Text>
-            </View>
+            {WATER_LOGGING_UI_ENABLED ? (
+              <View style={styles.ledgerRow}>
+                <Text style={styles.ledgerLabel}>HYDRATION</Text>
+                <Text style={styles.ledgerValue}>READY</Text>
+              </View>
+            ) : null}
           </View>
 
           <Pressable

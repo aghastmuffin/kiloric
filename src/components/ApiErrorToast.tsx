@@ -1,6 +1,7 @@
 import type { ApiErrorSource } from '@/lib/apiErrors'
 import { triggerNotificationHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
+import { flatInDark } from '@/lib/theme/shadow'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { Ionicons } from '@expo/vector-icons'
@@ -36,7 +37,7 @@ const SOURCE_LABEL: Record<ApiErrorSource, string> = {
 export function ApiErrorToast({ error, onDismiss }: Props) {
   const insets = useSafeAreaInsets()
   const styles = useThemedStyles(makeStyles)
-  const { colors } = useTheme()
+  const { colors, scheme } = useTheme()
   const [visible, setVisible] = useState<ApiErrorToastPayload | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const translateY = useSharedValue(-120)
@@ -104,7 +105,7 @@ export function ApiErrorToast({ error, onDismiss }: Props) {
   return (
     <View style={styles.overlay} pointerEvents="box-none">
       <Animated.View
-        style={[styles.toast, { marginTop: insets.top + 8 }, animatedStyle]}
+        style={[styles.toast, flatInDark(scheme), { marginTop: insets.top + 8 }, animatedStyle]}
       >
         <View style={styles.iconWrap}>
           <Ionicons name="alert-circle" size={22} color={colors.danger} />

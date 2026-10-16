@@ -10,7 +10,14 @@ import { clearProfileCache } from './profile'
 import { clearMealTypePreferencesCache } from './mealTypePreferences'
 import { clearTasksCache } from './tasks'
 import { clearWaterCache } from './water'
-import { clearAppwriteSession, persistAppwriteSession } from './appwriteSession'
+import * as SecureStore from 'expo-secure-store'
+import { clearAppwriteSession, persistAppwriteSession, restoreAppwriteSession } from './appwriteSession'
+
+vi.mock('expo-secure-store', () => ({
+  setItemAsync: vi.fn(() => Promise.resolve()),
+  getItemAsync: vi.fn(() => Promise.resolve(null)),
+  deleteItemAsync: vi.fn(() => Promise.resolve()),
+}))
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
@@ -99,7 +106,12 @@ describe('appwriteSession cache clearing', () => {
     )
 
     expect(client.setSession).toHaveBeenCalledWith('my-session-secret')
-    expect(AsyncStorage.setItem).toHaveBeenCalled()
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
+      expect.stringContaining('appwrite_session_'),
+      'my-session-secret',
+    )
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled()
+    expect(AsyncStorage.removeItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
     expect(clearTasksCache).toHaveBeenCalled()
@@ -116,6 +128,7 @@ describe('appwriteSession cache clearing', () => {
     } as unknown as Parameters<typeof persistAppwriteSession>[0])
 
     expect(client.setSession).not.toHaveBeenCalled()
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled()
     expect(AsyncStorage.setItem).not.toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearTodayMealsCache).toHaveBeenCalledWith()
@@ -128,6 +141,7 @@ describe('appwriteSession cache clearing', () => {
     await clearAppwriteSession()
 
     expect(client.setSession).toHaveBeenCalledWith('')
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalled()
     expect(AsyncStorage.removeItem).toHaveBeenCalled()
     expect(clearCachedToken).toHaveBeenCalled()
     expect(clearProfileCache).toHaveBeenCalled()
@@ -136,5 +150,28 @@ describe('appwriteSession cache clearing', () => {
     expect(clearFavoriteFoodsCache).toHaveBeenCalled()
     expect(clearWaterCache).toHaveBeenCalledWith()
     expect(clearMealTypePreferencesCache).toHaveBeenCalled()
+  })
+
+  it('does not persist the session secret in a browser document', async () => {
+    const documentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document')
+    Object.defineProperty(globalThis, 'document', {
+      configurable: true,
+      value: {},
+    })
+    try {
+      await persistAppwriteSession({
+        userId: 'user-123',
+        secret: 'web-secret',
+      } as unknown as Parameters<typeof persistAppwriteSession>[0])
+      await expect(restoreAppwriteSession()).resolves.toBe(false)
+      expect(SecureStore.setItemAsync).not.toHaveBeenCalled()
+      expect(client.setSession).toHaveBeenCalledWith('web-secret')
+    } finally {
+      if (documentDescriptor) {
+        Object.defineProperty(globalThis, 'document', documentDescriptor)
+      } else {
+        delete (globalThis as { document?: unknown }).document
+      }
+    }
   })
 })

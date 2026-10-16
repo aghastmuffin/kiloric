@@ -37,7 +37,7 @@ const results = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(quer
 
 | Method | Path | Used by |
 |--------|------|---------|
-| GET | `/api/barcode/:code` | Log tab, camera scan, product detail (`Additions`) |
+| GET | `/api/barcode/:code` | Add tab, camera scan, product detail (`/food/[barcode]`) |
 | GET | `/api/fuzzy/:query` | Log tab text search |
 
 Response shapes vary; screens defensively read common keys (`product_name`, `code`, `barcode`, `calories`, etc.).

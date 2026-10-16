@@ -1,5 +1,6 @@
 import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics'
 import { useTheme } from '@/lib/theme/ThemeContext'
+import { flatInDark } from '@/lib/theme/shadow'
 import type { OnboardingColors } from '@/lib/theme/tokens'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import { useCallback, useEffect } from 'react'
@@ -43,7 +44,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const styles = useOnboardingStyles(makeStyles)
-  const { colors, onboardingColors } = useTheme()
+  const { colors, onboardingColors, scheme } = useTheme()
   const backdropOpacity = useSharedValue(0)
   const cardScale = useSharedValue(0.94)
   const cardOpacity = useSharedValue(0)
@@ -93,7 +94,7 @@ export function ConfirmDialog({
         <Animated.View
           accessibilityRole="alert"
           accessibilityViewIsModal={true}
-          style={[styles.card, cardStyle]}
+          style={[styles.card, flatInDark(scheme), cardStyle]}
         >
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>

@@ -4,7 +4,7 @@ import {
   saveThemeChoice,
 } from '@/lib/theme/themePreferences'
 import {
-  resolveOnboardingColors,
+  onboardingColorsFromTheme,
   resolveThemeColors,
   type AppThemeChoice,
   type ColorSchemeName,
@@ -19,7 +19,6 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { useColorScheme } from 'react-native'
 
 type ThemeContextValue = {
   themeChoice: AppThemeChoice
@@ -34,7 +33,6 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useColorScheme()
   const [themeChoice, setThemeChoiceState] = useState<AppThemeChoice>(DEFAULT_THEME_CHOICE)
   const [loading, setLoading] = useState(true)
 
@@ -44,18 +42,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  // iOS theme follows the device; barebones is always dark.
-  const scheme: ColorSchemeName =
-    themeChoice === 'barebones' ? 'dark' : systemScheme === 'light' ? 'light' : 'dark'
+  const scheme: ColorSchemeName = themeChoice === 'paper' ? 'light' : 'dark'
 
-  const colors = useMemo(
-    () => resolveThemeColors(themeChoice, scheme),
-    [themeChoice, scheme],
-  )
-  const onboardingColors = useMemo(
-    () => resolveOnboardingColors(themeChoice, scheme),
-    [themeChoice, scheme],
-  )
+  const colors = useMemo(() => resolveThemeColors(themeChoice), [themeChoice])
+  const onboardingColors = useMemo(() => onboardingColorsFromTheme(colors), [colors])
 
   const setThemeChoice = useCallback(async (choice: AppThemeChoice) => {
     setThemeChoiceState(choice)

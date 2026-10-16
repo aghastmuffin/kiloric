@@ -6,8 +6,8 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
 
-const THEME_OPTIONS: AppThemeChoice[] = ['paper', 'ios', 'barebones']
-const THEME_LABELS = ['Paper', 'Cool', 'Barebones']
+const THEME_OPTIONS: AppThemeChoice[] = ['night', 'paper']
+const THEME_LABELS = ['Night', 'Paper']
 
 export function ThemePreferencePicker() {
   const { themeChoice, setThemeChoice } = useTheme()
@@ -29,8 +29,7 @@ export function ThemePreferencePicker() {
     <View style={styles.section}>
       <Text accessibilityRole="header" style={styles.label}>Color theme</Text>
       <Text style={styles.hint}>
-        Paper is warm and editorial. Cool is crisp and blue; Barebones is dark and
-        high-contrast.
+        Night is the default. Paper is the warm light theme.
       </Text>
       <ThemedSegmentedControl
         values={THEME_LABELS}
@@ -38,7 +37,7 @@ export function ThemePreferencePicker() {
         onChange={handleIndexChange}
         enabled={!saving}
         accessibilityLabel="Color theme selection"
-        accessibilityHint="Selects the active visual color scheme for the application"
+        accessibilityHint="Selects Night or Paper"
       />
     </View>
   )

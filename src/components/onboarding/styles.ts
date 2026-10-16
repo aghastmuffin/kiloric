@@ -200,7 +200,7 @@ export const makeOnboardingStyles = (onboardingColors: OnboardingColors) => Styl
     borderColor: onboardingColors.border,
   },
   metricValue: {
-    ...typography.metric,
+    ...typography.numeric,
     color: onboardingColors.text,
     marginBottom: 4,
   },

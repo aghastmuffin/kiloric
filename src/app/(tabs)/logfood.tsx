@@ -476,7 +476,7 @@ export default function LogFoodScreen() {
       const product = item ? unwrapProduct(item) : { code: barcode }
       const id = storeSearchResult(barcode, product)
       router.push({
-        pathname: '/Additions',
+        pathname: '/food/[barcode]',
         params: { id, barcode, query },
       })
     },
@@ -720,7 +720,7 @@ export default function LogFoodScreen() {
                   hitSlop={8}
                   style={styles.loadRetry}
                 >
-                  <Text style={styles.loadRetryText}>RETRY</Text>
+                  <Text style={styles.loadRetryText}>Retry</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -1503,7 +1503,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   loadNoticeText: { ...typography.bodySmall, color: c.textMuted, flex: 1 },
   loadRetry: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  loadRetryText: { ...typography.overline, color: c.danger },
+  loadRetryText: { ...typography.label, color: c.danger },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1616,20 +1616,20 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     gap: spacing.md,
   },
   mealCard: {
-    backgroundColor: c.surface,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: c.border,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
     overflow: 'hidden',
   },
   mealCardDropTarget: {
-    borderColor: c.accent,
     backgroundColor: c.accentSoft,
   },
   mealCardHeader: {
     minHeight: 52,
-    paddingHorizontal: spacing.md,
-    backgroundColor: c.surfaceAlt,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1650,7 +1650,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontWeight: '700',
   },
   mealCardKcal: {
-    ...typography.label,
+    ...typography.numeric,
     color: c.text,
   },
   mealItems: {
@@ -1659,11 +1659,13 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   mealItemRow: {
     minHeight: 64,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: c.surface,
+    backgroundColor: 'transparent',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.border,
   },
   mealItemGhost: {
     opacity: 0.35,
@@ -1686,9 +1688,8 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textMuted,
   },
   mealItemKcal: {
-    ...typography.label,
-    color: c.accent,
-    fontWeight: '700',
+    ...typography.numeric,
+    color: c.text,
   },
   logNewButton: {
     minHeight: 54,
