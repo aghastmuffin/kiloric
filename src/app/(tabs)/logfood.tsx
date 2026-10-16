@@ -40,6 +40,7 @@ import { listSavedMeals, logSavedMeal, saveMealFromEntries, type SavedMeal } fro
 import { useFocusLoader } from '@/lib/data/useLoader'
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
 import { usePalette } from '@/lib/theme/palette'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { Fragment, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
@@ -179,6 +180,11 @@ export default function LogFoodScreen() {
       else next.set(row.key, row.selection)
       return next
     })
+  }
+
+  function openContribute() {
+    const text = query.trim()
+    router.push({ pathname: '/contribute-food', params: text ? (/^\d{8,14}$/.test(text) ? { code: text } : { query: text }) : {} })
   }
 
   async function runSearch(text: string) {
@@ -322,7 +328,13 @@ export default function LogFoodScreen() {
         {searching || (!data && state.loading) ? (
           <LoadingBlock />
         ) : rows.length === 0 ? (
-          <EmptyState icon="nutrition-outline" title={emptyCopy[tab].title} body={emptyCopy[tab].body} />
+          <EmptyState
+            icon="nutrition-outline"
+            title={emptyCopy[tab].title}
+            body={emptyCopy[tab].body}
+            actionLabel={tab === 'results' && searchError ? 'Add this food' : undefined}
+            onAction={tab === 'results' ? openContribute : undefined}
+          />
         ) : (
           rows.map((row, index) => (
             <Fragment key={row.key}>
@@ -353,6 +365,27 @@ export default function LogFoodScreen() {
           ))
         )}
       </Card>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Snap a few photos of the package to add it"
+        onPress={openContribute}
+        testID="add-a-food"
+        style={({ pressed }) => [styles.addFood, { backgroundColor: c.mint, opacity: pressed ? 0.85 : 1 }]}
+      >
+        <View style={[styles.addFoodIcon, { backgroundColor: c.card }]}>
+          <Ionicons name="camera-outline" size={22} color={c.mintInk} />
+        </View>
+        <View style={styles.rowText}>
+          <Txt variant="subheading" color={c.mintInk}>
+            Can’t find it? Add a food
+          </Txt>
+          <Txt variant="caption" color={c.mintInk}>
+            Snap the barcode, front, ingredients and label.
+          </Txt>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={c.mintInk} />
+      </Pressable>
 
       <Card testID="logged-today">
         <View style={styles.sectionHeader}>
@@ -432,4 +465,6 @@ const styles = StyleSheet.create({
   savePanel: { gap: 10, marginTop: 10 },
   saveActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   saveButton: { marginTop: 10, alignSelf: 'flex-start' },
+  addFood: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 24, padding: 16 },
+  addFoodIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 })
