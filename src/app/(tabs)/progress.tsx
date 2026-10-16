@@ -16,10 +16,12 @@ import { showApiError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
 import { shortMonthDay } from '@/lib/data/dateKeys'
 import { formatKcal } from '@/lib/data/foodItem'
-import { displayWeight, loadProgress, weightUnitLabel, type ProgressRange } from '@/lib/data/overview'
+import { displayWeight, loadProgress, weightUnitLabel, type ProgressData, type ProgressRange } from '@/lib/data/overview'
+import { applyMaintenanceEstimate, targetsFromTdee } from '@/lib/data/targets'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import { logWeight } from '@/lib/data/weight'
-import { lbsToKg } from '@/lib/units'
+import { kgPerWeekToLbsPerWeek, lbsToKg } from '@/lib/units'
+import { ADAPTIVE_MIN_LOGGED_DAYS, ADAPTIVE_MIN_WEIGH_INS } from '@/lib/weightTrend'
 import { fonts, usePalette } from '@/lib/theme/palette'
 import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
@@ -55,6 +57,77 @@ function StatCard({ label, value, unit, detail }: { label: string; value: string
   )
 }
 
+/** Below this gap the formula and the data agree closely enough that retargeting is noise. */
+const RETARGET_MIN_DIFF_KCAL = 100
+const RETARGET_MIN_CONFIDENCE = 0.5
+
+function MaintenanceCard({ data, onApply, applying }: { data: ProgressData; onApply: (tdee: number) => void; applying: boolean }) {
+  const c = usePalette()
+  const { adaptive, adaptiveInputs, summary } = data
+  const formula = summary.plan.tdee
+  if (!adaptive) {
+    const daysLeft = Math.max(0, ADAPTIVE_MIN_LOGGED_DAYS - adaptiveInputs.loggedDays)
+    const weighInsLeft = Math.max(0, ADAPTIVE_MIN_WEIGH_INS - adaptiveInputs.weighIns)
+    const needs = [
+      daysLeft > 0 ? `${daysLeft} more logged day${daysLeft === 1 ? '' : 's'}` : null,
+      weighInsLeft > 0 ? `${weighInsLeft} more weigh-in${weighInsLeft === 1 ? '' : 's'}` : null,
+    ].filter(Boolean)
+    return (
+      <Card style={styles.maintenance} testID="maintenance-card">
+        <Txt variant="caption" tone="muted">
+          Maintenance estimate
+        </Txt>
+        <View style={styles.statValue}>
+          <Text style={[styles.statNumber, { color: c.ink }]}>{formula ? formatKcal(formula) : '—'}</Text>
+          {formula ? (
+            <Txt variant="label" tone="muted">
+              kcal/day
+            </Txt>
+          ) : null}
+        </View>
+        <Txt variant="caption" tone="muted">
+          {needs.length > 0
+            ? `From your profile for now. ${needs.join(' and ')} over two weeks will personalise it from your own logs.`
+            : 'From your profile for now. Keep weighing in across two weeks to personalise it.'}
+        </Txt>
+      </Card>
+    )
+  }
+  const units = summary.units
+  const weekly = units === 'imperial' ? `${kgPerWeekToLbsPerWeek(adaptive.weeklyChangeKg)} lb` : `${adaptive.weeklyChangeKg} kg`
+  const next = targetsFromTdee(summary, adaptive.tdee)
+  const canApply =
+    adaptive.confidence >= RETARGET_MIN_CONFIDENCE &&
+    Math.abs(next.targetKcal - summary.targets.kcal) >= RETARGET_MIN_DIFF_KCAL
+  return (
+    <Card style={styles.maintenance} testID="maintenance-card">
+      <Txt variant="caption" tone="muted">
+        Maintenance estimate · from your data
+      </Txt>
+      <View style={styles.statValue}>
+        <Text style={[styles.statNumber, { color: c.ink }]}>{formatKcal(adaptive.tdee)}</Text>
+        <Txt variant="label" tone="muted">
+          kcal/day
+        </Txt>
+      </View>
+      <Txt variant="caption" tone="muted">
+        {adaptive.loggedDays} logged days, trend {adaptive.weeklyChangeKg > 0 ? '+' : ''}
+        {weekly}/week. Profile estimate {formatKcal(adaptive.formulaTdee)} · {Math.round(adaptive.confidence * 100)}% from your logs.
+      </Txt>
+      {canApply ? (
+        <UButton
+          label={applying ? 'Updating…' : `Use it · goal becomes ${formatKcal(next.targetKcal)} kcal`}
+          tone="mint"
+          size="sm"
+          disabled={applying}
+          onPress={() => onApply(adaptive.tdee)}
+          testID="apply-maintenance"
+        />
+      ) : null}
+    </Card>
+  )
+}
+
 export default function ProgressScreen() {
   const { user } = useAuth()
   const { wide } = useShell()
@@ -63,6 +136,7 @@ export default function ProgressScreen() {
   const [logOpen, setLogOpen] = useState(false)
   const [weightText, setWeightText] = useState('')
   const [saving, setSaving] = useState(false)
+  const [applying, setApplying] = useState(false)
 
   const state = useFocusLoader(() => loadProgress(userId!, range, user?.name), userId ? `${userId}:${range}` : null)
   const data = state.data
@@ -91,11 +165,25 @@ export default function ProgressScreen() {
     }
   }
 
+  async function applyEstimate(tdee: number) {
+    if (!userId || !data) return
+    setApplying(true)
+    try {
+      await applyMaintenanceEstimate(userId, data.summary, tdee)
+      await state.reload()
+    } catch (err) {
+      showApiError(err, 'appwrite')
+    } finally {
+      setApplying(false)
+    }
+  }
+
   const logAction = <UButton label="Log weight" tone="mint" size="sm" onPress={() => setLogOpen(true)} testID="log-weight" />
 
   const weightCard = data ? (
     <WeightCard
       weights={data.weights}
+      trend={data.trend}
       units={units}
       fallbackKg={data.summary.currentWeightKg}
       range={range}
@@ -155,6 +243,7 @@ export default function ProgressScreen() {
           </View>
           <View style={styles.wideCol}>
             {stats}
+            <MaintenanceCard data={data} onApply={applyEstimate} applying={applying} />
             <CaloriesWeekCard bars={data.bars} goal={target} initials={false} />
           </View>
         </View>
@@ -163,6 +252,7 @@ export default function ProgressScreen() {
           {weightCard}
           {logPanel}
           {stats}
+          <MaintenanceCard data={data} onApply={applyEstimate} applying={applying} />
           <CaloriesWeekCard bars={data.bars} goal={target} />
         </>
       )}
@@ -176,6 +266,7 @@ const styles = StyleSheet.create({
   statValue: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   statNumber: { fontFamily: fonts.heavy, fontSize: 28, letterSpacing: -0.8 },
   logPanel: { gap: 12 },
+  maintenance: { gap: 6 },
   logActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   wideRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
   wideCol: { flex: 1, gap: 16 },

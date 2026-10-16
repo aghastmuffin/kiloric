@@ -7,14 +7,17 @@ import { StyleSheet, Text, View } from 'react-native'
 type Props = {
   eaten: Macros
   burned: number
+  /** Portion of `burned` added back to the budget. */
+  credit: number
   targets: Targets
   remaining: number
   layout: 'mobile' | 'wide'
 }
 
-export function CaloriesCard({ eaten, burned, targets, remaining, layout }: Props) {
+export function CaloriesCard({ eaten, burned, credit, targets, remaining, layout }: Props) {
   const c = usePalette()
-  const budget = targets.kcal + burned
+  const budget = targets.kcal + credit
+  const covered = Math.max(0, burned - credit)
   const progress = budget > 0 ? eaten.kcal / budget : 0
   const over = remaining < 0
   const wide = layout === 'wide'
@@ -44,6 +47,13 @@ export function CaloriesCard({ eaten, burned, targets, remaining, layout }: Prop
           <Stat label={wide ? 'Goal' : 'Daily goal'} value={targets.kcal > 0 ? formatKcal(targets.kcal) : '—'} inline={wide} />
         </View>
       </View>
+      {covered > 0 ? (
+        <Txt variant="caption" tone="muted" style={wide ? undefined : styles.creditNote}>
+          {credit > 0
+            ? `+${formatKcal(credit)} kcal added back. Your activity level already covers the other ${formatKcal(covered)}.`
+            : 'Your activity level already covers today’s workout, so nothing extra is added back.'}
+        </Txt>
+      ) : null}
       <View style={wide ? styles.macrosStacked : styles.macrosRow}>
         {macros.map((macro) => (
           <View key={macro.key} style={wide ? styles.macroStacked : styles.macroCell}>
@@ -94,6 +104,7 @@ const styles = StyleSheet.create({
   ringValue: { fontFamily: fonts.heavy, letterSpacing: -1 },
   ringLabel: { fontFamily: fonts.medium, fontSize: 13 },
   stats: { gap: 10 },
+  creditNote: { marginTop: -8, marginBottom: 16 },
   statsWide: { gap: 8 },
   inlineStat: { fontFamily: fonts.medium, fontSize: 15 },
   macrosRow: { flexDirection: 'row', gap: 16 },

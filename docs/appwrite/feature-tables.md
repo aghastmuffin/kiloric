@@ -11,7 +11,7 @@ owner-scoped tables in the `main` database. Their schema lives in
 | `meal_plan_entries` | Plan, Today's plan | `day` is a local `YYYY-MM-DD`. Checking an entry for today logs it to the food log. |
 | `prep_sessions` | Plan, dashboard prep card | One per week (`week_start` = Monday). `items_json` is `[{ name, portions }]`. |
 | `grocery_items` | Grocery list | Scoped to `week_start`. |
-| `workouts` | Train, Today's plan | `status` is `planned` → `active` → `done`. `kcal_burned` (MET 5 estimate) is added back to today's budget. |
+| `workouts` | Train, Today's plan | `status` is `planned` → `active` → `done`. `kcal_burned` is a net estimate, (MET − 1) × kg × active hours. Only the part above what the activity level already covers is added back to today's budget (see `docs/formulas.md`). |
 | `workout_sets` | Train session | Weights are stored in kg; the UI converts for imperial users. |
 | `weight_logs` | Progress, dashboard | Logging a weight also updates `users.weight`. |
 

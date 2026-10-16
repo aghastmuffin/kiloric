@@ -1,4 +1,8 @@
+import { account } from '@/lib/appwrite'
+import { exerciseCreditKcal } from '@/lib/exercise'
 import { getTodayMeals, type MealDocument } from '@/lib/meals'
+import { resolvePlanInputs, type PlanInputs } from '@/lib/planInputs'
+import { planPreferencesFromUser, type PlanPreferences } from '@/lib/planPreferences'
 import { getProfile, type ProfileDocument } from '@/lib/profile'
 import { kgToLbs, parseDisplayUnitsPreference, type DisplayUnits } from '@/lib/units'
 import { addDays, dayKey, lastNDayKeys, startOfDay, startOfWeek, weekDayKeys } from './dateKeys'
@@ -7,6 +11,7 @@ import type { Macros } from './foodItem'
 import { getPrepSession, listGroceryItems, listPlanEntries, parsePrepItems, type GroceryItem, type PlanEntry, type PrepItem, type PrepSession } from './mealPlan'
 import { burnedOn, listWorkoutsBetween, type Workout } from './workouts'
 import { dailyWeightSeries, listWeightsSince, type WeightPoint } from './weight'
+import { estimateAdaptiveTdee, weightTrend, type AdaptiveTdee, type TrendPoint } from '@/lib/weightTrend'
 
 export type Targets = Macros & { fluidMl: number | null }
 
@@ -22,6 +27,7 @@ export type ProfileSummary = {
   firstName: string
   goal: GoalInfo
   currentWeightKg: number | null
+  plan: PlanInputs
 }
 
 export function targetsFromProfile(profile: ProfileDocument | null): Targets {
@@ -50,9 +56,19 @@ function firstNameFrom(profile: ProfileDocument | null, fallbackName: string | u
   return first ? first.charAt(0).toUpperCase() + first.slice(1) : ''
 }
 
+async function loadPrefs(userId: string): Promise<PlanPreferences | null> {
+  try {
+    const user = await account.get()
+    return user.$id === userId ? planPreferencesFromUser(user) : null
+  } catch {
+    return null
+  }
+}
+
 export async function loadProfileSummary(userId: string, accountName?: string): Promise<ProfileSummary> {
-  const profile = await getProfile(userId)
+  const [profile, prefs] = await Promise.all([getProfile(userId), loadPrefs(userId)])
   return {
+    plan: resolvePlanInputs(profile, prefs),
     profile,
     targets: targetsFromProfile(profile),
     units: parseDisplayUnitsPreference(profile?.goal_plain, profile?.country),
@@ -73,7 +89,10 @@ export function weightUnitLabel(units: DisplayUnits): string {
 export type TodayOverview = {
   summary: ProfileSummary
   eaten: Macros
+  /** Net workout energy logged today. */
   burned: number
+  /** The part of `burned` added back to the budget (beyond the activity-level allowance). */
+  exerciseCredit: number
   remaining: number
   meals: MealDocument[]
   entries: FoodEntry[]
@@ -82,8 +101,14 @@ export type TodayOverview = {
   streak: number
 }
 
+const STREAK_LOOKBACK_DAYS = 365
+
+export function exerciseCreditFor(summary: ProfileSummary, burned: number): number {
+  return exerciseCreditKcal(burned, summary.plan.tdee, summary.plan.activity)
+}
+
 export async function loadStreak(userId: string): Promise<number> {
-  const since = addDays(startOfDay(), -60)
+  const since = addDays(startOfDay(), -STREAK_LOOKBACK_DAYS)
   const meals = await listMealsSince(userId, since)
   const days = new Set<string>()
   for (const [day, kcal] of dailyKcalByDay(meals)) if (kcal > 0) days.add(day)
@@ -102,11 +127,13 @@ export async function loadToday(userId: string, accountName?: string): Promise<T
   ])
   const eaten = mealTotals(meals)
   const burned = burnedOn(workouts, today)
+  const exerciseCredit = exerciseCreditFor(summary, burned)
   return {
     summary,
     eaten,
     burned,
-    remaining: summary.targets.kcal - eaten.kcal + burned,
+    exerciseCredit,
+    remaining: summary.targets.kcal - eaten.kcal + exerciseCredit,
     meals,
     entries,
     plan,
@@ -119,6 +146,7 @@ export type TodayBudget = {
   summary: ProfileSummary
   eaten: Macros
   burned: number
+  exerciseCredit: number
   remaining: number
 }
 
@@ -131,7 +159,8 @@ export async function loadTodayBudget(userId: string, accountName?: string): Pro
   ])
   const eaten = mealTotals(meals)
   const burned = burnedOn(workouts, today)
-  return { summary, eaten, burned, remaining: summary.targets.kcal - eaten.kcal + burned }
+  const exerciseCredit = exerciseCreditFor(summary, burned)
+  return { summary, eaten, burned, exerciseCredit, remaining: summary.targets.kcal - eaten.kcal + exerciseCredit }
 }
 
 export type DayBar = { day: string; kcal: number; isToday: boolean }
@@ -148,6 +177,11 @@ export const RANGE_DAYS: Record<ProgressRange, number> = { week: 7, month: 30, q
 export type ProgressData = {
   summary: ProfileSummary
   weights: WeightPoint[]
+  /** Smoothed weight for each point in `weights`. */
+  trend: TrendPoint[]
+  adaptive: AdaptiveTdee | null
+  /** Data collected toward the adaptive estimate, for the "keep logging" state. */
+  adaptiveInputs: { loggedDays: number; weighIns: number }
   bars: DayBar[]
   avgIntake: number | null
   workoutsDone: number
@@ -160,21 +194,47 @@ export function averageLoggedIntake(totals: Map<string, number>, dayKeys: readon
   return Math.round(logged.reduce((sum, day) => sum + (totals.get(day) ?? 0), 0) / logged.length)
 }
 
+/** Window used for the adaptive maintenance estimate, independent of the chart range. */
+export const ADAPTIVE_WINDOW_DAYS = 28
+
 export async function loadProgress(userId: string, range: ProgressRange, accountName?: string): Promise<ProgressData> {
   const days = RANGE_DAYS[range]
   const since = addDays(startOfDay(), -(days - 1))
+  const lookbackDays = Math.max(days, ADAPTIVE_WINDOW_DAYS + 1, 7)
+  const lookbackStart = addDays(startOfDay(), -(lookbackDays - 1))
   const weekStart = startOfWeek()
   const weekKeys = weekDayKeys(weekStart)
   const [summary, meals, weightLogs, weekWorkouts] = await Promise.all([
     loadProfileSummary(userId, accountName),
-    listMealsSince(userId, addDays(startOfDay(), -(Math.max(days, 7) - 1))),
-    listWeightsSince(userId, since),
+    listMealsSince(userId, lookbackStart),
+    listWeightsSince(userId, lookbackStart),
     listWorkoutsBetween(userId, weekKeys[0], weekKeys[6]),
   ])
   const totals = dailyKcalByDay(meals)
+  const allWeights = dailyWeightSeries(weightLogs)
+  const sinceKey = dayKey(since)
+  const trend = weightTrend(allWeights).filter((point) => point.day >= sinceKey)
+  const adaptiveStart = dayKey(addDays(startOfDay(), -ADAPTIVE_WINDOW_DAYS))
+  const todayKey = dayKey()
+  const windowTotals = new Map([...totals].filter(([day]) => day >= adaptiveStart && day !== todayKey))
+  const windowWeights = allWeights.filter((point) => point.day >= adaptiveStart)
+  const adaptive = summary.plan.tdee
+    ? estimateAdaptiveTdee({
+        intakeByDay: windowTotals,
+        weights: windowWeights,
+        formulaTdee: summary.plan.tdee,
+        excludeDays: [todayKey],
+      })
+    : null
   return {
     summary,
-    weights: dailyWeightSeries(weightLogs),
+    weights: allWeights.filter((point) => point.day >= sinceKey),
+    trend,
+    adaptive,
+    adaptiveInputs: {
+      loggedDays: [...windowTotals.values()].filter((kcal) => kcal > 0).length,
+      weighIns: windowWeights.length,
+    },
     bars: buildDayBars(totals),
     avgIntake: averageLoggedIntake(totals, lastNDayKeys(days), dayKey()),
     workoutsDone: weekWorkouts.filter((workout) => workout.status === 'done').length,

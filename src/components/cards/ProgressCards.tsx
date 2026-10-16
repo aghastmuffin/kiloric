@@ -2,7 +2,8 @@ import { Badge, BarChart, Card, EmptyState, LineChart, Txt } from '@/components/
 import { parseDayKey, shortMonthDay, shortWeekday, weekdayInitial } from '@/lib/data/dateKeys'
 import { formatKcal } from '@/lib/data/foodItem'
 import { displayWeight, weightUnitLabel, type DayBar } from '@/lib/data/overview'
-import { weightDelta, type WeightPoint } from '@/lib/data/weight'
+import type { WeightPoint } from '@/lib/data/weight'
+import type { TrendPoint } from '@/lib/weightTrend'
 import type { DisplayUnits } from '@/lib/units'
 import { fonts, usePalette } from '@/lib/theme/palette'
 import type { ReactNode } from 'react'
@@ -17,6 +18,7 @@ const RANGE_PHRASE: Record<string, string> = {
 
 export function WeightCard({
   weights,
+  trend,
   units,
   fallbackKg,
   range = 'month',
@@ -25,6 +27,8 @@ export function WeightCard({
   compact,
 }: {
   weights: readonly WeightPoint[]
+  /** Smoothed series; when present the chart and change badge follow the trend, not raw scale noise. */
+  trend?: readonly TrendPoint[]
   units: DisplayUnits
   fallbackKg: number | null
   range?: string
@@ -35,7 +39,9 @@ export function WeightCard({
   const c = usePalette()
   const unit = weightUnitLabel(units)
   const latestKg = weights.length > 0 ? weights[weights.length - 1].weightKg : fallbackKg
-  const deltaKg = weightDelta(weights)
+  const series = trend && trend.length === weights.length ? trend.map((point) => ({ day: point.day, weightKg: point.trendKg })) : weights
+  const deltaKg = series.length >= 2 ? Math.round((series[series.length - 1].weightKg - series[0].weightKg) * 10) / 10 : null
+  const trendKg = trend && trend.length >= 2 ? trend[trend.length - 1].trendKg : null
   const delta = deltaKg != null ? displayWeight(Math.abs(deltaKg), units) : null
   const sign = deltaKg != null && deltaKg < 0 ? '−' : '+'
   const mid = weights.length > 2 ? weights[Math.floor(weights.length / 2)] : null
@@ -53,6 +59,11 @@ export function WeightCard({
             </Text>
             <Text style={[styles.unit, { color: c.inkMuted }]}>{unit}</Text>
           </View>
+          {trendKg != null ? (
+            <Txt variant="caption" tone="muted">
+              Trend {displayWeight(trendKg, units)} {unit}
+            </Txt>
+          ) : null}
         </View>
         {delta != null && delta > 0 ? (
           <Badge label={`${sign}${delta} ${unit} ${RANGE_PHRASE[range] ?? ''}`.trim()} tone="mint" />
@@ -62,7 +73,7 @@ export function WeightCard({
       </View>
       {weights.length >= 2 ? (
         <LineChart
-          values={weights.map((point) => displayWeight(point.weightKg, units))}
+          values={series.map((point) => displayWeight(point.weightKg, units))}
           labels={[
             shortMonthDay(parseDayKey(weights[0].day)),
             ...(mid ? [shortMonthDay(parseDayKey(mid.day))] : []),

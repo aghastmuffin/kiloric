@@ -128,7 +128,7 @@ export default function TodayScreen() {
         {header}
         {dashboard.error ? <ErrorNote message={dashboard.error} onRetry={dashboard.reload} /> : null}
         <View style={styles.gridRow}>
-          <CaloriesCard eaten={today.eaten} burned={today.burned} targets={today.summary.targets} remaining={today.remaining} layout="wide" />
+          <CaloriesCard eaten={today.eaten} burned={today.burned} credit={today.exerciseCredit} targets={today.summary.targets} remaining={today.remaining} layout="wide" />
           {checklist}
           <PrepCard
             prep={prep}
@@ -140,6 +140,7 @@ export default function TodayScreen() {
         <View style={styles.gridRow}>
           <WeightCard
             weights={progress.weights}
+            trend={progress.trend}
             units={progress.summary.units}
             fallbackKg={progress.summary.currentWeightKg}
             overline="Weight · last 30 days"
@@ -155,7 +156,7 @@ export default function TodayScreen() {
     <ScreenScroll refreshing={dashboard.loading} onRefresh={dashboard.reload}>
       {header}
       {dashboard.error ? <ErrorNote message={dashboard.error} onRetry={dashboard.reload} /> : null}
-      <CaloriesCard eaten={today.eaten} burned={today.burned} targets={today.summary.targets} remaining={today.remaining} layout="mobile" />
+      <CaloriesCard eaten={today.eaten} burned={today.burned} credit={today.exerciseCredit} targets={today.summary.targets} remaining={today.remaining} layout="mobile" />
       {checklist}
     </ScreenScroll>
   )
