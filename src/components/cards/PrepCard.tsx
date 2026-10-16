@@ -21,7 +21,7 @@ export function PrepCard({ prep, layout, onGrocery, onEdit }: Props) {
     ? [
         `${shortWeekday(when)} ${timeLabel(when)}`,
         session?.duration_min ? `about ${session.duration_min} min` : null,
-        layout === 'dashboard' && prep.preppedMeals > 0 ? `${prep.preppedMeals} meals` : null,
+        layout === 'dashboard' && prep.preppedMeals > 0 ? `${prep.preppedMeals} meal${prep.preppedMeals === 1 ? '' : 's'}` : null,
       ]
         .filter(Boolean)
         .join(' · ')
@@ -38,7 +38,7 @@ export function PrepCard({ prep, layout, onGrocery, onEdit }: Props) {
             {meta ?? 'Batch-cook for the week ahead'}
           </Txt>
         </View>
-        {layout === 'plan' && prep.preppedMeals > 0 ? <Badge label={`${prep.preppedMeals} meals`} tone="card" /> : null}
+        {layout === 'plan' && prep.preppedMeals > 0 ? <Badge label={`${prep.preppedMeals} meal${prep.preppedMeals === 1 ? '' : 's'}`} tone="card" /> : null}
       </View>
 
       {prep.items.length > 0 ? (

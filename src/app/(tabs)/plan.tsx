@@ -38,6 +38,8 @@ import { useRouter } from 'expo-router'
 import { Fragment, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
+const AUTOFILL_SLOTS = ['Breakfast', 'Lunch', 'Dinner'] as const
+
 export default function PlanScreen() {
   const { user } = useAuth()
   const router = useRouter()
@@ -48,6 +50,7 @@ export default function PlanScreen() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedDay, setSelectedDay] = useState(todayKey)
   const [busy, setBusy] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const weekStart = useMemo(() => addDays(startOfWeek(), weekOffset * 7), [weekOffset])
   const weekKeys = useMemo(() => weekDayKeys(weekStart), [weekStart])
@@ -92,15 +95,18 @@ export default function PlanScreen() {
     if (!userId || !data) return
     void run('autofill', async () => {
       const [saved, recent] = await Promise.all([listSavedMeals(userId), listRecentEntries(userId)])
-      const candidates = planCandidatesFrom(saved, frequentFoods(recent, 20), recent)
+      const candidates = planCandidatesFrom(saved, frequentFoods(recent, 20), recent, data.entries)
       const additions = autofillWeek(weekStart, data.entries, candidates)
       if (additions.length === 0) {
-        throw new Error(
-          candidates.size === 0
-            ? 'Log or save a few meals first — auto-fill plans your week from foods you already eat.'
-            : 'Every breakfast, lunch and dinner slot left this week is already planned.',
+        const hasOptions = AUTOFILL_SLOTS.some((slot) => (candidates.get(slot)?.length ?? 0) > 0)
+        setNotice(
+          hasOptions
+            ? 'Every breakfast, lunch and dinner slot left this week is already planned.'
+            : 'Log, save or plan a breakfast, lunch or dinner first — auto-fill builds your week from meals you already eat.',
         )
+        return
       }
+      setNotice(null)
       for (const addition of additions) await addPlanEntry(userId, addition)
     })
   }
@@ -238,6 +244,14 @@ export default function PlanScreen() {
       <ScreenHeader overline={monthRangeLabel(weekStart, addDays(weekStart, 6))} title="Meal plan" />
       {dayPicker}
       {state.error ? <ErrorNote message={state.error} onRetry={state.reload} /> : null}
+      {notice ? (
+        <Card tone="mint" style={styles.notice}>
+          <Txt variant="caption" color={c.mintInk} style={styles.flex}>
+            {notice}
+          </Txt>
+          <IconButton icon="close" tone="card" size={30} accessibilityLabel="Dismiss" onPress={() => setNotice(null)} />
+        </Card>
+      ) : null}
       {!data && state.loading ? (
         <LoadingBlock />
       ) : wide ? (
@@ -268,4 +282,5 @@ const styles = StyleSheet.create({
   entryRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   addButton: { marginTop: 8, alignSelf: 'flex-start' },
   wideRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
+  notice: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
 })

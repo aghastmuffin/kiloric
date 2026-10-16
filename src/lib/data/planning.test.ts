@@ -101,6 +101,15 @@ describe('autofillWeek', () => {
     expect(additions.every((addition) => addition.prepped === false)).toBe(true)
   })
 
+  it('reuses meals already on the plan as candidates', () => {
+    const planned = [
+      { day: '2026-10-16', meal_type: 'Dinner' as const, name: 'Chicken rice bowl', kcal: 620, protein: 45, carbs: 70, fat: 14, prepped: true, logged: false },
+    ]
+    const fromPlan = planCandidatesFrom([], [], [], planned)
+    const additions = autofillWeek(weekStart, planned, fromPlan, new Date(2026, 9, 16))
+    expect(additions.map((addition) => `${addition.day} ${addition.name}`)).toEqual(['2026-10-17 Chicken rice bowl', '2026-10-18 Chicken rice bowl'])
+  })
+
   it('adds nothing without candidates', () => {
     expect(autofillWeek(weekStart, [], new Map(), new Date(2026, 9, 12))).toEqual([])
   })

@@ -187,11 +187,12 @@ export type PlanCandidate = Pick<PlanEntryFields, 'meal_type' | 'name' | 'kcal' 
   serving_label?: string | null
 }
 
-/** Build per-meal-type candidates from the user's saved meals first, then their most-logged foods. */
+/** Build per-meal-type candidates from saved meals, already-planned meals, then the most-logged foods. */
 export function planCandidatesFrom(
   savedMeals: readonly SavedMeal[],
   frequent: readonly { entry: FoodEntry; count: number }[],
   recent: readonly FoodEntry[],
+  planned: readonly PlanEntryFields[] = [],
 ): Map<MealType, PlanCandidate[]> {
   const byType = new Map<MealType, PlanCandidate[]>()
   const seen = new Set<string>()
@@ -205,6 +206,9 @@ export function planCandidatesFrom(
   }
   for (const meal of savedMeals) {
     push({ meal_type: meal.meal_type, name: meal.name, kcal: meal.kcal, protein: meal.protein, carbs: meal.carbs, fat: meal.fat })
+  }
+  for (const entry of planned) {
+    push({ ...entry, serving_label: entry.serving_label })
   }
   for (const { entry } of frequent) {
     push({ ...entry, serving_label: entry.serving_label })
