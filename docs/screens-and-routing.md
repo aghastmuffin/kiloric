@@ -31,7 +31,7 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 | `workout-editor.tsx` | `/workout-editor` | Schedule a workout with exercises, sets, reps and target weights |
 | `Additions.tsx` | `/Additions` | Product detail and add-to-meal |
 | `config.tsx` | `/config` | Profile, goals, nutrition targets, and appearance preferences |
-| `contribute-food.tsx` | `/contribute-food` | Submit a food record for review |
+| `contribute-food.tsx` | `/contribute-food` | Add a food with guided photos (barcode, front, ingredients, label) for review |
 | `privacy-policy.tsx` | `/privacy-policy` | Privacy and retention policy |
 | `credits.tsx` | `/credits` | Credits and acknowledgements |
 
