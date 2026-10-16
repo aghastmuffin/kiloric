@@ -1,151 +1,681 @@
-import { MotionView } from '@/components/MotionView'
-import { showApiError } from '@/lib/apiErrors'
+import { CaptureCamera, type CaptureGuide } from '@/components/contribute/CaptureCamera'
+import { ThanksBurst } from '@/components/contribute/ThanksBurst'
+import { Badge, Card, ErrorNote, Field, IconButton, ScreenScroll, Txt, UButton, WIDE_BREAKPOINT } from '@/components/ds'
+import { formatAppwriteError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
-import { submitFoodContribution, type OffNumberField } from '@/lib/foodContributions'
-import { useAppLayout } from '@/lib/theme/layout'
-import { useTheme } from '@/lib/theme/ThemeContext'
-import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens'
-import { typography } from '@/lib/theme/typography'
-import { useThemedStyles } from '@/lib/theme/useThemedStyles'
+import {
+  NUMBER_OFF_FIELDS,
+  STRING_OFF_FIELDS,
+  addFileId,
+  confirmContributor,
+  countContributions,
+  createContributionRecord,
+  discardContributionFiles,
+  uploadContributionPhoto,
+  type ContributionFileIds,
+  type ContributionPhoto,
+  type ContributionPhotoKind,
+  type FoodContributionResult,
+  type OffNumberField,
+  type OffStringField,
+} from '@/lib/foodContributions'
+import { triggerNotificationHaptic } from '@/lib/haptics'
+import type { ImageSource } from '@/lib/imageUpload'
+import { usePalette } from '@/lib/theme/palette'
 import { Ionicons } from '@expo/vector-icons'
-import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useMemo, useRef, useState, type ComponentProps } from 'react'
+import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 
-type Photo = { uri: string; mimeType?: string | null; fileName?: string | null; fileSize?: number | null }
-type PhotoKind = 'ingredients' | 'barcode' | 'front'
-const STEPS: { key: PhotoKind; title: string; description: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'ingredients', title: 'Ingredients list', description: 'Fill the frame and keep every line readable.', icon: 'reader-outline' },
-  { key: 'barcode', title: 'Barcode', description: 'Hold steady so the whole code is sharp.', icon: 'barcode-outline' },
-  { key: 'front', title: 'Front of product', description: 'Show the full package, straight on, in good light.', icon: 'cube-outline' },
-]
-const FIELDS: { key: OffNumberField; label: string }[] = [
-  { key: 'energy-kcal_100g', label: 'Energy (kcal)' }, { key: 'proteins_100g', label: 'Protein (g)' },
-  { key: 'carbohydrates_100g', label: 'Carbohydrate (g)' }, { key: 'fat_100g', label: 'Fat (g)' },
-  { key: 'fiber_100g', label: 'Fiber (g)' }, { key: 'sugars_100g', label: 'Sugars (g)' },
-  { key: 'sodium_100g', label: 'Sodium (g)' },
-]
-const PARAM_FIELDS: Record<string, OffNumberField> = {
-  energy_kcal_100g: 'energy-kcal_100g', proteins_100g: 'proteins_100g', carbohydrates_100g: 'carbohydrates_100g',
-  fat_100g: 'fat_100g', fiber_100g: 'fiber_100g', sugars_100g: 'sugars_100g', sodium_100g: 'sodium_100g',
+type PhotoKind = Exclude<ContributionPhotoKind, 'extra'>
+type StepKey = PhotoKind | 'details'
+type Phase = 'capture' | 'uploading' | 'done'
+type UploadStatus = 'waiting' | 'uploading' | 'done' | 'failed'
+
+type PhotoStep = {
+  key: PhotoKind
+  label: string
+  title: string
+  body: string
+  hint: string
+  guide: CaptureGuide
+  icon: ComponentProps<typeof Ionicons>['name']
+  optional?: boolean
 }
-function param(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] ?? '' : value ?? '' }
+
+const PHOTO_STEPS: PhotoStep[] = [
+  {
+    key: 'barcode',
+    label: 'Barcode',
+    title: 'Scan the barcode',
+    body: 'Line it up inside the frame. We read the number and snap the photo for you.',
+    hint: 'Hold steady, about a hand’s width away',
+    guide: 'barcode',
+    icon: 'barcode-outline',
+  },
+  {
+    key: 'front',
+    label: 'Front',
+    title: 'Snap the front',
+    body: 'Straight on, the whole pack in view. This becomes the product photo everyone sees.',
+    hint: 'Good light, no glare, fill the frame',
+    guide: 'portrait',
+    icon: 'cube-outline',
+  },
+  {
+    key: 'ingredients',
+    label: 'Ingredients',
+    title: 'Ingredients list',
+    body: 'Get every line in, sharp enough to read. It’s how we spot allergens.',
+    hint: 'Move closer until the text is crisp',
+    guide: 'landscape',
+    icon: 'reader-outline',
+  },
+  {
+    key: 'nutrition',
+    label: 'Nutrition',
+    title: 'Nutrition label',
+    body: 'The facts table with calories and macros. Include the per 100 g or per serving column.',
+    hint: 'Keep the whole table inside the frame',
+    guide: 'landscape',
+    icon: 'stats-chart-outline',
+    optional: true,
+  },
+]
+
+const STEP_KEYS: StepKey[] = [...PHOTO_STEPS.map((step) => step.key), 'details']
+const KIND_LABEL: Record<ContributionPhotoKind, string> = {
+  barcode: 'Barcode',
+  front: 'Front of pack',
+  ingredients: 'Ingredients',
+  nutrition: 'Nutrition label',
+  extra: 'Extra photo',
+}
+
+function param(value: string | string[] | undefined): string {
+  return (Array.isArray(value) ? value[0] : value)?.trim() ?? ''
+}
+
+function prefilledFields(params: Record<string, string | string[] | undefined>) {
+  const fields: Partial<Record<OffStringField | OffNumberField, string>> = {}
+  for (const key of [...STRING_OFF_FIELDS, ...NUMBER_OFF_FIELDS]) {
+    if (key === 'code' || key === 'product_name') continue
+    const value = param(params[key] ?? params[key.replace(/-/g, '_')])
+    if (value) fields[key] = value
+  }
+  return fields
+}
 
 export default function ContributeFoodScreen() {
-  const { user } = useAuth(); const router = useRouter(); const styles = useThemedStyles(makeStyles)
-  const { colors } = useTheme(); const { gutter, compact } = useAppLayout(); const insets = useSafeAreaInsets()
+  const c = usePalette()
+  const router = useRouter()
+  const { user } = useAuth()
+  const { width, height } = useWindowDimensions()
+  const wide = width >= WIDE_BREAKPOINT
   const params = useLocalSearchParams() as Record<string, string | string[] | undefined>
-  const initialQuery = useMemo(() => param(params.query), [params.query])
-  const initialCode = useMemo(() => param(params.code), [params.code])
-  const initialName = useMemo(() => param(params.product_name) || (!/^\d{8,14}$/.test(initialQuery) ? initialQuery : ''), [initialQuery, params.product_name])
-  const [photos, setPhotos] = useState<Partial<Record<PhotoKind, Photo>>>({})
-  const [manual, setManual] = useState(false); const [productName, setProductName] = useState(initialName); const [code, setCode] = useState(initialCode)
-  const [numbers, setNumbers] = useState<Partial<Record<OffNumberField, string>>>(() => Object.fromEntries(Object.entries(PARAM_FIELDS).map(([key, field]) => [field, param(params[key])]).filter(([, value]) => value)))
-  const [submitting, setSubmitting] = useState(false); const [submitted, setSubmitted] = useState(false)
-  const complete = STEPS.filter(({ key }) => photos[key]).length; const photosComplete = complete === 3
-  const ready = photosComplete && Boolean(productName.trim())
+  const prefill = useMemo(() => prefilledFields(params), [params])
+  const query = param(params.query)
 
-  async function choosePhoto(kind: PhotoKind, source: 'camera' | 'library') {
-    if (source === 'camera') {
-      const permission = await ImagePicker.requestCameraPermissionsAsync()
-      if (!permission.granted) return Alert.alert('Camera access needed', 'Allow camera access to photograph this product.')
+  const [stepIndex, setStepIndex] = useState(0)
+  const [phase, setPhase] = useState<Phase>('capture')
+  const [photos, setPhotos] = useState<Partial<Record<ContributionPhotoKind, ContributionPhoto>>>({})
+  const [code, setCode] = useState(param(params.code) || (/^\d{8,14}$/.test(query) ? query : ''))
+  const [codeVersion, setCodeVersion] = useState(0)
+  const [scannedCode, setScannedCode] = useState(false)
+  const [name, setName] = useState(param(params.product_name) || (/^\d{8,14}$/.test(query) ? '' : query))
+  const [brand, setBrand] = useState(prefill.brands ?? '')
+  const [serving, setServing] = useState(prefill.serving_size ?? '')
+  const [extraCamera, setExtraCamera] = useState(false)
+  const [progress, setProgress] = useState<Partial<Record<ContributionPhotoKind, number>>>({})
+  const [status, setStatus] = useState<Partial<Record<ContributionPhotoKind, UploadStatus>>>({})
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<FoodContributionResult | null>(null)
+  const [contributionCount, setContributionCount] = useState<number | null>(null)
+  const uploaded = useRef<Partial<Record<ContributionPhotoKind, { uri: string; fileId: string }>>>({})
+
+  const stepKey = STEP_KEYS[stepIndex]
+  const photoStep = PHOTO_STEPS.find((step) => step.key === stepKey) ?? null
+  const photoKinds = (Object.keys(photos) as ContributionPhotoKind[]).filter((kind) => photos[kind])
+  const missingRequired = PHOTO_STEPS.filter(
+    (step) => !step.optional && !photos[step.key] && !(step.key === 'barcode' && code),
+  )
+
+  const contentWidth = wide ? 1080 : Math.min(width, 560)
+  const cameraHeight = wide
+    ? Math.min(620, Math.max(420, height - 230))
+    : Math.min(Math.round((contentWidth - 40) * 1.2), Math.max(320, height - 360))
+
+  function exit() {
+    const pendingFiles = !result ? fileIdsFromUploads() : null
+    if (pendingFiles && Object.keys(pendingFiles).length) void discardContributionFiles(pendingFiles)
+    if (router.canGoBack()) router.back()
+    else router.replace('/logfood')
+  }
+
+  function back() {
+    if (stepIndex === 0) exit()
+    else setStepIndex(stepIndex - 1)
+  }
+
+  function next() {
+    setExtraCamera(false)
+    setStepIndex(Math.min(STEP_KEYS.length - 1, stepIndex + 1))
+  }
+
+  function setPhoto(kind: ContributionPhotoKind, photo: ImageSource | null) {
+    setPhotos((current) => {
+      const nextPhotos = { ...current }
+      if (photo) nextPhotos[kind] = { ...photo, kind }
+      else delete nextPhotos[kind]
+      return nextPhotos
+    })
+    if (photo) triggerNotificationHaptic('success')
+  }
+
+  async function pickFromLibrary(kind: ContributionPhotoKind) {
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 })
+    const asset = picked.canceled ? null : picked.assets?.[0]
+    if (!asset) return
+    setPhoto(kind, {
+      uri: asset.uri,
+      mimeType: asset.mimeType,
+      fileName: asset.fileName,
+      fileSize: asset.fileSize,
+      file: asset.file ?? null,
+    })
+    if (kind === 'extra') setExtraCamera(false)
+  }
+
+  function onBarcode(value: string) {
+    setCode(value)
+    setScannedCode(true)
+    setCodeVersion((version) => version + 1)
+  }
+
+  function fileIdsFromUploads(): ContributionFileIds {
+    let files: ContributionFileIds = {}
+    for (const kind of photoKinds) {
+      const entry = uploaded.current[kind]
+      if (entry && entry.uri === photos[kind]?.uri) files = addFileId(files, kind, entry.fileId)
     }
-    const result = source === 'camera'
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 })
-    if (result.canceled || !result.assets?.[0]) return
-    const asset = result.assets[0]
-    setPhotos((current) => ({ ...current, [kind]: { uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName, fileSize: asset.fileSize } }))
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    return files
   }
-  function promptPhoto(kind: PhotoKind) {
-    const title = STEPS.find((step) => step.key === kind)?.title ?? 'Product photo'
-    Alert.alert(title, 'Take a new photo or choose one you already have.', [
-      { text: 'Take photo', onPress: () => void choosePhoto(kind, 'camera') },
-      { text: 'Choose from library', onPress: () => void choosePhoto(kind, 'library') }, { text: 'Cancel', style: 'cancel' },
-    ])
-  }
-  async function submit() {
-    if (!user?.$id) return Alert.alert('Sign in required', 'Sign in to submit product details.')
-    if (!photosComplete) return Alert.alert('Three photos needed', 'Add each requested product view first.')
-    if (!productName.trim()) { setManual(true); return Alert.alert('Product name needed', 'Enter the product name under manual details.') }
-    setSubmitting(true)
+
+  async function send() {
+    if (!user?.$id) {
+      setError('Sign in to send product photos.')
+      return
+    }
+    setPhase('uploading')
+    setError(null)
+    setStatus(Object.fromEntries(photoKinds.map((kind) => [kind, uploaded.current[kind]?.uri === photos[kind]?.uri ? 'done' : 'waiting'])))
     try {
-      const fields: Partial<Record<OffNumberField, string | number>> = {}
-      for (const [key, value] of Object.entries(numbers)) if (value?.trim()) fields[key as OffNumberField] = value.trim()
-      await submitFoodContribution(user.$id, { photo: photos.ingredients!, additionalPhotos: [photos.barcode!, photos.front!], product_name: productName, code: code.trim() || null, source_query: initialQuery || code.trim() || productName.trim(), fields })
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setSubmitted(true)
-    } catch (error) { console.error('Could not submit food contribution', error); showApiError(error, 'appwrite') } finally { setSubmitting(false) }
+      const owner = await confirmContributor(user.$id)
+      for (const kind of photoKinds) {
+        const photo = photos[kind]!
+        if (uploaded.current[kind]?.uri === photo.uri) continue
+        setStatus((current) => ({ ...current, [kind]: 'uploading' }))
+        try {
+          const fileId = await uploadContributionPhoto(owner, photo, (fraction) =>
+            setProgress((current) => ({ ...current, [kind]: fraction })),
+          )
+          uploaded.current[kind] = { uri: photo.uri, fileId }
+          setStatus((current) => ({ ...current, [kind]: 'done' }))
+        } catch (uploadError) {
+          setStatus((current) => ({ ...current, [kind]: 'failed' }))
+          throw uploadError
+        }
+      }
+      const fields: Partial<Record<OffStringField | OffNumberField, string>> = { ...prefill }
+      if (brand.trim()) fields.brands = brand.trim()
+      else delete fields.brands
+      if (serving.trim()) fields.serving_size = serving.trim()
+      else delete fields.serving_size
+      const record = await createContributionRecord(owner, {
+        product_name: name,
+        code: code || null,
+        source_query: query || code || name,
+        fields,
+        files: fileIdsFromUploads(),
+      })
+      setResult(record)
+      setContributionCount(await countContributions(owner))
+      triggerNotificationHaptic('success')
+      setPhase('done')
+    } catch (sendError) {
+      console.error('Could not send food contribution', sendError)
+      triggerNotificationHaptic('error')
+      setError(formatAppwriteError(sendError))
+    }
   }
 
-  if (submitted) return <View style={[styles.successScreen, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl, paddingHorizontal: gutter }]}>
-    <MotionView from={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', damping: 18 }} style={styles.successCard}>
-      <View style={styles.successIcon}><Ionicons name="checkmark" size={30} color={colors.onBrand} /></View>
-      <Text accessibilityRole="header" style={styles.successTitle}>Thank you.</Text>
-      <Text style={styles.successCopy}>Your photos are ready for review. They’ll help make this product easier to find and log.</Text>
-      <Pressable accessibilityRole="button" onPress={() => router.back()} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}><Text style={styles.primaryButtonText}>Back to food log</Text></Pressable>
-    </MotionView>
-  </View>
+  function startOver() {
+    uploaded.current = {}
+    setPhotos({})
+    setProgress({})
+    setStatus({})
+    setResult(null)
+    setError(null)
+    setCode('')
+    setScannedCode(false)
+    setCodeVersion((version) => version + 1)
+    setName('')
+    setBrand('')
+    setServing('')
+    setStepIndex(0)
+    setPhase('capture')
+  }
 
-  return <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <View style={[styles.nav, { paddingTop: insets.top + 4, paddingHorizontal: gutter }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back to food log" onPress={() => router.back()} style={({ pressed }) => [styles.back, pressed && styles.pressed]}><Ionicons name="chevron-back" size={22} color={colors.accent} /><Text style={styles.backText}>Log food</Text></Pressable>
-      <Text numberOfLines={1} style={styles.navTitle}>Help complete this food</Text><View style={styles.navSide} />
-    </View>
-    <ScrollView contentContainerStyle={[styles.content, { paddingHorizontal: gutter, paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <View style={styles.intro}><Text accessibilityRole="header" style={styles.title}>Three quick photos, then you’re done.</Text><Text style={styles.description}>We’ll use the package to fill in what’s missing. For now, just make each view clear and readable.</Text></View>
-      <View
-        accessible={true}
-        accessibilityRole="progressbar"
-        accessibilityValue={{ min: 0, max: 3, now: complete }}
-        accessibilityLabel={`Photo contribution progress: ${complete} of 3 photos added`}
-        style={styles.progressBlock}
-      >
-        <View style={styles.progressLabels}><Text style={styles.progressCount}>{complete} of 3 photos</Text><Text style={styles.progressStatus}>{photosComplete ? 'Ready to send' : 'A little more to go'}</Text></View>
-        <View style={styles.track}><View style={[styles.fill, { width: `${Math.round((complete / 3) * 100)}%` }]} /></View>
-      </View>
-      <View style={styles.photoList}>{STEPS.map((step, index) => {
-        const photo = photos[step.key]
-        return <MotionView key={step.key} from={{ opacity: 0, translateY: 8 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 220, delay: index * 45 }}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${photo ? 'Retake' : 'Add'} ${step.title} photo`} accessibilityHint={step.description} onPress={() => promptPhoto(step.key)} style={({ pressed }) => [styles.photoRow, photo && styles.photoRowDone, pressed && styles.pressed]}>
-            {photo ? <Image source={{ uri: photo.uri }} style={styles.thumbnail} /> : <View style={styles.photoIcon}><Ionicons name={step.icon} size={23} color={colors.accent} /></View>}
-            <View style={styles.photoCopy}><Text style={styles.photoTitle}>{step.title}</Text><Text style={styles.photoDescription}>{photo ? 'Photo added · tap to retake' : step.description}</Text></View>
-            <View style={[styles.stepMark, photo && styles.stepMarkDone]}><Ionicons name={photo ? 'checkmark' : 'camera-outline'} size={18} color={photo ? colors.onBrand : colors.accent} /></View>
-          </Pressable>
-        </MotionView>
-      })}</View>
-      {!initialName ? <View style={styles.nameNote}><Ionicons name="information-circle-outline" size={19} color={colors.accent} /><Text style={styles.nameNoteText}>We still need the product name. You can add it under manual details.</Text></View> : null}
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded: manual }} onPress={() => setManual((value) => !value)} style={({ pressed }) => [styles.manualToggle, pressed && styles.pressed]}><Ionicons name="create-outline" size={19} color={colors.accent} /><Text style={styles.manualToggleText}>Manually enter details</Text><Ionicons name={manual ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} /></Pressable>
-      {manual ? <MotionView from={{ opacity: 0, translateY: -6 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 180 }} style={styles.manualPanel}>
-        <Text style={styles.manualTitle}>Product details</Text><Text style={styles.manualHint}>Add only what you can verify on the package.</Text>
-        <View style={[styles.fieldGrid, compact && styles.fieldGridCompact]}>
-          <Field label="Product name" value={productName} onChangeText={setProductName} placeholder="Required" styles={styles} colors={colors} />
-          <Field label="Barcode" value={code} onChangeText={setCode} placeholder="Optional" keyboardType="number-pad" styles={styles} colors={colors} />
-          {FIELDS.map((field) => <Field key={field.key} label={`${field.label} per 100 g`} value={numbers[field.key] ?? ''} onChangeText={(value) => setNumbers((current) => ({ ...current, [field.key]: value }))} placeholder="Optional" keyboardType="decimal-pad" styles={styles} colors={colors} />)}
+  if (phase === 'done' && result) {
+    return (
+      <ScreenScroll maxWidth={560} testID="contribute-thanks">
+        <View style={styles.thanks}>
+          <ThanksBurst size={wide ? 120 : 104} />
+          <Animated.View entering={FadeInDown.delay(260).duration(420)} style={styles.thanksCopy}>
+            <Txt variant="display" align="center">
+              Thank you!
+            </Txt>
+            <Txt variant="body" tone="muted" align="center">
+              {name.trim() ? `${name.trim()} is` : 'Your food is'} on its way. We check every photo, then add it so
+              everyone can find and log it in a tap.
+            </Txt>
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(420).duration(420)} style={styles.thanksBadges}>
+            <Badge label={`${photoKinds.length} photos sent`} icon="images-outline" tone="mint" />
+            {contributionCount ? (
+              <Badge
+                label={contributionCount === 1 ? 'Your first contribution' : `${contributionCount} foods added by you`}
+                icon="sparkles-outline"
+                tone="peach"
+              />
+            ) : null}
+          </Animated.View>
+          <Animated.View entering={FadeIn.delay(560).duration(400)} style={styles.thanksActions}>
+            <UButton label="Back to Log food" size="lg" fullWidth onPress={exit} testID="thanks-done" />
+            <UButton label="Add another food" tone="chip" fullWidth onPress={startOver} testID="thanks-another" />
+          </Animated.View>
         </View>
-      </MotionView> : null}
-      <View style={styles.submitBlock}><Text style={styles.reviewNote}>{ready ? 'Photos are reviewed before the product appears in search.' : `${3 - complete} photo${3 - complete === 1 ? '' : 's'} remaining.`}</Text>
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ready || submitting }} disabled={!ready || submitting} onPress={() => void submit()} style={({ pressed }) => [styles.primaryButton, (!ready || submitting) && styles.primaryButtonDisabled, pressed && styles.pressed]}>{submitting ? <ActivityIndicator color={colors.onBrand} /> : <><Ionicons name="paper-plane-outline" size={19} color={colors.onBrand} /><Text style={styles.primaryButtonText}>Send photos</Text></>}</Pressable>
+      </ScreenScroll>
+    )
+  }
+
+  if (phase === 'uploading') {
+    const total = photoKinds.length || 1
+    const overall = photoKinds.reduce((sum, kind) => sum + (status[kind] === 'done' ? 1 : progress[kind] ?? 0), 0) / total
+    return (
+      <ScreenScroll maxWidth={560} testID="contribute-uploading">
+        <View style={styles.topRow}>
+          <Txt variant="label" tone="muted">
+            Add a food
+          </Txt>
+        </View>
+        <Txt variant="title">{error ? 'Something didn’t go through' : 'Sending your photos…'}</Txt>
+        <Txt variant="body" tone="muted">
+          {error
+            ? 'Finished photos are saved, so retrying only sends what’s left.'
+            : 'Keep this screen open for a moment. Photos are resized before they’re sent.'}
+        </Txt>
+        <ProgressTrack fraction={error ? overall : Math.max(0.04, overall)} />
+        <Card padded={false} style={styles.uploadList}>
+          {photoKinds.map((kind, index) => {
+            const state = status[kind] ?? 'waiting'
+            const fraction = state === 'done' ? 1 : progress[kind] ?? 0
+            return (
+              <View key={kind} style={[styles.uploadRow, index > 0 && { borderTopWidth: 1, borderTopColor: c.line }]} testID={`upload-${kind}`}>
+                <Image source={{ uri: photos[kind]!.uri }} style={styles.uploadThumb} />
+                <View style={styles.flex}>
+                  <Txt variant="bodyStrong">{KIND_LABEL[kind]}</Txt>
+                  <View style={[styles.miniTrack, { backgroundColor: c.chip }]}>
+                    <View
+                      style={[
+                        styles.miniFill,
+                        { width: `${Math.round(fraction * 100)}%`, backgroundColor: state === 'failed' ? c.danger : c.primary },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <Txt variant="caption" color={state === 'failed' ? c.danger : state === 'done' ? c.primary : c.inkMuted}>
+                  {state === 'done' ? 'Sent' : state === 'failed' ? 'Failed' : state === 'uploading' ? `${Math.round(fraction * 100)}%` : 'Waiting'}
+                </Txt>
+              </View>
+            )
+          })}
+        </Card>
+        {error ? (
+          <>
+            <ErrorNote message={error} />
+            <View style={styles.actionsRow}>
+              <UButton label="Back to photos" tone="chip" onPress={() => setPhase('capture')} style={styles.flex} fullWidth />
+              <UButton label="Try again" onPress={() => void send()} style={styles.flex} fullWidth testID="upload-retry" />
+            </View>
+          </>
+        ) : null}
+      </ScreenScroll>
+    )
+  }
+
+  const canContinue = photoStep ? Boolean(photos[photoStep.key]) || (photoStep.key === 'barcode' && Boolean(code)) : true
+  const header = (
+    <View style={styles.topRow}>
+      <IconButton icon="chevron-back" accessibilityLabel={stepIndex === 0 ? 'Close' : 'Previous step'} onPress={back} testID="contribute-back" />
+      <View style={styles.headerCopy}>
+        <Txt variant="label" tone="muted">
+          Add a food
+        </Txt>
+        <Txt variant="caption" tone="faint">
+          Step {stepIndex + 1} of {STEP_KEYS.length}
+        </Txt>
       </View>
-    </ScrollView>
-  </KeyboardAvoidingView>
+      <IconButton icon="close" tone="chip" size={40} accessibilityLabel="Close" onPress={exit} testID="contribute-close" />
+    </View>
+  )
+
+  const stepper = (
+    <View style={styles.stepper} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: STEP_KEYS.length, now: stepIndex + 1 }}>
+      {STEP_KEYS.map((key, index) => (
+        <View
+          key={key}
+          style={[styles.stepSegment, { backgroundColor: index < stepIndex ? c.primary : index === stepIndex ? c.mintStrong : c.chip }]}
+        />
+      ))}
+    </View>
+  )
+
+  const capture = photoStep ? (
+    photos[photoStep.key] ? (
+      <Animated.View entering={FadeIn.duration(220)} key={`preview-${photoStep.key}`}>
+        <View style={[styles.preview, { height: cameraHeight, backgroundColor: c.inverse }]} testID="photo-preview">
+          <Image source={{ uri: photos[photoStep.key]!.uri }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+          <View style={styles.previewBadge}>
+            <Badge label={photoStep.key === 'barcode' && scannedCode ? `Read ${code}` : 'Looks good'} icon="checkmark-circle" tone="mint" />
+          </View>
+        </View>
+      </Animated.View>
+    ) : (
+      <CaptureCamera
+        key={`camera-${photoStep.key}`}
+        guide={photoStep.guide}
+        hint={photoStep.hint}
+        height={cameraHeight}
+        fileName={`${photoStep.key}.jpg`}
+        scanBarcodes={photoStep.key === 'barcode'}
+        onBarcode={onBarcode}
+        onCapture={(photo) => setPhoto(photoStep.key, photo)}
+      />
+    )
+  ) : null
+
+  const stepCopy = photoStep ? (
+    <View style={styles.copy}>
+      <View style={styles.titleRow}>
+        <Txt variant="title">{photoStep.title}</Txt>
+        {photoStep.optional ? <Badge label="Optional" tone="card" /> : null}
+      </View>
+      <Txt variant="body" tone="muted">
+        {photoStep.body}
+      </Txt>
+    </View>
+  ) : (
+    <View style={styles.copy}>
+      <Txt variant="title">Anything else?</Txt>
+      <Txt variant="body" tone="muted">
+        All optional. A name and serving size help us publish it faster.
+      </Txt>
+    </View>
+  )
+
+  const photoActions = photoStep ? (
+    <View style={styles.actions}>
+      {photos[photoStep.key] ? (
+        <View style={styles.actionsRow}>
+          <UButton label="Retake" tone="chip" onPress={() => setPhoto(photoStep.key, null)} style={styles.flex} fullWidth testID="retake" />
+          <UButton label="Use photo" onPress={next} style={styles.flex} fullWidth testID="use-photo" />
+        </View>
+      ) : (
+        <>
+          <UButton
+            label={wide ? 'Upload a photo instead' : 'Choose from library'}
+            tone="card"
+            fullWidth
+            onPress={() => void pickFromLibrary(photoStep.key)}
+            testID="pick-photo"
+          />
+          {canContinue || photoStep.optional ? (
+            <UButton
+              label={photoStep.key === 'barcode' ? 'Continue with the number' : 'Skip, there’s no label'}
+              tone="ghost"
+              fullWidth
+              onPress={next}
+              testID="skip-step"
+            />
+          ) : null}
+        </>
+      )}
+    </View>
+  ) : null
+
+  const barcodeField =
+    stepKey === 'barcode' ? (
+      <Field
+        key={`code-${codeVersion}`}
+        label={scannedCode ? 'Barcode number (read from the scan)' : 'Barcode number'}
+        defaultValue={code}
+        placeholder="Scan it, or type the digits under the bars"
+        keyboardType="number-pad"
+        maxLength={14}
+        onChangeText={(text) => {
+          setCode(text.replace(/\D/g, ''))
+          setScannedCode(false)
+        }}
+        testID="contribute-code"
+      />
+    ) : null
+
+  const details =
+    stepKey === 'details' ? (
+      <View style={styles.details}>
+        <Card style={styles.detailCard}>
+          <Field label="Product name" defaultValue={name} placeholder="e.g. Greek yogurt, plain" onChangeText={setName} maxLength={256} testID="contribute-name" />
+          <View style={[styles.fieldRow, !wide && styles.fieldColumn]}>
+            <Field label="Brand" defaultValue={brand} placeholder="e.g. Fage" onChangeText={setBrand} maxLength={256} testID="contribute-brand" />
+            <Field label="Serving size" defaultValue={serving} placeholder="e.g. 170 g" onChangeText={setServing} maxLength={64} testID="contribute-serving" />
+          </View>
+        </Card>
+        <Card style={styles.detailCard}>
+          <View style={styles.titleRow}>
+            <Txt variant="subheading">Extra photo</Txt>
+            <Badge label="Optional" tone="card" />
+          </View>
+          <Txt variant="caption" tone="muted">
+            Allergen panel, back of pack, or anything else that looks useful.
+          </Txt>
+          {photos.extra ? (
+            <View style={styles.extraRow}>
+              <Image source={{ uri: photos.extra.uri }} style={styles.extraThumb} />
+              <UButton label="Remove" tone="chip" size="sm" onPress={() => setPhoto('extra', null)} />
+            </View>
+          ) : extraCamera ? (
+            <CaptureCamera
+              guide="landscape"
+              hint="Anything that helps describe the product"
+              height={wide ? 360 : 300}
+              fileName="extra.jpg"
+              onCapture={(photo) => {
+                setPhoto('extra', photo)
+                setExtraCamera(false)
+              }}
+            />
+          ) : null}
+          {!photos.extra ? (
+            <View style={styles.actionsRow}>
+              {!extraCamera ? <UButton label="Take photo" tone="mint" size="sm" onPress={() => setExtraCamera(true)} testID="extra-camera" /> : null}
+              <UButton label="Choose photo" tone="chip" size="sm" onPress={() => void pickFromLibrary('extra')} testID="extra-pick" />
+            </View>
+          ) : null}
+        </Card>
+        {missingRequired.length ? (
+          <ErrorNote message={`Still needed: ${missingRequired.map((step) => step.label.toLowerCase()).join(', ')}.`} />
+        ) : null}
+        <UButton
+          label="Send to CalCount"
+          trailing={`${photoKinds.length} photo${photoKinds.length === 1 ? '' : 's'}`}
+          size="lg"
+          fullWidth
+          disabled={missingRequired.length > 0}
+          onPress={() => void send()}
+          testID="contribute-send"
+        />
+      </View>
+    ) : null
+
+  const thumbs = (
+    <View style={[styles.thumbs, wide && styles.thumbsWide]}>
+      {[...PHOTO_STEPS, null].map((step, index) => {
+        const key: StepKey = step?.key ?? 'details'
+        const photo = step ? photos[step.key] : null
+        const active = key === stepKey
+        const done = step ? Boolean(photo) || (step.key === 'barcode' && Boolean(code)) : false
+        return (
+          <Pressable
+            key={key}
+            accessibilityRole="button"
+            accessibilityLabel={`${step?.label ?? 'Details'}${done ? ', done' : ''}`}
+            onPress={() => {
+              setExtraCamera(false)
+              setStepIndex(index)
+            }}
+            style={[styles.thumb, wide && styles.thumbWide, { backgroundColor: active ? c.mint : c.card, borderColor: active ? c.primary : c.line }]}
+            testID={`thumb-${key}`}
+          >
+            <View style={[styles.thumbImage, { backgroundColor: c.chip }]}>
+              {photo ? (
+                <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} />
+              ) : (
+                <Ionicons name={step?.icon ?? 'create-outline'} size={20} color={done ? c.primary : c.inkMuted} />
+              )}
+              {done ? (
+                <View style={[styles.thumbCheck, { backgroundColor: c.primary }]}>
+                  <Ionicons name="checkmark" size={11} color={c.onPrimary} />
+                </View>
+              ) : null}
+            </View>
+            {wide ? (
+              <View style={styles.flex}>
+                <Txt variant="bodyStrong">{step?.label ?? 'Details'}</Txt>
+                <Txt variant="caption" tone="muted">
+                  {step ? (photo ? 'Photo added' : step.optional ? 'Optional' : step.key === 'barcode' && code ? `Number ${code}` : 'Needed') : 'Name, brand, extras'}
+                </Txt>
+              </View>
+            ) : (
+              <Txt variant="caption" tone={active ? 'ink' : 'muted'} numberOfLines={1}>
+                {step?.label ?? 'Details'}
+              </Txt>
+            )}
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+
+  if (wide) {
+    return (
+      <ScreenScroll maxWidth={contentWidth} testID="contribute-food">
+        {header}
+        {stepper}
+        <View style={styles.wideRow}>
+          <View style={styles.wideMain}>
+            {stepKey === 'details' ? (
+              <>
+                {stepCopy}
+                {details}
+              </>
+            ) : (
+              capture
+            )}
+          </View>
+          <View style={styles.wideSide}>
+            {photoStep ? stepCopy : null}
+            {barcodeField}
+            {photoActions}
+            <Card padded={false} style={styles.sideCard}>
+              {thumbs}
+            </Card>
+            <Txt variant="caption" tone="faint">
+              Photos are private to you and our reviewers until the product is published.
+            </Txt>
+          </View>
+        </View>
+      </ScreenScroll>
+    )
+  }
+
+  return (
+    <ScreenScroll maxWidth={560} testID="contribute-food">
+      {header}
+      {stepper}
+      {thumbs}
+      {stepCopy}
+      {capture}
+      {barcodeField}
+      {photoActions}
+      {details}
+    </ScreenScroll>
+  )
 }
 
-function Field({ label, value, onChangeText, placeholder, keyboardType, styles, colors }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; keyboardType?: 'number-pad' | 'decimal-pad'; styles: ReturnType<typeof makeStyles>; colors: ThemeColors }) {
-  return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={colors.textFaint} keyboardType={keyboardType} style={styles.input} /></View>
+function ProgressTrack({ fraction }: { fraction: number }) {
+  const c = usePalette()
+  return (
+    <View
+      style={[styles.track, { backgroundColor: c.chip }]}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(fraction * 100) }}
+      testID="upload-progress"
+    >
+      <View style={[styles.trackFill, { width: `${Math.round(fraction * 100)}%`, backgroundColor: c.primary }]} />
+    </View>
+  )
 }
 
-const makeStyles = (c: ThemeColors) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: c.background }, nav: { flexDirection: 'row', alignItems: 'center', minHeight: 52, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
-  back: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', marginLeft: -8 }, backText: { ...typography.label, color: c.accent }, navTitle: { ...typography.label, color: c.text, fontWeight: '700', textAlign: 'center', flexShrink: 1 }, navSide: { flex: 1 },
-  content: { width: '100%', maxWidth: 620, alignSelf: 'center', paddingTop: spacing.xl, gap: spacing.lg }, intro: { gap: spacing.sm }, title: { ...typography.headlineLarge, color: c.text }, description: { ...typography.bodyLarge, color: c.textMuted, maxWidth: 540 },
-  progressBlock: { gap: spacing.sm, paddingVertical: spacing.sm }, progressLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md }, progressCount: { ...typography.label, color: c.text }, progressStatus: { ...typography.labelSmall, color: c.textMuted }, track: { height: 8, borderRadius: borderRadius.pill, backgroundColor: c.surfaceAlt, overflow: 'hidden' }, fill: { height: '100%', borderRadius: borderRadius.pill, backgroundColor: c.brand },
-  photoList: { gap: spacing.sm }, photoRow: { minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.md }, photoRowDone: { backgroundColor: c.brandSoft, borderColor: c.brand }, photoIcon: { width: 52, height: 52, borderRadius: borderRadius.md, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }, thumbnail: { width: 52, height: 52, borderRadius: borderRadius.md, resizeMode: 'cover' }, photoCopy: { flex: 1, gap: 3 }, photoTitle: { ...typography.body, color: c.text, fontWeight: '600' }, photoDescription: { ...typography.bodySmall, color: c.textMuted }, stepMark: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: c.accent, alignItems: 'center', justifyContent: 'center' }, stepMarkDone: { backgroundColor: c.brand, borderColor: c.brand },
-  nameNote: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', padding: spacing.md, backgroundColor: c.accentSoft, borderRadius: borderRadius.sm }, nameNoteText: { ...typography.bodySmall, color: c.text, flex: 1 }, manualToggle: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong }, manualToggleText: { ...typography.label, color: c.accent, flex: 1 },
-  manualPanel: { gap: spacing.md, paddingBottom: spacing.sm }, manualTitle: { ...typography.headline, color: c.text }, manualHint: { ...typography.bodySmall, color: c.textMuted, marginTop: -spacing.sm }, fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }, fieldGridCompact: { gap: spacing.sm }, field: { gap: 6, flexGrow: 1, flexBasis: '46%', minWidth: 240 }, fieldLabel: { ...typography.labelSmall, color: c.textMuted }, input: { ...typography.body, minHeight: 48, color: c.text, backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: 10 },
-  submitBlock: { gap: spacing.sm, paddingTop: spacing.sm }, reviewNote: { ...typography.labelSmall, color: c.textMuted, textAlign: 'center' }, primaryButton: { minHeight: 50, borderRadius: borderRadius.pill, backgroundColor: c.brand, flexDirection: 'row', gap: spacing.sm, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg }, primaryButtonDisabled: { opacity: 0.48 }, primaryButtonText: { ...typography.label, color: c.onBrand, fontSize: 16 }, pressed: { opacity: 0.76 },
-  successScreen: { flex: 1, backgroundColor: c.background, alignItems: 'center', justifyContent: 'center' }, successCard: { width: '100%', maxWidth: 480, alignItems: 'center', gap: spacing.md, padding: spacing.xl, backgroundColor: c.surface, borderRadius: borderRadius.lg }, successIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center' }, successTitle: { ...typography.headlineLarge, color: c.text }, successCopy: { ...typography.bodyLarge, color: c.textMuted, textAlign: 'center', marginBottom: spacing.sm },
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerCopy: { flex: 1, alignItems: 'center' },
+  stepper: { flexDirection: 'row', gap: 6 },
+  stepSegment: { flex: 1, height: 6, borderRadius: 3 },
+  copy: { gap: 6 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  preview: { width: '100%', borderRadius: 28, overflow: 'hidden' },
+  previewBadge: { position: 'absolute', top: 16, left: 16 },
+  actions: { gap: 10 },
+  actionsRow: { flexDirection: 'row', gap: 10 },
+  details: { gap: 16 },
+  detailCard: { gap: 14 },
+  fieldRow: { flexDirection: 'row', gap: 12 },
+  fieldColumn: { flexDirection: 'column' },
+  extraRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  extraThumb: { width: 72, height: 72, borderRadius: 16 },
+  thumbs: { flexDirection: 'row', gap: 8 },
+  thumbsWide: { flexDirection: 'column', gap: 0 },
+  thumb: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 2, borderRadius: 18, borderWidth: 1 },
+  thumbWide: { flexDirection: 'row', gap: 14, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 0, borderWidth: 0 },
+  thumbImage: { width: 44, height: 44, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  thumbCheck: { position: 'absolute', right: 2, bottom: 2, width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  wideRow: { flexDirection: 'row', gap: 32, alignItems: 'flex-start' },
+  wideMain: { flex: 1.35, gap: 16 },
+  wideSide: { flex: 1, gap: 16 },
+  sideCard: { overflow: 'hidden', paddingVertical: 6 },
+  track: { height: 10, borderRadius: 5, overflow: 'hidden' },
+  trackFill: { height: '100%', borderRadius: 5 },
+  uploadList: { paddingHorizontal: 16 },
+  uploadRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
+  uploadThumb: { width: 48, height: 48, borderRadius: 12 },
+  miniTrack: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 6 },
+  miniFill: { height: '100%', borderRadius: 3 },
+  thanks: { alignItems: 'center', gap: 18, paddingTop: 24 },
+  thanksCopy: { gap: 10, alignItems: 'center', maxWidth: 440 },
+  thanksBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+  thanksActions: { width: '100%', gap: 10, marginTop: 8 },
 })
