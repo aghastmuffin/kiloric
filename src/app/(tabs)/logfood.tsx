@@ -303,11 +303,11 @@ export default function LogFoodScreen() {
         />
       </View>
       <View style={styles.chips}>
-        <Chip label="Recent" selected={tab === 'recent'} onPress={() => setTab('recent')} size="md" />
-        <Chip label="Frequent" selected={tab === 'frequent'} onPress={() => setTab('frequent')} size="md" />
-        <Chip label="My meals" selected={tab === 'meals'} onPress={() => setTab('meals')} size="md" />
+        <Chip label="Recent" selected={tab === 'recent'} onPress={() => setTab('recent')} />
+        <Chip label="Frequent" selected={tab === 'frequent'} onPress={() => setTab('frequent')} />
+        <Chip label="My meals" selected={tab === 'meals'} onPress={() => setTab('meals')} />
         {results.length > 0 || searchError || searching ? (
-          <Chip label="Results" selected={tab === 'results'} onPress={() => setTab('results')} size="md" />
+          <Chip label="Results" selected={tab === 'results'} onPress={() => setTab('results')} />
         ) : null}
       </View>
       {query.trim() && tab !== 'results' ? (

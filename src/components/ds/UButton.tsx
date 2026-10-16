@@ -88,7 +88,7 @@ export function UButton({
           borderRadius: radius,
           height,
           width: width as number | undefined,
-          paddingHorizontal: size === 'sm' ? 16 : 24,
+          paddingHorizontal: fullWidth && !trailing ? 6 : size === 'sm' ? 16 : 24,
         }}
       >
         {trailing ? (
