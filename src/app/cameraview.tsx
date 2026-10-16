@@ -5,7 +5,6 @@ import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, CameraType, useCameraPermissions, type BarcodeType } from 'expo-camera';
 import * as Device from 'expo-device';
@@ -112,15 +111,9 @@ export default function CameraScannerScreen() {
       setScanned(true);
       setDetailLoading(true);
       try {
-        // Log tab picks this up on focus and shows LogFoodMultiView in-place.
-        await AsyncStorage.setItem('saved_barcode', barcode);
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace('/(tabs)/logfood');
-        }
+        router.replace({ pathname: '/review-log', params: { barcode, source: 'scan' } });
       } catch (error) {
-        console.error('Storage failed', error);
+        console.error('Could not open review screen', error);
         setHandoffError('The barcode was read, but the food log could not be opened. Please scan again.');
         setDetailLoading(false);
         setScanned(false);
