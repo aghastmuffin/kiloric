@@ -2,6 +2,29 @@
  * OFF ↔ storage field mapping and payload builders.
  * No Appwrite / network imports — safe for unit tests and Oracle swap.
  */
+import type { Models } from 'react-native-appwrite'
+
+export const FOODS_DATABASE_ID =
+  process.env.EXPO_PUBLIC_APPWRITE_FOODS_DATABASE_ID ?? '6a4577f00008c718d204'
+export const FOOD_CONTRIBUTIONS_COLLECTION_ID =
+  process.env.EXPO_PUBLIC_APPWRITE_FOOD_CONTRIBUTIONS_COLLECTION_ID ?? 'food_contributions'
+export const FOOD_IMAGES_BUCKET_ID =
+  process.env.EXPO_PUBLIC_APPWRITE_FOOD_IMAGES_BUCKET_ID ?? '6a32e0dd000f9dee7b98'
+
+export type FoodContributionDocument = Models.Document & {
+  owner: string
+  status: string
+  photo_file_id: string
+  product_name: string
+  source_query?: string | null
+  code?: string | null
+  image_url?: string | null
+  front_file_id?: string | null
+  barcode_file_id?: string | null
+  ingredients_file_id?: string | null
+  nutrition_file_id?: string | null
+  extra_file_ids?: string[] | null
+}
 
 /** OFF canonical name → snake_case storage column key. */
 export const OFF_TO_APPWRITE: Record<string, string> = {
@@ -191,6 +214,33 @@ export function decodeContributionFiles(value: string | null | undefined): Contr
     }
   }
   return files
+}
+
+/** Every photo a stored contribution references, whichever way its IDs were saved. */
+export function contributionFileIdList(doc: {
+  photo_file_id?: string | null
+  image_url?: string | null
+  front_file_id?: string | null
+  barcode_file_id?: string | null
+  ingredients_file_id?: string | null
+  nutrition_file_id?: string | null
+  extra_file_ids?: string[] | null
+}): string[] {
+  const packed = decodeContributionFiles(doc.image_url)
+  const ids = [
+    doc.photo_file_id,
+    doc.front_file_id,
+    doc.barcode_file_id,
+    doc.ingredients_file_id,
+    doc.nutrition_file_id,
+    ...(doc.extra_file_ids ?? []),
+    packed?.front,
+    packed?.barcode,
+    packed?.ingredients,
+    packed?.nutrition,
+    ...(packed?.extra ?? []),
+  ]
+  return [...new Set(ids.filter((id): id is string => Boolean(id)))]
 }
 
 export function fallbackProductName(code: string | null | undefined): string {

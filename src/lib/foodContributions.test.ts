@@ -209,6 +209,11 @@ describe('contribution file IDs', () => {
 })
 
 describe('createContributionRecord', () => {
+  beforeEach(async () => {
+    const { resetContributionSchemaProbe } = await import('./foodContributions')
+    resetContributionSchemaProbe()
+  })
+
   it('rejects a mismatched authenticated user before writing', async () => {
     mockAccountGet.mockResolvedValueOnce({ $id: 'session-user-123' })
     const { confirmContributor } = await import('./foodContributions')
@@ -247,6 +252,11 @@ describe('createContributionRecord', () => {
     expect(retry).not.toHaveProperty('front_file_id')
     expect(retry).not.toHaveProperty('submitted_from')
     expect(retry.image_url).toBe('appwrite-files://front=f1;ingredients=i1')
+
+    mockCreateDocument.mockResolvedValueOnce({ $id: 'doc-3', status: 'pending' })
+    await createContributionRecord('u1', { product_name: 'Second bar', files: { front: 'f2' } })
+    expect(mockCreateDocument).toHaveBeenCalledTimes(3)
+    expect(mockCreateDocument.mock.calls[2][0].data.image_url).toBe('appwrite-files://front=f2')
   })
 
   it('does not retry other failures', async () => {

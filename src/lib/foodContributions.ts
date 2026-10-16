@@ -10,6 +10,9 @@ import { Platform } from 'react-native'
 import { ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
 import { account, databases, storage } from './appwrite'
 import {
+  FOOD_CONTRIBUTIONS_COLLECTION_ID as COLLECTION_ID,
+  FOOD_IMAGES_BUCKET_ID as BUCKET_ID,
+  FOODS_DATABASE_ID,
   buildContributionPayload,
   contributionFileColumns,
   encodeContributionFiles,
@@ -17,6 +20,7 @@ import {
   primaryFileId,
   type ContributionFileIds,
   type ContributionPhotoKind,
+  type FoodContributionDocument,
   type FoodContributionFieldsInput,
 } from './foodContributionFields'
 import { prepareImageForUpload, uploadImageToBucket, type ImageSource } from './imageUpload'
@@ -24,6 +28,9 @@ import { isUnknownAttributeError } from './profile'
 
 export {
   CONTRIBUTION_PHOTO_KINDS,
+  FOOD_CONTRIBUTIONS_COLLECTION_ID,
+  FOOD_IMAGES_BUCKET_ID,
+  FOODS_DATABASE_ID,
   OFF_TO_APPWRITE,
   STRING_OFF_FIELDS,
   NUMBER_OFF_FIELDS,
@@ -32,28 +39,13 @@ export {
   encodeContributionFiles,
   type ContributionFileIds,
   type ContributionPhotoKind,
+  type FoodContributionDocument,
   type OffStringField,
   type OffNumberField,
 } from './foodContributionFields'
 
-const FOODS_DATABASE_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOODS_DATABASE_ID ?? '6a4577f00008c718d204'
-const COLLECTION_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOOD_CONTRIBUTIONS_COLLECTION_ID ?? 'food_contributions'
-const BUCKET_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOOD_IMAGES_BUCKET_ID ?? '6a32e0dd000f9dee7b98'
 
 export type ContributionPhoto = ImageSource & { kind: ContributionPhotoKind }
-
-export type FoodContributionDocument = Models.Document & {
-  owner: string
-  status: string
-  photo_file_id: string
-  product_name: string
-  source_query?: string | null
-  code?: string | null
-  image_url?: string | null
-}
 
 export type FoodContributionResult = {
   id: string
@@ -61,6 +53,12 @@ export type FoodContributionResult = {
   files: ContributionFileIds
   /** False when the collection lacks the file columns and IDs went into `image_url`. */
   storedInColumns: boolean
+}
+
+let fileColumnsMissing = false
+
+export function resetContributionSchemaProbe(): void {
+  fileColumnsMissing = false
 }
 
 function ownerPermissions(owner: string): string[] {
@@ -124,11 +122,14 @@ export async function createContributionRecord(
       permissions: ownerPermissions(owner),
     })
 
-  try {
-    const doc = await create({ ...payload, ...contributionFileColumns(input.files), submitted_from: Platform.OS })
-    return { id: doc.$id, status: doc.status ?? 'pending', files: input.files, storedInColumns: true }
-  } catch (error) {
-    if (!isUnknownAttributeError(error)) throw error
+  if (!fileColumnsMissing) {
+    try {
+      const doc = await create({ ...payload, ...contributionFileColumns(input.files), submitted_from: Platform.OS })
+      return { id: doc.$id, status: doc.status ?? 'pending', files: input.files, storedInColumns: true }
+    } catch (error) {
+      if (!isUnknownAttributeError(error)) throw error
+      fileColumnsMissing = true
+    }
   }
   const doc = await create({ ...payload, image_url: encodeContributionFiles(input.files) })
   return { id: doc.$id, status: doc.status ?? 'pending', files: input.files, storedInColumns: false }
@@ -153,10 +154,4 @@ export async function countContributions(owner: string): Promise<number | null> 
   } catch {
     return null
   }
-}
-
-export {
-  FOODS_DATABASE_ID,
-  COLLECTION_ID as FOOD_CONTRIBUTIONS_COLLECTION_ID,
-  BUCKET_ID as FOOD_IMAGES_BUCKET_ID,
 }
