@@ -83,6 +83,17 @@ export function sumMacros(list: readonly Partial<Macros>[]): Macros {
   )
 }
 
+const KJ_PER_KCAL = 4.184
+/** Pure fat is ~900 kcal / 100 g; anything above that is a kJ value stored in the kcal column. */
+const MAX_KCAL_PER_100G = 900
+
+function kcalPer100g(product: Record<string, unknown>): number {
+  const kcal = firstNumber(product, ['energy_kcal_100g', 'energy-kcal_100g', 'energy-kcal', 'energy_kcal', 'calories'])
+  if (kcal != null) return kcal > MAX_KCAL_PER_100G ? Math.round(kcal / KJ_PER_KCAL) : kcal
+  const kj = firstNumber(product, ['energy_kj_100g', 'energy-kj_100g', 'energy-kj', 'energy_kj'])
+  return kj != null ? Math.round(kj / KJ_PER_KCAL) : 0
+}
+
 /** Normalize a food-database product (ORDS or legacy shape) into a FoodItem. */
 export function foodItemFromProduct(raw: Record<string, unknown>): FoodItem {
   const product = unwrapProduct(raw)
@@ -91,7 +102,7 @@ export function foodItemFromProduct(raw: Record<string, unknown>): FoodItem {
   const servingSize = cleanString(product.serving_size)
 
   const per100g: Macros = {
-    kcal: firstNumber(product, ['energy_kcal_100g', 'energy-kcal_100g', 'energy-kcal', 'energy_kcal', 'calories']) ?? 0,
+    kcal: kcalPer100g(product),
     protein: firstNumber(product, ['proteins_100g', 'proteins', 'protein']) ?? 0,
     carbs: firstNumber(product, ['carbohydrates_100g', 'carbohydrates', 'carbs']) ?? 0,
     fat: firstNumber(product, ['fat_100g', 'fat']) ?? 0,

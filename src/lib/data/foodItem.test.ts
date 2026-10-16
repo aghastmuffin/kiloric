@@ -34,6 +34,12 @@ describe('foodItemFromProduct', () => {
     expect(item.brand).toBeNull()
     expect(item.perServing).toEqual({ kcal: 380, protein: 0, carbs: 0, fat: 0 })
   })
+
+  it('treats impossible kcal values as kilojoules and falls back to kJ', () => {
+    expect(foodItemFromProduct({ product_name: 'Snacks, banana chips', energy_kcal_100g: '2170.0' }).perServing.kcal).toBe(519)
+    expect(foodItemFromProduct({ product_name: 'Oil', energy_kcal_100g: 884 }).perServing.kcal).toBe(884)
+    expect(foodItemFromProduct({ product_name: 'Bar', energy_kcal_100g: 'Unknown', energy_kj_100g: 1674 }).perServing.kcal).toBe(400)
+  })
 })
 
 describe('amount helpers', () => {
