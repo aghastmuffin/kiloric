@@ -1,10 +1,11 @@
-import { account } from '@/lib/appwrite';
-import { purgeAccountData } from '@/lib/accountDeletion';
+import { account } from './appwrite';
+import { purgeAccountData } from './accountDeletion';
+import { isValidEmail, isValidPassword } from './authValidation';
 import {
     clearAppwriteSession,
     persistAppwriteSession,
     restoreAppwriteSession,
-} from '@/lib/appwriteSession';
+} from './appwriteSession';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { ID, type Models } from 'react-native-appwrite';
@@ -92,12 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearUserState])
 
   const sendPasswordReset = useCallback(async (email: string) => {
-    await account.createRecovery({ email, url: passwordResetUrl() })
+    await sendPasswordResetRequest(email)
   }, [])
 
   const confirmPasswordReset = useCallback(
     async (userId: string, secret: string, password: string) => {
-      await account.updateRecovery({ userId, secret, password })
+      await confirmPasswordResetRequest(userId, secret, password)
     },
     [],
   )
@@ -136,6 +137,30 @@ export function useAuth(): AuthContextValue {
     throw new Error('useAuth must be used within AuthProvider')
   }
   return context
+}
+
+export async function sendPasswordResetRequest(email: string): Promise<void> {
+  if (!isValidEmail(email)) {
+    throw new Error('Enter a valid email address.')
+  }
+  await account.createRecovery({ email, url: passwordResetUrl() })
+}
+
+export async function confirmPasswordResetRequest(
+  userId: string,
+  secret: string,
+  password: string,
+): Promise<void> {
+  if (!userId || !/^[a-zA-Z0-9._-]{1,128}$/.test(userId)) {
+    throw new Error('Invalid user ID.')
+  }
+  if (!secret || typeof secret !== 'string' || !secret.trim()) {
+    throw new Error('Invalid recovery secret.')
+  }
+  if (!isValidPassword(password)) {
+    throw new Error('Password must be between 8 and 128 characters.')
+  }
+  await account.updateRecovery({ userId, secret, password })
 }
 
 export function getAuthErrorMessage(err: unknown): string {
