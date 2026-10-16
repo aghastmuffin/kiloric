@@ -101,10 +101,17 @@ function looksLikeKilojoules(kcal: number, macroKcal: number): boolean {
 
 function kcalPer100g(product: Record<string, unknown>, macros: Omit<Macros, 'kcal'>): number {
   const kcal = firstNumber(product, ['energy_kcal_100g', 'energy-kcal_100g', 'energy-kcal', 'energy_kcal', 'calories'])
-  const macroKcal = macros.protein * 4 + macros.carbs * 4 + macros.fat * 9
-  if (kcal != null) return looksLikeKilojoules(kcal, macroKcal) ? Math.round(kcal / KJ_PER_KCAL) : kcal
+  const macroKcal = atwaterKcal(macros)
+  const missing = (value: number | null) => value == null || (value === 0 && macroKcal >= MIN_MACRO_KCAL_FOR_CHECK)
+  if (!missing(kcal)) return looksLikeKilojoules(kcal!, macroKcal) ? Math.round(kcal! / KJ_PER_KCAL) : kcal!
   const kj = firstNumber(product, ['energy_kj_100g', 'energy-kj_100g', 'energy-kj', 'energy_kj'])
-  return kj != null ? Math.round(kj / KJ_PER_KCAL) : 0
+  if (!missing(kj)) return Math.round(kj! / KJ_PER_KCAL)
+  return Math.round(macroKcal)
+}
+
+/** General Atwater factors: 4 kcal/g protein and carbohydrate, 9 kcal/g fat. */
+export function atwaterKcal(macros: Pick<Macros, 'protein' | 'carbs' | 'fat'>): number {
+  return macros.protein * 4 + macros.carbs * 4 + macros.fat * 9
 }
 
 /** Normalize a food-database product (ORDS or legacy shape) into a FoodItem. */

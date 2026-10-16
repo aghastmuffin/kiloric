@@ -1,3 +1,4 @@
+import { netStrengthKcal } from '@/lib/exercise'
 import { dayKey } from './dateKeys'
 import { createRecordStore, type StoredRecord } from './recordStore'
 
@@ -54,14 +55,6 @@ export const workoutSetsStore = createRecordStore<WorkoutSetFields>({
   fallbackLimit: 160,
   recencyField: '$createdAt',
 })
-
-/** Strength-training MET (Compendium of Physical Activities, ~5.0 for general weight lifting). */
-const STRENGTH_MET = 5
-
-export function estimateKcalBurned(durationMin: number, bodyWeightKg: number | null | undefined): number {
-  const weight = bodyWeightKg && bodyWeightKg > 0 ? bodyWeightKg : 70
-  return Math.max(0, Math.round(STRENGTH_MET * weight * (durationMin / 60)))
-}
 
 export function listWorkoutsBetween(userId: string, fromDay: string, toDay: string): Promise<Workout[]> {
   return workoutsStore.list(
@@ -215,15 +208,20 @@ export function completeSet(
   })
 }
 
-export function finishWorkout(userId: string, workout: Workout, bodyWeightKg: number | null | undefined): Promise<Workout> {
+export function finishWorkout(
+  userId: string,
+  workout: Workout,
+  input: { bodyWeightKg: number | null | undefined; completedSets: number },
+): Promise<Workout> {
   const finished = new Date()
   const started = workout.started_at ? new Date(workout.started_at) : finished
-  const durationMin = Math.max(1, Math.round((finished.getTime() - started.getTime()) / 60_000))
+  const elapsedMinutes = (finished.getTime() - started.getTime()) / 60_000
+  const estimate = netStrengthKcal({ elapsedMinutes, completedSets: input.completedSets, bodyWeightKg: input.bodyWeightKg })
   return workoutsStore.update(userId, workout.$id, {
     status: 'done',
     finished_at: finished.toISOString(),
-    duration_min: durationMin,
-    kcal_burned: estimateKcalBurned(durationMin, bodyWeightKg),
+    duration_min: Math.max(1, Math.round(elapsedMinutes)),
+    kcal_burned: estimate.kcal,
   })
 }
 

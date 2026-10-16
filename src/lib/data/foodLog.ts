@@ -9,7 +9,7 @@ import {
   type MealDocument,
   type MealType,
 } from '@/lib/meals'
-import { Query } from 'react-native-appwrite'
+import { Query, type Models } from 'react-native-appwrite'
 import { dayKey } from './dateKeys'
 import { scaleMacros, sumMacros, type FoodItem, type Macros } from './foodItem'
 import { assertSessionUser, createRecordStore, type StoredRecord } from './recordStore'
@@ -210,21 +210,32 @@ export function listRecentEntries(userId: string, limit = 120): Promise<FoodEntr
   return foodEntriesStore.list(userId, [], { orderBy: 'logged_at', desc: true, limit })
 }
 
-/** All `meals` buckets created on or after `since` (used for charts and streaks). */
+const MEALS_PAGE_SIZE = 500
+const MEALS_MAX_PAGES = 10
+
+/** All `meals` buckets created on or after `since`, oldest first (used for charts and streaks). */
 export async function listMealsSince(userId: string, since: Date): Promise<MealDocument[]> {
   await assertSessionUser(userId)
   if (!DATABASE_ID || !MEALS_COLLECTION_ID) return []
-  const response = await databases.listDocuments<MealDocument>({
-    databaseId: DATABASE_ID,
-    collectionId: MEALS_COLLECTION_ID,
-    queries: [
-      Query.equal('owner', userId),
-      Query.greaterThanEqual('$createdAt', since.toISOString()),
-      Query.orderAsc('$createdAt'),
-      Query.limit(1000),
-    ],
-  })
-  return response.documents
+  const documents: MealDocument[] = []
+  let cursor: string | null = null
+  for (let page = 0; page < MEALS_MAX_PAGES; page += 1) {
+    const response: Models.DocumentList<MealDocument> = await databases.listDocuments<MealDocument>({
+      databaseId: DATABASE_ID,
+      collectionId: MEALS_COLLECTION_ID,
+      queries: [
+        Query.equal('owner', userId),
+        Query.greaterThanEqual('$createdAt', since.toISOString()),
+        Query.orderDesc('$createdAt'),
+        Query.limit(MEALS_PAGE_SIZE),
+        ...(cursor ? [Query.cursorAfter(cursor)] : []),
+      ],
+    })
+    documents.push(...response.documents)
+    if (response.documents.length < MEALS_PAGE_SIZE) break
+    cursor = response.documents[response.documents.length - 1].$id
+  }
+  return documents.reverse()
 }
 
 /** Total kcal per local day from meal buckets. */

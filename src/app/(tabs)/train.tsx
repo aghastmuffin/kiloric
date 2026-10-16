@@ -324,7 +324,10 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
     if (!userId || !workout) return
     setBusy('finish')
     try {
-      const finished = await finishWorkout(userId, workout, state.data?.summary.currentWeightKg)
+      const finished = await finishWorkout(userId, workout, {
+        bodyWeightKg: state.data?.summary.currentWeightKg,
+        completedSets: sets.filter((set) => set.done).length,
+      })
       setWorkoutOverride(finished)
       setRestEndsAt(null)
     } catch (err) {
@@ -400,7 +403,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
           </Txt>
           <Txt variant="body" color={c.mintInk}>
             {doneSets} sets in {workout.duration_min ?? 0} min
-            {workout.kcal_burned ? ` · about ${workout.kcal_burned} kcal burned, added back to today’s budget` : ''}.
+            {workout.kcal_burned ? ` · about ${workout.kcal_burned} kcal burned beyond resting` : ''}.
           </Txt>
         </Card>
       ) : null}

@@ -41,6 +41,12 @@ describe('foodItemFromProduct', () => {
     expect(foodItemFromProduct({ product_name: 'Bar', energy_kcal_100g: 'Unknown', energy_kj_100g: 1674 }).perServing.kcal).toBe(400)
   })
 
+  it('falls back to Atwater 4/4/9 when no energy value is listed', () => {
+    expect(foodItemFromProduct({ product_name: 'Lentils', proteins_100g: 9, carbohydrates_100g: 20, fat_100g: 0.4 }).perServing.kcal).toBe(120)
+    expect(foodItemFromProduct({ product_name: 'Lentils', energy_kcal_100g: 0, proteins_100g: 9, carbohydrates_100g: 20, fat_100g: 0.4 }).perServing.kcal).toBe(120)
+    expect(foodItemFromProduct({ product_name: 'Water', energy_kcal_100g: 0 }).perServing.kcal).toBe(0)
+  })
+
   it('detects kilojoules that disagree with the macros', () => {
     const yogurt = { product_name: 'Yogurt, Greek, plain, nonfat', proteins_100g: 10.3, carbohydrates_100g: 3.6, fat_100g: 0.4 }
     expect(foodItemFromProduct({ ...yogurt, energy_kcal_100g: 256 }).perServing.kcal).toBe(61)

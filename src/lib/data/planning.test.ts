@@ -13,7 +13,7 @@ vi.mock('react-native-appwrite', () => ({
 const { frequentFoods, loggingStreak, recentFoods } = await import('./foodLog')
 const { autofillWeek, planCandidatesFrom } = await import('./mealPlan')
 const { averageLoggedIntake, buildDayBars } = await import('./overview')
-const { currentExerciseIndex, estimateKcalBurned, formatElapsed, groupSets } = await import('./workouts')
+const { currentExerciseIndex, formatElapsed, groupSets } = await import('./workouts')
 const { dailyWeightSeries, weightDelta } = await import('./weight')
 
 function entry(name: string, loggedAt: string, extra: Record<string, unknown> = {}) {
@@ -171,9 +171,7 @@ describe('workout helpers', () => {
     expect(currentExerciseIndex(groupSets([set(0, 1, true)]))).toBe(0)
   })
 
-  it('estimates calories with a strength MET and formats elapsed time', () => {
-    expect(estimateKcalBurned(60, 80)).toBe(400)
-    expect(estimateKcalBurned(30, null)).toBe(175)
+  it('formats elapsed time', () => {
     expect(formatElapsed(1122)).toBe('18:42')
     expect(formatElapsed(3725)).toBe('1:02:05')
   })
