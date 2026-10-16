@@ -57,7 +57,8 @@
     "lint": "expo lint",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm test",
-    "appwrite:push-tables": "appwrite push tables --force --all"
+    "appwrite:push-tables": "appwrite push tables --force --all",
+    "appwrite:setup-features": "node scripts/setup-feature-tables.mjs"
   },
   "overrides": {
     "react-native-appwrite": {

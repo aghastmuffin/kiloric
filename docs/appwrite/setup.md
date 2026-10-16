@@ -24,6 +24,7 @@ Tables in the `main` database (`6a32d624001ac88a8608`):
 | `users` | User profiles and nutrition targets |
 | `meals` | Logged meals |
 | `water_logs` | Daily water intake entries |
+| `food_entries`, `saved_meals`, `meal_plan_entries`, `prep_sessions`, `grocery_items`, `workouts`, `workout_sets`, `weight_logs` | Food log, meal plan, training and weight features — see [feature-tables.md](./feature-tables.md) |
 
 ```bash
 npm run appwrite:push-tables
@@ -62,4 +63,5 @@ Required vars are documented in [environment.md](../environment.md). Water track
 - [profiles.md](./profiles.md) — user profile table
 - [meals.md](./meals.md) — meals table
 - [water.md](./water.md) — water log table
+- [feature-tables.md](./feature-tables.md) — food log, meal plan, training and weight tables
 - [auth-and-db.md](./auth-and-db.md) — client auth + database patterns
