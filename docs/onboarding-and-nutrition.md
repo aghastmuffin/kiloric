@@ -56,6 +56,7 @@ On confirm, wizard calls `saveProfileFields(user.$id, { ... })` with:
 - Machine-readable goal state from `buildGoalState()` / `buildGoalStateFromPlan()`:
   - `goal_type`, `goal_pace_kg_per_week`, `goal_start_weight_kg`, `goal_target_weight_kg`
   - `goal_start_date`, `goal_estimated_weeks`
+- Plan inputs (formula version 5): `sex`, `activity_level`, `body_fat_pct`, `diet_style`, `goal_pace`, `bmr`, `formula_version`. If the Appwrite collection doesn't have these columns yet, `saveProfileFields` retries without them. The same values are always mirrored in account prefs (`calcountPlan`).
 
 The `meals` relationship field is **never** written as plain text.
 
@@ -65,19 +66,21 @@ The `meals` relationship field is **never** written as plain text.
 
 ### `buildNutritionPlan` inputs
 
-- Date of birth, sex, weight (kg), height (cm)
+- Date of birth, sex, weight (kg), height (cm), optional body-fat %
 - Activity level, fitness goal, pace, diet style
 - Optional macro overrides from wizard review step
 
 ### Calculations (summary)
 
+Full formulas, constants and sources are in [`formulas.md`](./formulas.md).
+
 1. **Age** from DOB
-2. **BMR** — Mifflin–St Jeor
+2. **BMR** — Mifflin–St Jeor, or Katch–McArdle when body-fat % is entered
 3. **TDEE** — BMR × activity multiplier (1.2–1.9)
-4. **Goal pace** — preset maps directly to kg/week: gentle `0.25`, moderate `0.5`, aggressive `0.75`; signed negative for loss and positive for gain
-5. **Target calories** — `TDEE + (paceKgPerWeek × 7700) / 7`; floored at 1200 (F) / 1500 (M)
-6. **Macros** — protein by kg and diet style; fat %; remaining carbs
-7. **Fluid** — ~35 ml/kg (rounded)
+4. **Goal pace** — a share of body weight per week (loss 0.5 / 0.75 / 1 %, gain 0.15 / 0.25 / 0.5 %), capped at 1 kg/week loss and 0.5 kg/week gain
+5. **Target calories** — `TDEE + (paceKgPerWeek × 7700) / 7`; floored at 1200 (F) / 1500 (M), never above TDEE
+6. **Macros** — protein in g/kg of a reference mass (lean-mass based when body fat is known, otherwise capped at BMI 25), fat floor of 20 % energy and 0.5 g/kg, carbs as the remainder
+7. **Fluid** — beverage target by sex
 8. **Weekly deficit** — `(TDEE - targetKcal) × 7`
 9. **Estimated weight change** — `weeklyDeficit / 7700` kcal per kg of fat
 10. **Estimated weeks to goal** — `|targetWeight - startWeight| / |paceKgPerWeek|`
@@ -93,12 +96,14 @@ Exported arrays drive UI labels and descriptions:
 
 ### Formula audit and trend behavior
 
-- Formula version 4 uses Mifflin–St Jeor for BMR and the selected lifestyle activity factor for estimated TDEE. These are planning estimates, not measured metabolism. Sex, activity, goal, pace, eating style, target weight, display units, and custom targets are also saved in account preferences so later edits do not silently revert to defaults.
-- The three preset paces represent 0.25, 0.50, and 0.75 kg/week. Their calorie adjustment uses the common 7,700 kcal/kg approximation and the app enforces a 1,200 kcal female / 1,500 kcal male planning floor. A floor can therefore make the achieved pace slower than the selected preset; the UI reports the energy-derived pace.
-- Preset macro targets are calculated in grams from current body weight and the selected eating style. The Targets screen reconciles those grams back to calories using 4 kcal/g protein, 4 kcal/g carbohydrate, and 9 kcal/g fat, and warns when a custom combination differs by more than 5% (or 50 kcal) from the energy target.
+- Formula version 5 uses Mifflin–St Jeor (or Katch–McArdle with body fat) for BMR and the selected lifestyle activity factor for estimated TDEE. These are planning estimates, not measured metabolism. Sex, activity, goal, pace, eating style, body fat, target weight, display units, and custom targets are saved in account preferences and, when the columns exist, on the profile, so later edits do not silently revert to defaults.
+- Preset paces scale with body weight. Their calorie adjustment uses the common 7,700 kcal/kg approximation and the app enforces a 1,200 kcal female / 1,500 kcal male planning floor (never above TDEE). A floor can therefore make the achieved pace slower than the selected preset; the UI and the saved `goal_pace_kg_per_week` use the energy-derived pace.
+- Once there are at least 10 logged days and 3 weigh-ins over 14 days, Progress shows an adaptive maintenance estimate (intake minus the smoothed weight slope × 7,700) blended with the formula by confidence, and offers to apply it.
+- Logged workouts store net calories (MET − 1). Only the part above what the activity level already assumes is added back to the day's budget.
+- Preset macro targets are calculated in grams from a reference body mass and the selected eating style. The Targets screen reconciles those grams back to calories using 4 kcal/g protein, 4 kcal/g carbohydrate, and 9 kcal/g fat, and warns when a custom combination differs by more than 5% (or 50 kcal) from the energy target.
 - Adult hydration values are beverage targets (2.2 L female / 3.0 L male); they intentionally do not claim to be total-water requirements because food also contributes water.
 - Stats compares equal adjacent windows of **logged days**. Missing days are excluded instead of treated as zero intake, and a visible confidence label is based on logging completeness. Intake trends do not claim to predict weight or metabolic adaptation.
-- Targets are recalculated whenever body data or goal settings change and are stored when the profile is saved. Because the app currently stores one current weight rather than a weight-log collection, it does not fabricate a longitudinal weight trend.
+- Targets are recalculated whenever body data or goal settings change and are stored when the profile is saved. Weight charts show a gap-aware exponentially weighted trend (α = 0.1) over the logged weigh-ins, so day-to-day water swings don't read as fat change.
 
 ## Profile completeness
 

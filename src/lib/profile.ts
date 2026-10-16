@@ -2,7 +2,7 @@ import { AppwriteException, Permission, Role, type Models } from 'react-native-a
 import { databases } from './appwrite'
 import { getSessionUserId } from './sessionAuth'
 import { isUserBlockedError, notifyUserBlocked } from './userBlocked'
-import type { FitnessGoal } from './nutrition'
+import type { ActivityLevel, DietStyle, FitnessGoal, GoalPace, Sex } from './nutrition'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
 const USER_PROFILES_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID!
@@ -50,6 +50,67 @@ export type ProfileFields = {
   goal_target_weight_kg?: number | null // double
   goal_start_date?: string | null // datetime
   goal_estimated_weeks?: number | null // integer
+
+  // Calculation inputs (formula v5). Optional so older rows and unprovisioned schemas keep working.
+  sex?: Sex | null // enum: female | male
+  activity_level?: ActivityLevel | null // enum
+  body_fat_pct?: number | null // double 3–60
+  diet_style?: DietStyle | null // enum
+  goal_pace?: GoalPace | null // enum: gentle | moderate | aggressive
+  bmr?: number | null // integer
+  formula_version?: number | null // integer
+}
+
+/**
+ * Columns added with formula v5. Until they're provisioned, Appwrite rejects them as
+ * unknown attributes, so writes retry without them (the same values live in account prefs).
+ */
+export const EXTENDED_PROFILE_KEYS = [
+  'sex',
+  'activity_level',
+  'body_fat_pct',
+  'diet_style',
+  'goal_pace',
+  'bmr',
+  'formula_version',
+] as const satisfies readonly (keyof ProfileFields)[]
+
+let extendedColumnsMissing = false
+
+export function isUnknownAttributeError(err: unknown): boolean {
+  return (
+    err instanceof AppwriteException &&
+    err.code === 400 &&
+    (err.type === 'document_invalid_structure' || err.type === 'row_invalid_structure') &&
+    /unknown attribute/i.test(err.message)
+  )
+}
+
+export function withoutExtendedKeys(data: Partial<ProfileFields>): Partial<ProfileFields> {
+  const copy = { ...data }
+  for (const key of EXTENDED_PROFILE_KEYS) delete copy[key]
+  return copy
+}
+
+async function writeWithSchemaFallback<T>(
+  data: Partial<ProfileFields>,
+  write: (payload: Partial<ProfileFields>) => Promise<T>,
+): Promise<T> {
+  const hasExtended = EXTENDED_PROFILE_KEYS.some((key) => data[key] !== undefined)
+  if (!hasExtended) return write(data)
+  if (extendedColumnsMissing) return write(withoutExtendedKeys(data))
+  try {
+    return await write(data)
+  } catch (err) {
+    if (!isUnknownAttributeError(err)) throw err
+    extendedColumnsMissing = true
+    return write(withoutExtendedKeys(data))
+  }
+}
+
+/** Test hook: forget whether the extended columns were found missing. */
+export function resetProfileSchemaProbe(): void {
+  extendedColumnsMissing = false
 }
 
 /** Required when creating the first profile document. */
@@ -175,6 +236,8 @@ const INTEGER_FIELD_KEYS = new Set<keyof ProfileFields>([
   'target_weight',
   'weekly_deficit',
   'goal_estimated_weeks',
+  'bmr',
+  'formula_version',
 ])
 
 /** Appwrite double columns — keep one decimal place. */
@@ -184,6 +247,7 @@ const DOUBLE_FIELD_KEYS = new Set<keyof ProfileFields>([
   'goal_pace_kg_per_week',
   'goal_start_weight_kg',
   'goal_target_weight_kg',
+  'body_fat_pct',
 ])
 
 function roundDouble(value: number): number {
@@ -452,7 +516,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
 
   if (existing) {
     try {
-      return await updateProfile(userId, pickWritablePayload(normalized))
+      return await writeWithSchemaFallback(pickWritablePayload(normalized), (payload) => updateProfile(userId, payload))
     } catch (err) {
       logAppwriteError('updateProfile', err)
       throw new Error(formatProfileSaveError(err))
@@ -478,7 +542,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
     if (Object.keys(optionalPayload).length === 0) {
       return created
     }
-    return await updateProfile(userId, optionalPayload)
+    return await writeWithSchemaFallback(optionalPayload, (payload) => updateProfile(userId, payload))
   } catch (err) {
     logAppwriteError('createProfile', err)
     throw new Error(formatProfileSaveError(err))

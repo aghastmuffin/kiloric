@@ -32,6 +32,15 @@ Collection ID: **`users`** (set `EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID=use
 | `goal_target_weight_kg` | double | no | yes — desired body weight |
 | `goal_start_date` | datetime | no | yes — ISO 8601 goal creation timestamp |
 | `goal_estimated_weeks` | integer | no | yes — estimated weeks to reach target at pace |
+| `sex` | enum (`female` / `male`) | no | yes — BMR input |
+| `activity_level` | enum (`sedentary` / `light` / `moderate` / `active` / `very_active`) | no | yes |
+| `body_fat_pct` | double 3–60 | no | yes — optional; switches BMR to Katch–McArdle |
+| `diet_style` | enum (`balanced` / `high_protein` / `low_carb` / `mediterranean` / `plant_forward` / `custom`) | no | yes |
+| `goal_pace` | enum (`gentle` / `moderate` / `aggressive`) | no | yes — preset, not kg |
+| `bmr` | integer 0–10000 | no | yes |
+| `formula_version` | integer 0–1000 | no | yes — currently `5` |
+
+The last seven columns are optional. If they haven't been created yet, Appwrite rejects the write with `document_invalid_structure` ("Unknown attribute"). `saveProfileFields` then retries without them and remembers that for the session. The app reads the same values from account prefs (`calcountPlan`), so nothing is lost. To add them, run `APPWRITE_API_KEY=... npm run appwrite:setup-features`.
 
 ## Goal state
 

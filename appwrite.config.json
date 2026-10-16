@@ -364,6 +364,89 @@
                     "default": null,
                     "min": 0,
                     "max": 9223372036854775807
+                },
+                {
+                    "key": "sex",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "female",
+                        "male"
+                    ]
+                },
+                {
+                    "key": "activity_level",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "sedentary",
+                        "light",
+                        "moderate",
+                        "active",
+                        "very_active"
+                    ]
+                },
+                {
+                    "key": "body_fat_pct",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 3,
+                    "max": 60
+                },
+                {
+                    "key": "diet_style",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "balanced",
+                        "high_protein",
+                        "low_carb",
+                        "mediterranean",
+                        "plant_forward",
+                        "custom"
+                    ]
+                },
+                {
+                    "key": "goal_pace",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "gentle",
+                        "moderate",
+                        "aggressive"
+                    ]
+                },
+                {
+                    "key": "bmr",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 10000
+                },
+                {
+                    "key": "formula_version",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
                 }
             ],
             "indexes": [
@@ -973,6 +1056,60 @@
                     "default": null,
                     "min": -1000000000000,
                     "max": 1000000000000
+                },
+                {
+                    "key": "front_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "barcode_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "ingredients_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "nutrition_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "extra_file_ids",
+                    "type": "string",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "submitted_from",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 16,
+                    "encrypt": false
                 }
             ],
             "indexes": [

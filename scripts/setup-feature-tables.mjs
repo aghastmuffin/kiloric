@@ -2,7 +2,9 @@
 /**
  * Creates the CalCount feature tables (food log, saved meals, meal plan, prep,
  * groceries, workouts, sets, weight) from `appwrite.config.json` via the REST
- * API. Idempotent: existing collections, attributes and indexes are kept.
+ * API, and adds the newer columns to the existing `users` profile table and the
+ * `food_contributions` table. Idempotent: existing collections, attributes and
+ * indexes are kept.
  *
  *   APPWRITE_API_KEY=... node scripts/setup-feature-tables.mjs
  *
@@ -23,6 +25,9 @@ const FEATURE_TABLE_IDS = [
   'workout_sets',
   'weight_logs',
 ]
+
+/** Existing tables that only need their newer columns added. */
+const EXTENDED_TABLE_IDS = ['users', 'food_contributions']
 
 function loadPublicAppEnv() {
   try {
@@ -52,6 +57,7 @@ if (!endpoint || !projectId || !databaseId || !apiKey) {
 
 const config = JSON.parse(readFileSync(resolve(process.cwd(), 'appwrite.config.json'), 'utf8'))
 const tables = config.tables.filter((table) => FEATURE_TABLE_IDS.includes(table.$id))
+const extendedTables = config.tables.filter((table) => EXTENDED_TABLE_IDS.includes(table.$id))
 
 async function request(path, { method = 'GET', body } = {}) {
   const response = await fetch(`${endpoint}${path}`, {
@@ -79,6 +85,7 @@ const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise,
 function attributeRequest(column) {
   const common = { key: column.key, required: column.required, array: column.array ?? false }
   const withDefault = (body) => (column.required || column.default == null ? body : { ...body, default: column.default })
+  if (column.format === 'enum') return ['enum', withDefault({ ...common, elements: column.elements })]
   switch (column.type) {
     case 'varchar':
     case 'string':
@@ -99,8 +106,12 @@ function attributeRequest(column) {
   }
 }
 
+function collectionBase(table) {
+  return `/databases/${table.databaseId ?? databaseId}/collections/${table.$id}`
+}
+
 async function ensureCollection(table) {
-  const base = `/databases/${databaseId}/collections/${table.$id}`
+  const base = collectionBase(table)
   try {
     const existing = await request(base)
     if (!existing.documentSecurity) throw new Error(`${table.$id} must have document security enabled.`)
@@ -108,7 +119,7 @@ async function ensureCollection(table) {
   } catch (error) {
     if (error.status !== 404) throw error
   }
-  await request(`/databases/${databaseId}/collections`, {
+  await request(`/databases/${table.databaseId ?? databaseId}/collections`, {
     method: 'POST',
     body: {
       collectionId: table.$id,
@@ -135,7 +146,7 @@ async function ensureAttributes(base, table) {
   const response = await request(`${base}/attributes`)
   const keys = new Set((response.attributes ?? []).map((attribute) => attribute.key))
   for (const column of table.columns) {
-    if (keys.has(column.key)) continue
+    if (keys.has(column.key) || column.type === 'relationship') continue
     const [path, body] = attributeRequest(column)
     await request(`${base}/attributes/${path}`, { method: 'POST', body })
     await waitForAttribute(base, column.key)
@@ -159,5 +170,11 @@ for (const table of tables) {
   await ensureAttributes(base, table)
   await ensureIndexes(base, table)
   console.log(`✓ ${table.$id}`)
+}
+for (const table of extendedTables) {
+  const base = collectionBase(table)
+  await request(base)
+  await ensureAttributes(base, table)
+  console.log(`✓ ${table.$id} (columns)`)
 }
 console.log(`Feature tables ready in database ${databaseId}.`)

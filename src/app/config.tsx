@@ -26,6 +26,7 @@ import {
     estimateWeeklyWeightChangeKg,
     GOAL_OPTIONS,
     PACE_OPTIONS,
+    goalPaceKgPerWeek,
     type ActivityLevel,
     type DietStyle,
     type FitnessGoal,
@@ -120,6 +121,7 @@ export default function ConfigScreen() {
   const [weight, setWeight] = useState(75);
   const [targetWeight, setTargetWeight] = useState<number | null>(null);
   const [activity, setActivity] = useState<ActivityLevel>('moderate');
+  const [bodyFatPct, setBodyFatPct] = useState<number | null>(null);
   const [goal, setGoal] = useState<FitnessGoal>('maintain');
   const [pace, setPace] = useState<GoalPace>('moderate');
   const [diet, setDiet] = useState<DietStyle>('balanced');
@@ -145,13 +147,14 @@ export default function ConfigScreen() {
       sex,
       heightCm: height,
       weightKg: weight,
+      bodyFatPct,
       activity,
       goal,
       pace,
       diet,
       targetWeight,
     });
-  }, [dateOfBirth, sex, height, weight, activity, goal, pace, diet, targetWeight]);
+  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight]);
 
   const activeTargetKcal = targetKcal ?? computedPlan.targetKcal;
   const activeTargetProtein = targetProtein ?? computedPlan.targetProtein;
@@ -216,6 +219,7 @@ export default function ConfigScreen() {
     const savedPlan = planPreferencesFromUser(user);
     setSex(savedPlan.sex);
     setActivity(savedPlan.activity);
+    setBodyFatPct(savedPlan.bodyFatPct);
     setGoal(savedPlan.goal);
     setPace(savedPlan.pace);
     setDiet(savedPlan.diet);
@@ -349,6 +353,7 @@ export default function ConfigScreen() {
         startWeightKg: goalStartWeightKg ?? roundMetric(weight),
         targetWeightKg: finalTargetWeight,
         startDate: goalStartDate ? new Date(goalStartDate) : new Date(),
+        paceKgPerWeek: goal === 'maintain' ? 0 : -currentWeeklyChangeKg,
       });
 
       await saveProfileFields(user.$id, {
@@ -376,6 +381,13 @@ export default function ConfigScreen() {
         goal_target_weight_kg: goalState.targetWeightKg,
         goal_start_date: goalState.startDate,
         goal_estimated_weeks: goalState.estimatedWeeks,
+        sex,
+        activity_level: activity,
+        body_fat_pct: bodyFatPct,
+        diet_style: diet,
+        goal_pace: pace,
+        bmr: computedPlan.bmr,
+        formula_version: NUTRITION_FORMULA_VERSION,
       });
       await savePlanPreferences(
         {
@@ -386,6 +398,7 @@ export default function ConfigScreen() {
           pace,
           diet,
           targetWeightKg: finalTargetWeight,
+          bodyFatPct,
           displayUnits,
           overrides: {
             targetKcal: activeTargetKcal,
@@ -734,11 +747,7 @@ export default function ConfigScreen() {
                         key={opt.value}
                         value={opt.value}
                         label={opt.label}
-                        description={formatPaceRate(displayUnits, {
-                          gentle: 0.25,
-                          moderate: 0.5,
-                          aggressive: 0.75,
-                        }[opt.value])}
+                        description={`${formatPaceRate(displayUnits, goalPaceKgPerWeek(goal, opt.value, weight))} · ${opt.description}`}
                         selected={pace === opt.value}
                         onPress={(val) => setPace(val)}
                         disabled={saving}
@@ -790,7 +799,7 @@ export default function ConfigScreen() {
                   : ''}
               </Text>
               <Text style={styles.fieldHint}>
-                Formula v{NUTRITION_FORMULA_VERSION} · Mifflin–St Jeor BMR · activity-factor TDEE · macros account for {targetAudit.macroCalories} kcal/day.
+                Formula v{NUTRITION_FORMULA_VERSION} · {computedPlan.bmrFormula === 'katch_mcardle' ? 'Katch–McArdle' : 'Mifflin–St Jeor'} BMR · activity-factor TDEE · macros account for {targetAudit.macroCalories} kcal/day.
               </Text>
               {targetAudit.warnings.map((warning) => (
                 <Text key={warning} accessibilityRole="alert" style={[styles.fieldHint, { color: colors.danger }]}>Warning: {warning}</Text>
