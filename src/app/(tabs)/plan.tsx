@@ -230,18 +230,35 @@ export default function PlanScreen() {
       onRefresh={state.reload}
       maxWidth={wide ? 1040 : undefined}
       footer={
-        <UButton
-          label={busy === 'autofill' ? 'Filling…' : 'Auto-fill week'}
-          tone="inverse"
-          size="lg"
-          fullWidth
-          disabled={busy === 'autofill' || !data}
-          onPress={autofill}
-          testID="plan-autofill"
-        />
+        wide ? undefined : (
+          <UButton
+            label={busy === 'autofill' ? 'Filling…' : 'Auto-fill week'}
+            tone="inverse"
+            size="lg"
+            fullWidth
+            disabled={busy === 'autofill' || !data}
+            onPress={autofill}
+            testID="plan-autofill"
+          />
+        )
       }
     >
-      <ScreenHeader overline={monthRangeLabel(weekStart, addDays(weekStart, 6))} title="Meal plan" />
+      <ScreenHeader
+        overline={monthRangeLabel(weekStart, addDays(weekStart, 6))}
+        title="Meal plan"
+        right={
+          wide ? (
+            <UButton
+              label={busy === 'autofill' ? 'Filling…' : 'Auto-fill week'}
+              tone="inverse"
+              size="sm"
+              disabled={busy === 'autofill' || !data}
+              onPress={autofill}
+              testID="plan-autofill"
+            />
+          ) : null
+        }
+      />
       {dayPicker}
       {state.error ? <ErrorNote message={state.error} onRetry={state.reload} /> : null}
       {notice ? (

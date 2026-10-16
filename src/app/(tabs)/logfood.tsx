@@ -14,6 +14,7 @@ import {
   Segmented,
   Txt,
   UButton,
+  useShell,
 } from '@/components/ds'
 import { authenticatedRequest } from '@/lib/apiUtils'
 import { showApiError } from '@/lib/apiErrors'
@@ -86,6 +87,7 @@ export default function LogFoodScreen() {
   const c = usePalette()
   const userId = user?.$id ?? null
   const { selectedMealType, setSelectedMealType } = useMealTypePreferences()
+  const { wide } = useShell()
   const mealType = asLogMealType(selectedMealType)
 
   const [tab, setTab] = useState<ListTab>('recent')
@@ -269,12 +271,12 @@ export default function LogFoodScreen() {
   }
 
   return (
-    <ScreenScroll footer={footer} refreshing={state.loading} onRefresh={state.reload}>
+    <ScreenScroll footer={footer} refreshing={state.loading} onRefresh={state.reload} maxWidth={wide ? 860 : undefined}>
       <ScreenHeader
         overline={overline}
         title="Log food"
         right={
-          router.canGoBack() ? (
+          !wide && router.canGoBack() ? (
             <IconButton icon="close" accessibilityLabel="Close log food" onPress={() => router.back()} />
           ) : null
         }
