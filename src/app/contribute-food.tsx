@@ -133,6 +133,7 @@ export default function ContributeFoodScreen() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<FoodContributionResult | null>(null)
   const [contributionCount, setContributionCount] = useState<number | null>(null)
+  const typedCode = useRef(false)
   const uploaded = useRef<Partial<Record<ContributionPhotoKind, { uri: string; fileId: string }>>>({})
 
   const stepKey = STEP_KEYS[stepIndex]
@@ -189,6 +190,7 @@ export default function ContributeFoodScreen() {
   }
 
   function onBarcode(value: string) {
+    if (typedCode.current) return
     setCode(value)
     setScannedCode(true)
     setCodeVersion((version) => version + 1)
@@ -245,7 +247,6 @@ export default function ContributeFoodScreen() {
       triggerNotificationHaptic('success')
       setPhase('done')
     } catch (sendError) {
-      console.error('Could not send food contribution', sendError)
       triggerNotificationHaptic('error')
       setError(formatAppwriteError(sendError))
     }
@@ -253,6 +254,7 @@ export default function ContributeFoodScreen() {
 
   function startOver() {
     uploaded.current = {}
+    typedCode.current = false
     setPhotos({})
     setProgress({})
     setStatus({})
@@ -356,6 +358,11 @@ export default function ContributeFoodScreen() {
     )
   }
 
+  function stepDone(key: StepKey): boolean {
+    if (key === 'details') return false
+    return Boolean(photos[key]) || (key === 'barcode' && Boolean(code))
+  }
+
   const canContinue = photoStep ? Boolean(photos[photoStep.key]) || (photoStep.key === 'barcode' && Boolean(code)) : true
   const header = (
     <View style={styles.topRow}>
@@ -377,7 +384,7 @@ export default function ContributeFoodScreen() {
       {STEP_KEYS.map((key, index) => (
         <View
           key={key}
-          style={[styles.stepSegment, { backgroundColor: index < stepIndex ? c.primary : index === stepIndex ? c.mintStrong : c.chip }]}
+          style={[styles.stepSegment, { backgroundColor: index === stepIndex ? c.mintStrong : stepDone(key) ? c.primary : c.chip }]}
         />
       ))}
     </View>
@@ -466,7 +473,9 @@ export default function ContributeFoodScreen() {
         keyboardType="number-pad"
         maxLength={14}
         onChangeText={(text) => {
-          setCode(text.replace(/\D/g, ''))
+          const digits = text.replace(/\D/g, '')
+          typedCode.current = digits.length > 0
+          setCode(digits)
           setScannedCode(false)
         }}
         testID="contribute-code"
@@ -486,7 +495,7 @@ export default function ContributeFoodScreen() {
         <Card style={styles.detailCard}>
           <View style={styles.titleRow}>
             <Txt variant="subheading">Extra photo</Txt>
-            <Badge label="Optional" tone="card" />
+            <Badge label="Optional" tone="peach" />
           </View>
           <Txt variant="caption" tone="muted">
             Allergen panel, back of pack, or anything else that looks useful.
@@ -536,7 +545,7 @@ export default function ContributeFoodScreen() {
         const key: StepKey = step?.key ?? 'details'
         const photo = step ? photos[step.key] : null
         const active = key === stepKey
-        const done = step ? Boolean(photo) || (step.key === 'barcode' && Boolean(code)) : false
+        const done = stepDone(key)
         return (
           <Pressable
             key={key}

@@ -37,13 +37,17 @@ export function CaptureCamera({
   const c = usePalette()
   const camera = useRef<CameraView>(null)
   const scanned = useRef(false)
+  // The web barcode scanner keeps the first onBarcodeScanned it receives, so capture reads refs.
+  const readyRef = useRef(false)
+  const busyRef = useRef(false)
   const [permission, requestPermission] = useCameraPermissions()
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [mountError, setMountError] = useState<string | null>(null)
 
   async function capture() {
-    if (!camera.current || !ready || busy) return
+    if (!camera.current || !readyRef.current || busyRef.current) return
+    busyRef.current = true
     setBusy(true)
     triggerImpactHaptic()
     try {
@@ -52,6 +56,7 @@ export function CaptureCamera({
     } catch (error) {
       setMountError(error instanceof Error ? error.message : 'Could not take the photo.')
     } finally {
+      busyRef.current = false
       setBusy(false)
     }
   }
@@ -99,7 +104,10 @@ export function CaptureCamera({
         ref={camera}
         style={StyleSheet.absoluteFill}
         facing="back"
-        onCameraReady={() => setReady(true)}
+        onCameraReady={() => {
+          readyRef.current = true
+          setReady(true)
+        }}
         onMountError={(event) => setMountError(event.message)}
         barcodeScannerSettings={scanBarcodes ? { barcodeTypes: PRODUCT_BARCODES } : undefined}
         onBarcodeScanned={scanBarcodes && onBarcode ? handleBarcode : undefined}
