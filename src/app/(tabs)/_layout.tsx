@@ -181,7 +181,7 @@ function Shell() {
         <View style={[styles.frame, { backgroundColor: c.bg }]}>
           {wide ? <Sidebar /> : null}
           <View style={styles.flex}>
-            <TabSlot />
+            <TabSlot style={styles.flex} />
           </View>
           {wide ? null : <BottomBar />}
         </View>
