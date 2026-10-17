@@ -15,6 +15,7 @@ import { useAppLayout } from '@/lib/theme/layout';
 import { borderRadius, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
+import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics';
 import {
     formatWeightImperial,
     formatWeightMetric,
@@ -346,6 +347,7 @@ export default function DashboardScreen() {
                     icon: 'trash-outline',
                     destructive: true,
                     onPress: () => {
+                      triggerImpactHaptic()
                       if (personalId) {
                         setPersonalQuests((prev) => prev.filter((q) => q.id !== personalId))
                         if (user?.$id && !personalId.startsWith('temp-')) {
@@ -368,10 +370,12 @@ export default function DashboardScreen() {
                   >
                     {personalId ? (
                       <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={quest.done ? `Mark ${quest.label} incomplete` : `Mark ${quest.label} complete`}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: quest.done }}
+                        accessibilityLabel={quest.label}
                         onPress={() => {
                           if (!user?.$id) return
+                          triggerSelectionHaptic()
                           const nextDone = !quest.done
                           setPersonalQuests((prev) =>
                             prev.map((q) => (q.id === personalId ? { ...q, done: nextDone } : q)),
@@ -521,10 +525,15 @@ function CreateTaskModal({
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              accessibilityHint="Adds item to your daily checklist"
               accessibilityState={{ disabled: !taskDraft.trim() }}
               disabled={!taskDraft.trim()}
               onPress={submit}
-              style={({ pressed }) => [styles.taskBtn, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [
+                styles.taskBtn,
+                !taskDraft.trim() && styles.taskBtnDisabled,
+                pressed && { opacity: 0.85 },
+              ]}
             >
               <Text style={styles.taskBtnText}>Add</Text>
             </Pressable>
@@ -854,4 +863,5 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
   },
   taskBtnText: { ...typography.label, color: c.onBrand, fontWeight: '500' },
+  taskBtnDisabled: { opacity: 0.45 },
 })
