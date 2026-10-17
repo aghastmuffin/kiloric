@@ -1,10 +1,11 @@
-import { account } from '@/lib/appwrite';
-import { purgeAccountData } from '@/lib/accountDeletion';
+import { account } from './appwrite';
+import { purgeAccountData } from './accountDeletion';
 import {
     clearAppwriteSession,
     persistAppwriteSession,
     restoreAppwriteSession,
-} from '@/lib/appwriteSession';
+} from './appwriteSession';
+import { isValidEmail, isValidPassword } from './authValidation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { ID, type Models } from 'react-native-appwrite';
@@ -44,6 +45,42 @@ function passwordResetUrl(): string {
   return 'calorie://reset-password'
 }
 
+export function validateSignInInput(email: string, password: string): void {
+  if (!isValidEmail(email)) {
+    throw new Error('Invalid email address.')
+  }
+  if (!isValidPassword(password)) {
+    throw new Error('Password must be between 8 and 128 characters.')
+  }
+}
+
+export function validateSignUpInput(email: string, password: string): void {
+  if (!isValidEmail(email)) {
+    throw new Error('Invalid email address.')
+  }
+  if (!isValidPassword(password)) {
+    throw new Error('Password must be between 8 and 128 characters.')
+  }
+}
+
+export function validateSendPasswordResetInput(email: string): void {
+  if (!isValidEmail(email)) {
+    throw new Error('Invalid email address.')
+  }
+}
+
+export function validateConfirmPasswordResetInput(userId: string, secret: string, password: string): void {
+  if (!/^[a-zA-Z0-9._-]{1,128}$/.test(userId)) {
+    throw new Error('Invalid user ID format.')
+  }
+  if (!secret || typeof secret !== 'string' || !secret.trim()) {
+    throw new Error('Invalid recovery secret.')
+  }
+  if (!isValidPassword(password)) {
+    throw new Error('Password must be between 8 and 128 characters.')
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppwriteUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -62,12 +99,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser])
 
   const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
+    validateSignInInput(email, password)
     const signedInUser = await establishSession(email, password)
     setUser(signedInUser)
     return Boolean(signedInUser?.$id)
   }, [])
 
   const signUp = useCallback(async (email: string, password: string): Promise<SignUpResult> => {
+    validateSignUpInput(email, password)
     await account.create({ userId: ID.unique(), email, password })
 
     try {
@@ -92,11 +131,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearUserState])
 
   const sendPasswordReset = useCallback(async (email: string) => {
+    validateSendPasswordResetInput(email)
     await account.createRecovery({ email, url: passwordResetUrl() })
   }, [])
 
   const confirmPasswordReset = useCallback(
     async (userId: string, secret: string, password: string) => {
+      validateConfirmPasswordResetInput(userId, secret, password)
       await account.updateRecovery({ userId, secret, password })
     },
     [],
