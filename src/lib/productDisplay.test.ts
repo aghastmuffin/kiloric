@@ -1,6 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, expect, it } from 'vitest'
 import {
+  clearFormattedLabelCache,
   formatProductLabel,
   formatProductValue,
   getBarcodeFromProduct,
@@ -22,6 +23,17 @@ describe('productDisplay', () => {
     expect(formatProductValue(null)).toBe('—')
     expect(formatProductValue(true)).toBe('Yes')
     expect(formatProductValue(['a', 'b'])).toBe('a, b')
+  })
+
+  it('caches formatted labels and allows clearing the cache', () => {
+    clearFormattedLabelCache()
+    const firstCall = formatProductLabel('serving_size')
+    const secondCall = formatProductLabel('serving_size')
+    expect(firstCall).toBe('Serving Size')
+    expect(secondCall).toBe('Serving Size')
+
+    clearFormattedLabelCache()
+    expect(formatProductLabel('serving_size')).toBe('Serving Size')
   })
 
   it('reads title and barcode from aliases', () => {

@@ -148,12 +148,31 @@ export function getNestedValue(data: Record<string, unknown>, key: string): unkn
   return undefined
 }
 
+/**
+ * ⚡ Bolt: In-memory cache for formatted product field labels.
+ * Product property keys (e.g., 'energy_kcal_100g', 'proteins_100g', 'serving_size') are repeatedly
+ * formatted across search results, detail cards, and fact summaries.
+ * Caching formatted strings turns repeated label formatting into O(1) hash map lookups,
+ * eliminating 4 regex evaluations per key per render.
+ */
+const FORMATTED_LABEL_CACHE = new Map<string, string>()
+
+export function clearFormattedLabelCache(): void {
+  FORMATTED_LABEL_CACHE.clear()
+}
+
 export function formatProductLabel(key: string): string {
-  return key
+  const cached = FORMATTED_LABEL_CACHE.get(key)
+  if (cached !== undefined) return cached
+
+  const formatted = key
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\b\w/g, (char) => char.toUpperCase())
+
+  FORMATTED_LABEL_CACHE.set(key, formatted)
+  return formatted
 }
 
 export function formatProductValue(value: unknown): string {
