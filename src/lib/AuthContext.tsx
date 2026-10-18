@@ -5,6 +5,12 @@ import {
     persistAppwriteSession,
     restoreAppwriteSession,
 } from '@/lib/appwriteSession';
+import {
+    validateConfirmPasswordResetInput,
+    validateSendPasswordResetInput,
+    validateSignInInput,
+    validateSignUpInput,
+} from '@/lib/authValidation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { ID, type Models } from 'react-native-appwrite';
@@ -62,12 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser])
 
   const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
+    validateSignInInput(email, password)
     const signedInUser = await establishSession(email, password)
     setUser(signedInUser)
     return Boolean(signedInUser?.$id)
   }, [])
 
   const signUp = useCallback(async (email: string, password: string): Promise<SignUpResult> => {
+    validateSignUpInput(email, password)
     await account.create({ userId: ID.unique(), email, password })
 
     try {
@@ -92,11 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearUserState])
 
   const sendPasswordReset = useCallback(async (email: string) => {
+    validateSendPasswordResetInput(email)
     await account.createRecovery({ email, url: passwordResetUrl() })
   }, [])
 
   const confirmPasswordReset = useCallback(
     async (userId: string, secret: string, password: string) => {
+      validateConfirmPasswordResetInput(userId, secret, password)
       await account.updateRecovery({ userId, secret, password })
     },
     [],

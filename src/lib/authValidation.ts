@@ -10,3 +10,38 @@ export function isValidEmail(value: string): boolean {
 export function isValidPassword(value: string): boolean {
   return value.length >= 8 && value.length <= 128
 }
+
+export function isValidUserId(value: string): boolean {
+  if (typeof value !== 'string') return false
+  return /^[a-zA-Z0-9._-]{1,128}$/.test(value.trim())
+}
+
+export function isValidSecret(value: string): boolean {
+  if (typeof value !== 'string') return false
+  const trimmed = value.trim()
+  return trimmed.length > 0 && trimmed.length <= 512
+}
+
+export function validateSignInInput(email: string, password: string): void {
+  if (!isValidEmail(email)) throw new Error('Invalid email format.')
+  if (!isValidPassword(password)) throw new Error('Password must be between 8 and 128 characters.')
+}
+
+export function validateSignUpInput(email: string, password: string): void {
+  if (!isValidEmail(email)) throw new Error('Invalid email format.')
+  if (!isValidPassword(password)) throw new Error('Password must be between 8 and 128 characters.')
+}
+
+export function validateSendPasswordResetInput(email: string): void {
+  if (!isValidEmail(email)) throw new Error('Invalid email format.')
+}
+
+export function validateConfirmPasswordResetInput(
+  userId: string,
+  secret: string,
+  password: string,
+): void {
+  if (!isValidUserId(userId)) throw new Error('Invalid user ID.')
+  if (!isValidSecret(secret)) throw new Error('Invalid recovery secret.')
+  if (!isValidPassword(password)) throw new Error('Password must be between 8 and 128 characters.')
+}
