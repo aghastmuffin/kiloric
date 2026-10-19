@@ -408,12 +408,21 @@ export function macroReferenceWarnings(pcts: MacroPercentages): string[] {
   return warnings
 }
 
+// ⚡ Bolt: Module-level Maps for O(1) label lookups, replacing linear Array.prototype.find searches.
+const DIET_LABEL_MAP = new Map<DietStyle, string>(
+  DIET_OPTIONS.map((option) => [option.value, option.label]),
+)
+
+const GOAL_LABEL_MAP = new Map<FitnessGoal, string>(
+  GOAL_OPTIONS.map((option) => [option.value, option.label]),
+)
+
 function getDietLabel(diet: DietStyle): string {
-  return DIET_OPTIONS.find((option) => option.value === diet)?.label ?? 'Balanced'
+  return DIET_LABEL_MAP.get(diet) ?? 'Balanced'
 }
 
 function getGoalLabel(goal: FitnessGoal): string {
-  return GOAL_OPTIONS.find((option) => option.value === goal)?.label ?? 'Maintain weight'
+  return GOAL_LABEL_MAP.get(goal) ?? 'Maintain weight'
 }
 
 export function buildGoalPlainText(params: {

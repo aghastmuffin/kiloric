@@ -62,8 +62,13 @@ export type GoalSummary = {
 
 export const GOAL_TYPE_OPTIONS = GOAL_OPTIONS
 
+// ⚡ Bolt: Module-level Map for O(1) goal label lookup, eliminating linear Array.prototype.find scanning.
+const GOAL_TYPE_LABEL_MAP = new Map<FitnessGoal, string>(
+  GOAL_OPTIONS.map((option) => [option.value, option.label]),
+)
+
 export function goalTypeLabel(goal: FitnessGoal): string {
-  return GOAL_OPTIONS.find((option) => option.value === goal)?.label ?? 'Maintain weight'
+  return GOAL_TYPE_LABEL_MAP.get(goal) ?? 'Maintain weight'
 }
 
 export function goalPaceFromPreset(goal: FitnessGoal, pace: GoalPace, weightKg?: number | null): number {
