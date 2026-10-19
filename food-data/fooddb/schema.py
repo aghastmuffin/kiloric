@@ -25,7 +25,9 @@ REAL = "real"
 INT = "int"
 
 # Upper bounds reject obviously broken values (unit mix-ups, typos) instead of
-# exporting them. 100 g per 100 g is the physical ceiling for any component.
+# exporting them. 100 g per 100 g is the physical ceiling for any component;
+# micronutrient caps sit just above the richest real foods and supplements
+# (e.g. calcium carbonate is 40 % calcium, magnesium oxide 60 % magnesium).
 COLUMNS: tuple[Column, ...] = (
     Column("code", TEXT, 64),
     Column("product_name", TEXT, 256),
@@ -56,15 +58,15 @@ COLUMNS: tuple[Column, ...] = (
     Column("monounsaturated_fat_100g", REAL, max_value=100),
     Column("polyunsaturated_fat_100g", REAL, max_value=100),
     Column("sodium_100g", REAL, max_value=40),
-    Column("cholesterol_100g", REAL, max_value=10),
-    Column("vitamin_a_100g", REAL, max_value=1),
+    Column("cholesterol_100g", REAL, max_value=4),
+    Column("vitamin_a_100g", REAL, max_value=0.5),
     Column("vitamin_c_100g", REAL, max_value=100),
-    Column("vitamin_d_100g", REAL, max_value=1),
-    Column("vitamin_b12_100g", REAL, max_value=1),
-    Column("calcium_100g", REAL, max_value=100),
-    Column("iron_100g", REAL, max_value=100),
-    Column("potassium_100g", REAL, max_value=100),
-    Column("magnesium_100g", REAL, max_value=100),
+    Column("vitamin_d_100g", REAL, max_value=0.05),
+    Column("vitamin_b12_100g", REAL, max_value=0.1),
+    Column("calcium_100g", REAL, max_value=40),
+    Column("iron_100g", REAL, max_value=5),
+    Column("potassium_100g", REAL, max_value=55),
+    Column("magnesium_100g", REAL, max_value=60),
     Column("caffeine_100g", REAL, max_value=100),
     Column("taurine_100g", REAL, max_value=100),
     Column("ingredients_text", TEXT, 2000),

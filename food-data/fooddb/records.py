@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from .normalize import clean_column_value, fix_energy, name_key, normalize_barcode
+from .normalize import (
+    barcode_spellings,
+    clean_column_value,
+    drop_inconsistent_components,
+    fix_energy,
+    name_key,
+    normalize_barcode,
+)
 from .schema import COLUMN_NAMES, COMPLETION_FIELDS, UNION_FIELDS
 
 DATA_FIELDS = tuple(
@@ -40,6 +47,7 @@ def make_record(
     fix_energy(record)
     for name in DATA_FIELDS:
         record[name] = clean_column_value(name, record[name])
+    drop_inconsistent_components(record)
 
     gtin = normalize_barcode(barcode)
     if gtin:
@@ -51,6 +59,8 @@ def make_record(
         merge_key = f"name:{key}" if key else f"id:{source}:{source_id}"
 
     alias_set = {record_code}
+    if gtin:
+        alias_set.update(barcode_spellings(gtin))
     if code:
         alias_set.add(code)
     raw_barcode = str(barcode).strip() if barcode not in (None, "") else None

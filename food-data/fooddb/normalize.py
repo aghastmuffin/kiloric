@@ -210,6 +210,16 @@ def normalize_barcode(value: object) -> str | None:
     return core.zfill(13)
 
 
+def barcode_spellings(gtin: str) -> list[str]:
+    """Other spellings scanners report for a normalized GTIN (UPC-A 12 digits, GTIN-14)."""
+    if len(gtin) != 13:
+        return []
+    spellings = ["0" + gtin]
+    if gtin.startswith("0"):
+        spellings.append(gtin[1:])
+    return spellings
+
+
 _PLURAL_EXCEPTIONS = {"ss", "us", "is"}
 
 
@@ -309,6 +319,27 @@ def fix_energy(record: dict) -> None:
 
     record["energy_kcal_100g"] = kcal
     record["energy_kj_100g"] = kj
+
+
+# A part can't outweigh the whole it belongs to; small tolerance for label rounding.
+COMPONENT_PARENTS = (
+    ("saturated_fat_100g", "fat_100g"),
+    ("trans_fat_100g", "fat_100g"),
+    ("monounsaturated_fat_100g", "fat_100g"),
+    ("polyunsaturated_fat_100g", "fat_100g"),
+    ("sugars_100g", "carbohydrates_100g"),
+    ("polyols_100g", "carbohydrates_100g"),
+    ("added_sugars_100g", "sugars_100g"),
+)
+
+
+def drop_inconsistent_components(record: dict) -> None:
+    """Null sub-nutrients that exceed their parent (e.g. sugars above total carbs)."""
+    for child, parent in COMPONENT_PARENTS:
+        part = record.get(child)
+        whole = record.get(parent)
+        if part is not None and whole is not None and part > whole * 1.05 + 0.5:
+            record[child] = None
 
 
 def fill_energy_from_macros(record: dict) -> None:

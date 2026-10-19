@@ -1,7 +1,9 @@
 import unittest
 
 from fooddb.normalize import (
+    barcode_spellings,
     clean_column_value,
+    drop_inconsistent_components,
     clean_ingredients,
     clean_name,
     clean_tags,
@@ -28,6 +30,11 @@ class BarcodeTests(unittest.TestCase):
 
     def test_gtin14_with_indicator_digit(self):
         self.assertEqual(normalize_barcode("10016000275284"), "10016000275284")
+
+    def test_scanner_spellings(self):
+        self.assertEqual(barcode_spellings("0016000275287"), ["00016000275287", "016000275287"])
+        self.assertEqual(barcode_spellings("3017620422003"), ["03017620422003"])
+        self.assertEqual(barcode_spellings("00171424"), [])
 
     def test_invalid(self):
         for raw in (None, "", "abc123", "0000", "123456789012345"):
@@ -100,6 +107,15 @@ class EnergyTests(unittest.TestCase):
         r = {"energy_kcal_100g": 418, "proteins_100g": 5, "carbohydrates_100g": 20, "fat_100g": 1}
         fix_energy(r)
         self.assertAlmostEqual(r["energy_kcal_100g"], 418 / 4.184)
+
+    def test_components_cannot_exceed_parent(self):
+        r = {"fat_100g": 2, "saturated_fat_100g": 5, "trans_fat_100g": 2.4,
+             "carbohydrates_100g": 10, "sugars_100g": 30, "added_sugars_100g": 3}
+        drop_inconsistent_components(r)
+        self.assertIsNone(r["saturated_fat_100g"])
+        self.assertEqual(r["trans_fat_100g"], 2.4)
+        self.assertIsNone(r["sugars_100g"])
+        self.assertEqual(r["added_sugars_100g"], 3)
 
     def test_macros_fallback(self):
         r = {"proteins_100g": 10, "carbohydrates_100g": 20, "fat_100g": 5, "energy_kcal_100g": None}

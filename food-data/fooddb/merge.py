@@ -7,7 +7,7 @@ import sqlite3
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from .normalize import fill_energy_from_macros, format_amount
+from .normalize import drop_inconsistent_components, fill_energy_from_macros, format_amount
 from .records import DATA_FIELDS
 from .schema import (
     BRAND_FIELDS,
@@ -68,6 +68,7 @@ def merge_group(merge_key: str, records: list[dict]) -> tuple[dict, list[str]]:
 
     for field in NUTRIENT_FIELDS:
         row[field] = _first(nutrition, field)
+    drop_inconsistent_components(row)
     fill_energy_from_macros(row)
     for field in ENERGY_FIELDS:
         row[field] = clean_column_value(field, row[field])

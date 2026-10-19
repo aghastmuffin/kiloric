@@ -91,6 +91,13 @@ class BarcodeMergeTests(unittest.TestCase):
         self.assertIsNone(row["energy_kcal_100g"])
         self.assertEqual(row["trust_and_completion_score"], 0)
 
+    def test_gap_fill_never_breaks_parent_totals(self):
+        usda = usda_cheerios()
+        off = off_cheerios(saturated_fat_100g=9, sugars_100g=4)
+        row, _ = merge_group(usda["_merge_key"], [usda, off])
+        self.assertIsNone(row["saturated_fat_100g"])  # OFF's 9 g can't sit under USDA's 6.4 g fat
+        self.assertEqual(row["sugars_100g"], 4)
+
     def test_energy_from_macros_when_no_source_has_it(self):
         r = make_record(OFF, "1", {"product_name": "x", "proteins_100g": 10, "carbohydrates_100g": 10, "fat_100g": 10},
                         code="00000001", barcode="00000001", countries=("us",))
