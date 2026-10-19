@@ -2,11 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { client } from './appwrite'
 import type { Models } from 'react-native-appwrite'
 import { clearFavoriteFoodsCache } from './foodFavorites'
+import { clearFontPreferencesCache } from './fontPreferences'
 import { clearCachedToken } from './getAccessToken'
 import { clearTodayMealsCache } from './meals'
 import { clearProfileCache } from './profile'
 import { clearMealTypePreferencesCache } from './mealTypePreferences'
 import { clearTasksCache } from './tasks'
+import { clearThemePreferencesCache } from './theme/themePreferences'
 import { clearWaterCache } from './water'
 
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID ?? 'default'
@@ -28,6 +30,8 @@ function clearSessionCaches(): void {
   clearFavoriteFoodsCache()
   clearWaterCache()
   clearMealTypePreferencesCache()
+  clearFontPreferencesCache()
+  clearThemePreferencesCache()
 }
 
 export async function persistAppwriteSession(session: Models.Session): Promise<void> {
