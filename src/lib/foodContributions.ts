@@ -77,6 +77,7 @@ export async function uploadContributionPhoto(
   photo: ContributionPhoto,
   onProgress?: (fraction: number) => void,
 ): Promise<string> {
+  await confirmContributor(owner)
   const image = await prepareImageForUpload(photo, `contribution-${photo.kind}`)
   onProgress?.(0.02)
   const file = await uploadImageToBucket({
@@ -102,6 +103,7 @@ export async function createContributionRecord(
   owner: string,
   input: FoodContributionFieldsInput & { files: ContributionFileIds },
 ): Promise<FoodContributionResult> {
+  await confirmContributor(owner)
   const photoFileId = primaryFileId(input.files)
   if (!photoFileId) throw new Error('Add at least one photo before sending.')
 
@@ -145,6 +147,7 @@ export async function discardContributionFiles(files: ContributionFileIds): Prom
 
 export async function countContributions(owner: string): Promise<number | null> {
   try {
+    await confirmContributor(owner)
     const list = await databases.listDocuments({
       databaseId: FOODS_DATABASE_ID,
       collectionId: COLLECTION_ID,
