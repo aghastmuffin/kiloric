@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from fooddb.__main__ import main
-from fooddb.export import write_sql_dump
+from fooddb.export import _literal, write_sql_dump
 from fooddb.sources.off import iter_off
 
 from . import fixtures
@@ -152,7 +152,7 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(food["countries"], "United States,Canada")
         self.assertEqual(food["data_sources"], "USDA FoodData Central (Branded), Open Food Facts")
         self.assertEqual(food["source_ids"], "off:16000275287;usda:2000")
-        for alias in ("16000275287", "00016000275287", "2000"):
+        for alias in ("16000275287", "016000275287", "00016000275287", "2000"):
             code = self.db.execute("SELECT code FROM food_codes WHERE alias = ?", (alias,)).fetchone()[0]
             self.assertEqual(code, "0016000275287", alias)
 
@@ -225,6 +225,26 @@ class BuildTests(unittest.TestCase):
         self.assertIn("ingredients_text CLOB", ora_text)
         self.assertIn("INSERT ALL", ora_text)
         self.assertIn("'1 medium (7\" to 7-7/8\" long) (118 g)'", ora_text)
+
+    def test_oracle_insert_all_stays_under_column_limit(self):
+        ora = self.tmp / "ora.sql"
+        write_sql_dump(self.db_path, ora, "oracle", batch=500)
+        blocks = ora.read_text(encoding="utf-8").split("INSERT ALL\n")[1:]
+        self.assertTrue(blocks)
+        for block in blocks:
+            statement = block.split("SELECT 1 FROM DUAL;")[0]
+            into_lines = [line for line in statement.splitlines() if line.startswith("  INTO ")]
+            columns = into_lines[0].split("(", 1)[1].split(")", 1)[0].count(",") + 1
+            self.assertLessEqual(len(into_lines) * columns, 999)
+
+    def test_oracle_long_clob_literals_are_chunked(self):
+        literal = _literal("é'" * 1500, "clob", "oracle")
+        self.assertEqual(literal.count("TO_CLOB("), 3)
+        for piece in literal.split(" || "):
+            self.assertTrue(piece.startswith("TO_CLOB('") and piece.endswith("')"))
+            value = piece[len("TO_CLOB('"):-2].replace("''", "'")
+            self.assertLessEqual(len(value.encode()), 4000)
+        self.assertEqual(_literal("short", "clob", "oracle"), "'short'")
 
 
 if __name__ == "__main__":
