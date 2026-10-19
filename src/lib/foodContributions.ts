@@ -3,170 +3,155 @@
  *
  * Public field names are Open Food Facts (OFF). Mapping lives in
  * `foodContributionFields.ts` so UI + tests stay transport-agnostic.
- * Swap this file when moving to Oracle; keep the `submitFoodContribution` signature.
  *
  * Photos → `images_to_check` bucket. Rows → `food_contributions` in the `foods` DB.
  */
+import { Platform } from 'react-native'
+import { ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
 import { account, databases, storage } from './appwrite'
 import {
+  FOOD_CONTRIBUTIONS_COLLECTION_ID as COLLECTION_ID,
+  FOOD_IMAGES_BUCKET_ID as BUCKET_ID,
+  FOODS_DATABASE_ID,
   buildContributionPayload,
+  contributionFileColumns,
+  encodeContributionFiles,
+  fallbackProductName,
+  primaryFileId,
+  type ContributionFileIds,
+  type ContributionPhotoKind,
+  type FoodContributionDocument,
   type FoodContributionFieldsInput,
 } from './foodContributionFields'
-import { ID, Permission, Role, type Models } from 'react-native-appwrite'
+import { prepareImageForUpload, uploadImageToBucket, type ImageSource } from './imageUpload'
+import { isUnknownAttributeError } from './profile'
 
 export {
+  CONTRIBUTION_PHOTO_KINDS,
+  FOOD_CONTRIBUTIONS_COLLECTION_ID,
+  FOOD_IMAGES_BUCKET_ID,
+  FOODS_DATABASE_ID,
   OFF_TO_APPWRITE,
   STRING_OFF_FIELDS,
   NUMBER_OFF_FIELDS,
   buildContributionPayload,
+  decodeContributionFiles,
+  encodeContributionFiles,
+  type ContributionFileIds,
+  type ContributionPhotoKind,
+  type FoodContributionDocument,
   type OffStringField,
   type OffNumberField,
 } from './foodContributionFields'
 
-const FOODS_DATABASE_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOODS_DATABASE_ID ?? '6a4577f00008c718d204'
-const COLLECTION_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOOD_CONTRIBUTIONS_COLLECTION_ID ?? 'food_contributions'
-const BUCKET_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOOD_IMAGES_BUCKET_ID ?? '6a32e0dd000f9dee7b98'
 
-export type FoodContributionPhoto = {
-  uri: string
-  mimeType?: string | null
-  fileName?: string | null
-  fileSize?: number | null
-}
-
-export type FoodContributionInput = FoodContributionFieldsInput & {
-  photo: FoodContributionPhoto
-  additionalPhotos?: FoodContributionPhoto[]
-}
+export type ContributionPhoto = ImageSource & { kind: ContributionPhotoKind }
 
 export type FoodContributionResult = {
   id: string
-  photoFileId: string
   status: string
+  files: ContributionFileIds
+  /** False when the collection lacks the file columns and IDs went into `image_url`. */
+  storedInColumns: boolean
 }
 
-export type FoodContributionDocument = Models.Document & {
-  owner: string
-  status: string
-  photo_file_id: string
-  product_name: string
-  source_query?: string | null
-  code?: string | null
-  image_url?: string | null
+let fileColumnsMissing = false
+
+export function resetContributionSchemaProbe(): void {
+  fileColumnsMissing = false
 }
 
-function guessMime(uri: string, mimeType?: string | null): string {
-  if (mimeType && mimeType.startsWith('image/')) return mimeType
-  const lower = uri.toLowerCase()
-  if (lower.endsWith('.png')) return 'image/png'
-  return 'image/jpeg'
+function ownerPermissions(owner: string): string[] {
+  return [Permission.read(Role.user(owner)), Permission.update(Role.user(owner)), Permission.delete(Role.user(owner))]
 }
 
-function guessFileName(uri: string, fileName?: string | null, mime?: string): string {
-  if (fileName && fileName.trim()) return fileName.trim()
-  const ext = mime === 'image/png' ? 'png' : 'jpg'
-  return `food-contribution.${ext}`
-}
-
-async function authenticatedUserId(expectedUserId: string): Promise<string> {
+export async function confirmContributor(expectedUserId: string): Promise<string> {
   const user = await account.get()
-  if (user.$id !== expectedUserId) {
-    throw new Error('You can only submit contributions as yourself.')
-  }
+  if (user.$id !== expectedUserId) throw new Error('You can only submit contributions as yourself.')
   return user.$id
 }
 
-async function resolveFileSize(uri: string, known?: number | null): Promise<number> {
-  if (typeof known === 'number' && Number.isFinite(known) && known > 0) return known
-  const response = await fetch(uri)
-  const blob = await response.blob()
-  if (!blob.size) throw new Error('Could not read photo file size.')
-  return blob.size
+/** Uploads one photo and returns its file ID. Safe to call again for a photo that failed. */
+export async function uploadContributionPhoto(
+  owner: string,
+  photo: ContributionPhoto,
+  onProgress?: (fraction: number) => void,
+): Promise<string> {
+  const image = await prepareImageForUpload(photo, `contribution-${photo.kind}`)
+  onProgress?.(0.02)
+  const file = await uploadImageToBucket({
+    bucketId: BUCKET_ID,
+    fileId: ID.unique(),
+    image,
+    permissions: ownerPermissions(owner),
+    onProgress,
+  })
+  return file.$id
+}
+
+export function addFileId(files: ContributionFileIds, kind: ContributionPhotoKind, fileId: string): ContributionFileIds {
+  if (kind === 'extra') return { ...files, extra: [...(files.extra ?? []), fileId] }
+  return { ...files, [kind]: fileId }
 }
 
 /**
- * Upload photo + create a pending contribution document.
- * Requires product_name and photo. All other OFF fields are optional.
+ * Creates the pending row. Uses the dedicated file columns when the collection has them,
+ * otherwise packs the labelled IDs into `image_url` so reviewers still know which is which.
  */
-export async function submitFoodContribution(
-  userId: string,
-  input: FoodContributionInput,
+export async function createContributionRecord(
+  owner: string,
+  input: FoodContributionFieldsInput & { files: ContributionFileIds },
 ): Promise<FoodContributionResult> {
-  const owner = await authenticatedUserId(userId)
-
-  if (!input.photo?.uri?.trim()) {
-    throw new Error('A photo is required when adding a new food.')
-  }
-
-  const uploadedFiles: Models.File[] = []
-  for (const [index, photo] of [input.photo, ...(input.additionalPhotos ?? [])].entries()) {
-    const mime = guessMime(photo.uri, photo.mimeType)
-    if (mime !== 'image/jpeg' && mime !== 'image/png' && mime !== 'image/jpg') {
-      throw new Error('Photos must be JPG or PNG files.')
-    }
-    const normalizedMime = mime === 'image/jpg' ? 'image/jpeg' : mime
-    const size = await resolveFileSize(photo.uri, photo.fileSize)
-    if (size > 10_000_000) throw new Error('Each photo must be 10 MB or smaller.')
-    const uploaded = await storage.createFile({
-      bucketId: BUCKET_ID,
-      fileId: ID.unique(),
-      file: {
-        name: `${index + 1}-${guessFileName(photo.uri, photo.fileName, normalizedMime)}`,
-        type: normalizedMime,
-        size,
-        uri: photo.uri,
-      },
-      permissions: [Permission.read(Role.user(owner)), Permission.update(Role.user(owner)), Permission.delete(Role.user(owner))],
-    })
-    uploadedFiles.push(uploaded)
-  }
-  const uploaded = uploadedFiles[0]
+  const photoFileId = primaryFileId(input.files)
+  if (!photoFileId) throw new Error('Add at least one photo before sending.')
 
   const payload = buildContributionPayload({
     owner,
-    photo_file_id: uploaded.$id,
-    product_name: input.product_name,
+    photo_file_id: photoFileId,
+    product_name: input.product_name.trim() || fallbackProductName(input.code),
     code: input.code,
     source_query: input.source_query,
-    fields: {
-      ...input.fields,
-      ...(uploadedFiles.length > 1 ? { image_url: `appwrite-files://${uploadedFiles.map((file) => file.$id).join(',')}` } : {}),
-    },
+    fields: input.fields,
   })
-
-  try {
-    const doc = await databases.createDocument<FoodContributionDocument>({
+  const create = (data: Record<string, unknown>) =>
+    databases.createDocument<FoodContributionDocument>({
       databaseId: FOODS_DATABASE_ID,
       collectionId: COLLECTION_ID,
       documentId: ID.unique(),
-      data: payload,
-      permissions: [
-        Permission.read(Role.user(owner)),
-        Permission.update(Role.user(owner)),
-        Permission.delete(Role.user(owner)),
-      ],
+      data: data as Omit<FoodContributionDocument, keyof Models.Document>,
+      permissions: ownerPermissions(owner),
     })
 
-    return {
-      id: doc.$id,
-      photoFileId: uploaded.$id,
-      status: doc.status ?? 'pending',
-    }
-  } catch (error) {
+  if (!fileColumnsMissing) {
     try {
-      await Promise.all(uploadedFiles.map((file) => storage.deleteFile({ bucketId: BUCKET_ID, fileId: file.$id })))
-    } catch {
-      // ignore cleanup failure
+      const doc = await create({ ...payload, ...contributionFileColumns(input.files), submitted_from: Platform.OS })
+      return { id: doc.$id, status: doc.status ?? 'pending', files: input.files, storedInColumns: true }
+    } catch (error) {
+      if (!isUnknownAttributeError(error)) throw error
+      fileColumnsMissing = true
     }
-    throw error
   }
+  const doc = await create({ ...payload, image_url: encodeContributionFiles(input.files) })
+  return { id: doc.$id, status: doc.status ?? 'pending', files: input.files, storedInColumns: false }
 }
 
-export {
-  FOODS_DATABASE_ID,
-  COLLECTION_ID as FOOD_CONTRIBUTIONS_COLLECTION_ID,
-  BUCKET_ID as FOOD_IMAGES_BUCKET_ID,
+/** Removes uploaded photos when the user abandons a submission. Best effort. */
+export async function discardContributionFiles(files: ContributionFileIds): Promise<void> {
+  const ids = [files.front, files.barcode, files.ingredients, files.nutrition, ...(files.extra ?? [])].filter(
+    (id): id is string => Boolean(id),
+  )
+  await Promise.all(ids.map((fileId) => storage.deleteFile({ bucketId: BUCKET_ID, fileId }).catch(() => undefined)))
+}
+
+export async function countContributions(owner: string): Promise<number | null> {
+  try {
+    const list = await databases.listDocuments({
+      databaseId: FOODS_DATABASE_ID,
+      collectionId: COLLECTION_ID,
+      queries: [Query.equal('owner', owner), Query.limit(1)],
+    })
+    return list.total
+  } catch {
+    return null
+  }
 }

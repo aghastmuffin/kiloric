@@ -87,7 +87,15 @@ describe('accountDeletion security & functionality', () => {
     // Simulate returning documents then empty lists to terminate deletion loops
     mockListDocuments
       .mockResolvedValueOnce({
-        documents: [{ $id: 'contrib_1', photo_file_id: 'photo_1' }],
+        documents: [
+          {
+            $id: 'contrib_1',
+            photo_file_id: 'photo_1',
+            image_url: 'appwrite-files://barcode=photo_2;front=photo_1;extra=photo_3,photo_4',
+          },
+          { $id: 'contrib_2', photo_file_id: 'photo_5', front_file_id: 'photo_5', nutrition_file_id: 'photo_6' },
+          { $id: 'contrib_3', photo_file_id: 'photo_7', image_url: 'appwrite-files://photo_8,photo_9' },
+        ],
       })
       .mockResolvedValueOnce({ documents: [] }) // end deleteContributions loop
       .mockResolvedValueOnce({ documents: [{ $id: 'meal_1' }] }) // meals
@@ -100,10 +108,9 @@ describe('accountDeletion security & functionality', () => {
 
     await purgeAccountData('user_123')
 
-    expect(mockDeleteFile).toHaveBeenCalledWith({
-      bucketId: expect.any(String),
-      fileId: 'photo_1',
-    })
+    expect(mockDeleteFile.mock.calls.map(([call]) => call.fileId).sort()).toEqual(
+      ['photo_1', 'photo_2', 'photo_3', 'photo_4', 'photo_5', 'photo_6', 'photo_7', 'photo_8', 'photo_9'],
+    )
     expect(mockDeleteDocument).toHaveBeenCalledWith({
       databaseId: 'test-db',
       collectionId: 'test-profiles-col',

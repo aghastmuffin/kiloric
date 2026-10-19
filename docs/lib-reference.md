@@ -66,15 +66,18 @@ Onboarding and goal calculation utilities.
 | Function | Description |
 |----------|-------------|
 | `calculateAge(dob)` | Age from date of birth |
-| `calculateBmr(kg, cm, age, sex)` | Mifflin–St Jeor BMR |
+| `calculateBmr(kg, cm, age, sex, bodyFatPct?)` | Mifflin–St Jeor, or Katch–McArdle with body fat |
 | `calculateTdee(bmr, activity)` | BMR × activity multiplier |
 | `suggestTargetWeight(kg, cm, goal)` | Goal-based target weight |
-| `calculateDailyCalories(tdee, goal, pace, sex)` | Target kcal with floor |
+| `goalPaceKgPerWeek(goal, pace, kg?)` | Weight-relative preset pace |
+| `calculateDailyCalories(tdee, goal, pace, sex, kg?)` | Target kcal with floor |
 | `calculateWeeklyDeficit(tdee, targetKcal)` | Weekly kcal delta |
 | `estimateWeeklyWeightChangeKg(deficit)` | ~7700 kcal/kg rule |
-| `calculateMacros(kcal, kg, diet)` | Protein / carbs / fat grams |
+| `calculateMacros(kcal, kg, diet, { goal, heightCm, bodyFatPct })` | Protein / carbs / fat grams |
 | `calculateDailyFluid(kg)` | ml/day suggestion |
 | `buildNutritionPlan(...)` | Full plan object for onboarding save |
+
+Related modules: `exercise.ts` (net workout calories and the activity allowance), `weightTrend.ts` (EWMA trend and adaptive maintenance), `planInputs.ts` (resolves plan inputs from profile columns and prefs). Formulas and sources: [`formulas.md`](./formulas.md).
 
 ---
 

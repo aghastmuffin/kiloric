@@ -1,6 +1,7 @@
 import { account } from './appwrite'
 import {
   DIET_MACRO_PERCENTAGES,
+  isValidBodyFatPct,
   NUTRITION_FORMULA_VERSION,
   type ActivityLevel,
   type DietStyle,
@@ -37,6 +38,7 @@ export type PlanPreferences = {
   pace: GoalPace
   diet: DietStyle
   targetWeightKg: number | null
+  bodyFatPct: number | null
   displayUnits: DisplayUnits
   overrides: NutritionOverrides
   mealSlots: MealSlotPreference[]
@@ -62,6 +64,7 @@ export function createDefaultPlanPreferences(): PlanPreferences {
     pace: 'moderate',
     diet: 'balanced',
     targetWeightKg: null,
+    bodyFatPct: null,
     displayUnits: 'metric',
     overrides: {},
     mealSlots: defaultMealSlots(),
@@ -138,6 +141,7 @@ export function normalizePlanPreferences(value: unknown): PlanPreferences {
       ? (raw.diet as DietStyle)
       : defaults.diet,
     targetWeightKg: finiteInRange(raw.targetWeightKg, 30, 500) ? raw.targetWeightKg : null,
+    bodyFatPct: isValidBodyFatPct(raw.bodyFatPct) ? Math.round(raw.bodyFatPct * 10) / 10 : null,
     displayUnits: raw.displayUnits === 'imperial' ? 'imperial' : 'metric',
     overrides: { targetKcal, dailyFluid, macroGrams },
     mealSlots: normalizeSlots(raw.mealSlots),

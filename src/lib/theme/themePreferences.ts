@@ -3,12 +3,12 @@ import type { AppThemeChoice } from '@/lib/theme/tokens'
 
 const STORAGE_KEY = '@calcount/app_theme_choice'
 
-export const DEFAULT_THEME_CHOICE: AppThemeChoice = 'paper'
+export const DEFAULT_THEME_CHOICE: AppThemeChoice = 'calcount'
 
 export async function loadThemeChoice(): Promise<AppThemeChoice> {
   try {
     const value = await AsyncStorage.getItem(STORAGE_KEY)
-    if (value === 'paper' || value === 'ios' || value === 'barebones') return value
+    if (value === 'calcount' || value === 'paper' || value === 'ios' || value === 'barebones') return value
   } catch (err) {
     console.error('[themePreferences] load failed', err)
   }

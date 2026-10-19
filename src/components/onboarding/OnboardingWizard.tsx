@@ -35,10 +35,15 @@ import {
   DIET_OPTIONS,
   estimateWeeklyWeightChangeKg,
   GOAL_OPTIONS,
+  goalPaceKgPerWeek,
+  isValidBodyFatPct,
+  BODY_FAT_PCT_RANGE,
+  NUTRITION_FORMULA_VERSION,
   PACE_OPTIONS,
   type NutritionPlan,
   type Sex,
 } from '@/lib/nutrition'
+import { resolvePlanInputs } from '@/lib/planInputs'
 import {
   dateToIso,
   DEFAULT_PROFILE_ROLE,
@@ -47,7 +52,7 @@ import {
   isProfileComplete,
   saveProfileFields,
 } from '@/lib/profile'
-import { planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences'
+import { loadPlanPreferences, planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences'
 import {
   appendDisplayUnitsToGoalPlain,
   defaultDisplayUnits,
@@ -218,6 +223,7 @@ export function OnboardingWizard() {
   const [signingOut, setSigningOut] = useState(false)
   const [ageBlocked, setAgeBlocked] = useState(false)
   const [dateOfBirthConfirmed, setDateOfBirthConfirmed] = useState(false)
+  const [bodyFatText, setBodyFatText] = useState('')
 
   const visibleSteps = useMemo(
     () => getOnboardingSteps(Boolean(user?.$id)),
@@ -240,6 +246,7 @@ export function OnboardingWizard() {
         sex: form.sex,
         heightCm: form.height,
         weightKg: form.weight,
+        bodyFatPct: form.bodyFatPct,
         activity: form.activity,
         goal: form.goal,
         pace: form.pace,
@@ -321,8 +328,8 @@ export function OnboardingWizard() {
 
     let active = true
 
-    getProfile(user.$id)
-      .then((profile) => {
+    Promise.all([getProfile(user.$id), loadPlanPreferences(user.$id).catch(() => null)])
+      .then(([profile, prefs]) => {
         if (!active) return
 
         const complete = isProfileComplete(profile)
@@ -336,6 +343,7 @@ export function OnboardingWizard() {
         }
 
         const country = profile.country ?? defaults.country
+        const saved = resolvePlanInputs(profile, prefs)
         const body = normalizeStoredMetricsToMetric(
           country,
           profile.height ?? defaults.height,
@@ -352,13 +360,14 @@ export function OnboardingWizard() {
           dateOfBirth: parseProfileDate(profile.dateOfBirth),
           country,
           bio: profile.bio ?? '',
-          sex: defaults.sex,
+          sex: saved.sex,
           height: body.heightCm,
           weight: body.weightKg,
-          activity: defaults.activity,
-          goal: defaults.goal,
-          pace: defaults.pace,
-          diet: defaults.diet,
+          bodyFatPct: saved.bodyFatPct,
+          activity: saved.activity,
+          goal: saved.goal,
+          pace: saved.pace,
+          diet: saved.diet,
           targetWeight: normalizeStoredTargetWeightKg(
             country,
             profile.target_weight,
@@ -375,6 +384,7 @@ export function OnboardingWizard() {
             : null,
         })
         setDateOfBirthConfirmed(Boolean(profile.dateOfBirth))
+        setBodyFatText(saved.bodyFatPct != null ? String(saved.bodyFatPct) : '')
 
         // Central eligibility enforcement: an existing session whose saved date
         // of birth is under the minimum age stays on the restriction screen.
@@ -412,6 +422,9 @@ export function OnboardingWizard() {
         return null
       case 'body':
         if (form.height <= 0 || form.weight <= 0) return 'Enter your height and weight.'
+        if (bodyFatText.trim() && form.bodyFatPct == null) {
+          return `Body fat must be between ${BODY_FAT_PCT_RANGE.min}% and ${BODY_FAT_PCT_RANGE.max}%, or leave it blank.`
+        }
         return null
       case 'lifestyle':
         return null
@@ -549,6 +562,13 @@ export function OnboardingWizard() {
         goal_target_weight_kg: goalState.targetWeightKg,
         goal_start_date: goalState.startDate,
         goal_estimated_weeks: goalState.estimatedWeeks,
+        sex: form.sex,
+        activity_level: form.activity,
+        body_fat_pct: form.bodyFatPct,
+        diet_style: form.diet,
+        goal_pace: form.pace,
+        bmr: plan.bmr,
+        formula_version: NUTRITION_FORMULA_VERSION,
       })
       await savePlanPreferences(
         {
@@ -559,6 +579,7 @@ export function OnboardingWizard() {
           pace: form.pace,
           diet: form.diet,
           targetWeightKg: targetKg,
+          bodyFatPct: form.bodyFatPct,
           displayUnits: form.displayUnits,
           overrides: {
             targetKcal: macros.targetKcal,
@@ -784,6 +805,27 @@ export function OnboardingWizard() {
               onChange={(value) => updateForm('weight', value)}
               disabled={saving}
             />
+            <Text style={onboardingStyles.label}>Body fat % (optional)</Text>
+            <TextInput
+              value={bodyFatText}
+              onChangeText={(value) => {
+                setBodyFatText(value)
+                const parsed = Number.parseFloat(value.replace(',', '.'))
+                updateForm('bodyFatPct', value.trim() && isValidBodyFatPct(parsed) ? parsed : null)
+              }}
+              placeholder="e.g. 24"
+              placeholderTextColor={onboardingColors.textMuted}
+              keyboardType="decimal-pad"
+              maxLength={4}
+              editable={!saving}
+              accessibilityLabel="Body fat percentage, optional"
+              testID="body-fat-input"
+              style={onboardingStyles.input}
+            />
+            <Text style={onboardingStyles.hintInline}>
+              Only if you know it from a DEXA scan, smart scale or calipers. We&apos;ll use your lean
+              mass (Katch–McArdle) instead of an estimate.
+            </Text>
           </>
         )
 
@@ -825,11 +867,10 @@ export function OnboardingWizard() {
                     key={option.value}
                     value={option.value}
                     label={option.label}
-                    description={formatPaceRate(form.displayUnits, {
-                      gentle: 0.25,
-                      moderate: 0.5,
-                      aggressive: 0.75,
-                    }[option.value])}
+                    description={`${formatPaceRate(
+                      form.displayUnits,
+                      goalPaceKgPerWeek(form.goal, option.value, form.weight),
+                    )} · ${option.description}`}
                     selected={form.pace === option.value}
                     onPress={(value) => updateForm('pace', value)}
                     disabled={saving}
@@ -958,7 +999,8 @@ export function OnboardingWizard() {
             <View style={onboardingStyles.infoCard}>
               <Text style={onboardingStyles.infoCardTitle}>Behind the numbers</Text>
               <Text style={onboardingStyles.infoCardText}>
-                BMR {plan.bmr} kcal · Weekly energy balance {weeklyDeficit > 0 ? '+' : ''}
+                {plan.bmrFormula === 'katch_mcardle' ? 'Katch–McArdle' : 'Mifflin–St Jeor'} BMR {plan.bmr} kcal ·
+                Weekly energy balance {weeklyDeficit > 0 ? '+' : ''}
                 {weeklyDeficit} kcal
                 {form.goal !== 'maintain'
                   ? ` · ${formatPaceRate(form.displayUnits, weeklyChangeKg)}`

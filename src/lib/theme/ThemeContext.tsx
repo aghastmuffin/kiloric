@@ -46,7 +46,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // iOS theme follows the device; barebones is always dark.
   const scheme: ColorSchemeName =
-    themeChoice === 'barebones' ? 'dark' : systemScheme === 'light' ? 'light' : 'dark'
+    themeChoice === 'barebones'
+      ? 'dark'
+      : themeChoice === 'calcount'
+        ? systemScheme === 'dark' ? 'dark' : 'light'
+        : systemScheme === 'light' ? 'light' : 'dark'
 
   const colors = useMemo(
     () => resolveThemeColors(themeChoice, scheme),

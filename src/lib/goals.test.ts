@@ -66,7 +66,7 @@ describe('goal progress', () => {
     } as unknown as ProfileDocument
     const goal = resolveGoalState(legacy)
     expect(goal?.type).toBe('lose')
-    expect(goal?.paceKgPerWeek).toBe(0.5)
+    expect(goal?.paceKgPerWeek).toBe(-0.5)
     expect(goal?.targetWeightKg).toBe(76)
   })
 

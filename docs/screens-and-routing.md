@@ -6,14 +6,14 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 
 | File | Route | Description |
 |------|-------|-------------|
-| `(tabs)/index.tsx` | `/` | Today dashboard: nutrition targets, automatic indicators, personal tasks, and recent logs |
-| `(tabs)/logfood.tsx` | `/logfood` | Food search, barcode entry, favorites, history, and meal logging |
-| `(tabs)/stats.tsx` | `/stats` | Nutrition history and progress summaries |
+| `(tabs)/index.tsx` | `/` | Today: calorie ring (eaten / burned / goal), macro bars, today's plan checklist. On wide web it becomes the dashboard with prep, weight and 7-day calorie cards |
+| `(tabs)/plan.tsx` | `/plan` | Weekly meal plan: day picker, planned meals with prepped badges, prep session card, auto-fill week |
+| `(tabs)/logfood.tsx` | `/logfood` | Log food: meal segmented control, search + scan, Recent / Frequent / My meals, multi-select add |
+| `(tabs)/train.tsx` | `/train` | Upcoming and past workouts; `?workout=<id>` opens the live session (sets table, rest timer, finish) |
+| `(tabs)/progress.tsx` | `/progress` | Weight trend, weigh-in form, average intake, workouts this week, 7-day calories |
 | `(tabs)/account.tsx` | `/account` | Sign in, account summary, user preferences, privacy controls, and deletion |
 
-`(tabs)/_layout.tsx` applies `ProfileGate`. Signed-in users cannot enter the main tabs until a complete, adult-eligible profile is confirmed.
-
-The `meals`, `workouts`, `meds`, and `searchrewrite` files are hidden routes. Preview planners have no production navigation entry point.
+`(tabs)/_layout.tsx` applies `ProfileGate` and renders the shell with headless `expo-router/ui` tabs: a floating bottom bar (Today, Plan, centre +, Train, Progress) below 960 px, and a left sidebar with a logging-streak card at 960 px and above. Account is reached from the avatar on Today or the sidebar.
 
 ## Stack screens
 
@@ -23,10 +23,15 @@ The `meals`, `workouts`, `meds`, and `searchrewrite` files are hidden routes. Pr
 | `onboarding.tsx` | `/onboarding` | Eligibility-first account creation and profile setup |
 | `onboard_success.tsx` | `/onboard_success` | Setup completion screen |
 | `reset-password.tsx` | `/reset-password` | Completes Appwrite email recovery links |
-| `cameraview.tsx` | `/cameraview` | Barcode scanner; opened only from an explicit scan action |
+| `cameraview.tsx` | `/cameraview` | Barcode scanner; opened only from an explicit scan action, hands off to `/review-log` |
+| `review-log.tsx` | `/review-log` | Review & log a food: servings / grams, quick picks, meal, macro impact on today, kcal left |
+| `plan-entry.tsx` | `/plan-entry` | Add or edit a planned meal (`?day=`, `?meal=`, `?id=`) |
+| `prep-edit.tsx` | `/prep-edit` | Schedule the week's prep session and its dishes (`?week=`) |
+| `grocery.tsx` | `/grocery` | Weekly grocery checklist (`?week=`) |
+| `workout-editor.tsx` | `/workout-editor` | Schedule a workout with exercises, sets, reps and target weights |
 | `Additions.tsx` | `/Additions` | Product detail and add-to-meal |
 | `config.tsx` | `/config` | Profile, goals, nutrition targets, and appearance preferences |
-| `contribute-food.tsx` | `/contribute-food` | Submit a food record for review |
+| `contribute-food.tsx` | `/contribute-food` | Add a food with guided photos (barcode, front, ingredients, label) for review |
 | `privacy-policy.tsx` | `/privacy-policy` | Privacy and retention policy |
 | `credits.tsx` | `/credits` | Credits and acknowledgements |
 

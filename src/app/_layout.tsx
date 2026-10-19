@@ -106,6 +106,11 @@ function RootNavigation() {
                   options={{ headerShown: true, headerTitle: "Privacy Policy" }}
                 />
                 <Stack.Screen name="credits" options={{ headerShown: true, headerTitle: "Credits" }} />
+                <Stack.Screen name="review-log" options={{ headerShown: false }} />
+                <Stack.Screen name="plan-entry" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="grocery" options={{ headerShown: false }} />
+                <Stack.Screen name="prep-edit" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="workout-editor" options={{ headerShown: false, presentation: 'modal' }} />
               </Stack>
             </MealTypePreferencesProvider>
           </AuthProvider>

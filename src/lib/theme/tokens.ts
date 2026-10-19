@@ -70,6 +70,105 @@ export type OnboardingColors = {
   dangerSoft: string
 }
 
+// CalCount: warm off-white canvas, white cards, deep green actions.
+export const calcountLightColors: ThemeColors = {
+  background: '#F4F2EC',
+  surface: '#FFFFFF',
+  surfaceAlt: '#ECE8DF',
+  surfaceMuted: '#FFFFFF',
+  border: '#E6E2D9',
+  borderStrong: '#D3CEC3',
+  text: '#17201C',
+  textMuted: '#5E625F',
+  textFaint: '#7C807C',
+  accent: '#1B6B4F',
+  brand: '#1B6B4F',
+  onBrand: '#FFFFFF',
+  brandSoft: '#DCEFE5',
+  onAccent: '#FFFFFF',
+  accentSoft: '#DCEFE5',
+  danger: '#B4372F',
+  onDanger: '#FFFFFF',
+  dangerButtonBg: '#F6DCD8',
+  dangerSoft: 'rgba(180, 55, 47, 0.09)',
+  warning: '#B26F06',
+  success: '#1B6B4F',
+  mono: '#1B6B4F',
+  overlay: 'rgba(23, 32, 28, 0.42)',
+  pickerVariant: 'light',
+  pickerAccent: '#1B6B4F',
+  xpAccent: '#1B6B4F',
+  streakColor: '#B26F06',
+  levelGlow: 'rgba(27, 107, 79, 0.14)',
+  progressTrail: '#E3EEE8',
+}
+
+export const calcountDarkColors: ThemeColors = {
+  background: '#0F1412',
+  surface: '#1A211E',
+  surfaceAlt: '#252D29',
+  surfaceMuted: '#1A211E',
+  border: '#2A332F',
+  borderStrong: '#3A4540',
+  text: '#F1F3EF',
+  textMuted: '#A9B0AB',
+  textFaint: '#868E89',
+  accent: '#46A883',
+  brand: '#46A883',
+  onBrand: '#07120D',
+  brandSoft: '#1E3A2F',
+  onAccent: '#07120D',
+  accentSoft: '#1E3A2F',
+  danger: '#EE8A80',
+  onDanger: '#1A0B09',
+  dangerButtonBg: 'rgba(238, 138, 128, 0.16)',
+  dangerSoft: 'rgba(238, 138, 128, 0.10)',
+  warning: '#F0A93A',
+  success: '#46A883',
+  mono: '#8FD6B6',
+  overlay: 'rgba(0, 0, 0, 0.6)',
+  pickerVariant: 'dark',
+  pickerAccent: '#46A883',
+  xpAccent: '#46A883',
+  streakColor: '#F0A93A',
+  levelGlow: 'rgba(70, 168, 131, 0.2)',
+  progressTrail: '#24332C',
+}
+
+const calcountLightOnboardingColors: OnboardingColors = {
+  background: '#F4F2EC',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
+  cardSelected: '#DCEFE5',
+  border: '#E6E2D9',
+  borderSelected: '#1B6B4F',
+  accent: '#1B6B4F',
+  onAccent: '#FFFFFF',
+  accentMuted: '#5E625F',
+  text: '#17201C',
+  textMuted: '#5E625F',
+  textSoft: '#7C807C',
+  danger: '#B4372F',
+  dangerSoft: 'rgba(180, 55, 47, 0.09)',
+}
+
+const calcountDarkOnboardingColors: OnboardingColors = {
+  background: '#0F1412',
+  surface: '#1A211E',
+  card: '#1A211E',
+  cardSelected: '#1E3A2F',
+  border: '#2A332F',
+  borderSelected: '#46A883',
+  accent: '#46A883',
+  onAccent: '#07120D',
+  accentMuted: '#A9B0AB',
+  text: '#F1F3EF',
+  textMuted: '#A9B0AB',
+  textSoft: '#868E89',
+  danger: '#EE8A80',
+  dangerSoft: 'rgba(238, 138, 128, 0.10)',
+}
+
 // Paper & Ink === the signature taeson.co aesthetic.
 // Light mode: warm paper background, softly lifted surfaces, rich charcoal text.
 export const paperLightColors: ThemeColors = {
@@ -321,7 +420,7 @@ const iosDarkOnboardingColors: OnboardingColors = {
   dangerSoft: 'rgba(255, 69, 58, 0.12)',
 }
 
-export type AppThemeChoice = 'paper' | 'barebones' | 'ios'
+export type AppThemeChoice = 'calcount' | 'paper' | 'barebones' | 'ios'
 
 export const spacing = { xs: 4, sm: 8, md: 14, lg: 20, xl: 28, xxl: 40, xxxl: 56 } as const
 export const borderRadius = { sm: 8, md: 14, lg: 22, xl: 30, pill: 999 } as const
@@ -330,6 +429,7 @@ export function resolveThemeColors(
   choice: AppThemeChoice,
   scheme: ColorSchemeName,
 ): ThemeColors {
+  if (choice === 'calcount') return scheme === 'light' ? calcountLightColors : calcountDarkColors
   if (choice === 'paper') return scheme === 'light' ? paperLightColors : paperDarkColors
   if (choice === 'barebones') return barebonesColors
   return scheme === 'light' ? iosLightColors : iosDarkColors
@@ -339,6 +439,9 @@ export function resolveOnboardingColors(
   choice: AppThemeChoice,
   scheme: ColorSchemeName,
 ): OnboardingColors {
+  if (choice === 'calcount') {
+    return scheme === 'light' ? calcountLightOnboardingColors : calcountDarkOnboardingColors
+  }
   if (choice === 'paper') return scheme === 'light' ? paperLightOnboardingColors : paperDarkOnboardingColors
   if (choice === 'barebones') return barebonesOnboardingColors
   return scheme === 'light' ? iosLightOnboardingColors : iosDarkOnboardingColors

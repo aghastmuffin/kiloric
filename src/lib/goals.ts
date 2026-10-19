@@ -66,8 +66,8 @@ export function goalTypeLabel(goal: FitnessGoal): string {
   return GOAL_OPTIONS.find((option) => option.value === goal)?.label ?? 'Maintain weight'
 }
 
-export function goalPaceFromPreset(goal: FitnessGoal, pace: GoalPace): number {
-  return goalPaceKgPerWeek(goal, pace)
+export function goalPaceFromPreset(goal: FitnessGoal, pace: GoalPace, weightKg?: number | null): number {
+  return goalPaceKgPerWeek(goal, pace, weightKg)
 }
 
 export function weeklyEnergyDeltaKcal(paceKgPerWeek: number): number {
@@ -91,8 +91,10 @@ export function buildGoalState(input: {
   startWeightKg: number
   targetWeightKg: number
   startDate?: Date
+  /** Pace the energy target actually produces (after safety floors). */
+  paceKgPerWeek?: number
 }): GoalState {
-  const paceKgPerWeek = goalPaceFromPreset(input.goal, input.pace)
+  const paceKgPerWeek = input.paceKgPerWeek ?? goalPaceFromPreset(input.goal, input.pace)
   return {
     type: input.goal,
     paceKgPerWeek,
@@ -118,6 +120,7 @@ export function buildGoalStateFromPlan(
     startWeightKg: input.startWeightKg,
     targetWeightKg: plan.targetWeight,
     startDate: input.startDate,
+    paceKgPerWeek: plan.goalPaceKgPerWeek,
   })
 }
 
@@ -160,7 +163,7 @@ export function resolveGoalState(profile: ProfileDocument | null | undefined): G
 
   let paceKgPerWeek = profile.goal_pace_kg_per_week ?? null
   if (paceKgPerWeek == null && profile.weekly_deficit != null) {
-    paceKgPerWeek = profile.weekly_deficit / CALORIES_PER_KG_FAT
+    paceKgPerWeek = profile.weekly_deficit === 0 ? 0 : -profile.weekly_deficit / CALORIES_PER_KG_FAT
   }
   if (paceKgPerWeek == null) {
     paceKgPerWeek = 0

@@ -54,6 +54,8 @@ export type OnboardingFormState = {
   sex: Sex
   height: number
   weight: number
+  /** Optional measured body-fat %; switches BMR to Katch–McArdle. */
+  bodyFatPct: number | null
   activity: ActivityLevel
   goal: FitnessGoal
   pace: GoalPace
@@ -75,6 +77,7 @@ export function createDefaultFormState(email?: string | null): OnboardingFormSta
     sex: 'female',
     height: 170,
     weight: 70,
+    bodyFatPct: null,
     activity: 'moderate',
     goal: 'maintain',
     pace: 'moderate',
