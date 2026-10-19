@@ -60,7 +60,12 @@ export function Segmented<T extends string>({
       {options.map((option) => {
         const active = option.value === value
         return (
-          <View key={option.value} style={styles.segmentItem}>
+          <View
+            key={option.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            style={styles.segmentItem}
+          >
             <UButton
               label={option.label}
               onPress={() => onChange(option.value)}
