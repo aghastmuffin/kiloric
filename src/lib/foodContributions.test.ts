@@ -56,6 +56,7 @@ vi.mock('react-native-appwrite', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockAccountGet.mockResolvedValue({ $id: 'u1' })
 })
 
 describe('foodContributionFields map', () => {
@@ -270,6 +271,29 @@ describe('createContributionRecord', () => {
   it('needs at least one photo', async () => {
     const { createContributionRecord } = await import('./foodContributions')
     await expect(createContributionRecord('u1', { product_name: 'Oat bar', files: {} })).rejects.toThrow(/at least one photo/)
+  })
+
+  it('rejects createContributionRecord for mismatched owner', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'u1' })
+    const { createContributionRecord } = await import('./foodContributions')
+    await expect(
+      createContributionRecord('u2-other', { product_name: 'Oat bar', files: { front: 'f1' } }),
+    ).rejects.toThrow('You can only submit contributions as yourself.')
+  })
+
+  it('rejects uploadContributionPhoto for mismatched owner', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'u1' })
+    const { uploadContributionPhoto } = await import('./foodContributions')
+    await expect(
+      uploadContributionPhoto('u2-other', { kind: 'front', uri: 'file://img.jpg', name: 'img.jpg', type: 'image/jpeg', size: 100 }),
+    ).rejects.toThrow('You can only submit contributions as yourself.')
+  })
+
+  it('rejects countContributions for mismatched owner', async () => {
+    mockAccountGet.mockResolvedValueOnce({ $id: 'u1' })
+    const { countContributions } = await import('./foodContributions')
+    const count = await countContributions('u2-other')
+    expect(count).toBeNull()
   })
 })
 
