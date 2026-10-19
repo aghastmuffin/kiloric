@@ -38,7 +38,7 @@ Useful flags:
 | `--refresh` | Re-download even if cached |
 
 The newest FoodData Central release is discovered from the USDA download page; downloads resume if interrupted.
-A full build downloads about 1.7 GB (mostly the Open Food Facts export and USDA Branded) and needs about 1.5 GB of RAM.
+A full build downloads about 1.7 GB (mostly the Open Food Facts export and USDA Branded), peaks at about 900 MB of RAM and takes around 6 minutes once downloaded. It condenses roughly 1.58 M source records into 1.2 M foods (about 1 GB of SQLite, plus about 870 MB for the optional `.sql` script) with 3.7 M barcode/ID aliases.
 
 Tests (no network, synthetic fixtures in each upstream format):
 
