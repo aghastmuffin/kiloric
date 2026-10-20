@@ -21,6 +21,7 @@
 | Screens and routes | [screens-and-routing.md](./screens-and-routing.md) |
 | Onboarding wizard + nutrition math | [onboarding-and-nutrition.md](./onboarding-and-nutrition.md) |
 | Themes, fonts, and local preferences | [preferences-and-fonts.md](./preferences-and-fonts.md) |
+| Food database build (USDA, CNF, Open Food Facts → SQL) | [../food-data/README.md](../food-data/README.md) |
 
 ## Source layout
 
@@ -33,6 +34,7 @@ src/
 assets/
   fonts/         Custom font files (Redaction)
 docs/            This documentation (safe for Expo)
+food-data/       Python pipeline that builds the food catalog SQL database
 ```
 
 ## External services
