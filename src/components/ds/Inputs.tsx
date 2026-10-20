@@ -1,11 +1,12 @@
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { fonts, usePalette } from '@/lib/theme/palette'
 import { Host, TextInput, type TextInputRef } from '@expo/ui'
 import { Ionicons } from '@expo/vector-icons'
-import { useRef } from 'react'
-import { StyleSheet, View, type KeyboardTypeOptions } from 'react-native'
+import { useRef, useState } from 'react'
+import { Pressable, StyleSheet, View, type KeyboardTypeOptions } from 'react-native'
 import { Txt } from './Txt'
 
-/** Search box using the Expo UI universal TextInput. */
+/** Search box using the Expo UI universal TextInput with clear button and a11y. */
 export function SearchField({
   placeholder,
   defaultValue,
@@ -21,8 +22,26 @@ export function SearchField({
 }) {
   const c = usePalette()
   const ref = useRef<TextInputRef>(null)
+  const [query, setQuery] = useState(defaultValue ?? '')
+
+  const handleChangeText = (text: string) => {
+    setQuery(text)
+    onChangeText?.(text)
+  }
+
+  const handleClear = () => {
+    triggerSelectionHaptic()
+    ref.current?.clear()
+    setQuery('')
+    onChangeText?.('')
+  }
+
   return (
-    <View style={[styles.search, { backgroundColor: c.card, borderColor: c.line }]}>
+    <View
+      accessibilityRole="search"
+      accessibilityLabel={placeholder}
+      style={[styles.search, { backgroundColor: c.card, borderColor: c.line }]}
+    >
       <Ionicons name="search" size={20} color={c.inkMuted} />
       <Host ignoreSafeArea="all" style={styles.flex}>
         <TextInput
@@ -31,7 +50,7 @@ export function SearchField({
           defaultValue={defaultValue}
           placeholder={placeholder}
           placeholderTextColor={c.inkFaint}
-          onChangeText={onChangeText}
+          onChangeText={handleChangeText}
           onSubmitEditing={onSubmit}
           returnKeyType="search"
           enterKeyHint="search"
@@ -41,6 +60,17 @@ export function SearchField({
           textStyle={{ fontFamily: fonts.medium, fontSize: 16, color: c.ink }}
         />
       </Host>
+      {query.length > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          hitSlop={8}
+          onPress={handleClear}
+          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Ionicons name="close-circle" size={20} color={c.inkMuted} />
+        </Pressable>
+      ) : null}
     </View>
   )
 }
