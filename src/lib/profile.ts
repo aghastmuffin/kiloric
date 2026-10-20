@@ -3,6 +3,7 @@ import { databases } from './appwrite'
 import { getSessionUserId } from './sessionAuth'
 import { isUserBlockedError, notifyUserBlocked } from './userBlocked'
 import type { ActivityLevel, DietStyle, FitnessGoal, GoalPace, Sex } from './nutrition'
+import { isRaceValue, type RaceValue } from './residency'
 
 const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
 const USER_PROFILES_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID!
@@ -27,7 +28,9 @@ export type ProfileFields = {
   role: ProfileRole // enum, required — must include `user`
   lastLogin?: string // datetime
   bio?: string | null // string, max 512
-  country?: string | null // string, size 2
+  country?: string | null // string, size 2 — country of residence
+  race?: RaceValue | null // self-reported race
+  resides_in_asia?: boolean | null // explicit "yes" to residing in any Asian country
   /** Many-to-one relationship — meal document ID only; never write diet labels */
   meals?: string | null
   target_kcal?: number | null // integer
@@ -75,7 +78,11 @@ export const EXTENDED_PROFILE_KEYS = [
   'formula_version',
 ] as const satisfies readonly (keyof ProfileFields)[]
 
+/** Demographic columns added after formula v5. Missing columns must not drop the v5 fields. */
+export const DEMOGRAPHIC_PROFILE_KEYS = ['race', 'resides_in_asia'] as const satisfies readonly (keyof ProfileFields)[]
+
 let extendedColumnsMissing = false
+let demographicColumnsMissing = false
 
 export function isUnknownAttributeError(err: unknown): boolean {
   return (
@@ -86,31 +93,79 @@ export function isUnknownAttributeError(err: unknown): boolean {
   )
 }
 
-export function withoutExtendedKeys(data: Partial<ProfileFields>): Partial<ProfileFields> {
+export function withoutKeys(
+  data: Partial<ProfileFields>,
+  keys: readonly (keyof ProfileFields)[],
+): Partial<ProfileFields> {
   const copy = { ...data }
-  for (const key of EXTENDED_PROFILE_KEYS) delete copy[key]
+  for (const key of keys) delete copy[key]
   return copy
+}
+
+export function withoutExtendedKeys(data: Partial<ProfileFields>): Partial<ProfileFields> {
+  return withoutKeys(data, EXTENDED_PROFILE_KEYS)
+}
+
+function messageMentionsKey(err: unknown, key: string): boolean {
+  const message = err instanceof Error ? err.message : ''
+  return message.includes(`"${key}"`) || message.includes(`'${key}'`) || message.includes(key)
+}
+
+function narrowUnknownAttributes(data: Partial<ProfileFields>, err: unknown): Partial<ProfileFields> | null {
+  let next = data
+  let changed = false
+  const demographicHit = DEMOGRAPHIC_PROFILE_KEYS.some(
+    (key) => next[key] !== undefined && messageMentionsKey(err, key),
+  )
+  const extendedHit = EXTENDED_PROFILE_KEYS.some(
+    (key) => next[key] !== undefined && messageMentionsKey(err, key),
+  )
+
+  if (demographicHit) {
+    demographicColumnsMissing = true
+    next = withoutKeys(next, DEMOGRAPHIC_PROFILE_KEYS)
+    changed = true
+  }
+  if (extendedHit) {
+    extendedColumnsMissing = true
+    next = withoutKeys(next, EXTENDED_PROFILE_KEYS)
+    changed = true
+  }
+  if (changed) return next
+
+  const hasDemographic = DEMOGRAPHIC_PROFILE_KEYS.some((key) => next[key] !== undefined)
+  const hasExtended = EXTENDED_PROFILE_KEYS.some((key) => next[key] !== undefined)
+  if (!hasDemographic && !hasExtended) return null
+  if (hasDemographic) demographicColumnsMissing = true
+  if (hasExtended) extendedColumnsMissing = true
+  return withoutKeys(withoutKeys(next, DEMOGRAPHIC_PROFILE_KEYS), EXTENDED_PROFILE_KEYS)
 }
 
 async function writeWithSchemaFallback<T>(
   data: Partial<ProfileFields>,
   write: (payload: Partial<ProfileFields>) => Promise<T>,
 ): Promise<T> {
-  const hasExtended = EXTENDED_PROFILE_KEYS.some((key) => data[key] !== undefined)
-  if (!hasExtended) return write(data)
-  if (extendedColumnsMissing) return write(withoutExtendedKeys(data))
-  try {
-    return await write(data)
-  } catch (err) {
-    if (!isUnknownAttributeError(err)) throw err
-    extendedColumnsMissing = true
-    return write(withoutExtendedKeys(data))
+  let payload = data
+  if (demographicColumnsMissing) payload = withoutKeys(payload, DEMOGRAPHIC_PROFILE_KEYS)
+  if (extendedColumnsMissing) payload = withoutKeys(payload, EXTENDED_PROFILE_KEYS)
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await write(payload)
+    } catch (err) {
+      if (!isUnknownAttributeError(err) || attempt === 2) throw err
+      const next = narrowUnknownAttributes(payload, err)
+      if (!next) throw err
+      payload = next
+    }
   }
+  return write(payload)
 }
 
-/** Test hook: forget whether the extended columns were found missing. */
+/** Test hook: forget whether optional columns were found missing. */
 export function resetProfileSchemaProbe(): void {
   extendedColumnsMissing = false
+  demographicColumnsMissing = false
 }
 
 /** Required when creating the first profile document. */
@@ -296,6 +351,17 @@ export function normalizeProfileWritePayload(data: Partial<ProfileFields>): Part
       continue
     }
 
+    if (key === 'race' && typeof value === 'string') {
+      const trimmed = value.trim().slice(0, 64)
+      normalized[key] = (isRaceValue(trimmed) ? trimmed : null) as never
+      continue
+    }
+
+    if (key === 'resides_in_asia') {
+      normalized[key] = (value === true ? true : value === false ? false : null) as never
+      continue
+    }
+
     normalized[key] = value as never
   }
 
@@ -312,6 +378,9 @@ function validateProfileWritePayload(data: Partial<ProfileFields>): string | nul
   if (data.country && data.country.length !== 2) {
     return 'Country must be a 2-letter code (e.g. US).'
   }
+  if (data.race && !isRaceValue(data.race)) {
+    return 'Race must be one of the listed options.'
+  }
   if (data.role && !PROFILE_ROLE_OPTIONS.includes(data.role)) {
     return `Role must be one of: ${PROFILE_ROLE_OPTIONS.join(', ')}`
   }
@@ -319,7 +388,14 @@ function validateProfileWritePayload(data: Partial<ProfileFields>): string | nul
 }
 
 function pickCreatePayload(data: ProfileCreate): ProfileCreate {
-  return { ...data }
+  return {
+    username: data.username,
+    email: data.email,
+    dateOfBirth: data.dateOfBirth,
+    weight: data.weight,
+    height: data.height,
+    role: data.role,
+  }
 }
 
 function pickOptionalPayload(data: Partial<ProfileFields>): Partial<ProfileFields> {

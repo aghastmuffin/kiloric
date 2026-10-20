@@ -185,6 +185,22 @@
                     "encrypt": false
                 },
                 {
+                    "key": "race",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "resides_in_asia",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
                     "key": "weight",
                     "type": "double",
                     "required": true,

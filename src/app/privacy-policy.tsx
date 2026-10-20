@@ -14,7 +14,7 @@ export default function PrivacyPolicyScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Privacy Policy</Text>
         <Text style={styles.subtitle}>
-          Last Updated: August 17, 2026 · Effective Date: August 17, 2026
+          Last Updated: October 20, 2026 · Effective Date: October 20, 2026
         </Text>
       </View>
 
@@ -58,7 +58,7 @@ export default function PrivacyPolicyScreen() {
             {
               title: 'Profile & Demographic Information',
               description:
-                'Biological sex, date of birth / age, country/region, and account roles.',
+                'Biological sex, date of birth / age, self-reported race, country of residence, whether you reside in any country in Asia, and account roles. CalCount is not offered to residents of the European Union, Russia, or Vietnam.',
             },
             {
               title: 'Physical & Health Metrics',
@@ -392,7 +392,7 @@ function RetentionTable() {
   const rows = [
     {
       category: 'Account & Profile Data',
-      details: 'Name, email, birthdate, sex, country',
+      details: 'Name, email, birthdate, sex, race, country of residence',
       retention: 'Lifetime of the active account',
       trigger: 'Deleted within 30 days of account deletion request',
     },

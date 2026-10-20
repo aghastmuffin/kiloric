@@ -37,12 +37,13 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 
 ## Authentication and eligibility
 
-1. A new user confirms a date of birth and must be at least 18 before entering an email or password.
-2. After account creation, onboarding gathers the fields needed for nutrition calculations.
-3. `ProfileGate` revalidates profile completeness and age on every signed-in tab entry.
-4. Profile edits reject an ineligible date of birth.
-5. Password recovery begins from the sign-in password screen and returns through `/reset-password`.
-6. Account deletion is available from the You tab and immediately blocks account access; server-side retention procedures complete the purge.
+1. A new user confirms a date of birth and must be at least 18 before entering an email or password. The same step collects race, country of residence, and whether they reside in any country in Asia.
+2. Residents of the EU, Russia, or Vietnam are stopped with the version 101926 legal notice. An Asia “yes” (or an Asian country of residence) shows a red H. pylori screening warning.
+3. After account creation, onboarding gathers the same body, activity, diet, and target fields the profile editor saves later.
+4. `ProfileGate` revalidates profile completeness, age, and barred country of residence on every signed-in tab entry.
+5. Profile edits reject an ineligible date of birth or a barred country of residence, and they edit the same race and Asia answer collected during onboarding.
+6. Password recovery begins from the sign-in password screen and returns through `/reset-password`.
+7. Account deletion is available from the You tab and immediately blocks account access; server-side retention procedures complete the purge.
 
 ## Camera behavior
 

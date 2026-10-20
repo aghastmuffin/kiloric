@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/AuthContext';
 import { isEligibleOnboardingAge } from '@/lib/ageEligibility';
+import { isBarredResidency } from '@/lib/residency';
 import { getProfile, isProfileComplete } from '@/lib/profile';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
@@ -41,6 +42,10 @@ export function ProfileGate({ children }: { children: ReactNode }) {
         }
         const dateOfBirth = new Date(profile.dateOfBirth);
         if (Number.isNaN(dateOfBirth.getTime()) || !isEligibleOnboardingAge(dateOfBirth)) {
+          router.replace('/onboarding');
+          return;
+        }
+        if (isBarredResidency(profile.country)) {
           router.replace('/onboarding');
           return;
         }

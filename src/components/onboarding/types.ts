@@ -6,6 +6,7 @@ import type {
   Sex,
 } from '@/lib/nutrition'
 import { guessCountryCode, usernameFromEmail } from '@/lib/nutrition'
+import { isAsianCountry, type RaceValue } from '@/lib/residency'
 import { defaultDisplayUnits, type DisplayUnits } from '@/lib/units'
 
 export type MacroOverrides = {
@@ -49,7 +50,12 @@ export function getOnboardingSteps(isAuthenticated: boolean): OnboardingStep[] {
 export type OnboardingFormState = {
   username: string
   dateOfBirth: Date
+  /** ISO country of residence. */
   country: string
+  /** Self-reported race. Empty until the person chooses. */
+  race: RaceValue | ''
+  /** Explicit answer to “Do you reside in any country in Asia?” */
+  residesInAsia: boolean | null
   bio: string
   sex: Sex
   height: number
@@ -73,6 +79,8 @@ export function createDefaultFormState(email?: string | null): OnboardingFormSta
     username: email ? usernameFromEmail(email) : '',
     dateOfBirth: DEFAULT_DATE_OF_BIRTH,
     country,
+    race: '',
+    residesInAsia: isAsianCountry(country) ? true : null,
     bio: '',
     sex: 'female',
     height: 170,
