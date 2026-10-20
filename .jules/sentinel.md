@@ -42,3 +42,8 @@
 **Vulnerability:** Missing authorization validation in `purgeAccountData` allowed any authenticated user to trigger deletion of another user's account documents, contributions, and profile by specifying their `userId`.
 **Learning:** High-impact data purging functions must assert active session user ID ownership at the entry point of the function before listing or deleting owned database documents.
 **Prevention:** Call `await assertAuthenticatedUserId(userId)` at the beginning of data purging routines to guarantee only the resource owner can trigger deletion of their account records.
+
+## 2026-08-10 - [Strict Document ID Format Validation in Record Store]
+**Vulnerability:** Unvalidated record document IDs in `createRecordStore` allowed malformed ID strings to reach database query methods (`getDocument`, `updateDocument`, `deleteDocument`).
+**Learning:** Store factory functions and repository abstraction layers that wrap database operations must validate document ID formats at the top-level method signatures before executing table or account pref operations.
+**Prevention:** Validate document IDs against `/^[a-zA-Z0-9._-]{1,64}$/` at the entry point of `update` and `remove` methods in generic data access abstractions like `createRecordStore`.
