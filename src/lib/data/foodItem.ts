@@ -71,16 +71,33 @@ export function addMacros(a: Macros, b: Macros): Macros {
   }
 }
 
+/**
+ * Sum macronutrient values across a list of food items.
+ * Optimized with a single-pass indexed for loop and primitive local variables
+ * to eliminate reduce callback allocations, object spreading ({ ...ZERO_MACROS }),
+ * intermediate object creation per iteration, and redundant rounding operations.
+ */
 export function sumMacros(list: readonly Partial<Macros>[]): Macros {
-  return list.reduce<Macros>(
-    (total, item) => ({
-      kcal: total.kcal + (item.kcal ?? 0),
-      protein: roundMacro(total.protein + (item.protein ?? 0)),
-      carbs: roundMacro(total.carbs + (item.carbs ?? 0)),
-      fat: roundMacro(total.fat + (item.fat ?? 0)),
-    }),
-    { ...ZERO_MACROS },
-  )
+  let kcal = 0
+  let protein = 0
+  let carbs = 0
+  let fat = 0
+
+  for (let i = 0; i < list.length; i += 1) {
+    const item = list[i]
+    if (!item) continue
+    kcal += item.kcal ?? 0
+    protein += item.protein ?? 0
+    carbs += item.carbs ?? 0
+    fat += item.fat ?? 0
+  }
+
+  return {
+    kcal,
+    protein: roundMacro(protein),
+    carbs: roundMacro(carbs),
+    fat: roundMacro(fat),
+  }
 }
 
 const KJ_PER_KCAL = 4.184
