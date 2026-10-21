@@ -405,6 +405,7 @@ export async function deleteMeal(userId: string, mealId: string): Promise<void> 
 
 export async function getMeal(mealId: string): Promise<MealDocument | null> {
   if (isMealsConfigMissing()) return null
+  if (!/^[a-zA-Z0-9._-]{1,64}$/.test(mealId)) return null
 
   try {
     return await databases.getDocument<MealDocument>({

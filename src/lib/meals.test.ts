@@ -397,6 +397,15 @@ describe('meals authorization checks', () => {
     ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
   })
 
+  describe('getMeal', () => {
+    it('returns null immediately for malformed meal IDs', async () => {
+      expect(await mealsModule.getMeal('invalid id!')).toBeNull()
+      expect(await mealsModule.getMeal('../path/traversal')).toBeNull()
+      expect(await mealsModule.getMeal('')).toBeNull()
+      expect(mockGetDocument).not.toHaveBeenCalled()
+    })
+  })
+
   describe('deleteMeal', () => {
     it('deletes a meal owned by the authenticated user relationship', async () => {
       mockGetAccount.mockResolvedValue({ $id: 'user-123' })
