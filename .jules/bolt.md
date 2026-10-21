@@ -39,3 +39,8 @@
 **Learning:** In product entry lists and detail modals, property sorting was repeatedly calling `Array.prototype.indexOf` against an array of ~58 field priority strings inside `sort(([a], [b]) => ...)` callbacks. Since `sort` executes $O(M \log M)$ comparisons per product entry, linear array scanning triggered thousands of string comparisons on every render. Backing field priority ranks with a module-level `Map` (`ORDS_FIELD_PRIORITY_MAP`) turns rank lookups into $O(1)$ hash map gets, eliminating CPU overhead during list rendering.
 
 **Action:** Never use `Array.prototype.indexOf` inside array `sort` comparators for static or semi-static key priorities; pre-populate a module-level `Map<string, number>` for $O(1)$ rank lookup.
+
+## 2025-05-23 - Zero-Allocation Date Indexing and Slope Loops
+**Learning:** Calculating trend lines and linear regression slopes over date series repeatedly called `.split('-')` and `.map(...)` for ISO date strings, as well as `points.map(...)` and `.reduce(...)` for mean calculations. This created heavy array allocation overhead during progress chart re-renders. Replacing date splitting with `indexOf`/`slice` and converting slope calculations to a single-pass sum loop eliminated intermediate array allocations and GC overhead.
+
+**Action:** Avoid `.split()` and `Array.map` inside date math or regression functions called on chart render passes; use `indexOf`/`slice` date extraction and accumulate sums in a single `for` loop.
