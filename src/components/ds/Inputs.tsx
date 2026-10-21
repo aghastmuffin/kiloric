@@ -1,19 +1,22 @@
+import { triggerSelectionHaptic } from '@/lib/haptics'
 import { fonts, usePalette } from '@/lib/theme/palette'
 import { Host, TextInput, type TextInputRef } from '@expo/ui'
 import { Ionicons } from '@expo/vector-icons'
-import { useRef } from 'react'
-import { StyleSheet, View, type KeyboardTypeOptions } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Pressable, StyleSheet, View, type KeyboardTypeOptions } from 'react-native'
 import { Txt } from './Txt'
 
 /** Search box using the Expo UI universal TextInput. */
 export function SearchField({
   placeholder,
+  value,
   defaultValue,
   onChangeText,
   onSubmit,
   testID,
 }: {
   placeholder: string
+  value?: string
   defaultValue?: string
   onChangeText?: (text: string) => void
   onSubmit: (text: string) => void
@@ -21,8 +24,32 @@ export function SearchField({
 }) {
   const c = usePalette()
   const ref = useRef<TextInputRef>(null)
+  const [text, setText] = useState(value ?? defaultValue ?? '')
+
+  useEffect(() => {
+    if (value !== undefined) {
+      setText(value)
+    }
+  }, [value])
+
+  const handleChangeText = (newText: string) => {
+    setText(newText)
+    onChangeText?.(newText)
+  }
+
+  const handleClear = () => {
+    triggerSelectionHaptic()
+    ref.current?.clear()
+    setText('')
+    onChangeText?.('')
+  }
+
   return (
-    <View style={[styles.search, { backgroundColor: c.card, borderColor: c.line }]}>
+    <View
+      accessibilityRole="search"
+      accessibilityLabel={placeholder}
+      style={[styles.search, { backgroundColor: c.card, borderColor: c.line }]}
+    >
       <Ionicons name="search" size={20} color={c.inkMuted} />
       <Host ignoreSafeArea="all" style={styles.flex}>
         <TextInput
@@ -31,7 +58,7 @@ export function SearchField({
           defaultValue={defaultValue}
           placeholder={placeholder}
           placeholderTextColor={c.inkFaint}
-          onChangeText={onChangeText}
+          onChangeText={handleChangeText}
           onSubmitEditing={onSubmit}
           returnKeyType="search"
           enterKeyHint="search"
@@ -41,6 +68,17 @@ export function SearchField({
           textStyle={{ fontFamily: fonts.medium, fontSize: 16, color: c.ink }}
         />
       </Host>
+      {text.length > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          onPress={handleClear}
+          hitSlop={8}
+          style={styles.clearButton}
+        >
+          <Ionicons name="close-circle" size={20} color={c.inkMuted} />
+        </Pressable>
+      ) : null}
     </View>
   )
 }
@@ -153,6 +191,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 60,
   },
+  clearButton: { padding: 4, justifyContent: 'center', alignItems: 'center' },
   cell: { flex: 1, borderRadius: 12, overflow: 'hidden' },
   field: { gap: 6, flex: 1 },
   fieldBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 14, gap: 8 },

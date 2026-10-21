@@ -296,6 +296,7 @@ export default function LogFoodScreen() {
       <View style={styles.searchRow}>
         <SearchField
           placeholder="Search foods, brands, meals"
+          value={query}
           onChangeText={setQuery}
           onSubmit={(text) => void runSearch(text)}
           testID="food-search"
