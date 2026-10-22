@@ -68,6 +68,7 @@ export function listWorkoutsBetween(userId: string, fromDay: string, toDay: stri
 }
 
 export async function getWorkout(userId: string, workoutId: string): Promise<Workout | null> {
+  if (!/^[a-zA-Z0-9._-]{1,64}$/.test(workoutId)) return null
   const rows = await workoutsStore.list(userId, [{ field: '$id', op: 'eq', value: workoutId }], { limit: 1 })
   return rows[0] ?? null
 }
