@@ -139,4 +139,11 @@ describe('createRecordStore', () => {
       expect.objectContaining({ collectionId: 'rows_d', data: { owner: 'u1', day: '2026-10-16', kcal: 50, done: false } }),
     )
   })
+
+  it('rejects malformed record IDs on update and remove', async () => {
+    const store = createRecordStore<Row>({ collectionId: 'rows_e', databaseId: 'db', fallbackLimit: 5, recencyField: 'day' })
+    await expect(store.update('u1', 'invalid/id!', { done: true })).rejects.toThrow('Invalid record ID.')
+    await expect(store.remove('u1', '')).rejects.toThrow('Invalid record ID.')
+    await expect(store.update('u1', 'a'.repeat(65), { done: true })).rejects.toThrow('Invalid record ID.')
+  })
 })

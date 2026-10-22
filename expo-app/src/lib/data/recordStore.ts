@@ -320,6 +320,7 @@ export function createRecordStore<T extends Record<string, unknown>>(config: Sto
 
     async update(userId, id, patch) {
       await assertSessionUser(userId)
+      if (!/^[a-zA-Z0-9._-]{1,64}$/.test(id)) throw new Error('Invalid record ID.')
       const payload = cleanPayload(patch as Record<string, unknown>)
       delete payload.owner
       return withTable(
@@ -353,6 +354,7 @@ export function createRecordStore<T extends Record<string, unknown>>(config: Sto
 
     async remove(userId, id) {
       await assertSessionUser(userId)
+      if (!/^[a-zA-Z0-9._-]{1,64}$/.test(id)) throw new Error('Invalid record ID.')
       await withTable(
         async () => {
           const existing = await databases.getDocument({ databaseId, collectionId, documentId: id })
