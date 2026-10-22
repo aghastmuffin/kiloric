@@ -102,7 +102,7 @@ def build(options: BuildOptions) -> dict:
         **{f"records_{k}": v for k, v in sorted(per_source.items())},
     }
     info = {
-        "generator": f"calcount-fooddb {__version__}",
+        "generator": f"kiloric-fooddb {__version__}",
         "built_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "countries": ",".join(sorted(options.countries)),
         "units": "*_100g columns are grams per 100 g/ml; energy_kcal_100g kcal, energy_kj_100g kJ; serving_quantity g/ml",
