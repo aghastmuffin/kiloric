@@ -21,7 +21,7 @@ export default function ResetPasswordScreen() {
   const [saving, setSaving] = useState(false)
 
   async function submit() {
-    triggerImpactHaptic('medium')
+    triggerImpactHaptic()
     if (!userId || !secret) {
       setError('This reset link is incomplete or expired. Request a new link from sign in.')
       triggerNotificationHaptic('error')
