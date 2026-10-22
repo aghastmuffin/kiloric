@@ -285,7 +285,7 @@ describe('createContributionRecord', () => {
     mockAccountGet.mockResolvedValueOnce({ $id: 'u1' })
     const { uploadContributionPhoto } = await import('./foodContributions')
     await expect(
-      uploadContributionPhoto('u2-other', { kind: 'front', uri: 'file://img.jpg', name: 'img.jpg', type: 'image/jpeg', size: 100 }),
+      uploadContributionPhoto('u2-other', { kind: 'front', uri: 'file://img.jpg', fileName: 'img.jpg', mimeType: 'image/jpeg', fileSize: 100 }),
     ).rejects.toThrow('You can only submit contributions as yourself.')
   })
 
