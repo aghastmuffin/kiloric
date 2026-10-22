@@ -1,8 +1,10 @@
 import { inferMealTypeFromTime } from './mealFromProduct'
 import { MEAL_TYPE_OPTIONS, type MealType } from './meals'
+import { readStoredPreference } from '@/lib/storedPreference'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const STORAGE_KEY = '@calcount/selected_meal_type'
+const STORAGE_KEY = '@kiloric/selected_meal_type'
+const LEGACY_STORAGE_KEY = '@calcount/selected_meal_type'
 
 export const DEFAULT_MEAL_TYPE: MealType = inferMealTypeFromTime()
 
@@ -33,7 +35,7 @@ export function loadSelectedMealType(): Promise<MealType> {
   const promise = (async () => {
     let result = DEFAULT_MEAL_TYPE
     try {
-      const value = await AsyncStorage.getItem(STORAGE_KEY)
+      const value = await readStoredPreference(STORAGE_KEY, LEGACY_STORAGE_KEY)
       if (value && MEAL_TYPE_OPTIONS.includes(value as MealType)) {
         result = value as MealType
       }

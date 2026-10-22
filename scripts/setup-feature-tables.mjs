@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Creates the CalCount feature tables (food log, saved meals, meal plan, prep,
+ * Creates the Kiloric feature tables (food log, saved meals, meal plan, prep,
  * groceries, workouts, sets, weight) from `appwrite.config.json` via the REST
  * API, and adds the newer columns to the existing `users` profile table and the
  * `food_contributions` table. Idempotent: existing collections, attributes and

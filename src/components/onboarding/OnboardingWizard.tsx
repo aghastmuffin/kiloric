@@ -135,9 +135,9 @@ function AgeRestrictionScreen({
           <Ionicons name="shield-checkmark-outline" size={34} color={onboardingColors.accent} />
         </View>
         <Text style={styles.restrictionEyebrow}>Age requirement</Text>
-        <Text accessibilityRole="header" style={styles.restrictionTitle}>CalCount is for adults</Text>
+        <Text accessibilityRole="header" style={styles.restrictionTitle}>Kiloric is for adults</Text>
         <Text style={styles.restrictionBody}>
-          CalCount isn’t available to anyone under {MINIMUM_ONBOARDING_AGE}, including children
+          Kiloric isn’t available to anyone under {MINIMUM_ONBOARDING_AGE}, including children
           under 13. Its nutrition targets are designed for adults and won’t work correctly for
           younger users.
         </Text>
@@ -631,7 +631,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              Start with the email you want to use for your CalCount account.
+              Start with the email you want to use for your Kiloric account.
             </Text>
             {authError ? (
               <View accessibilityRole="alert" style={onboardingStyles.errorBox}>
@@ -705,7 +705,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              A quick setup so CalCount can personalize calories, macros, and hydration for you.
+              A quick setup so Kiloric can personalize calories, macros, and hydration for you.
             </Text>
             <View style={onboardingStyles.infoCard}>
               <Text style={onboardingStyles.infoCardTitle}>We&apos;ll handle the math</Text>
@@ -732,7 +732,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              CalCount creates adult nutrition targets, so you must be {MINIMUM_ONBOARDING_AGE} or
+              Kiloric creates adult nutrition targets, so you must be {MINIMUM_ONBOARDING_AGE} or
               older to continue.
             </Text>
             <Text style={onboardingStyles.label}>Date of birth</Text>

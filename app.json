@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "CalCount",
-    "slug": "taesonco-calcount",
+    "name": "Kiloric",
+    "slug": "kiloric",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
-    "scheme": "calorie",
+    "scheme": "kiloric",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/app-icon.png",

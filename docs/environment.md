@@ -22,7 +22,7 @@ npx expo start -c
 
 | Variable | Description |
 |----------|-------------|
-| `EXPO_PUBLIC_APPWRITE_PLATFORM_WEB` | Web platform hostname if registered separately in Appwrite |
+| `EXPO_PUBLIC_APPWRITE_PLATFORM_WEB` | Web platform hostname if registered separately in Appwrite. Production web sign-in uses the browser hostname, so `kiloric.co` (and `www.kiloric.co` if that host is served) must be an accepted Appwrite platform. |
 | `EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID` | Meals table ID (typically `meals`) |
 | `EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID` | Water logs table ID (typically `water_logs`) |
 

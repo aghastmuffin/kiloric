@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { readStoredPreference } from '@/lib/storedPreference'
 
 /** Food lookup backend. `legacy` is the FastAPI proxy (deprecated). */
 export type ApiBackendChoice = 'ords' | 'legacy'
 
-const STORAGE_KEY = '@calcount/api_backend'
+const STORAGE_KEY = '@kiloric/api_backend'
+const LEGACY_STORAGE_KEY = '@calcount/api_backend'
 
 /** Prefer the Oracle ORDS endpoints; FastAPI remains available as deprecated. */
 export const DEFAULT_API_BACKEND: ApiBackendChoice = 'ords'
@@ -13,7 +15,7 @@ export const API_BACKEND_LABELS: Record<ApiBackendChoice, string> = {
   legacy: 'Legacy (deprecated)',
 }
 
-const LEGACY_BACKEND_URL = 'https://calcount.taeson.co'
+const LEGACY_BACKEND_URL = 'https://kiloric.co'
 const ORDS_BACKEND_URL =
   'https://gba34651847beaf-caloriecount.adb.ca-montreal-1.oraclecloudapps.com/ords/admin/v1'
 
@@ -25,7 +27,7 @@ export function isApiBackendChoice(value: unknown): value is ApiBackendChoice {
 
 export async function loadApiBackendChoice(): Promise<ApiBackendChoice> {
   try {
-    const value = await AsyncStorage.getItem(STORAGE_KEY)
+    const value = await readStoredPreference(STORAGE_KEY, LEGACY_STORAGE_KEY)
     if (isApiBackendChoice(value)) {
       cachedBackend = value
       return value

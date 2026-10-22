@@ -48,7 +48,7 @@ export default function ResetPasswordScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.card}>
-        <Text style={styles.eyebrow}>CALCOUNT ACCOUNT</Text>
+        <Text style={styles.eyebrow}>KILORIC ACCOUNT</Text>
         <Text accessibilityRole="header" style={styles.title}>Choose a new password</Text>
         <Text style={styles.body}>Use at least 8 characters, then return to sign in.</Text>
         {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}

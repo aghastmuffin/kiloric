@@ -4,7 +4,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 
 ## Cursor Cloud specific instructions
 
-CalCount is a single Expo (SDK 56) React Native app that talks to a hosted Appwrite backend. There is no separate backend service to start in this repo. Standard commands live in `package.json` scripts and `docs/README.md`.
+Kiloric is a single Expo (SDK 56) React Native app that talks to a hosted Appwrite backend. The public site is `https://kiloric.co`. There is no separate backend service to start in this repo. Standard commands live in `package.json` scripts and `docs/README.md`.
 
 - Run the app in the cloud VM with `npx expo start --web` (Metro serves on port 8081). There is no iOS/Android simulator here, so use the web target. The first browser bundle takes ~15s to compile.
 - `.env` is committed and points at the hosted Appwrite instance (`https://appwrite.calcount.taeson.co/v1`). On web, the Appwrite platform is derived from the browser hostname, and `localhost` is already an accepted origin, so email/password signup + sign-in work from the VM browser without extra config.

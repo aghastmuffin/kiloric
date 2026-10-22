@@ -5,7 +5,7 @@
 - **Expo SDK 56** with **Expo Router** (typed routes, React Compiler enabled)
 - **React Native 0.85** / **React 19**
 - **Appwrite** (`react-native-appwrite`) for auth + databases
-- **FastAPI** backend at `https://calcount.taeson.co` for food/barcode APIs
+- **FastAPI** backend at `https://kiloric.co` for food/barcode APIs
 - **AsyncStorage** for session persistence and user preferences
 
 Path alias: `@/*` → `src/*` (see `tsconfig.json`).
@@ -95,4 +95,5 @@ Search, scan, and favorites on the Log tab write straight to today's Appwrite me
 
 - **EAS**: `eas.json` defines `development` (dev client), `preview`, and `production` profiles.
 - **Bundle ID**: `co.taeson.calcount` (iOS + Android) — must match `EXPO_PUBLIC_APPWRITE_PLATFORM_ID`.
-- **Deep link scheme**: `calorie://`
+- **Deep link scheme**: `kiloric://`
+- **Public site**: `https://kiloric.co`

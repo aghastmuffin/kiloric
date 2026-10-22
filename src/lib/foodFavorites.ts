@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const STORAGE_PREFIX = '@calcount/food_favorites:'
+const STORAGE_PREFIX = '@kiloric/food_favorites:'
+const LEGACY_STORAGE_PREFIX = '@calcount/food_favorites:'
 const LEGACY_STORAGE_KEY = 'vitality_food_favorites_v1'
 
 export type FavoriteFood = {
@@ -19,6 +20,10 @@ export function favoritesUserKey(userId: string | undefined): string {
 
 function storageKey(userKey: string): string {
   return `${STORAGE_PREFIX}${userKey}`
+}
+
+function legacyStorageKey(userKey: string): string {
+  return `${LEGACY_STORAGE_PREFIX}${userKey}`
 }
 
 function parseFavoriteFoods(raw: string | null): FavoriteFood[] {
@@ -89,7 +94,18 @@ export function loadFavoriteFoods(userKeyOrEmpty?: string): Promise<FavoriteFood
           // ignore legacy cleanup error
         }
       }
-      const raw = await AsyncStorage.getItem(storageKey(userKey))
+      const key = storageKey(userKey)
+      let raw = await AsyncStorage.getItem(key)
+      if (raw == null) {
+        const legacyKey = legacyStorageKey(userKey)
+        raw = await AsyncStorage.getItem(legacyKey)
+        if (raw != null) {
+          await AsyncStorage.setItem(key, raw)
+          if (typeof AsyncStorage.removeItem === 'function') {
+            await AsyncStorage.removeItem(legacyKey)
+          }
+        }
+      }
       const entries = parseFavoriteFoods(raw)
       loadedSuccessfully = true
       return entries

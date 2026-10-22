@@ -14,13 +14,16 @@ export default function PrivacyPolicyScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Privacy Policy</Text>
         <Text style={styles.subtitle}>
-          Last Updated: August 17, 2026 · Effective Date: August 17, 2026
+          Last Updated: October 21, 2026 · Effective Date: October 21, 2026
         </Text>
       </View>
 
       <View style={styles.meta}>
         <Text style={styles.bodyText}>
-          <Text style={styles.strong}>Service:</Text> CalCount
+          <Text style={styles.strong}>Service:</Text> Kiloric
+        </Text>
+        <Text style={styles.bodyText}>
+          <Text style={styles.strong}>Website:</Text> https://kiloric.co
         </Text>
         <Text style={styles.bodyText}>
           <Text style={styles.strong}>Provider:</Text> Taeson Co.
@@ -34,7 +37,7 @@ export default function PrivacyPolicyScreen() {
       <Section title="Part 1: Privacy Policy">
         <Heading>1. Introduction & Overview</Heading>
         <Paragraph>
-          Welcome to CalCount (&quot;Service&quot;, &quot;App&quot;), operated by Taeson Co. We
+          Welcome to Kiloric (&quot;Service&quot;, &quot;App&quot;), operated by Taeson Co. We
           respect your privacy and are committed to protecting your personal
           information and health/wellness data. This Privacy Policy explains
           what information we collect, how we use it, how we store and protect
@@ -201,8 +204,8 @@ export default function PrivacyPolicyScreen() {
         <NumberedList
           items={[
             'Send an email to data_privacy@taeson.co.',
-            'Include CalCount in the subject line (for example, "CalCount - Data Export Request").',
-            'Body Details: Please include the email address associated with your CalCount account so we can verify your identity before processing the request.',
+            'Include Kiloric in the subject line (for example, "Kiloric - Data Export Request").',
+            'Body Details: Please include the email address associated with your Kiloric account so we can verify your identity before processing the request.',
           ]}
         />
         <Paragraph>
@@ -266,7 +269,7 @@ export default function PrivacyPolicyScreen() {
 
       <Section title="Part 4: Children's Privacy">
         <Paragraph>
-          CalCount is an adult-only service and requires every user to be at
+          Kiloric is an adult-only service and requires every user to be at
           least 18 years old. Eligibility is checked before account creation
           and whenever the saved date of birth changes. We do not knowingly
           collect personal data from anyone under 18. If we learn that an
@@ -299,7 +302,7 @@ export default function PrivacyPolicyScreen() {
             {
               title: 'Subject Requirement',
               description:
-                'Must include "CalCount" in the subject line (e.g., "CalCount - Data Privacy Request")',
+                'Must include "Kiloric" in the subject line (e.g., "Kiloric - Data Privacy Request")',
             },
             {
               title: 'Organization',

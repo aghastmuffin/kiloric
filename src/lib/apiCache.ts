@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const STORAGE_PREFIX = '@calcount/api_cache:'
+const STORAGE_PREFIX = '@kiloric/api_cache:'
+const LEGACY_STORAGE_PREFIX = '@calcount/api_cache:'
 const DAY_MS = 24 * 60 * 60 * 1000
 const MAX_MEMORY_ENTRIES = 100
 const MAX_STORED_ENTRIES = 200
@@ -161,7 +162,16 @@ export async function getCachedResponse(
   }
 
   try {
-    const raw = await AsyncStorage.getItem(storageKey(cacheKey))
+    const key = storageKey(cacheKey)
+    let raw = await AsyncStorage.getItem(key)
+    if (!raw) {
+      const legacyKey = `${LEGACY_STORAGE_PREFIX}${cacheKey}`
+      raw = await AsyncStorage.getItem(legacyKey)
+      if (raw) {
+        await AsyncStorage.setItem(key, raw)
+        await AsyncStorage.removeItem(legacyKey)
+      }
+    }
     if (!raw) return null
 
     const entry = parseCacheEntry(raw)

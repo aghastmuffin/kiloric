@@ -2,7 +2,7 @@ import { account, databases } from '@/lib/appwrite'
 import { AppwriteException, ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
 
 /**
- * Owner-scoped persistence for CalCount feature tables.
+ * Owner-scoped persistence for Kiloric feature tables.
  *
  * Each store targets an Appwrite table (see `appwrite.config.json`). When the
  * table has not been provisioned yet, Appwrite answers `collection_not_found`;

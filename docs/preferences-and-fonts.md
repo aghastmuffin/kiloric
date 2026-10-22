@@ -10,7 +10,7 @@ Scan vs text lookup is a Log-tab action, not a persisted preference. `SearchMode
 
 ## Theme preference
 
-**Storage:** `@calcount/app_theme_choice`
+**Storage:** `@kiloric/app_theme_choice` (legacy `@calcount/app_theme_choice`, including the stored value `calcount`, is copied forward as `kiloric`)
 **Values:** `'ios'` (Adaptive) | `'barebones'` (Original Dark)
 **Module:** `src/lib/theme/themePreferences.ts`
 **Context:** `ThemeProvider` (root `_layout.tsx`)
@@ -45,7 +45,7 @@ const styles = useThemedStyles((c) => StyleSheet.create({
 
 ## Font preference
 
-**Storage:** `@calcount/app_font_choice`  
+**Storage:** `@kiloric/app_font_choice` (legacy `@calcount/app_font_choice` is copied forward)  
 **Values:** `'default'` (system) | `'custom'` (Redaction)  
 **Module:** `src/lib/fontPreferences.ts`  
 **Context:** `FontPreferencesProvider` (root `_layout.tsx`)

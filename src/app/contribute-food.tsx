@@ -528,7 +528,7 @@ export default function ContributeFoodScreen() {
           <ErrorNote message={`Still needed: ${missingRequired.map((step) => step.label.toLowerCase()).join(', ')}.`} />
         ) : null}
         <UButton
-          label="Send to CalCount"
+          label="Send to Kiloric"
           trailing={`${photoKinds.length} photo${photoKinds.length === 1 ? '' : 's'}`}
           size="lg"
           fullWidth

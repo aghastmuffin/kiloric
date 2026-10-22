@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { readStoredPreference } from '@/lib/storedPreference'
 
 export type AppFontChoice = 'default' | 'custom' | 'mono'
 
-const STORAGE_KEY = '@calcount/app_font_choice'
+const STORAGE_KEY = '@kiloric/app_font_choice'
+const LEGACY_STORAGE_KEY = '@calcount/app_font_choice'
 const VALID_CHOICES: AppFontChoice[] = ['default', 'custom', 'mono']
 
 export const DEFAULT_FONT_CHOICE: AppFontChoice = 'default'
@@ -34,7 +36,7 @@ export function loadFontChoice(): Promise<AppFontChoice> {
   const promise = (async () => {
     let result = DEFAULT_FONT_CHOICE
     try {
-      const value = await AsyncStorage.getItem(STORAGE_KEY)
+      const value = await readStoredPreference(STORAGE_KEY, LEGACY_STORAGE_KEY)
       if (value && VALID_CHOICES.includes(value as AppFontChoice)) {
         result = value as AppFontChoice
       }

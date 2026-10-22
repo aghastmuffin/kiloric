@@ -40,7 +40,7 @@ Collection ID: **`users`** (set `EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID=use
 | `bmr` | integer 0–10000 | no | yes |
 | `formula_version` | integer 0–1000 | no | yes — currently `5` |
 
-The last seven columns are optional. If they haven't been created yet, Appwrite rejects the write with `document_invalid_structure` ("Unknown attribute"). `saveProfileFields` then retries without them and remembers that for the session. The app reads the same values from account prefs (`calcountPlan`), so nothing is lost. To add them, run `APPWRITE_API_KEY=... npm run appwrite:setup-features`.
+The last seven columns are optional. If they haven't been created yet, Appwrite rejects the write with `document_invalid_structure` ("Unknown attribute"). `saveProfileFields` then retries without them and remembers that for the session. The app reads the same values from account prefs (`kiloricPlan`, falling back to `calcountPlan`), so nothing is lost. To add them, run `APPWRITE_API_KEY=... npm run appwrite:setup-features`.
 
 ## Goal state
 

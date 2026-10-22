@@ -24,7 +24,7 @@ describe('fontPreferences', () => {
     vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(null)
     const result = await loadFontChoice()
     expect(result).toBe(DEFAULT_FONT_CHOICE)
-    expect(AsyncStorage.getItem).toHaveBeenCalledWith('@calcount/app_font_choice')
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith('@kiloric/app_font_choice')
   })
 
   it('caches loaded font choice in memory to eliminate redundant AsyncStorage reads', async () => {
@@ -53,7 +53,7 @@ describe('fontPreferences', () => {
 
     await saveFontChoice('mono')
 
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@calcount/app_font_choice', 'mono')
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@kiloric/app_font_choice', 'mono')
 
     const value = await loadFontChoice()
     expect(value).toBe('mono')

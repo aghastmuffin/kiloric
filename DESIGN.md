@@ -1,5 +1,5 @@
 ---
-name: CalCount
+name: Kiloric
 colors:
   paper-light-background: "#F3EFE7"
   paper-light-surface: "#FCFAF5"
@@ -162,7 +162,7 @@ components:
     padding: "14px"
 ---
 
-# Design System: CalCount
+# Design System: Kiloric
 
 ## Overview
 
@@ -242,7 +242,7 @@ The baseline font preference is the editorial mix above. User-selected Serif and
 
 ## Layout
 
-CalCount is mobile-first and task-first. Primary screens use a centered single column with a practical maximum around 720px; reading and form-heavy regions commonly stop around 620px. Horizontal gutters are 16px below the 400px compact breakpoint and 24px otherwise. The core rhythm follows the 4, 8, 14, 20, and 28px spacing scale rather than a generic eight-point ladder.
+Kiloric is mobile-first and task-first. Primary screens use a centered single column with a practical maximum around 720px; reading and form-heavy regions commonly stop around 620px. Horizontal gutters are 16px below the 400px compact breakpoint and 24px otherwise. The core rhythm follows the 4, 8, 14, 20, and 28px spacing scale rather than a generic eight-point ladder.
 
 Wide layouts add specific structure rather than stretching phone content. Onboarding success earns a two-column composition around 760px, while ledgers and metric groups wrap internally. Filter chips scroll horizontally, long settings disclose in place, and primary action groups stack when width or font scale makes a row fragile.
 
@@ -335,7 +335,7 @@ Loading uses a centered spinner with quiet explanatory copy. Inline failures use
 
 ### Don't:
 
-- **Don't** turn CalCount into neon gamified fitness UI with saturated gradients, glowing rings, aggressive achievement chrome, or synthetic hype.
+- **Don't** turn Kiloric into neon gamified fitness UI with saturated gradients, glowing rings, aggressive achievement chrome, or synthetic hype.
 - **Don't** flood screens with rust or make every interactive accent the brand color; Carbon Ink and semantic colors have distinct jobs.
 - **Don't** place every section in a rounded card or add shadows to resting content merely to create hierarchy.
 - **Don't** stretch mobile content edge to edge on wide web layouts or leave a phone bottom bar unchanged on expanded native layouts.

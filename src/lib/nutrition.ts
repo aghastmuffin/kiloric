@@ -510,7 +510,7 @@ export function buildNutritionPlan(input: {
 export function usernameFromEmail(email: string): string {
   const local = email.split('@')[0]?.trim() ?? ''
   const sanitized = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 64)
-  return sanitized || 'calcount_user'
+  return sanitized || 'kiloric_user'
 }
 
 export function guessCountryCode(): string {

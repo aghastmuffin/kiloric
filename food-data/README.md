@@ -1,6 +1,6 @@
 # food-data
 
-Python pipeline that builds CalCount's food catalog as a SQL database from:
+Python pipeline that builds Kiloric's food catalog as a SQL database from:
 
 | Source | What it contributes | Licence |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ Only the Python standard library is needed (Python 3.10+).
 
 ```bash
 cd food-data
-python3 -m fooddb build                         # download (cached in .cache/) + build output/calcount_foods.sqlite
+python3 -m fooddb build                         # download (cached in .cache/) + build output/kiloric_foods.sqlite
 python3 -m fooddb build --sql output/foods.sql  # also write a .sql script (default dialect: sqlite)
 python3 -m fooddb build --sql output/foods_oracle.sql --dialect oracle   # or postgres
 python3 -m fooddb dump --sql output/foods_pg.sql --dialect postgres      # convert an existing build
@@ -48,7 +48,7 @@ cd food-data && python3 -m unittest discover -s tests -t .
 
 ## Output
 
-`output/calcount_foods.sqlite` contains:
+`output/kiloric_foods.sqlite` contains:
 
 - `foods` — one row per food (schema below)
 - `food_codes` — `alias → code` for every barcode spelling and source ID that was condensed into a row

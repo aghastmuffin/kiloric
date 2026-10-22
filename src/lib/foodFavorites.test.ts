@@ -118,7 +118,7 @@ describe('food favorites cache', () => {
 
     await expect(toggleFavoriteFood(food)).resolves.toMatchObject([{ barcode: apple.barcode }])
     await expect(toggleFavoriteFood(food)).resolves.toEqual([])
-    expect(AsyncStorage.getItem).toHaveBeenCalledTimes(1)
+    expect(AsyncStorage.getItem).toHaveBeenCalledTimes(2)
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2)
   })
 })

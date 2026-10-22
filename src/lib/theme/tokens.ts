@@ -70,8 +70,8 @@ export type OnboardingColors = {
   dangerSoft: string
 }
 
-// CalCount: warm off-white canvas, white cards, deep green actions.
-export const calcountLightColors: ThemeColors = {
+// Kiloric: warm off-white canvas, white cards, deep green actions.
+export const kiloricLightColors: ThemeColors = {
   background: '#F4F2EC',
   surface: '#FFFFFF',
   surfaceAlt: '#ECE8DF',
@@ -103,7 +103,7 @@ export const calcountLightColors: ThemeColors = {
   progressTrail: '#E3EEE8',
 }
 
-export const calcountDarkColors: ThemeColors = {
+export const kiloricDarkColors: ThemeColors = {
   background: '#0F1412',
   surface: '#1A211E',
   surfaceAlt: '#252D29',
@@ -135,7 +135,7 @@ export const calcountDarkColors: ThemeColors = {
   progressTrail: '#24332C',
 }
 
-const calcountLightOnboardingColors: OnboardingColors = {
+const kiloricLightOnboardingColors: OnboardingColors = {
   background: '#F4F2EC',
   surface: '#FFFFFF',
   card: '#FFFFFF',
@@ -152,7 +152,7 @@ const calcountLightOnboardingColors: OnboardingColors = {
   dangerSoft: 'rgba(180, 55, 47, 0.09)',
 }
 
-const calcountDarkOnboardingColors: OnboardingColors = {
+const kiloricDarkOnboardingColors: OnboardingColors = {
   background: '#0F1412',
   surface: '#1A211E',
   card: '#1A211E',
@@ -420,7 +420,7 @@ const iosDarkOnboardingColors: OnboardingColors = {
   dangerSoft: 'rgba(255, 69, 58, 0.12)',
 }
 
-export type AppThemeChoice = 'calcount' | 'paper' | 'barebones' | 'ios'
+export type AppThemeChoice = 'kiloric' | 'paper' | 'barebones' | 'ios'
 
 export const spacing = { xs: 4, sm: 8, md: 14, lg: 20, xl: 28, xxl: 40, xxxl: 56 } as const
 export const borderRadius = { sm: 8, md: 14, lg: 22, xl: 30, pill: 999 } as const
@@ -429,7 +429,7 @@ export function resolveThemeColors(
   choice: AppThemeChoice,
   scheme: ColorSchemeName,
 ): ThemeColors {
-  if (choice === 'calcount') return scheme === 'light' ? calcountLightColors : calcountDarkColors
+  if (choice === 'kiloric') return scheme === 'light' ? kiloricLightColors : kiloricDarkColors
   if (choice === 'paper') return scheme === 'light' ? paperLightColors : paperDarkColors
   if (choice === 'barebones') return barebonesColors
   return scheme === 'light' ? iosLightColors : iosDarkColors
@@ -439,8 +439,8 @@ export function resolveOnboardingColors(
   choice: AppThemeChoice,
   scheme: ColorSchemeName,
 ): OnboardingColors {
-  if (choice === 'calcount') {
-    return scheme === 'light' ? calcountLightOnboardingColors : calcountDarkOnboardingColors
+  if (choice === 'kiloric') {
+    return scheme === 'light' ? kiloricLightOnboardingColors : kiloricDarkOnboardingColors
   }
   if (choice === 'paper') return scheme === 'light' ? paperLightOnboardingColors : paperDarkOnboardingColors
   if (choice === 'barebones') return barebonesOnboardingColors

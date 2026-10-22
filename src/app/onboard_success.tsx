@@ -112,7 +112,7 @@ export default function OnboardingSuccess() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.masthead}>
-        <Text style={styles.wordmark}>CALCOUNT</Text>
+        <Text style={styles.wordmark}>KILORIC</Text>
         <Text style={styles.issue}>PLAN · 01</Text>
       </View>
 

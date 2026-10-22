@@ -1,8 +1,9 @@
-# CalCount Privacy Policy & Data Retention Policy
+# Kiloric Privacy Policy & Data Retention Policy
 
-**Last Updated:** August 17, 2026  
-**Effective Date:** August 17, 2026  
-**Service:** CalCount  
+**Last Updated:** October 21, 2026  
+**Effective Date:** October 21, 2026  
+**Service:** Kiloric  
+**Website:** [https://kiloric.co](https://kiloric.co)  
 **Provider:** Taeson Co. ("we", "us", or "our")  
 **Contact / Data Privacy Email:** `data_privacy@taeson.co`
 
@@ -11,7 +12,7 @@
 ## Part 1: Privacy Policy
 
 ### 1. Introduction & Overview
-Welcome to **CalCount** ("Service", "App"), operated by **Taeson Co.** We respect your privacy and are committed to protecting your personal information and health/wellness data. This Privacy Policy explains what information we collect, how we use it, how we store and protect it, and the rights you have concerning your data under applicable data protection laws (including GDPR, UK GDPR, and CCPA/CPRA).
+Welcome to **Kiloric** ("Service", "App"), operated by **Taeson Co.** We respect your privacy and are committed to protecting your personal information and health/wellness data. This Privacy Policy explains what information we collect, how we use it, how we store and protect it, and the rights you have concerning your data under applicable data protection laws (including GDPR, UK GDPR, and CCPA/CPRA).
 
 ---
 
@@ -75,8 +76,8 @@ Signed-in users can start account deletion directly from **You → Settings → 
 To request a data export, an update, or help with deletion:
 
 1. Send an email to **`data_privacy@taeson.co`**.
-2. Include **`CalCount`** in the subject line (for example, `CalCount - Data Export Request`).
-3. **Body Details:** Please include the email address associated with your CalCount account so we can verify your identity before processing the request.
+2. Include **`Kiloric`** in the subject line (for example, `Kiloric - Data Export Request`).
+3. **Body Details:** Please include the email address associated with your Kiloric account so we can verify your identity before processing the request.
 
 We will acknowledge receipt within 5 business days and fulfill verified requests within 30 calendar days (or within timelines required by applicable law).
 
@@ -119,7 +120,7 @@ We implement industry-standard administrative, technical, and physical safeguard
 ---
 
 ## Part 4: Children's Privacy
-CalCount is an adult-only service and requires every user to be at least 18 years old. Eligibility is checked before account creation and whenever the saved date of birth changes. We do not knowingly collect personal data from anyone under 18. If we learn that an ineligible person created an account, we will block access and promptly delete the associated information.
+Kiloric is an adult-only service and requires every user to be at least 18 years old. Eligibility is checked before account creation and whenever the saved date of birth changes. We do not knowingly collect personal data from anyone under 18. If we learn that an ineligible person created an account, we will block access and promptly delete the associated information.
 
 ---
 
@@ -133,6 +134,6 @@ We may update our Privacy Policy and Data Retention Policy from time to time. Wh
 For any inquiries, requests for data deletion, or updates on your user data, please contact:
 
 - **Email:** [`data_privacy@taeson.co`](mailto:data_privacy@taeson.co)
-- **Subject Requirement:** Must include **`CalCount`** in the subject line (e.g., `CalCount - Data Privacy Request`), to ensure the security of our customer base, the same email must issue this request, OR proof of ownership must be provided.
+- **Subject Requirement:** Must include **`Kiloric`** in the subject line (e.g., `Kiloric - Data Privacy Request`), to ensure the security of our customer base, the same email must issue this request, OR proof of ownership must be provided.
 - **Organization:** Taeson Co.
 - IN COMPLIANCE WITH REIGONAL FEDERAL LAW TAESONCO'S SERVICES ARE NOT AVAILABLE IN THE FOLLOWING COUNTRIES: KOREA, REPUBLIC OF; RUSSIA, FEDERATION; NAM, SOCIALIST REPUBLIC OF VIET; KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF; BRAZIL, FEDERAL REPUBLIC OF; ARABIA, KINGDOM OF SAUDI; CHINA, REPUBLIC OF.

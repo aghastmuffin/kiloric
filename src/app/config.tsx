@@ -326,7 +326,7 @@ export default function ConfigScreen() {
     if (!isEligibleOnboardingAge(dateOfBirth)) {
       Alert.alert(
         'Age requirement',
-        `CalCount is for adults ${MINIMUM_ONBOARDING_AGE} or older. Your profile cannot be saved with this date of birth.`,
+        `Kiloric is for adults ${MINIMUM_ONBOARDING_AGE} or older. Your profile cannot be saved with this date of birth.`,
       );
       return;
     }

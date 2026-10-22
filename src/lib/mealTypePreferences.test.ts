@@ -38,7 +38,7 @@ describe('mealTypePreferences', () => {
   it('loads default meal type when no saved value exists', async () => {
     const mealType = await loadSelectedMealType()
     expect(mealType).toBe(DEFAULT_MEAL_TYPE)
-    expect(AsyncStorage.getItem).toHaveBeenCalledWith('@calcount/selected_meal_type')
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith('@kiloric/selected_meal_type')
   })
 
   it('caches loaded meal type in memory to eliminate redundant AsyncStorage reads', async () => {
@@ -70,7 +70,7 @@ describe('mealTypePreferences', () => {
   it('updates in-memory cache synchronously and persists to AsyncStorage on save', async () => {
     await saveSelectedMealType('Snack')
 
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@calcount/selected_meal_type', 'Snack')
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@kiloric/selected_meal_type', 'Snack')
 
     // Immediate load returns 'Snack' without calling getItem
     const loaded = await loadSelectedMealType()

@@ -28,7 +28,7 @@ export default function CreditsScreen() {
         const seconds = data.total_seconds || 0
         const hours = Math.floor(seconds / 3600)
         const minutes = Math.floor((seconds % 3600) / 60)
-        const message = `Levi spent ${hours} hours and ${minutes} minutes building Sonex. Thank you for checking out CalCount.`
+        const message = `Levi spent ${hours} hours and ${minutes} minutes building Sonex. Thank you for checking out Kiloric.`
         if (Platform.OS === 'web') alert(message)
         else Alert.alert('Secret unlocked', message)
       })
@@ -54,7 +54,7 @@ export default function CreditsScreen() {
       <AppScreenHeader
         overline="Credits"
         title="Made with care."
-        description="The people and open-source communities behind CalCount."
+        description="The people and open-source communities behind Kiloric."
       />
 
       <View style={styles.creatorSection}>

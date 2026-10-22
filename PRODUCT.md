@@ -8,23 +8,23 @@ adaptive
 
 ## Users
 
-CalCount serves adults aged 18 and older who are managing a weight goal, tracking calories, or executing fitness-oriented macro targets. It must be powerful enough for users who care about detailed macro planning while remaining straightforward for someone who only wants to count calories. Advanced nutrition detail should not become mandatory complexity: targets can be prefilled where useful and omitted or disabled when they are not part of the user's plan.
+Kiloric serves adults aged 18 and older who are managing a weight goal, tracking calories, or executing fitness-oriented macro targets. It must be powerful enough for users who care about detailed macro planning while remaining straightforward for someone who only wants to count calories. Advanced nutrition detail should not become mandatory complexity: targets can be prefilled where useful and omitted or disabled when they are not part of the user's plan.
 
 Signed-in users may also contribute verifiable packaged-food information for moderation when the catalog is incomplete.
 
 ## Product Purpose
 
-CalCount helps people set a personalized nutrition plan, find foods by name or barcode, record what they eat, track calories, macros, and hydration, and understand progress over daily and multi-day periods.
+Kiloric helps people set a personalized nutrition plan, find foods by name or barcode, record what they eat, track calories, macros, and hydration, and understand progress over daily and multi-day periods.
 
 Success means a user can move from a realistic plan to an honest food log with little friction, while a more advanced user can inspect and manage the detail needed for macro-focused goals. Nutrition is the product's durable core. Workouts and medication or wellbeing planners are not core capabilities; current versions of those experiences are samples and must not be represented as saved or clinically actionable tools.
 
 ## Positioning
 
-CalCount combines a low-friction calorie-counting path with optional macro depth in the same product. It should make sensible choices for the user by default without hiding the detail that fitness-focused users need. Its progress reporting distinguishes missing data from zero intake and frames targets and trends as planning guidance rather than judgment or clinical fact.
+Kiloric combines a low-friction calorie-counting path with optional macro depth in the same product. It should make sensible choices for the user by default without hiding the detail that fitness-focused users need. Its progress reporting distinguishes missing data from zero intake and frames targets and trends as planning guidance rather than judgment or clinical fact.
 
 ## Operating Context
 
-Users create an account, complete an adult eligibility and body-goal onboarding flow, review a calculated nutrition plan, and then use CalCount around meals, shopping, food preparation, and progress review.
+Users create an account, complete an adult eligibility and body-goal onboarding flow, review a calculated nutrition plan, and then use Kiloric around meals, shopping, food preparation, and progress review.
 
 Core workflows include:
 
@@ -38,7 +38,7 @@ Core workflows include:
 
 ## Capabilities and Constraints
 
-- CalCount is an Expo SDK 56 React Native application that deliberately supports iOS, Android, and responsive web from one product. Native use is currently portrait-oriented, and web is statically exported.
+- Kiloric is an Expo SDK 56 React Native application that deliberately supports iOS, Android, and responsive web from one product. Native use is currently portrait-oriented, and web is statically exported.
 - Authentication, profiles, meals, tasks, and food contributions use a hosted Appwrite backend. User-created records must retain per-user ownership and permissions.
 - Food lookup currently uses hosted search APIs, with Oracle ORDS as the in-app default and a deprecated FastAPI option still present. The long-term canonical food-search backend remains undecided.
 - Profiles store height and weight in metric units while allowing metric or imperial display.
@@ -50,7 +50,7 @@ Core workflows include:
 
 ## Brand Commitments
 
-The product name is CalCount and the operator identity is Taeson Co. Existing app-mark and app-icon assets live under `assets/images/`.
+The product name is Kiloric, the public site is https://kiloric.co, and the operator identity is Taeson Co. Existing app-mark and app-icon assets live under `assets/images/`.
 
 The established product voice is clear, calm, direct, and evidence-conscious. It should support disciplined goals without shame, hype, or invented certainty. Health and trend language must distinguish estimates, incomplete data, and sample functionality from clinical advice or proven outcomes.
 

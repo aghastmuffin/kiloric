@@ -6,8 +6,8 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles'
 import { StyleSheet, Text, View } from 'react-native'
 import { useState } from 'react'
 
-const THEME_OPTIONS: AppThemeChoice[] = ['calcount', 'paper', 'ios', 'barebones']
-const THEME_LABELS = ['CalCount', 'Paper', 'Cool', 'Barebones']
+const THEME_OPTIONS: AppThemeChoice[] = ['kiloric', 'paper', 'ios', 'barebones']
+const THEME_LABELS = ['Kiloric', 'Paper', 'Cool', 'Barebones']
 
 export function ThemePreferencePicker() {
   const { themeChoice, setThemeChoice } = useTheme()
@@ -29,7 +29,7 @@ export function ThemePreferencePicker() {
     <View style={styles.section}>
       <Text accessibilityRole="header" style={styles.label}>Color theme</Text>
       <Text style={styles.hint}>
-        CalCount is fresh and green. Paper is warm and editorial. Cool is crisp and blue; Barebones is dark and
+        Kiloric is fresh and green. Paper is warm and editorial. Cool is crisp and blue; Barebones is dark and
         high-contrast.
       </Text>
       <ThemedSegmentedControl

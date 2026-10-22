@@ -1,11 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { AppThemeChoice } from '@/lib/theme/tokens'
+import { readStoredPreference } from '@/lib/storedPreference'
 
-const STORAGE_KEY = '@calcount/app_theme_choice'
+const STORAGE_KEY = '@kiloric/app_theme_choice'
+const LEGACY_STORAGE_KEY = '@calcount/app_theme_choice'
 
-export const DEFAULT_THEME_CHOICE: AppThemeChoice = 'calcount'
+export const DEFAULT_THEME_CHOICE: AppThemeChoice = 'kiloric'
 
-const VALID_THEMES: AppThemeChoice[] = ['calcount', 'paper', 'ios', 'barebones']
+const VALID_THEMES: AppThemeChoice[] = ['kiloric', 'paper', 'ios', 'barebones']
+
+function asThemeChoice(value: string | null): AppThemeChoice | null {
+  if (value === 'calcount') return 'kiloric'
+  if (value && VALID_THEMES.includes(value as AppThemeChoice)) return value as AppThemeChoice
+  return null
+}
 
 // ⚡ Bolt: In-memory cache, request deduplication, and cache generation tracking
 // to eliminate redundant AsyncStorage bridge reads and race conditions.
@@ -34,9 +42,13 @@ export function loadThemeChoice(): Promise<AppThemeChoice> {
   const promise = (async () => {
     let result = DEFAULT_THEME_CHOICE
     try {
-      const value = await AsyncStorage.getItem(STORAGE_KEY)
-      if (value && VALID_THEMES.includes(value as AppThemeChoice)) {
-        result = value as AppThemeChoice
+      const value = await readStoredPreference(STORAGE_KEY, LEGACY_STORAGE_KEY)
+      const choice = asThemeChoice(value)
+      if (choice) {
+        result = choice
+        if (value === 'calcount') {
+          await AsyncStorage.setItem(STORAGE_KEY, 'kiloric')
+        }
       }
     } catch (err) {
       console.error('[themePreferences] load failed', err)

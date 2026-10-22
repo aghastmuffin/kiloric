@@ -203,7 +203,7 @@ export default function CameraScannerScreen() {
           <Text style={styles.message}>
             {openSystemSettings
               ? 'Camera access is blocked. Enable it in system settings, then return here.'
-              : 'CalCount uses the camera only to read a barcode in the scanning frame.'}
+              : 'Kiloric uses the camera only to read a barcode in the scanning frame.'}
           </Text>
           <Pressable
             accessibilityRole="button"

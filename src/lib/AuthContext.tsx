@@ -47,7 +47,7 @@ function passwordResetUrl(): string {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return `${window.location.origin}/reset-password`
   }
-  return 'calorie://reset-password'
+  return 'kiloric://reset-password'
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

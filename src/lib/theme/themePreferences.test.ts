@@ -24,7 +24,7 @@ describe('themePreferences', () => {
     vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(null)
     const result = await loadThemeChoice()
     expect(result).toBe(DEFAULT_THEME_CHOICE)
-    expect(AsyncStorage.getItem).toHaveBeenCalledWith('@calcount/app_theme_choice')
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith('@kiloric/app_theme_choice')
   })
 
   it('caches loaded theme choice in memory to eliminate redundant AsyncStorage reads', async () => {
@@ -53,11 +53,18 @@ describe('themePreferences', () => {
 
     await saveThemeChoice('barebones')
 
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@calcount/app_theme_choice', 'barebones')
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@kiloric/app_theme_choice', 'barebones')
 
     const value = await loadThemeChoice()
     expect(value).toBe('barebones')
     expect(AsyncStorage.getItem).not.toHaveBeenCalled()
+  })
+
+  it('maps a stored calcount theme id to kiloric', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce('calcount')
+
+    await expect(loadThemeChoice()).resolves.toBe('kiloric')
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('@kiloric/app_theme_choice', 'kiloric')
   })
 
   it('clears in-memory cache via clearThemePreferencesCache', async () => {
@@ -67,7 +74,7 @@ describe('themePreferences', () => {
 
     clearThemePreferencesCache()
 
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce('calcount')
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce('kiloric')
     await loadThemeChoice()
     expect(AsyncStorage.getItem).toHaveBeenCalledTimes(2)
   })

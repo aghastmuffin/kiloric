@@ -89,8 +89,8 @@ export default function AccountScreen() {
         {user ? (
           <Pressable
             accessibilityRole="link"
-            accessibilityHint="Opens an email request for a copy of your CalCount data"
-            onPress={() => void Linking.openURL('mailto:data_privacy@taeson.co?subject=CalCount%20-%20Data%20Export%20Request')}
+            accessibilityHint="Opens an email request for a copy of your Kiloric data"
+            onPress={() => void Linking.openURL('mailto:data_privacy@taeson.co?subject=Kiloric%20-%20Data%20Export%20Request')}
             style={({ pressed }) => [styles.footerLink, pressed && styles.headerPressed]}
           >
             <Text style={styles.footerLinkText}>Request data export</Text>

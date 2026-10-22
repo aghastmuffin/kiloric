@@ -44,7 +44,8 @@ export type PlanPreferences = {
   mealSlots: MealSlotPreference[]
 }
 
-const PREFS_KEY = 'calcountPlan'
+const PREFS_KEY = 'kiloricPlan'
+const LEGACY_PREFS_KEY = 'calcountPlan'
 
 export function defaultMealSlots(): MealSlotPreference[] {
   return MEAL_TYPE_OPTIONS.map((key, order) => ({
@@ -152,7 +153,7 @@ export function planPreferencesFromUser(
   user: Models.User<Models.Preferences>,
 ): PlanPreferences {
   const prefs = user.prefs as Record<string, unknown>
-  return normalizePlanPreferences(prefs[PREFS_KEY])
+  return normalizePlanPreferences(prefs[PREFS_KEY] ?? prefs[LEGACY_PREFS_KEY])
 }
 
 export async function loadPlanPreferences(
@@ -178,6 +179,7 @@ export async function savePlanPreferences(
     prefs: {
       ...(user.prefs as Record<string, unknown>),
       [PREFS_KEY]: normalized,
+      [LEGACY_PREFS_KEY]: normalized,
     },
   })
   return normalized

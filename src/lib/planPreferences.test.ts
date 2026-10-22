@@ -68,6 +68,19 @@ describe('planPreferences security & authorization checks', () => {
     mockAccountGet.mockResolvedValueOnce({
       $id: 'user-123',
       prefs: {
+        kiloricPlan: { sex: 'male', goal: 'gain' },
+      },
+    })
+
+    const prefs = await loadPlanPreferences('user-123')
+    expect(prefs.sex).toBe('male')
+    expect(prefs.goal).toBe('gain')
+  })
+
+  it('loads preferences stored under the previous calcountPlan key', async () => {
+    mockAccountGet.mockResolvedValueOnce({
+      $id: 'user-123',
+      prefs: {
         calcountPlan: { sex: 'male', goal: 'gain' },
       },
     })
@@ -95,13 +108,18 @@ describe('planPreferences security & authorization checks', () => {
     })
     mockUpdatePrefs.mockResolvedValueOnce({
       $id: 'user-123',
-      prefs: { calcountPlan: createDefaultPlanPreferences() },
+      prefs: { kiloricPlan: createDefaultPlanPreferences() },
     })
 
     const defaults = createDefaultPlanPreferences()
     const saved = await savePlanPreferences(defaults, 'user-123')
     expect(saved).toEqual(defaults)
-    expect(mockUpdatePrefs).toHaveBeenCalledTimes(1)
+    expect(mockUpdatePrefs).toHaveBeenCalledWith({
+      prefs: {
+        kiloricPlan: defaults,
+        calcountPlan: defaults,
+      },
+    })
   })
 
   it('throws an authorization error when savePlanPreferences is called for a different user ID (BOLA/IDOR prevention)', async () => {

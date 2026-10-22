@@ -140,12 +140,12 @@ export function AccountSignInFlow() {
                     <>
                         <View style={styles.heroMark}>
                             <View style={styles.heroRule} />
-                            <Text style={styles.heroMarkText}>CALCOUNT</Text>
+                            <Text style={styles.heroMarkText}>KILORIC</Text>
                         </View>
                         <Text style={styles.eyebrow}>FOOD & NUTRITION</Text>
-                        <Text accessibilityRole="header" style={styles.title}>Welcome to CalCount</Text>
+                        <Text accessibilityRole="header" style={styles.title}>Welcome to Kiloric</Text>
                         <Text style={styles.subtitle}>
-                            Log meals and understand your nutrition in one place. CalCount is for adults
+                            Log meals and understand your nutrition in one place. Kiloric is for adults
                             18 and older; eligibility is checked before account creation.
                         </Text>
 

@@ -1,4 +1,4 @@
-# CalCount — project documentation
+# Kiloric — project documentation
 
 ## Quick start
 
@@ -42,7 +42,7 @@ food-data/       Python pipeline that builds the food catalog SQL database
 | Service | Role |
 |---------|------|
 | **Appwrite** | Email/password auth, user profile documents |
-| **FastAPI backend** (`calcount.taeson.co`) | Barcode lookup, fuzzy food search (JWT from Appwrite session) |
+| **FastAPI backend** (`kiloric.co`) | Barcode lookup, fuzzy food search (JWT from Appwrite session) |
 
 ## Related files not in `docs/`
 

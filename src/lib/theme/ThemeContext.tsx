@@ -48,7 +48,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const scheme: ColorSchemeName =
     themeChoice === 'barebones'
       ? 'dark'
-      : themeChoice === 'calcount'
+      : themeChoice === 'kiloric'
         ? systemScheme === 'dark' ? 'dark' : 'light'
         : systemScheme === 'light' ? 'light' : 'dark'
 

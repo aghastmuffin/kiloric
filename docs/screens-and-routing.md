@@ -19,7 +19,7 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 
 | File | Route | Description |
 |------|-------|-------------|
-| `signin.tsx` | `/signin` | Neutral CalCount introduction and password sign-in |
+| `signin.tsx` | `/signin` | Neutral Kiloric introduction and password sign-in |
 | `onboarding.tsx` | `/onboarding` | Eligibility-first account creation and profile setup |
 | `onboard_success.tsx` | `/onboard_success` | Setup completion screen |
 | `reset-password.tsx` | `/reset-password` | Completes Appwrite email recovery links |
@@ -47,6 +47,6 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 ## Camera behavior
 
 - Camera permission is requested only after an explicit scan or photo action.
-- CalCount does not request microphone access.
+- Kiloric does not request microphone access.
 - A permanently denied camera permission shows an Open settings action on native platforms.
 - The iOS Simulator shows a physical-camera requirement instead of opening the scanner.

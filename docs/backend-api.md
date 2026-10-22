@@ -5,7 +5,7 @@ Food and barcode data come from a **FastAPI backend**, not Appwrite. The app aut
 ## Base URL
 
 ```
-https://calcount.taeson.co
+https://kiloric.co
 ```
 
 Defined via `src/lib/apiBackendPreferences.ts` and requested through `src/lib/apiUtils.ts`.

@@ -1,6 +1,6 @@
 # Formulas (version 5)
 
-Every number CalCount shows comes from the pure functions below. They have no
+Every number Kiloric shows comes from the pure functions below. They have no
 Appwrite or UI imports and are covered by Vitest (`src/lib/formulas.test.ts`,
 `src/lib/nutrition.test.ts`, `src/lib/data/foodItem.test.ts`,
 `src/lib/data/planning.test.ts`). `NUTRITION_FORMULA_VERSION` is `5` and is
@@ -11,7 +11,7 @@ stored on the profile (`formula_version`) when targets are saved.
 | Input | Where it's collected | Stored in |
 | --- | --- | --- |
 | Date of birth → age | Onboarding step 1 | `users.dateOfBirth` |
-| Sex | Body step | `users.sex` (v5 column) + `calcountPlan.sex` prefs |
+| Sex | Body step | `users.sex` (v5 column) + `kiloricPlan.sex` prefs |
 | Height, weight | Body step; weigh-ins on Progress | `users.height`, `users.weight`, `weight_logs` |
 | Body-fat % (optional, 3–60) | Body step | `users.body_fat_pct` + prefs |
 | Activity level | Lifestyle step | `users.activity_level` + prefs |
@@ -20,7 +20,7 @@ stored on the profile (`formula_version`) when targets are saved.
 | Display units | Body / plan step | `goal_plain` suffix + prefs |
 
 `resolvePlanInputs()` (`src/lib/planInputs.ts`) reads the v5 profile columns
-first and falls back to the `calcountPlan` account prefs, so profiles created
+first and falls back to the `kiloricPlan` account prefs (`calcountPlan` is still read for existing accounts), so profiles created
 before v5 (or before the columns are provisioned) keep working. Editing the
 profile now restores the saved sex, activity, goal, pace, diet and body fat
 instead of resetting them to defaults.

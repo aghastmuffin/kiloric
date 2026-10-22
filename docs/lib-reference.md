@@ -104,13 +104,13 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 ### `fontPreferences.ts`
 
-- Key: `@calcount/app_font_choice`
+- Key: `@kiloric/app_font_choice` (legacy `@calcount/app_font_choice` is copied forward)
 - Values: `'default' | 'custom'`
 - Default: `'default'`
 
 ### `mealTypePreferences.ts`
 
-- Key: `@calcount/selected_meal_type`
+- Key: `@kiloric/selected_meal_type` (legacy `@calcount/selected_meal_type` is copied forward)
 - Values: `'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Other'`
 - Default: Inferred from current time (e.g., 8 AM → Breakfast)
 

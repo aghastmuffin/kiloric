@@ -56,7 +56,7 @@ On confirm, wizard calls `saveProfileFields(user.$id, { ... })` with:
 - Machine-readable goal state from `buildGoalState()` / `buildGoalStateFromPlan()`:
   - `goal_type`, `goal_pace_kg_per_week`, `goal_start_weight_kg`, `goal_target_weight_kg`
   - `goal_start_date`, `goal_estimated_weeks`
-- Plan inputs (formula version 5): `sex`, `activity_level`, `body_fat_pct`, `diet_style`, `goal_pace`, `bmr`, `formula_version`. If the Appwrite collection doesn't have these columns yet, `saveProfileFields` retries without them. The same values are always mirrored in account prefs (`calcountPlan`).
+- Plan inputs (formula version 5): `sex`, `activity_level`, `body_fat_pct`, `diet_style`, `goal_pace`, `bmr`, `formula_version`. If the Appwrite collection doesn't have these columns yet, `saveProfileFields` retries without them. The same values are always mirrored in account prefs (`kiloricPlan`, and the previous `calcountPlan` key).
 
 The `meals` relationship field is **never** written as plain text.
 
