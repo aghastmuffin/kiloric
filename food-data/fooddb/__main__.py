@@ -11,7 +11,7 @@ from .build import ALL_SOURCES, USDA_DATASETS, BuildOptions, build, fetch_inputs
 from .export import DIALECTS, write_sql_dump
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_OUT = ROOT / "output" / "calcount_foods.sqlite"
+DEFAULT_OUT = ROOT / "output" / "kiloric_foods.sqlite"
 DEFAULT_CACHE = ROOT / ".cache"
 
 

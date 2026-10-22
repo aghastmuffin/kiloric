@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-USER_AGENT = "CalCount-FoodDB/1.0 (https://github.com/taesonco/calcount)"
+USER_AGENT = "kiloric-FoodDB/1.0 (https://github.com/taesonco/kiloric)"
 
 FDC_BASE = "https://fdc.nal.usda.gov/fdc-datasets/"
 FDC_DOWNLOAD_PAGE = "https://fdc.nal.usda.gov/download-datasets"
