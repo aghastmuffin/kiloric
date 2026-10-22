@@ -1,0 +1,2239 @@
+{
+    "organizationId": "69d067d13608923abdc0",
+    "projectId": "6a32cb15000698f57e0e",
+    "projectName": "kiloric",
+    "endpoint": "https://nyc.cloud.appwrite.io/v1",
+    "settings": {
+        "services": {
+            "account": true,
+            "avatars": true,
+            "databases": true,
+            "locale": true,
+            "health": true,
+            "storage": true,
+            "teams": true,
+            "users": true,
+            "sites": true,
+            "functions": true,
+            "graphql": true,
+            "messaging": true
+        },
+        "protocols": {
+            "rest": true,
+            "graphql": true,
+            "websocket": true
+        },
+        "auth": {
+            "methods": {
+                "jwt": true,
+                "phone": true,
+                "invites": true,
+                "anonymous": false,
+                "email-otp": true,
+                "magic-url": true,
+                "email-password": true
+            },
+            "security": {
+                "duration": 31536000,
+                "limit": 3000,
+                "sessionsLimit": 2,
+                "passwordHistory": 5,
+                "passwordDictionary": false,
+                "personalDataCheck": false,
+                "sessionAlerts": false,
+                "mockNumbers": []
+            }
+        }
+    },
+    "functions": [
+        {
+            "$id": "6a37352300135625fdd6",
+            "name": "Ensure Profile Continuity",
+            "runtime": "python-3.14",
+            "path": "functions/ensure-profile-continuity",
+            "entrypoint": "src/main.py",
+            "execute": [],
+            "enabled": true,
+            "logging": true,
+            "events": [],
+            "schedule": "",
+            "timeout": 15,
+            "commands": "pip install -r requirements.txt",
+            "scopes": [
+                "users.read"
+            ],
+            "buildSpecification": "s-2vcpu-2gb",
+            "runtimeSpecification": "s-0.5vcpu-512mb",
+            "deploymentRetention": 0
+        },
+        {
+            "$id": "6a40600d000ea2404d75",
+            "name": "Starter function",
+            "runtime": "python-3.14",
+            "path": "functions/starter-function",
+            "entrypoint": "src/main.py",
+            "execute": [],
+            "enabled": true,
+            "logging": true,
+            "events": [],
+            "schedule": "1 0 * * 1",
+            "timeout": 600,
+            "commands": "pip install -r requirements.txt",
+            "scopes": [],
+            "buildSpecification": "s-2vcpu-2gb",
+            "runtimeSpecification": "s-0.5vcpu-512mb",
+            "deploymentRetention": 30
+        },
+        {
+            "$id": "6a454db3002d1c7a975c",
+            "name": "migrate-foodfacts-pictures",
+            "runtime": "python-3.14",
+            "path": "functions/migrate-foodfacts-pictures",
+            "entrypoint": "src/main.py",
+            "execute": [],
+            "enabled": true,
+            "logging": true,
+            "events": [],
+            "schedule": "",
+            "timeout": 15,
+            "commands": "pip install -r requirements.txt",
+            "scopes": [
+                "users.read"
+            ],
+            "buildSpecification": "s-2vcpu-4gb",
+            "runtimeSpecification": "s-0.5vcpu-512mb",
+            "deploymentRetention": 0
+        }
+    ],
+    "tablesDB": [
+        {
+            "$id": "6a32d624001ac88a8608",
+            "name": "main",
+            "enabled": true
+        },
+        {
+            "$id": "6a4577f00008c718d204",
+            "name": "foods",
+            "enabled": true
+        },
+        {
+            "$id": "tasks",
+            "name": "tasks",
+            "enabled": true
+        }
+    ],
+    "tables": [
+        {
+            "$id": "users",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "user",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "username",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "email",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "email"
+                },
+                {
+                    "key": "dateOfBirth",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "lastLogin",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": "2025-01-01T00:00:00+00:00",
+                    "format": ""
+                },
+                {
+                    "key": "bio",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 512,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "country",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "weight",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "height",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 300
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "Administrator",
+                        "Watchlist",
+                        "Banned",
+                        "user"
+                    ]
+                },
+                {
+                    "key": "meals",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "meals",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "owner",
+                    "onDelete": "cascade",
+                    "side": "child"
+                },
+                {
+                    "key": "target_kcal",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "target_protein",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "target_carbs",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "target_fat",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "daily_fluid",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "TDEE",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "goal_plain",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "target_weight",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "weekly_deficit",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "goal_type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "lose",
+                        "maintain",
+                        "gain"
+                    ]
+                },
+                {
+                    "key": "goal_pace_kg_per_week",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -10,
+                    "max": 10
+                },
+                {
+                    "key": "goal_start_weight_kg",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "goal_target_weight_kg",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "goal_start_date",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "goal_estimated_weeks",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "sex",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "female",
+                        "male"
+                    ]
+                },
+                {
+                    "key": "activity_level",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "sedentary",
+                        "light",
+                        "moderate",
+                        "active",
+                        "very_active"
+                    ]
+                },
+                {
+                    "key": "body_fat_pct",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 3,
+                    "max": 60
+                },
+                {
+                    "key": "diet_style",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "balanced",
+                        "high_protein",
+                        "low_carb",
+                        "mediterranean",
+                        "plant_forward",
+                        "custom"
+                    ]
+                },
+                {
+                    "key": "goal_pace",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "gentle",
+                        "moderate",
+                        "aggressive"
+                    ]
+                },
+                {
+                    "key": "bmr",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 10000
+                },
+                {
+                    "key": "formula_version",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "unique_username",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "username"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "unique_id",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "$id"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "meals",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "meals",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "relationship",
+                    "required": false,
+                    "array": false,
+                    "relatedTable": "users",
+                    "relationType": "manyToOne",
+                    "twoWay": true,
+                    "twoWayKey": "meals",
+                    "onDelete": "cascade",
+                    "side": "parent"
+                },
+                {
+                    "key": "friendlyname",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "Breakfast",
+                        "Lunch",
+                        "Dinner",
+                        "Snack",
+                        "Other"
+                    ]
+                },
+                {
+                    "key": "kcal",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 50000
+                },
+                {
+                    "key": "protein",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "carbs",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "fat",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "nutrient_density_score",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 100
+                },
+                {
+                    "key": "fluid",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "items",
+                    "type": "text",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_created_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "water_logs",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Water logs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "amount_ml",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 25,
+                    "max": 4000
+                },
+                {
+                    "key": "consumed_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_consumed_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "consumed_at"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "food_contributions",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a4577f00008c718d204",
+            "name": "Food contributions",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": "pending",
+                    "encrypt": false
+                },
+                {
+                    "key": "photo_file_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "source_query",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "code",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "product_name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "brands",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "categories",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 512,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "quantity",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "serving_size",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "allergens",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 512,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "traces_tags",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 512,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "image_url",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1024,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "nutriscore_grade",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 8,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ecoscore_grade",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 8,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "serving_quantity",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "nova_group",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "additives_n",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "carbon_footprint_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "energy_kcal_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "energy_kj_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "proteins_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "carbohydrates_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "fiber_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "sugars_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "added_sugars_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "polyols_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "saturated_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "trans_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "monounsaturated_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "polyunsaturated_fat_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "sodium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "cholesterol_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "vitamin_a_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "vitamin_c_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "vitamin_d_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "vitamin_b12_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "calcium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "iron_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "potassium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "magnesium_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "caffeine_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "taurine_100g",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1000000000000,
+                    "max": 1000000000000
+                },
+                {
+                    "key": "front_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "barcode_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "ingredients_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "nutrition_file_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "extra_file_ids",
+                    "type": "string",
+                    "required": false,
+                    "array": true,
+                    "default": null,
+                    "size": 64,
+                    "encrypt": false
+                },
+                {
+                    "key": "submitted_from",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "size": 16,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "code",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "code"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "tasks",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "tasks",
+            "name": "tasks",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "done",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "by_userId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "food_entries",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Food entries",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "meal_type",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "brand",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "barcode",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "serving_label",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "serving_grams",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 100,
+                    "min": 0,
+                    "max": 10000
+                },
+                {
+                    "key": "servings",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 100
+                },
+                {
+                    "key": "kcal",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 20000
+                },
+                {
+                    "key": "protein",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "carbs",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "fat",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "day",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "logged_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "source",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "meal_doc_id",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "day"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "owner_logged_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "logged_at"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "saved_meals",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Saved meals",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "meal_type",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "items_json",
+                    "type": "text",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "item_count",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 100
+                },
+                {
+                    "key": "kcal",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 20000
+                },
+                {
+                    "key": "protein",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "carbs",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "fat",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_name",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "name"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "meal_plan_entries",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Meal plan entries",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "day",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "meal_type",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "kcal",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 20000
+                },
+                {
+                    "key": "protein",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "carbs",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "fat",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 5000
+                },
+                {
+                    "key": "prepped",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "logged",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "note",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "serving_label",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "day"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "prep_sessions",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Prep sessions",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "week_start",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scheduled_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "duration_min",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1440
+                },
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "items_json",
+                    "type": "text",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_week",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "week_start"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "grocery_items",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Grocery items",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "week_start",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "quantity",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "checked",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_week",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "week_start"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "workouts",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Workouts",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "day",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scheduled_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "status",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "focus",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "planned_minutes",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1440
+                },
+                {
+                    "key": "started_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "finished_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "duration_min",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1440
+                },
+                {
+                    "key": "kcal_burned",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 10000
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "day"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "owner_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "owner_scheduled_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "scheduled_at"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "workout_sets",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Workout sets",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "workout_id",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "exercise_name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "exercise_order",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 100
+                },
+                {
+                    "key": "muscle_group",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "set_number",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 1,
+                    "max": 100
+                },
+                {
+                    "key": "target_reps",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "target_weight",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 2000
+                },
+                {
+                    "key": "weight",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 2000
+                },
+                {
+                    "key": "reps",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 1000
+                },
+                {
+                    "key": "done",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "completed_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_workout",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "workout_id"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "owner_exercise",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "exercise_name",
+                        "done"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "weight_logs",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "6a32d624001ac88a8608",
+            "name": "Weight logs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "owner",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "weight_kg",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 20,
+                    "max": 400
+                },
+                {
+                    "key": "day",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "logged_at",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "owner_logged_at",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "owner",
+                        "logged_at"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        }
+    ],
+    "buckets": [
+        {
+            "$id": "6a32e0dd000f9dee7b98",
+            "$permissions": [
+                "create(\"users\")",
+                "create(\"team:6a387d9f001617fc9bcf\")",
+                "read(\"team:6a387d9f001617fc9bcf\")",
+                "update(\"team:6a387d9f001617fc9bcf\")",
+                "delete(\"team:6a387d9f001617fc9bcf\")",
+                "create(\"team:6a387d7c001d5cbb7d47\")",
+                "read(\"team:6a387d7c001d5cbb7d47\")",
+                "update(\"team:6a387d7c001d5cbb7d47\")",
+                "delete(\"team:6a387d7c001d5cbb7d47\")",
+                "create(\"team:6a387d84003a74808d5c\")",
+                "read(\"team:6a387d84003a74808d5c\")",
+                "update(\"team:6a387d84003a74808d5c\")",
+                "delete(\"team:6a387d84003a74808d5c\")"
+            ],
+            "fileSecurity": true,
+            "name": "images_to_check",
+            "enabled": true,
+            "maximumFileSize": 10000000,
+            "allowedFileExtensions": [
+                "jpg",
+                "png"
+            ],
+            "compression": "gzip",
+            "encryption": false,
+            "antivirus": true
+        },
+        {
+            "$id": "6a32e0eb003918b566d0",
+            "$permissions": [],
+            "fileSecurity": true,
+            "name": "pfp",
+            "enabled": true,
+            "maximumFileSize": 2000000,
+            "allowedFileExtensions": [],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "6a387e630012e57bade8",
+            "$permissions": [],
+            "fileSecurity": false,
+            "name": "INTERNAL FILES",
+            "enabled": true,
+            "maximumFileSize": 5000000000,
+            "allowedFileExtensions": [],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "6a4578a4003bf86900f8",
+            "$permissions": [],
+            "fileSecurity": false,
+            "name": "food-images",
+            "enabled": true,
+            "maximumFileSize": 5000000000,
+            "allowedFileExtensions": [],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
+        }
+    ],
+    "teams": [
+        {
+            "$id": "6a387d6d002284083f1e",
+            "$createdAt": "2026-06-22T00:10:21.706+00:00",
+            "$updatedAt": "2026-06-22T00:10:21.706+00:00",
+            "name": "users",
+            "total": 0,
+            "prefs": {}
+        },
+        {
+            "$id": "6a387d7c001d5cbb7d47",
+            "$createdAt": "2026-06-22T00:10:36.557+00:00",
+            "$updatedAt": "2026-06-22T00:10:36.557+00:00",
+            "name": "admin",
+            "total": 0,
+            "prefs": {}
+        },
+        {
+            "$id": "6a387d84003a74808d5c",
+            "$createdAt": "2026-06-22T00:10:44.999+00:00",
+            "$updatedAt": "2026-06-22T00:10:44.999+00:00",
+            "name": "moderator",
+            "total": 0,
+            "prefs": {}
+        },
+        {
+            "$id": "6a387d8d002df771aeeb",
+            "$createdAt": "2026-06-22T00:10:53.802+00:00",
+            "$updatedAt": "2026-06-22T00:10:53.802+00:00",
+            "name": "banned",
+            "total": 0,
+            "prefs": {}
+        },
+        {
+            "$id": "6a387d9f001617fc9bcf",
+            "$createdAt": "2026-06-22T00:11:11.431+00:00",
+            "$updatedAt": "2026-06-22T00:11:11.431+00:00",
+            "name": "images",
+            "total": 0,
+            "prefs": {}
+        }
+    ]
+}
