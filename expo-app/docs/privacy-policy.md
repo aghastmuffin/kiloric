@@ -22,7 +22,7 @@ We collect information directly from you when you register, complete onboarding,
 1. **Account & Authentication Information**
    - Email address, name/display name, and encrypted authentication credentials (managed via our backend service, Appwrite).
 2. **Profile & Demographic Information**
-   - Biological sex, date of birth / age, self-reported race, country of residence, whether you reside in any country in Asia, and account roles. CalCount is not offered to residents of the European Union, Russia, or Vietnam.
+   - Biological sex, date of birth / age, self-reported race, country of residence, whether you reside in any country in Asia, and account roles. kiloric is not offered to residents of the European Union, Russia, or Vietnam.
 3. **Physical & Health Metrics**
    - Height, current body weight, target body weight, weight log history, and calculated metrics (such as Basal Metabolic Rate and Total Daily Energy Expenditure).
 4. **Fitness, Diet & Nutrition Goals**

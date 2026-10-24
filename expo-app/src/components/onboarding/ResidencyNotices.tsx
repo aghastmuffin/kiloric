@@ -15,7 +15,7 @@ export function ResidencyBarNotice() {
   const styles = useThemedStyles(makeStyles)
   return (
     <View accessibilityRole="alert" testID="residency-bar" style={styles.alert}>
-      <Text style={styles.alertTitle}>CalCount is unavailable in your country of residence</Text>
+      <Text style={styles.alertTitle}>kiloric is unavailable in your country of residence</Text>
       <Text style={styles.alertText}>{RESIDENCY_BAR_MESSAGE}</Text>
     </View>
   )

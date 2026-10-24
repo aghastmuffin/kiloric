@@ -58,7 +58,7 @@ export default function PrivacyPolicyScreen() {
             {
               title: 'Profile & Demographic Information',
               description:
-                'Biological sex, date of birth / age, self-reported race, country of residence, whether you reside in any country in Asia, and account roles. CalCount is not offered to residents of the European Union, Russia, or Vietnam.',
+                'Biological sex, date of birth / age, self-reported race, country of residence, whether you reside in any country in Asia, and account roles. kiloric is not offered to residents of the European Union, Russia, or Vietnam.',
             },
             {
               title: 'Physical & Health Metrics',

@@ -345,7 +345,7 @@ export default function ConfigScreen() {
     }
 
     if (isBarredResidency(country)) {
-      Alert.alert('CalCount is unavailable', RESIDENCY_BAR_MESSAGE);
+      Alert.alert('kiloric is unavailable', RESIDENCY_BAR_MESSAGE);
       return;
     }
 

@@ -480,7 +480,7 @@ export function OnboardingWizard() {
   async function goNext() {
     if (isBarredResidency(form.country)) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-      Alert.alert('CalCount is unavailable', RESIDENCY_BAR_MESSAGE)
+      Alert.alert('kiloric is unavailable', RESIDENCY_BAR_MESSAGE)
       return
     }
 
@@ -572,7 +572,7 @@ export function OnboardingWizard() {
     }
 
     if (isBarredResidency(form.country)) {
-      Alert.alert('CalCount is unavailable', RESIDENCY_BAR_MESSAGE)
+      Alert.alert('kiloric is unavailable', RESIDENCY_BAR_MESSAGE)
       return
     }
 
