@@ -1,7 +1,7 @@
 # kiloric Privacy Policy & Data Retention Policy
 
-**Last Updated:** August 17, 2026  
-**Effective Date:** August 17, 2026  
+**Last Updated:** October 20, 2026  
+**Effective Date:** October 20, 2026  
 **Service:** kiloric  
 **Provider:** Taeson Co. ("we", "us", or "our")  
 **Contact / Data Privacy Email:** `data_privacy@kiloric.co`
@@ -22,7 +22,7 @@ We collect information directly from you when you register, complete onboarding,
 1. **Account & Authentication Information**
    - Email address, name/display name, and encrypted authentication credentials (managed via our backend service, Appwrite).
 2. **Profile & Demographic Information**
-   - Biological sex, date of birth / age, country/region, and account roles.
+   - Biological sex, date of birth / age, self-reported race, country of residence, whether you reside in any country in Asia, and account roles. kiloric is not offered to residents of the European Union, Russia, or Vietnam.
 3. **Physical & Health Metrics**
    - Height, current body weight, target body weight, weight log history, and calculated metrics (such as Basal Metabolic Rate and Total Daily Energy Expenditure).
 4. **Fitness, Diet & Nutrition Goals**
@@ -91,7 +91,7 @@ Taeson Co. retains your personal data only for as long as necessary to fulfill t
 
 | Data Category | Retention Period | Deletion / Anonymization Trigger |
 | :--- | :--- | :--- |
-| **Account & Profile Data** (Name, email, birthdate, sex, country) | Retained for the lifetime of the active account | Deleted within 30 days of account deletion request or user-initiated deletion |
+| **Account & Profile Data** (Name, email, birthdate, sex, race, country of residence) | Retained for the lifetime of the active account | Deleted within 30 days of account deletion request or user-initiated deletion |
 | **Physical Metrics & Target Records** (Height, weight history, targets) | Retained for the lifetime of the active account to power historical progress graphs | Deleted within 30 days of account deletion request |
 | **Meal & Nutrition Logs** (Food entries, water intake, daily logs) | Retained while the account remains active | Deleted within 30 days of account deletion request |
 | **User-Uploaded Food Photos** | Retained while associated food entries exist | Deleted upon meal log deletion or account termination |

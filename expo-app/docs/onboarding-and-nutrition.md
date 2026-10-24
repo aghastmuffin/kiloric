@@ -22,7 +22,7 @@ Success path: onboarding wizard → `/onboard_success` → main tabs.
 Typical flow (see `types.ts` for exact order):
 
 1. Welcome / username
-2. Adult eligibility, date of birth, and country
+2. Adult eligibility, date of birth, race, and country of residence
 3. Sex, height, and weight (metric stored; imperial display optional)
 4. Activity level, fitness goal, and pace
 5. Diet style
@@ -33,6 +33,15 @@ Date of birth must be actively confirmed. Anyone under 18 is stopped before body
 questions are shown; the restriction screen explains that adult nutrition targets are not suitable,
 offers a way to correct an accidental date, and otherwise signs the account out without saving a
 profile or plan. Eligibility is checked again immediately before the final save.
+
+Country of residence is required and saved on the profile (`country`). Race is required and saved
+on `race`. The Asia-residence answer is saved on `resides_in_asia`. Residents of the EU (including
+outermost regions), Russia, or Vietnam cannot continue; the screen shows the version 101926 legal
+notice and does not create or update a profile. A yes answer, or any country of residence in Asia,
+shows a red Helicobacter pylori screening warning and still allows every other country through.
+The Congressional App Challenge note, with `mailto:admin@taeson.co`, is on this step and on the
+success screen. The profile editor at `/config` asks for the same race, country of residence, and
+Asia answer, and applies the same bar and warning.
 
 UI building blocks: `ProgressHeader`, `StepTransition`, `SelectionCard`, `BodyMetricPickers`, `UnitToggle`, `ConfirmDialog`.
 
@@ -48,7 +57,7 @@ UI building blocks: `ProgressHeader`, `StepTransition`, `SelectionCard`, `BodyMe
 On confirm, wizard calls `saveProfileFields(user.$id, { ... })` with:
 
 - Required profile fields (`username`, `email`, `dateOfBirth`, `weight`, `height`, `role`)
-- Optional: `bio`, `country`, `lastLogin`
+- Optional: `bio`, `country` (country of residence), `race`, `resides_in_asia`, `lastLogin`
 - Nutrition targets from `buildNutritionPlan()`:
   - `target_kcal`, `target_protein`, `target_carbs`, `target_fat`
   - `daily_fluid`, `TDEE`, `weekly_deficit`, `target_weight`

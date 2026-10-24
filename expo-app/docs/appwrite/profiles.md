@@ -12,7 +12,9 @@ Collection ID: **`users`** (set `EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID=use
 | `dateOfBirth` | datetime | yes | yes |
 | `lastLogin` | datetime | no | yes |
 | `bio` | string (512) | no | yes |
-| `country` | string (2) | no | yes |
+| `country` | string (2) | no | yes — country of residence |
+| `race` | string (64) | no | yes — self-reported race. Also mirrored in account prefs `calcountDemographics` so it survives if the column is not provisioned yet |
+| `resides_in_asia` | boolean | no | yes — yes to any country in Asia, or an Asian country of residence. Mirrored in `calcountDemographics` |
 | `weight` | double 0–1000 | yes | yes (metric kg) |
 | `height` | double 0–300 | yes | yes (metric cm) |
 | `role` | enum | yes | yes — value must be `user` |

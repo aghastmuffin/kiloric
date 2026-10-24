@@ -15,6 +15,19 @@ import { showApiError } from '@/lib/apiErrors';
 import { isEligibleOnboardingAge, MINIMUM_ONBOARDING_AGE } from '@/lib/ageEligibility';
 import { useAuth } from '@/lib/AuthContext';
 import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries';
+import {
+  CongressionalNote,
+  HPyloriWarning,
+  ResidencyBarNotice,
+} from '@/components/onboarding/ResidencyNotices';
+import {
+  isBarredResidency,
+  isRaceValue,
+  nextAsiaAnswer,
+  RACE_OPTIONS,
+  RESIDENCY_BAR_MESSAGE,
+  showHPyloriWarning,
+} from '@/lib/residency';
 import { buildGoalState } from '@/lib/goals';
 import {
     ACTIVITY_OPTIONS,
@@ -36,6 +49,7 @@ import {
     NUTRITION_FORMULA_VERSION,
 } from '@/lib/nutrition';
 import { planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences';
+import { loadDemographics, saveDemographics } from '@/lib/demographics';
 import {
     dateToIso,
     DEFAULT_PROFILE_ROLE,
@@ -112,6 +126,8 @@ export default function ConfigScreen() {
   const [dateOfBirth, setDateOfBirth] = useState(DEFAULT_DATE_OF_BIRTH);
   const [bio, setBio] = useState('');
   const [country, setCountry] = useState('US');
+  const [race, setRace] = useState('');
+  const [residesInAsia, setResidesInAsia] = useState<boolean | null>(null);
   const [role, setRole] = useState<ProfileRole>(DEFAULT_PROFILE_ROLE);
 
   // Body & Goal fields
@@ -225,8 +241,8 @@ export default function ConfigScreen() {
     setDiet(savedPlan.diet);
     setDisplayUnits(savedPlan.displayUnits);
 
-    getProfile(user.$id)
-      .then((profile) => {
+    Promise.all([getProfile(user.$id), loadDemographics(user.$id).catch(() => null)])
+      .then(([profile, demographics]) => {
         if (!active) return;
 
         const complete = isProfileComplete(profile);
@@ -246,6 +262,12 @@ export default function ConfigScreen() {
         setDateOfBirth(parseProfileDate(profile.dateOfBirth));
         setBio(profile.bio ?? '');
         setCountry(userCountry);
+        setRace(isRaceValue(profile.race) ? profile.race : demographics?.race ?? '');
+        setResidesInAsia(
+          typeof profile.resides_in_asia === 'boolean'
+            ? nextAsiaAnswer(profile.resides_in_asia, userCountry, userCountry)
+            : nextAsiaAnswer(demographics?.residesInAsia ?? null, 'US', userCountry),
+        );
         setDisplayUnits(parsedUnits);
         setHeight(body.heightCm);
         setWeight(body.weightKg);
@@ -322,6 +344,21 @@ export default function ConfigScreen() {
       return;
     }
 
+    if (isBarredResidency(country)) {
+      Alert.alert('kiloric is unavailable', RESIDENCY_BAR_MESSAGE);
+      return;
+    }
+
+    if (!isRaceValue(race)) {
+      Alert.alert('Missing details', 'Select your race. This is saved with the rest of your profile.');
+      return;
+    }
+
+    if (residesInAsia == null) {
+      Alert.alert('Missing details', 'Answer whether you reside in any country in Asia.');
+      return;
+    }
+
     // Eligibility is revalidated on every profile change, not just during onboarding.
     if (!isEligibleOnboardingAge(dateOfBirth)) {
       Alert.alert(
@@ -366,6 +403,8 @@ export default function ConfigScreen() {
         lastLogin: new Date().toISOString(),
         bio: bio.trim() || null,
         country: country.trim().toUpperCase() || null,
+        race,
+        resides_in_asia: residesInAsia === true || showHPyloriWarning(country, false),
         target_kcal: activeTargetKcal,
         target_protein: activeTargetProtein,
         target_carbs: activeTargetCarbs,
@@ -389,6 +428,13 @@ export default function ConfigScreen() {
         bmr: computedPlan.bmr,
         formula_version: NUTRITION_FORMULA_VERSION,
       });
+      await saveDemographics(
+        {
+          race,
+          residesInAsia: residesInAsia === true || showHPyloriWarning(country, false),
+        },
+        user.$id,
+      );
       await savePlanPreferences(
         {
           ...planPreferencesFromUser(user),
@@ -574,23 +620,66 @@ export default function ConfigScreen() {
 
               <View style={[styles.row, compactLayout && styles.rowCompact]}>
                 <View style={[styles.rowTextCol, compactLayout && styles.rowTextColCompact]}>
-                  <Text style={styles.fieldLabel}>Country</Text>
+                  <Text style={styles.fieldLabel}>Country of residence</Text>
                   <Text style={styles.fieldHint}>
                     {getCountryName(country)} ({country})
                   </Text>
                 </View>
                 <NativeEnumPicker
-                  accessibilityLabel="Country"
+                  accessibilityLabel="Country of residence"
                   value={country}
                   options={COUNTRY_OPTIONS}
                   onChange={(val) => {
                     setCountry(val);
+                    setResidesInAsia((current) => nextAsiaAnswer(current, country, val));
                     if (!prefersImperialDisplay(val) && displayUnits === 'imperial') {
                       setDisplayUnits(defaultDisplayUnits(val));
                     }
                   }}
                   disabled={saving}
                 />
+              </View>
+
+              {isBarredResidency(country) ? <ResidencyBarNotice /> : null}
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Race</Text>
+                <Text style={styles.fieldHint}>Self-reported. Stored with your profile.</Text>
+                <NativeEnumPicker
+                  accessibilityLabel="Race"
+                  value={race}
+                  options={[{ label: 'Select race', value: '' }, ...RACE_OPTIONS]}
+                  onChange={(val) => setRace(isRaceValue(val) ? val : '')}
+                  disabled={saving}
+                />
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.verticalRow}>
+                <Text style={styles.fieldLabel}>Do you reside in any country in Asia?</Text>
+                {([
+                  ['yes', true],
+                  ['no', false],
+                ] as const).map(([value, answer]) => (
+                  <SelectionCard
+                    key={value}
+                    value={value}
+                    label={value === 'yes' ? 'Yes' : 'No'}
+                    description={
+                      value === 'yes'
+                        ? 'I reside in at least one country in Asia'
+                        : 'I do not reside in a country in Asia'
+                    }
+                    selected={residesInAsia === answer}
+                    onPress={() => setResidesInAsia(answer)}
+                    disabled={saving}
+                  />
+                ))}
+                {showHPyloriWarning(country, residesInAsia) ? <HPyloriWarning /> : null}
+                <CongressionalNote />
               </View>
 
               <View style={styles.divider} />

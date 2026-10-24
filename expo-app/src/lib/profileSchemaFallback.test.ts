@@ -59,6 +59,26 @@ describe('profile writes before the v5 columns are provisioned', () => {
     expect(updateDocument).toHaveBeenCalledTimes(1)
   })
 
+  it('drops an unprovisioned race column without discarding nutrition inputs', async () => {
+    updateDocument
+      .mockRejectedValueOnce(new AppwriteException('Invalid document structure: Unknown attribute: "race"', 400, 'document_invalid_structure'))
+      .mockResolvedValueOnce({ $id: 'u1' })
+    await profile.saveProfileFields('u1', {
+      target_kcal: 2000,
+      sex: 'female',
+      race: 'asian',
+      resides_in_asia: true,
+    })
+    expect(updateDocument).toHaveBeenCalledTimes(2)
+    expect(updateDocument.mock.calls[0][0].data).toMatchObject({
+      target_kcal: 2000,
+      sex: 'female',
+      race: 'asian',
+      resides_in_asia: true,
+    })
+    expect(updateDocument.mock.calls[1][0].data).toEqual({ target_kcal: 2000, sex: 'female' })
+  })
+
   it('writes the new columns once they exist', async () => {
     updateDocument.mockResolvedValueOnce({ $id: 'u1' })
     await profile.saveProfileFields('u1', { sex: 'female', bmr: 1400.4 })

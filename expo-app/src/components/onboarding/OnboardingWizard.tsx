@@ -20,6 +20,11 @@ import {
   type OnboardingStep,
 } from '@/components/onboarding/types'
 import { UnitToggle } from '@/components/onboarding/UnitToggle'
+import {
+  CongressionalNote,
+  HPyloriWarning,
+  ResidencyBarNotice,
+} from '@/components/onboarding/ResidencyNotices'
 import { showApiError } from '@/lib/apiErrors'
 import { isEligibleOnboardingAge, MINIMUM_ONBOARDING_AGE } from '@/lib/ageEligibility'
 import { isValidEmail, isValidPassword } from '@/lib/authValidation'
@@ -28,6 +33,15 @@ import { buildGoalStateFromPlan } from '@/lib/goals'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
 import { COUNTRY_OPTIONS } from '@/lib/countries'
+import {
+  isAsianCountry,
+  isBarredResidency,
+  isRaceValue,
+  nextAsiaAnswer,
+  RACE_OPTIONS,
+  RESIDENCY_BAR_MESSAGE,
+  showHPyloriWarning,
+} from '@/lib/residency'
 import {
   ACTIVITY_OPTIONS,
   buildNutritionPlan,
@@ -53,6 +67,7 @@ import {
   saveProfileFields,
 } from '@/lib/profile'
 import { loadPlanPreferences, planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences'
+import { loadDemographics, saveDemographics } from '@/lib/demographics'
 import {
   appendDisplayUnitsToGoalPlain,
   defaultDisplayUnits,
@@ -238,6 +253,7 @@ export function OnboardingWizard() {
   const stepIndex = visibleSteps.indexOf(step)
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === visibleSteps.length - 1
+  const residencyBarred = isBarredResidency(form.country)
 
   const plan: NutritionPlan = useMemo(
     () =>
@@ -328,8 +344,12 @@ export function OnboardingWizard() {
 
     let active = true
 
-    Promise.all([getProfile(user.$id), loadPlanPreferences(user.$id).catch(() => null)])
-      .then(([profile, prefs]) => {
+    Promise.all([
+      getProfile(user.$id),
+      loadPlanPreferences(user.$id).catch(() => null),
+      loadDemographics(user.$id).catch(() => null),
+    ])
+      .then(([profile, prefs, demographics]) => {
         if (!active) return
 
         const complete = isProfileComplete(profile)
@@ -337,8 +357,11 @@ export function OnboardingWizard() {
 
         const defaults = createDefaultFormState(user.email)
         if (!profile) {
-          setForm(defaults)
-          setDateOfBirthConfirmed(false)
+          // Account creation happens mid-wizard. Keep the answers already entered.
+          setForm((current) => ({
+            ...current,
+            username: current.username.trim() ? current.username : defaults.username,
+          }))
           return
         }
 
@@ -359,6 +382,15 @@ export function OnboardingWizard() {
           username: profile.username ?? defaults.username,
           dateOfBirth: parseProfileDate(profile.dateOfBirth),
           country,
+          race: isRaceValue(profile.race) ? profile.race : demographics?.race ?? '',
+          residesInAsia:
+            typeof profile.resides_in_asia === 'boolean'
+              ? nextAsiaAnswer(profile.resides_in_asia, country, country)
+              : demographics?.residesInAsia != null
+                ? nextAsiaAnswer(demographics.residesInAsia, country, country)
+                : isAsianCountry(country)
+                  ? true
+                  : null,
           bio: profile.bio ?? '',
           sex: saved.sex,
           height: body.heightCm,
@@ -394,6 +426,9 @@ export function OnboardingWizard() {
             setAgeBlocked(true)
           }
         }
+        if (isBarredResidency(country)) {
+          setStep('eligibility')
+        }
       })
       .finally(() => {
         if (active) setLoadingProfile(false)
@@ -419,6 +454,10 @@ export function OnboardingWizard() {
       case 'eligibility':
         if (!dateOfBirthConfirmed) return 'Select your date of birth to continue.'
         if (form.dateOfBirth > new Date()) return 'Choose a valid date of birth.'
+        if (!isRaceValue(form.race)) return 'Select your race to continue.'
+        if (form.residesInAsia == null && !isAsianCountry(form.country)) {
+          return 'Answer whether you reside in any country in Asia.'
+        }
         return null
       case 'body':
         if (form.height <= 0 || form.weight <= 0) return 'Enter your height and weight.'
@@ -439,6 +478,12 @@ export function OnboardingWizard() {
   }
 
   async function goNext() {
+    if (isBarredResidency(form.country)) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+      Alert.alert('kiloric is unavailable', RESIDENCY_BAR_MESSAGE)
+      return
+    }
+
     const error = validateStep(step)
     if (error) {
       Alert.alert('Almost there', error)
@@ -526,6 +571,17 @@ export function OnboardingWizard() {
       return
     }
 
+    if (isBarredResidency(form.country)) {
+      Alert.alert('kiloric is unavailable', RESIDENCY_BAR_MESSAGE)
+      return
+    }
+
+    if (!isRaceValue(form.race)) {
+      Alert.alert('Almost there', 'Select your race to continue.')
+      setStep('eligibility')
+      return
+    }
+
     const targetKg = roundMetric(form.targetWeight ?? plan.targetWeight)
     const goalPlain = appendDisplayUnitsToGoalPlain(plan.goalPlain, form.displayUnits)
     const goalState = buildGoalStateFromPlan(plan, {
@@ -547,6 +603,8 @@ export function OnboardingWizard() {
         lastLogin: new Date().toISOString(),
         bio: form.bio.trim() || null,
         country: form.country.trim().toUpperCase() || null,
+        race: form.race,
+        resides_in_asia: form.residesInAsia === true || isAsianCountry(form.country),
         target_kcal: macros.targetKcal,
         target_protein: macros.targetProtein,
         target_carbs: macros.targetCarbs,
@@ -570,6 +628,13 @@ export function OnboardingWizard() {
         bmr: plan.bmr,
         formula_version: NUTRITION_FORMULA_VERSION,
       })
+      await saveDemographics(
+        {
+          race: form.race,
+          residesInAsia: form.residesInAsia === true || isAsianCountry(form.country),
+        },
+        user.$id,
+      )
       await savePlanPreferences(
         {
           ...planPreferencesFromUser(user),
@@ -747,9 +812,9 @@ export function OnboardingWizard() {
               minimumDate={new Date(1900, 0, 1)}
               maximumDate={new Date()}
             />
-            <Text style={onboardingStyles.label}>Country</Text>
+            <Text style={onboardingStyles.label}>Country of residence</Text>
             <NativeEnumPicker
-              accessibilityLabel="Country"
+              accessibilityLabel="Country of residence"
               value={form.country}
               options={COUNTRY_OPTIONS}
               onChange={(value) => {
@@ -757,15 +822,52 @@ export function OnboardingWizard() {
                   ...current,
                   country: value,
                   displayUnits: defaultDisplayUnits(value),
+                  residesInAsia: nextAsiaAnswer(current.residesInAsia, current.country, value),
                 }))
               }}
               disabled={saving}
             />
+            <Text style={onboardingStyles.hintInline}>
+              Where you live. This is saved on your profile and chooses feet and pounds for the US.
+            </Text>
             {prefersImperialDisplay(form.country) ? (
               <Text style={onboardingStyles.hintInline}>
                 We&apos;ll show feet and pounds by default — everything is saved in standard metric.
               </Text>
             ) : null}
+            <Text style={onboardingStyles.label}>Race</Text>
+            <NativeEnumPicker
+              accessibilityLabel="Race"
+              value={form.race}
+              options={[{ label: 'Select race', value: '' }, ...RACE_OPTIONS]}
+              onChange={(value) => updateForm('race', isRaceValue(value) ? value : '')}
+              disabled={saving}
+            />
+            <Text style={onboardingStyles.hintInline}>
+              Self-reported. This is stored with your profile and can be changed later in settings.
+            </Text>
+            <Text style={onboardingStyles.sectionLabel}>Do you reside in any country in Asia?</Text>
+            {([
+              ['yes', true],
+              ['no', false],
+            ] as const).map(([value, answer]) => (
+              <SelectionCard
+                key={value}
+                value={value}
+                label={value === 'yes' ? 'Yes' : 'No'}
+                description={
+                  value === 'yes'
+                    ? 'I reside in at least one country in Asia'
+                    : 'I do not reside in a country in Asia'
+                }
+                selected={form.residesInAsia === answer}
+                onPress={() => updateForm('residesInAsia', answer)}
+                disabled={saving}
+              />
+            ))}
+            {isBarredResidency(form.country) ? <ResidencyBarNotice /> : null}
+            {showHPyloriWarning(form.country, form.residesInAsia) ? <HPyloriWarning /> : null}
+            <CongressionalNote />
           </>
         )
 
@@ -1095,7 +1197,7 @@ export function OnboardingWizard() {
             stackActions && onboardingStyles.footerContentStacked,
           ]}
         >
-          {isRequired && step === 'welcome' ? (
+          {isRequired && (step === 'welcome' || isBarredResidency(form.country)) ? (
             <Pressable
               accessibilityRole="button"
               onPress={() => setLogoutDialogVisible(true)}
@@ -1131,20 +1233,22 @@ export function OnboardingWizard() {
           ) : null}
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: saving || signingOut, busy: saving }}
+            accessibilityState={{ disabled: saving || signingOut || residencyBarred, busy: saving }}
             onPress={goNext}
-            disabled={saving || signingOut}
+            disabled={saving || signingOut || residencyBarred}
             style={({ pressed }) => [
               onboardingStyles.primaryButton,
               stackActions && onboardingStyles.buttonStacked,
               pressed && { transform: [{ translateY: 2 }] },
-              (saving || signingOut) && onboardingStyles.primaryButtonDisabled,
+              (saving || signingOut || residencyBarred) && onboardingStyles.primaryButtonDisabled,
             ]}
           >
             <View style={onboardingStyles.buttonContent}>
               {saving ? <ActivityIndicator color={onboardingColors.onAccent} size="small" /> : null}
               <Text style={onboardingStyles.primaryButtonText}>
-                {saving
+                {residencyBarred
+                  ? 'Unavailable'
+                  : saving
                   ? step === 'password' && !user?.$id
                     ? 'Creating account…'
                     : 'Saving…'

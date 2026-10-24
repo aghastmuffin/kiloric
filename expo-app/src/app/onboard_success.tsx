@@ -1,3 +1,4 @@
+import { CongressionalNote } from '@/components/onboarding/ResidencyNotices'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
 import { typography } from '@/lib/theme/typography'
@@ -157,6 +158,7 @@ export default function OnboardingSuccess() {
             Your calorie, macro, and hydration targets are set. Start with today’s meals and let
             the pattern build from there.
           </Text>
+          <CongressionalNote />
 
           <View style={styles.planLedger}>
             <View style={styles.ledgerRow}>
