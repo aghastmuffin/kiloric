@@ -1,5 +1,8 @@
 /server/.env
-/server/kiloric.db
+/server/*.db
+/server/*.db-shm
+/server/*.db-wal
+/server/.venv
 /server/__pycache__
 /server/**/__pycache__
 /server/*.pyc
