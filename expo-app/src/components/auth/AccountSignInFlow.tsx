@@ -154,8 +154,10 @@ export function AccountSignInFlow() {
                         <Text style={styles.eyebrow}>FOOD & NUTRITION</Text>
                         <Text accessibilityRole="header" style={styles.title}>Welcome to kiloric</Text>
                         <Text style={styles.subtitle}>
-                            Log meals and understand your nutrition in one place. kiloric is for adults
-                            18 and older; eligibility is checked before account creation.
+                            The free, open source calorie counting app! 
+
+                            Congressional App Candiadate for 2026. District CA12 
+                            With love from Berkeley, California.
                         </Text>
 
                         <Pressable

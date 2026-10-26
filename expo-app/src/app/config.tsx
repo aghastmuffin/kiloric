@@ -729,7 +729,7 @@ export default function ConfigScreen() {
               <View style={styles.divider} />
 
               <View style={styles.verticalRow}>
-                <Text style={styles.fieldLabel}>Do you reside in any country in Asia?</Text>
+                <Text style={styles.fieldLabel}>Do you reside in any country in Asia? (or are you ethnically asian?)</Text>
                 {([
                   ['yes', true],
                   ['no', false],

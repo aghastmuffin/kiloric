@@ -2,7 +2,7 @@
 
 **Last Updated:** October 2026
 **Effective Date:** October 2026
-**Entity:** Taeson Co. / TAESON SAN FRANCISCO HOLDINGS LLC
+**Entity:** Taeson NORTH AMERICA Ltd. Liability Co. / TAESON SAN FRANCISCO HOLDINGS LLC
 **Contact Email:** `data_privacy@kiloric.co`
 
 ---

@@ -1,6 +1,6 @@
 # Data Collection, Processing & Audit Schedule
 
-**Entity:** Taeson Co. / TAESON SAN FRANCISCO HOLDINGS LLC
+**Entity:** Taeson NORTH AMERICA Ltd. Liability Co. / TAESON SAN FRANCISCO HOLDINGS LLC
 **Product:** kiloric
 **Next Privacy & Compliance Audit:** Scheduled for October 25th, 2026
 

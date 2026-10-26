@@ -3,7 +3,7 @@
 **Last Updated:** October 20, 2026  
 **Effective Date:** October 20, 2026  
 **Service:** kiloric  
-**Provider:** Taeson Co. ("we", "us", or "our")  
+**Provider:** Taeson NORTH AMERICA Ltd. Liability Co. ("we", "us", or "our")  
 **Contact / Data Privacy Email:** `data_privacy@kiloric.co`
 
 ---
@@ -11,7 +11,7 @@
 ## Part 1: Privacy Policy
 
 ### 1. Introduction & Overview
-Welcome to **kiloric** ("Service", "App"), operated by **Taeson Co.** We respect your privacy and are committed to protecting your personal information and health/wellness data. This Privacy Policy explains what information we collect, how we use it, how we store and protect it, and the rights you have concerning your data under applicable data protection laws (including GDPR, UK GDPR, and CCPA/CPRA).
+Welcome to **kiloric** ("Service", "App"), operated by **Taeson NORTH AMERICA Ltd. Liability Co.** We respect your privacy and are committed to protecting your personal information and health/wellness data. This Privacy Policy explains what information we collect, how we use it, how we store and protect it, and the rights you have concerning your data under applicable data protection laws (CCPA/CPRA).
 
 ---
 
@@ -85,7 +85,7 @@ We will acknowledge receipt within 5 business days and fulfill verified requests
 ## Part 2: Data Retention Policy
 
 ### 1. Retention Principles
-Taeson Co. retains your personal data only for as long as necessary to fulfill the purposes described in this policy, maintain active service functionality, resolve disputes, and comply with legal obligations.
+Taeson NORTH AMERICA Ltd. Liability Co. retains your personal data only for as long as necessary to fulfill the purposes described in this policy, maintain active service functionality, resolve disputes, and comply with legal obligations.
 
 ### 2. Retention Schedules by Data Category
 
@@ -134,5 +134,5 @@ For any inquiries, requests for data deletion, or updates on your user data, ple
 
 - **Email:** [`data_privacy@kiloric.co`](mailto:data_privacy@kiloric.co)
 - **Subject Requirement:** Must include **`kiloric`** in the subject line (e.g., `kiloric - Data Privacy Request`), to ensure the security of our customer base, the same email must issue this request, OR proof of ownership must be provided.
-- **Organization:** Taeson Co.
+- **Organization:** Taeson NORTH AMERICA Ltd. Liability Co.
 - IN COMPLIANCE WITH REIGONAL FEDERAL LAW TAESONCO'S SERVICES ARE NOT AVAILABLE IN THE FOLLOWING COUNTRIES: KOREA, REPUBLIC OF; RUSSIA, FEDERATION; NAM, SOCIALIST REPUBLIC OF VIET; KOREA, DEMOCRATIC PEOPLE'S REPUBLIC OF; BRAZIL, FEDERAL REPUBLIC OF; ARABIA, KINGDOM OF SAUDI; CHINA, REPUBLIC OF.

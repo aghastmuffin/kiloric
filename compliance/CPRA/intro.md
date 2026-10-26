@@ -1,5 +1,5 @@
 >[!info]
-> Legally, kiloric is operated by Taeson Co. As a courtesy and matter of good faith, your data is held in 100% compliance with the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA), California Civil Code §§ 1798.100–1798.199.100. This protection extends to all users globally regardless of state or national residency.
+> Legally, kiloric is operated by Taeson NORTH AMERICA Ltd. Liability Co. As a courtesy and matter of good faith, your data is held in 100% compliance with the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA), California Civil Code §§ 1798.100–1798.199.100. This protection extends to all users globally regardless of state or national residency.
 
 >[!info] kiloric is intellectual property of TAESON SAN FRANCISCO HOLDINGS Ltd Liability Co. Distributing modified copies of this program is disallowed.
 

@@ -50,7 +50,7 @@ Core workflows include:
 
 ## Brand Commitments
 
-The product name is kiloric and the operator identity is Taeson Co. Existing app-mark and app-icon assets live under `assets/images/`.
+The product name is kiloric and the operator identity is Taeson NORTH AMERICA Ltd. Liability Co. Existing app-mark and app-icon assets live under `assets/images/`.
 
 The established product voice is clear, calm, direct, and evidence-conscious. It should support disciplined goals without shame, hype, or invented certainty. Health and trend language must distinguish estimates, incomplete data, and sample functionality from clinical advice or proven outcomes.
 

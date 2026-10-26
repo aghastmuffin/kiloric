@@ -27,7 +27,7 @@ export default function PrivacyPolicyScreen() {
           <Text style={styles.strong}>Service:</Text> kiloric
         </Text>
         <Text style={styles.bodyText}>
-          <Text style={styles.strong}>Provider:</Text> Taeson Co.
+          <Text style={styles.strong}>Provider:</Text> Taeson NORTH AMERICA Ltd. Liability Co.
         </Text>
         <Text style={styles.bodyText}>
           <Text style={styles.strong}>Contact / Data Privacy Email:</Text>{' '}
@@ -38,12 +38,12 @@ export default function PrivacyPolicyScreen() {
       <Section title="Part 1: Privacy Policy">
         <Heading>1. Introduction & Overview</Heading>
         <Paragraph>
-          Welcome to kiloric (&quot;Service&quot;, &quot;App&quot;), operated by Taeson Co. We
+          Welcome to kiloric (&quot;Service&quot;, &quot;App&quot;), operated by Taeson NORTH AMERICA Ltd. Liability Co. We
           respect your privacy and are committed to protecting your personal
           information and health/wellness data. This Privacy Policy explains
           what information we collect, how we use it, how we store and protect
           it, and the rights you have concerning your data under applicable
-          data protection laws (including GDPR, UK GDPR, and CCPA/CPRA).
+          data protection laws (CCPA/CPRA).
         </Paragraph>
 
         <Heading>2. Information We Collect</Heading>
@@ -67,7 +67,7 @@ export default function PrivacyPolicyScreen() {
             {
               title: 'Physical & Health Metrics',
               description:
-                'Height, current body weight, target body weight, weight log history, and calculated metrics (such as Basal Metabolic Rate and Total Daily Energy Expenditure).',
+                'Height, current body weight, target body weight, weight log history, and calculated metrics using strictly user-provided data (such as Basal Metabolic Rate and Total Daily Energy Expenditure).',
             },
             {
               title: 'Fitness, Diet & Nutrition Goals',
@@ -82,7 +82,7 @@ export default function PrivacyPolicyScreen() {
             {
               title: 'User Contributed Content & Media',
               description:
-                'Custom food items, nutrition labels, and uploaded food images submitted for food logging or community contribution.',
+                'EXPLICIT USER CONSENT: Custom food items, nutrition labels, and uploaded food images submitted for food logging or community contribution.',
             },
             {
               title: 'App Preferences & Technical Metadata',
@@ -163,8 +163,8 @@ export default function PrivacyPolicyScreen() {
 
         <Heading>5. Your Rights & How to Request Data Updates or Deletion</Heading>
         <Paragraph>
-          Depending on your jurisdiction, you have the following rights
-          regarding your personal data:
+          Depending on your jurisdiction, you may have the following rights
+          regarding your personal data: (otherwise, the kiloric project team will still honor requests to delete or export your data).
         </Paragraph>
         <BulletList
           items={[
@@ -233,7 +233,7 @@ export default function PrivacyPolicyScreen() {
       <Section title="Part 2: Data Retention Policy">
         <Heading>1. Retention Principles</Heading>
         <Paragraph>
-          Taeson Co. retains your personal data only for as long as necessary
+          Taeson NORTH AMERICA Ltd. Liability Co. retains your personal data only for as long as necessary
           to fulfill the purposes described in this policy, maintain active
           service functionality, resolve disputes, and comply with legal
           obligations.
@@ -321,7 +321,7 @@ export default function PrivacyPolicyScreen() {
             },
             {
               title: 'Organization',
-              description: 'Taeson Co.',
+              description: 'Taeson NORTH AMERICA Ltd. Liability Co.',
             },
           ]}
         />

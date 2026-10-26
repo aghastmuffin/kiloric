@@ -246,10 +246,12 @@ export default function CpraPortalScreen() {
               trackColor={{ false: colors.border, true: colors.brand }}
               thumbColor={colors.surfaceMuted}
               accessibilityLabel="Do Not Sell or Share My Personal Info toggle"
+              disabled
             />
           </View>
           <Text style={styles.statusBadge}>
-            Status: {doNotSell ? 'Opted-Out (Active)' : 'Standard Protection'}
+            Status: {doNotSell ? 'Opted-Out (Active)' : 'Standard Protection'}  
+            (Note: I will not engage in selling information on a moral basis. You cannot change this setting to allow me to sell information. I still must legally provide this menu, however.)
           </Text>
         </View>
 
@@ -270,10 +272,12 @@ export default function CpraPortalScreen() {
               trackColor={{ false: colors.border, true: colors.brand }}
               thumbColor={colors.surfaceMuted}
               accessibilityLabel="Limit Use of Sensitive Personal Information toggle"
+              disabled
             />
           </View>
           <Text style={styles.statusBadge}>
-            Status: {limitSensitive ? 'Restricted to Core Service' : 'Standard Protection'}
+            Status: {limitSensitive ? 'Restricted to Core Service' : 'Standard Protection'} 
+            (see above note)
           </Text>
         </View>
       </View>
@@ -369,7 +373,7 @@ export default function CpraPortalScreen() {
       {/* Submit Formal Privacy Request Form */}
       <View style={styles.section}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
-          Submit Formal Privacy Request
+          Submit Formal Privacy Request (if you forget your password or otherwise lose access to your account) Expect 10 business days for a response until we get more volunteers.
         </Text>
         <View style={styles.card}>
           <Text style={styles.formLabel}>Request Type</Text>
