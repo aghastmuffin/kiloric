@@ -77,26 +77,35 @@ function finiteInRange(value: unknown, min: number, max: number): value is numbe
 
 function normalizeSlots(value: unknown): MealSlotPreference[] {
   if (!Array.isArray(value)) return defaultMealSlots()
-  const byKey = new Map<MealType, MealSlotPreference>()
+  const slots: MealSlotPreference[] = []
+  const seenKeys = new Set<string>()
+
   value.forEach((entry, index) => {
     if (!entry || typeof entry !== 'object') return
     const raw = entry as Partial<MealSlotPreference>
-    if (!MEAL_TYPE_OPTIONS.includes(raw.key as MealType)) return
-    const key = raw.key as MealType
-    byKey.set(key, {
+    const rawKey = typeof raw.key === 'string' && raw.key.trim() ? raw.key.trim().slice(0, 64) : ''
+    const rawName = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 64) : ''
+    const name = rawName || rawKey
+    if (!name) return
+
+    const key = rawKey || name
+    const keyLower = key.toLowerCase()
+    if (seenKeys.has(keyLower)) return
+    seenKeys.add(keyLower)
+
+    slots.push({
       key,
-      name:
-        typeof raw.name === 'string' && raw.name.trim()
-          ? raw.name.trim().slice(0, 32)
-          : key,
+      name,
       enabled: raw.enabled !== false,
       order: finiteInRange(raw.order, 0, 100) ? raw.order : index,
     })
   })
-  const merged = defaultMealSlots().map((slot) => byKey.get(slot.key) ?? slot)
-  merged.sort((a, b) => a.order - b.order)
-  if (!merged.some((slot) => slot.enabled)) merged[0].enabled = true
-  return merged.map((slot, order) => ({ ...slot, order }))
+
+  if (slots.length === 0) return defaultMealSlots()
+
+  slots.sort((a, b) => a.order - b.order)
+  if (!slots.some((slot) => slot.enabled)) slots[0].enabled = true
+  return slots.map((slot, order) => ({ ...slot, order }))
 }
 
 export function normalizePlanPreferences(value: unknown): PlanPreferences {
@@ -185,4 +194,9 @@ export async function savePlanPreferences(
 
 export function effectiveMealSlots(preferences: PlanPreferences): MealSlotPreference[] {
   return preferences.mealSlots.filter((slot) => slot.enabled).sort((a, b) => a.order - b.order)
+}
+
+export function effectiveMealNames(preferences: PlanPreferences): string[] {
+  const slots = effectiveMealSlots(preferences)
+  return slots.length > 0 ? slots.map((s) => s.name) : ['Breakfast', 'Lunch', 'Snack', 'Dinner']
 }

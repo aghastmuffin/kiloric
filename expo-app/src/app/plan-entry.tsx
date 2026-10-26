@@ -21,10 +21,10 @@ import {
   deletePlanEntry,
   listPlanEntries,
   planCandidatesFrom,
-  PLAN_MEAL_TYPES,
   updatePlanEntry,
   type PlanCandidate,
 } from '@/lib/data/mealPlan'
+import { effectiveMealNames, loadPlanPreferences } from '@/lib/planPreferences'
 import { listSavedMeals } from '@/lib/data/savedMeals'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import type { MealType } from '@/lib/meals'
@@ -45,9 +45,6 @@ function draftFrom(source: Partial<PlanCandidate> | null): Draft {
   }
 }
 
-function asMealType(value: string | undefined): MealType | null {
-  return value && (PLAN_MEAL_TYPES as readonly string[]).includes(value) ? (value as MealType) : null
-}
 
 export default function PlanEntryScreen() {
   const params = useLocalSearchParams<{ id?: string; day?: string; meal?: string }>()
@@ -56,7 +53,7 @@ export default function PlanEntryScreen() {
   const userId = user?.$id ?? null
   const day = params.day && /^\d{4}-\d{2}-\d{2}$/.test(params.day) ? params.day : dayKey()
 
-  const [mealType, setMealType] = useState<MealType>(asMealType(params.meal) ?? 'Lunch')
+  const [mealType, setMealType] = useState<MealType>(params.meal ?? 'Lunch')
   const [prepped, setPrepped] = useState(false)
   const [draft, setDraft] = useState<Draft>(draftFrom(null))
   const [formKey, setFormKey] = useState(0)
@@ -64,14 +61,19 @@ export default function PlanEntryScreen() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const state = useFocusLoader(async () => {
-    const [entries, saved, recent] = await Promise.all([
+    const [entries, saved, recent, planPrefs] = await Promise.all([
       params.id ? listPlanEntries(userId!, day, day) : Promise.resolve([]),
       listSavedMeals(userId!),
       listRecentEntries(userId!),
+      userId ? loadPlanPreferences(userId).catch(() => null) : Promise.resolve(null),
     ])
     const existing = entries.find((entry) => entry.$id === params.id) ?? null
-    return { existing, candidates: planCandidatesFrom(saved, frequentFoods(recent, 20), recent) }
+    return { existing, candidates: planCandidatesFrom(saved, frequentFoods(recent, 20), recent), planPrefs }
   }, userId ? `${userId}:${params.id ?? 'new'}` : null)
+
+  const activeMealNames = state.data?.planPrefs
+    ? effectiveMealNames(state.data.planPrefs)
+    : ['Breakfast', 'Lunch', 'Snack', 'Dinner']
 
   const existing = state.data?.existing ?? null
   const [hydratedId, setHydratedId] = useState<string | null>(null)
@@ -163,7 +165,7 @@ export default function PlanEntryScreen() {
       ) : (
         <>
           <View style={styles.chips}>
-            {PLAN_MEAL_TYPES.map((type) => (
+            {activeMealNames.map((type) => (
               <Chip key={type} label={type} selected={mealType === type} onPress={() => setMealType(type)} size="md" />
             ))}
           </View>

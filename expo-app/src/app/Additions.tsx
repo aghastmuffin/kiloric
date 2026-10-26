@@ -6,7 +6,8 @@ import {
 } from '@/components/LogFoodMultiView'
 import { MotionView } from '@/components/MotionView'
 import { useAuth } from '@/lib/AuthContext'
-import { addProductToMeal, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
+import { addProductToMeal, type MealType } from '@/lib/meals'
+import { effectiveMealNames, loadPlanPreferences } from '@/lib/planPreferences'
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
 import { isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'
 import {
@@ -73,6 +74,16 @@ export default function AdditionsScreen() {
   const [mealPickerOpen, setMealPickerOpen] = useState(false)
   const [adding, setAdding] = useState(false)
   const [added, setAdded] = useState(false)
+  const [activeMealNames, setActiveMealNames] = useState<string[]>(['Breakfast', 'Lunch', 'Snack', 'Dinner'])
+
+  useEffect(() => {
+    if (!user?.$id) return
+    loadPlanPreferences(user.$id)
+      .then((prefs) => {
+        setActiveMealNames(effectiveMealNames(prefs))
+      })
+      .catch(() => {})
+  }, [user?.$id])
 
   useEffect(() => {
     let active = true
@@ -238,7 +249,7 @@ export default function AdditionsScreen() {
               transition={{ type: 'timing', duration: 140 }}
               style={styles.mealMenu}
             >
-              {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type: MealType) => (
+              {activeMealNames.map((type: string) => (
                 <Pressable
                   key={type}
                   accessibilityRole="button"
