@@ -19,6 +19,8 @@ API origin: https://api.kiloric.co, with /v1 routes. Root landing page remains s
 - Reproducible web export goes to website/app, uses /app asset paths, supplies
   directory indexes for route reloads and marks the release in app/release.json.
   The original root page is retained; privacy content is also preserved.
+- The public privacy form now prepares a real email draft and clearly requires
+  the user to send it, instead of inventing a ticket and claiming email delivery.
 - GitHub Actions validates the app, checks that the new API is deployed, exports
   website/app, and uploads the entire website directory to Pages.
 
@@ -51,7 +53,10 @@ API origin: https://api.kiloric.co, with /v1 routes. Root landing page remains s
    new JWT session does not authenticate there. This feature requires its own API
    migration and is not certified working for b-1. No legacy user/data migration
    was run; existing Appwrite accounts/data are not automatically transferred.
-4. Configure SMTP and a strong production JWT_SECRET on the actual host. Password
+4. The in-app privacy-request helper still creates only a local confirmation;
+   manual privacy requests need a server-side request queue or email handoff.
+   Immediate data export and account deletion are separate API operations.
+5. Configure SMTP and a strong production JWT_SECRET on the actual host. Password
    email delivery and account recovery require a configured email service and
    were not verified end to end. Existing .env values override config defaults,
    so explicitly update CORS_ORIGINS and APP_RESET_URL on the host.

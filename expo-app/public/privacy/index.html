@@ -385,9 +385,9 @@
 
     <!-- Privacy Request Form -->
     <section class="card">
-      <h2>Submit Verified Consumer Privacy Request</h2>
+      <h2>Prepare a Consumer Privacy Request</h2>
       <p>
-        Submit a formal privacy request below. Requests are acknowledged within 10 business days and fulfilled within 45 calendar days.
+        Use this form to prepare an email to data_privacy@kiloric.co. Your email app will open; send the message there to submit your request.
       </p>
 
       <form id="privacyForm">
@@ -422,14 +422,13 @@
           <label for="isAgent" style="margin-bottom:0; font-weight: 400;">I am an Authorized Agent submitting this request on behalf of a consumer</label>
         </div>
 
-        <button type="submit" class="btn-primary">Submit Verified Privacy Request</button>
+        <button type="submit" class="btn-primary">Open Email Draft</button>
       </form>
 
       <div id="confirmationBox" class="confirmation-box">
-        <h3>Privacy Request Received</h3>
-        <p><strong>Reference Ticket:</strong> <span id="ticketId" style="font-family: var(--mono-font);"></span></p>
-        <p><strong>Status:</strong> Received & Pending Identity Verification</p>
-        <p>A confirmation email has been dispatched to <span id="confirmedEmail"></span>. Signed-in mobile app users can also trigger instant data exports and account deletion directly under <strong>You → CPRA & CCPA Privacy Portal</strong>.</p>
+        <h3>Email Draft Prepared</h3>
+        <p>Send the draft from your email app to submit your request. This website has not sent an email or created a support ticket.</p>
+        <p>If your email app did not open, contact <a href="mailto:data_privacy@kiloric.co">data_privacy@kiloric.co</a> directly. Signed-in users can export data and delete their account in the app.</p>
       </div>
     </section>
 
@@ -444,10 +443,15 @@
       e.preventDefault();
       const email = document.getElementById('email').value.trim();
       const requestType = document.getElementById('requestType').value;
-      const randomTicket = 'CPRA-WEB-REQ-' + Date.now() + '-' + Math.floor(1000 + Math.random() * 9000);
-
-      document.getElementById('ticketId').innerText = randomTicket;
-      document.getElementById('confirmedEmail').innerText = email;
+      const subject = 'Kiloric privacy request: ' + requestType;
+      const body = [
+        'Request type: ' + requestType,
+        'Name: ' + document.getElementById('fullName').value.trim(),
+        'Account email: ' + email,
+        'Authorized agent: ' + (document.getElementById('isAgent').checked ? 'Yes' : 'No'),
+        '', document.getElementById('notes').value.trim()
+      ].join('\n');
+      window.location.href = 'mailto:data_privacy@kiloric.co?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
       const box = document.getElementById('confirmationBox');
       box.classList.add('active');
       box.scrollIntoView({ behavior: 'smooth' });

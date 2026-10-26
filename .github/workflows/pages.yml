@@ -2,16 +2,32 @@ name: Publish b-1 website
 on:
   push:
     branches: [master]
-    paths: ['expo-app/**', '.github/workflows/pages.yml']
+    paths: ['expo-app/**', 'server/**', 'website/**', '.github/workflows/pages.yml']
+  pull_request:
+    paths: ['expo-app/**', 'server/**', 'website/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e .
+        working-directory: server
+      - run: python -m unittest discover -s tests
+        working-directory: server
+        env:
+          CORS_ORIGINS: https://kiloric.co
+          JWT_SECRET: b1-ci-secret-only-not-for-production
   build:
     runs-on: ubuntu-latest
     steps:
@@ -27,14 +43,6 @@ jobs:
         working-directory: expo-app
         env:
           EXPO_NO_TELEMETRY: '1'
-      - name: Check deployed API supports this release
-        run: |
-          status=$(curl --silent --show-error --max-time 30 --output /dev/null --write-out '%{http_code}' https://api.kiloric.co/v1/me/prefs)
-          test "$status" = 401 || { echo "Deploy the B-1 server first; /v1/me/prefs returned $status instead of 401"; exit 1; }
-      - uses: actions/configure-pages@v5
-        id: pages
-        with:
-          enablement: true
       - run: npm run export:web
         working-directory: expo-app
         env:
@@ -44,11 +52,19 @@ jobs:
         with:
           path: website
   deploy:
-    needs: build
+    if: github.event_name != 'pull_request'
+    needs: [build, server]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Check deployed API supports this release
+        run: |
+          status=$(curl --silent --show-error --max-time 30 --output /dev/null --write-out '%{http_code}' https://api.kiloric.co/v1/me/prefs)
+          test "$status" = 401 || { echo "Deploy the B-1 server first; /v1/me/prefs returned $status instead of 401"; exit 1; }
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/deploy-pages@v4
         id: deployment
