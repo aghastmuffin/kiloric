@@ -1,1 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kiloric · CPRA & CCPA Privacy Portal</title>
+  <style>
+    :root {
+      --bg: #F4F2EC;
+      --card-bg: #FFFFFF;
+      --card-alt: #ECE8DF;
+      --border: #E6E2D9;
+      --text: #17201C;
+      --text-muted: #5E625F;
+      --brand: #1B6B4F;
+      --brand-soft: #DCEFE5;
+      --accent: #1B6B4F;
+      --danger: #B4372F;
+      --danger-soft: #F6DCD8;
+      --radius: 12px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px 16px 80px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 28px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    p {
+      margin-bottom: 14px;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .highlight-box {
+      background-color: var(--brand-soft);
+      border-left: 4px solid var(--brand);
+      padding: 14px 18px;
+      border-radius: 6px;
+      margin: 16px 0;
+      font-weight: 500;
+      color: var(--brand);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border: 1px solid var(--border);
+    }
+
+    th {
+      background-color: var(--card-alt);
+      font-weight: 600;
+    }
+
+    .rights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .right-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .right-item h3 {
+      font-size: 16px;
+      margin-bottom: 6px;
+      color: var(--brand);
+    }
+
+    .right-item p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 0;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    input[type="text"],
+    input[type="email"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 15px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--brand);
+      background: #FFFFFF;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--brand);
+    }
+
+    .btn-primary {
+      background-color: var(--brand);
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: #14523C;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toggle-row:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-label {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .toggle-subtext {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--brand-soft);
+      color: var(--brand);
+    }
+
+    .confirmation-box {
+      margin-top: 20px;
+      padding: 18px;
+      background: var(--brand-soft);
+      border: 1px solid var(--brand);
+      border-radius: 8px;
+      display: none;
+    }
+
+    .confirmation-box.active {
+      display: block;
+    }
+
+    .confirmation-box h3 {
+      color: var(--brand);
+      margin-bottom: 8px;
+    }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand-eyebrow">kiloric · Privacy Center</div>
+      <h1>CPRA & CCPA Consumer Privacy Portal</h1>
+      <p class="subtitle">
+        Manage your privacy rights under California Civil Code §§ 1798.100–1798.199.100. All rights extend to all kiloric users globally.
+      </p>
+    </header>
+
+    <!-- Notice at Collection -->
+    <section class="card">
+      <h2>Notice at Collection</h2>
+      <p>
+        Under the California Consumer Privacy Act (CCPA) and California Privacy Rights Act (CPRA), we provide notice regarding the categories of personal data collected, business purposes, and retention rules.
+      </p>
+
+      <div class="highlight-box">
+        kiloric DOES NOT SELL OR SHARE personal information or sensitive personal health metrics with third parties or data brokers.
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Examples</th>
+            <th>Business Purpose</th>
+            <th>Sold or Shared?</th>
+            <th>Retention Period</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Identifiers</strong></td>
+            <td>Email address, username, user ID</td>
+            <td>Account creation, authentication, service updates</td>
+            <td><span class="badge">NO</span></td>
+            <td>Lifetime of account; hard deleted within 30 days of deletion request</td>
+          </tr>
+          <tr>
+            <td><strong>Sensitive Health Info</strong></td>
+            <td>Body weight, height, BMR, TDEE, meal/water logs</td>
+            <td>Calculating energy budgets, macronutrients, and tracking progress</td>
+            <td><span class="badge">NO</span></td>
+            <td>Lifetime of account; hard deleted within 30 days of deletion request</td>
+          </tr>
+          <tr>
+            <td><strong>Demographic Info</strong></td>
+            <td>Date of birth, biological sex, country of residence</td>
+            <td>Service eligibility verification and custom recommendations</td>
+            <td><span class="badge">NO</span></td>
+            <td>Lifetime of account; hard deleted within 30 days of deletion request</td>
+          </tr>
+          <tr>
+            <td><strong>Technical Metadata</strong></td>
+            <td>Theme choice, unit preferences, diagnostic logs</td>
+            <td>App state synchronization and performance monitoring</td>
+            <td><span class="badge">NO</span></td>
+            <td>30–90 days for logs; active while account exists</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- California Statutory Rights Overview -->
+    <section class="card">
+      <h2>Your California Statutory Rights</h2>
+      <div class="rights-grid">
+        <div class="right-item">
+          <h3>Right to Know & Access</h3>
+          <p>Request details about categories and specific pieces of personal data collected about you, or download a structured JSON export.</p>
+        </div>
+        <div class="right-item">
+          <h3>Right to Erasure / Deletion</h3>
+          <p>Request permanent deletion of your account and associated physical metrics, meal logs, and profile records.</p>
+        </div>
+        <div class="right-item">
+          <h3>Right to Correct</h3>
+          <p>Request correction or update of inaccurate personal data recorded in your profile or settings.</p>
+        </div>
+        <div class="right-item">
+          <h3>Right to Opt-Out of Sale/Share</h3>
+          <p>Direct us not to sell or share your data for cross-context behavioral advertising (kiloric never sells user data).</p>
+        </div>
+        <div class="right-item">
+          <h3>Right to Limit Sensitive Data</h3>
+          <p>Restrict processing of sensitive personal health information strictly to core application service functions.</p>
+        </div>
+        <div class="right-item">
+          <h3>Right to Non-Discrimination</h3>
+          <p>You will never be discriminated against, charged different rates, or denied service for exercising privacy rights.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Do Not Sell & Limit Sensitive Data Status -->
+    <section class="card">
+      <h2>Direct Statutory Controls</h2>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Do Not Sell or Share My Personal Information</div>
+          <div class="toggle-subtext">Status: Fully Opted-Out (kiloric does not engage in data sales or third-party behavioral sharing)</div>
+        </div>
+        <span class="badge">CONFIRMED OPT-OUT</span>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Limit Use of Sensitive Personal Information</div>
+          <div class="toggle-subtext">Status: Restricted strictly to core BMR, TDEE, and daily nutrition tracking functions</div>
+        </div>
+        <span class="badge">RESTRICTED TO CORE</span>
+      </div>
+    </section>
+
+    <!-- Privacy Request Form -->
+    <section class="card">
+      <h2>Submit Verified Consumer Privacy Request</h2>
+      <p>
+        Submit a formal privacy request below. Requests are acknowledged within 10 business days and fulfilled within 45 calendar days.
+      </p>
+
+      <form id="privacyForm">
+        <div class="form-group">
+          <label for="requestType">Request Type *</label>
+          <select id="requestType" required>
+            <option value="export_data">Right to Know / Access & Export Data (JSON)</option>
+            <option value="delete_account">Right to Delete Account & All Data</option>
+            <option value="correct_data">Right to Correct Inaccurate Personal Information</option>
+            <option value="opt_out_sale">Opt-Out of Sale or Sharing ("Do Not Sell or Share")</option>
+            <option value="limit_sensitive_data">Limit Use of Sensitive Personal Information</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="fullName">Full Name / Display Name *</label>
+          <input type="text" id="fullName" placeholder="Jane Doe" required />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Account Email Address *</label>
+          <input type="email" id="email" placeholder="jane.doe@example.com" required />
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Request Details / Additional Information</label>
+          <textarea id="notes" rows="4" placeholder="Provide any additional details regarding your request..."></textarea>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="isAgent" />
+          <label for="isAgent" style="margin-bottom:0; font-weight: 400;">I am an Authorized Agent submitting this request on behalf of a consumer</label>
+        </div>
+
+        <button type="submit" class="btn-primary">Submit Verified Privacy Request</button>
+      </form>
+
+      <div id="confirmationBox" class="confirmation-box">
+        <h3>Privacy Request Received</h3>
+        <p><strong>Reference Ticket:</strong> <span id="ticketId" style="font-family: var(--mono-font);"></span></p>
+        <p><strong>Status:</strong> Received & Pending Identity Verification</p>
+        <p>A confirmation email has been dispatched to <span id="confirmedEmail"></span>. Signed-in mobile app users can also trigger instant data exports and account deletion directly under <strong>You → CPRA & CCPA Privacy Portal</strong>.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>© Taeson Co. / TAESON SAN FRANCISCO HOLDINGS LLC · kiloric</p>
+      <p>Data Privacy Contact: <code>data_privacy@kiloric.co</code></p>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById('privacyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const requestType = document.getElementById('requestType').value;
+      const randomTicket = 'CPRA-WEB-REQ-' + Date.now() + '-' + Math.floor(1000 + Math.random() * 9000);
+
+      document.getElementById('ticketId').innerText = randomTicket;
+      document.getElementById('confirmedEmail').innerText = email;
+      const box = document.getElementById('confirmationBox');
+      box.classList.add('active');
+      box.scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>

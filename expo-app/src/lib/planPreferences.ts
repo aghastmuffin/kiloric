@@ -11,7 +11,6 @@ import {
 } from './nutrition'
 import { MEAL_TYPE_OPTIONS, type MealType } from './meals'
 import type { DisplayUnits } from './units'
-import type { Models } from 'react-native-appwrite'
 
 export type MealSlotPreference = {
   key: MealType
@@ -149,9 +148,9 @@ export function normalizePlanPreferences(value: unknown): PlanPreferences {
 }
 
 export function planPreferencesFromUser(
-  user: Models.User<Models.Preferences>,
+  user: { prefs?: Record<string, unknown> },
 ): PlanPreferences {
-  const prefs = user.prefs as Record<string, unknown>
+  const prefs = (user.prefs || {}) as Record<string, unknown>
   return normalizePlanPreferences(prefs[PREFS_KEY])
 }
 
