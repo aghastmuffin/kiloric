@@ -639,6 +639,30 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
   }
 }
 
+export const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15)
+
+/**
+ * Parses an ISO date string (e.g. YYYY-MM-DDTHH:mm:ss... or YYYY-MM-DD) into a local `Date`
+ * object matching the recorded calendar date. This avoids timezone conversion shifts where
+ * UTC midnight (e.g. 1990-06-15T00:00:00.000+00:00) shifts back to the previous day in
+ * negative UTC offsets (e.g. 1990-06-14 in UTC-7).
+ */
+export function parseProfileDate(value?: string, fallback = DEFAULT_DATE_OF_BIRTH): Date {
+  if (!value) return fallback
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  if (match) {
+    const year = parseInt(match[1], 10)
+    const month = parseInt(match[2], 10) - 1
+    const day = parseInt(match[3], 10)
+    const date = new Date(year, month, day)
+    if (!Number.isNaN(date.getTime())) {
+      return date
+    }
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed
+}
+
 /** `YYYY-MM-DD` → Appwrite datetime string */
 export function dateInputToIso(date: string): string {
   return `${date}T00:00:00.000+00:00`
