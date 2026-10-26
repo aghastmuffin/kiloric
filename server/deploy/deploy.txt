@@ -1,19 +1,24 @@
-    # 1. Install PostgreSQL & dependencies
-    sudo apt update && sudo apt install -y postgresql postgresql-contrib python3-pip
-    
-    # 2. Setup PostgreSQL database & user
-    sudo -u postgres psql -c "CREATE USER kiloric WITH PASSWORD 'YOUR_STRONG_PASSWORD';"
-    sudo -u postgres psql -c "CREATE DATABASE kiloric OWNER kiloric;"
+B-1 production deployment (existing host, behind Cloudflare)
 
-    # 3. Setup server directory and environment
-    cd /opt/kiloric/server
-    cp .env.example .env
-    # Edit .env with:
-    # DATABASE_URL=postgresql://kiloric:YOUR_STRONG_PASSWORD@localhost:5432/kiloric
-    # JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_hex(64))")
+1. Back up the production database before updating.
+2. Update the checkout in /opt/kiloric-server to the B-1 commit.
+3. Run: uv sync --frozen --no-dev
+4. Set these values in /opt/kiloric-server/.env without replacing other secrets:
+   CORS_ORIGINS=https://kiloric.co,https://www.kiloric.co
+   APP_RESET_URL=https://kiloric.co/app/reset-password
+   JWT_SECRET must be a randomly generated secret, never CHANGE_ME.
+   Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and EMAIL_FROM.
+5. Restart: sudo systemctl restart kiloric-server
+6. Through Cloudflare, verify:
+   curl https://api.kiloric.co/health
+   curl -i https://api.kiloric.co/v1/me/prefs
+   Expected: health 200; prefs 401 without a bearer token (not 404).
+7. Run the release's server tests with a test database and CORS_ORIGINS=https://kiloric.co.
+8. Enable GitHub Pages with Source = GitHub Actions and custom domain kiloric.co.
+   Point the domain's DNS to GitHub Pages; retain api.kiloric.co's existing API origin.
+   Run the Publish b-1 website workflow after the API is deployed.
 
-    # 4. Install dependencies and start systemd service
-    pip install -r requirements.txt # or: uv sync
-    sudo cp deploy/kiloric-server.service /etc/systemd/system/
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now kiloric-server
+The checked-in nginx.conf is a template for the API hostname. Keep the existing
+Cloudflare origin access restrictions, TLS settings and firewall rules.
+The Pages workflow exports the application to website/app; website/index.html is
+the independent root page. GitHub Pages cannot execute the Python server.

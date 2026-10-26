@@ -1,7 +1,9 @@
 """
 /v1/me — current user profile read + update + delete + export data collection.
 """
-from fastapi import APIRouter, Depends, HTTPException
+import json
+
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -31,6 +33,25 @@ router = APIRouter(prefix="/v1/me", tags=["me"])
 @router.get("", response_model=UserResponse)
 def get_me(user: User = Depends(get_current_user)):
     return UserResponse.from_orm_user(user)
+
+
+@router.get("/prefs")
+def get_prefs(user: User = Depends(get_current_user)):
+    return json.loads(user.plan_preferences_json or "{}")
+
+
+@router.patch("/prefs")
+def update_prefs(
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    prefs = body.get("prefs")
+    if not isinstance(prefs, dict) or len(json.dumps(prefs)) > 60000:
+        raise HTTPException(status_code=422, detail="Invalid preferences or preferences too large.")
+    user.plan_preferences_json = json.dumps(prefs)
+    db.commit()
+    return prefs
 
 
 def _export_user_collections(db: Session, user: User) -> dict:

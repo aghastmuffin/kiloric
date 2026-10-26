@@ -4,6 +4,7 @@ All response models expose `$id`, `$createdAt`, `$updatedAt` so the Expo app
 can swap in this backend with minimal field-name changes.
 """
 from __future__ import annotations
+import json
 from datetime import datetime
 from typing import Any, Optional
 from pydantic import BaseModel, EmailStr, Field, model_validator
@@ -59,6 +60,7 @@ class UserResponse(APIModel):
     dollar_id: str = Field(alias="$id")
     email: str
     username: str
+    prefs: dict[str, Any] = Field(default_factory=dict)
     date_of_birth: Optional[str] = Field(None, alias="dateOfBirth")
     weight: Optional[float] = None
     height: Optional[float] = None
@@ -100,6 +102,7 @@ class UserResponse(APIModel):
             "$id": u.id,
             "email": u.email,
             "username": u.username,
+            "prefs": json.loads(u.plan_preferences_json or "{}"),
             "dateOfBirth": u.date_of_birth,
             "weight": u.weight,
             "height": u.height,

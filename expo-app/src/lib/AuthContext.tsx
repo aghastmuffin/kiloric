@@ -1,5 +1,4 @@
-import { purgeAccountData } from '@/lib/accountDeletion'
-import { apiClient, clearTokens, getAccessToken, setTokens } from '@/lib/apiClient'
+import { apiClient, clearTokens, getAccessToken, revokeSession, setTokens } from '@/lib/apiClient'
 import { clearAppwriteSession } from '@/lib/appwriteSession'
 import {
   validateConfirmPasswordResetInput,
@@ -134,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      await apiClient.post('/v1/auth/logout', {}).catch(() => {})
+      await revokeSession()
     } finally {
       await clearUserState()
     }
@@ -159,8 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = useCallback(async () => {
     if (!user?.$id) throw new Error('No signed-in account to delete.')
-    await purgeAccountData(user.$id)
-    await apiClient.delete('/v1/me').catch(() => {})
+    await apiClient.delete('/v1/me')
     await clearUserState()
   }, [clearUserState, user])
 

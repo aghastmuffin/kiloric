@@ -1,3 +1,4 @@
+import { resetRecordStoreSession } from './data/recordStore'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { client } from './appwrite'
 import type { Models } from 'react-native-appwrite'
@@ -23,6 +24,7 @@ export function applyAppwriteSession(sessionSecret: string): void {
 }
 
 function clearSessionCaches(): void {
+  resetRecordStoreSession()
   clearCachedToken()
   clearProfileCache()
   clearTasksCache()

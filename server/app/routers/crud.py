@@ -6,11 +6,12 @@ All responses use Appwrite-compatible field names ($id, $createdAt, owner, …).
 """
 from __future__ import annotations
 import json
+from datetime import datetime
 from typing import Any, Callable, Optional, Type
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from pydantic import BaseModel
-from sqlalchemy import asc, desc
+from pydantic import BaseModel, ValidationError
+from sqlalchemy import asc, desc, or_, DateTime
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -31,6 +32,8 @@ def _model_to_dict(obj: Any) -> dict:
         if col.name in ("id", "owner_id", "created_at", "updated_at"):
             continue
         d[col.name] = getattr(obj, col.name, None)
+    if obj.__tablename__ == "tasks":
+        d["userId"] = obj.owner_id
     # items_json → items (array) — for meals and saved_meals
     if "items_json" in d and obj.__tablename__ in ("meals",):
         try:
@@ -54,6 +57,7 @@ def make_crud_router(
 
     @router.get("")
     def list_records(
+        queries: Optional[str] = Query(None, max_length=20000),
         day: Optional[str] = Query(None),
         day_from: Optional[str] = Query(None),
         day_to: Optional[str] = Query(None),
@@ -61,7 +65,7 @@ def make_crud_router(
         status: Optional[str] = Query(None),
         workout_id: Optional[str] = Query(None),
         since: Optional[str] = Query(None, description="logged_at >= since (ISO-8601)"),
-        limit: int = Query(100, le=500),
+        limit: int = Query(100, ge=1, le=5000),
         offset: int = Query(0, ge=0),
         order: str = Query("created_at"),
         desc_order: bool = Query(False),
@@ -84,10 +88,68 @@ def make_crud_router(
         if since and hasattr(model_cls, "logged_at"):
             q = q.filter(model_cls.logged_at >= since)
 
-        col = getattr(model_cls, order, model_cls.created_at)
-        q = q.order_by(desc(col) if desc_order else asc(col))
+        # Translate the feature stores' legacy query representation at the boundary.
+        field_map = {"$id": "id", "$createdAt": "created_at", "$updatedAt": "updated_at",
+                     "owner": owner_field, "userId": owner_field}
+        cursor = None
+        if queries:
+            try:
+                clauses = json.loads(queries)
+                if not isinstance(clauses, list) or len(clauses) > 100:
+                    raise ValueError()
+                for clause in clauses:
+                    clause = json.loads(clause) if isinstance(clause, str) else clause
+                    if not isinstance(clause, dict):
+                        raise ValueError()
+                    method, values = clause["method"], clause.get("values", [])
+                    if not isinstance(values, list):
+                        raise ValueError()
+                    field = field_map.get(clause.get("attribute"), clause.get("attribute"))
+                    if method == "limit":
+                        limit = max(1, min(int(values[0]), 5000))
+                    elif method == "offset":
+                        offset = max(0, int(values[0]))
+                    elif method == "cursorAfter":
+                        cursor = str(values[0])
+                    elif method in ("orderAsc", "orderDesc"):
+                        if field not in model_cls.__table__.columns:
+                            raise ValueError()
+                        order, desc_order = field, method == "orderDesc"
+                    elif method == "select":
+                        continue
+                    else:
+                        if field not in model_cls.__table__.columns or not values:
+                            raise ValueError()
+                        column = getattr(model_cls, field)
+                        if isinstance(model_cls.__table__.columns[field].type, DateTime):
+                            values = [datetime.fromisoformat(v.replace("Z", "+00:00")) for v in values]
+                        if method == "equal":
+                            q = q.filter(column.in_(values))
+                        elif method == "greaterThanEqual":
+                            q = q.filter(column >= values[0])
+                        elif method == "lessThan":
+                            q = q.filter(column < values[0])
+                        elif method == "lessThanEqual":
+                            q = q.filter(column <= values[0])
+                        else:
+                            raise ValueError()
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
+                raise HTTPException(status_code=422, detail="Invalid query.")
+        if order not in model_cls.__table__.columns:
+            raise HTTPException(status_code=422, detail="Invalid sort field.")
+        col = getattr(model_cls, order)
+        if cursor:
+            anchor = db.get(model_cls, cursor)
+            if not anchor or getattr(anchor, owner_field) != user.id:
+                raise HTTPException(status_code=422, detail="Invalid cursor.")
+            value = getattr(anchor, order)
+            q = q.filter(or_(col < value, (col == value) & (model_cls.id < cursor)) if desc_order
+                         else or_(col > value, (col == value) & (model_cls.id > cursor)))
+        total = q.count()
+        q = q.order_by(desc(col) if desc_order else asc(col),
+                       desc(model_cls.id) if desc_order else asc(model_cls.id))
         rows = q.offset(offset).limit(limit).all()
-        return {"documents": [_model_to_dict(r) for r in rows], "total": len(rows)}
+        return {"documents": [_model_to_dict(r) for r in rows], "total": total}
 
     @router.get("/{record_id}")
     def get_record(
@@ -106,7 +168,10 @@ def make_crud_router(
         db: Session = Depends(get_db),
         user: User = Depends(get_current_user),
     ):
-        parsed = create_schema.model_validate(body)
+        try:
+            parsed = create_schema.model_validate(body)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=json.loads(exc.json()))
         data = parsed.model_dump(exclude_unset=False)
         # items list → items_json for meals
         if "items" in data and hasattr(model_cls, "items_json"):
@@ -130,7 +195,10 @@ def make_crud_router(
         row = db.get(model_cls, record_id)
         if not row or getattr(row, owner_field) != user.id:
             raise HTTPException(status_code=404, detail="Not found.")
-        parsed = patch_schema.model_validate(body)
+        try:
+            parsed = patch_schema.model_validate(body)
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=json.loads(exc.json()))
         data = parsed.model_dump(exclude_unset=True)
         # items list → items_json
         if "items" in data and hasattr(model_cls, "items_json"):

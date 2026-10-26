@@ -1,0 +1,6 @@
+{
+  "release": "b-1",
+  "version": "1.0.0-beta.1",
+  "api": "https://api.kiloric.co/v1",
+  "basePath": "/app"
+}
