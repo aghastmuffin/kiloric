@@ -16,9 +16,11 @@ import { addDays, dayKey, shortMonthDay, shortWeekday, startOfDay } from '@/lib/
 import { loadProfileSummary, weightUnitLabel } from '@/lib/data/overview'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import { createWorkout, groupSets, listRecentWorkouts, listSets, type Workout } from '@/lib/data/workouts'
-import { kgToLbs, lbsToKg } from '@/lib/units'
-import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { getSampleTemplate, SAMPLE_WORKOUT_TEMPLATES, type WorkoutTemplate } from '@/lib/data/workoutTemplates'
+import { usePalette } from '@/lib/theme/palette'
+import { kgToLbs, lbsToKg, type DisplayUnits } from '@/lib/units'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 type DraftExercise = { key: string; name: string; muscleGroup: string; sets: string; reps: string; weight: string }
@@ -43,7 +45,9 @@ function parseTime(text: string): { hours: number; minutes: number } | null {
 
 export default function WorkoutEditorScreen() {
   const router = useRouter()
+  const params = useLocalSearchParams<{ template?: string }>()
   const { user } = useAuth()
+  const c = usePalette()
   const userId = user?.$id ?? null
   const days = Array.from({ length: 7 }, (_, index) => addDays(startOfDay(), index))
 
@@ -55,6 +59,7 @@ export default function WorkoutEditorScreen() {
   const [formKey, setFormKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [showPastPrompt, setShowPastPrompt] = useState(false)
 
   const state = useFocusLoader(async () => {
     const [summary, recent] = await Promise.all([loadProfileSummary(userId!, user?.name), listRecentWorkouts(userId!, 6)])
@@ -62,6 +67,32 @@ export default function WorkoutEditorScreen() {
   }, userId)
   const units = state.data?.summary.units ?? 'metric'
   const unit = weightUnitLabel(units)
+
+  useEffect(() => {
+    if (params.template) {
+      const template = getSampleTemplate(params.template)
+      if (template) applySampleTemplate(template, units)
+    }
+  }, [params.template, units])
+
+  function applySampleTemplate(tmpl: WorkoutTemplate, displayUnits: DisplayUnits = units) {
+    setName(tmpl.name)
+    setMinutes(String(tmpl.plannedMinutes))
+    setExercises(
+      tmpl.exercises.map((ex) => {
+        const weight = ex.weightKg > 0 ? (displayUnits === 'imperial' ? kgToLbs(ex.weightKg) : ex.weightKg) : 0
+        return newExercise({
+          name: ex.name,
+          muscleGroup: ex.muscleGroup,
+          sets: String(ex.sets),
+          reps: String(ex.reps),
+          weight: weight > 0 ? String(Math.round(weight * 2) / 2) : '',
+        })
+      }),
+    )
+    setFormKey((value) => value + 1)
+    setShowPastPrompt(false)
+  }
 
   function update(key: string, field: keyof Omit<DraftExercise, 'key'>, value: string) {
     setExercises((current) => current.map((exercise) => (exercise.key === key ? { ...exercise, [field]: value } : exercise)))
@@ -92,11 +123,17 @@ export default function WorkoutEditorScreen() {
     }
   }
 
-  async function save() {
+  const parsedTime = parseTime(time)
+  const scheduledAt = parsedTime ? new Date(`${day}T00:00:00`) : null
+  if (scheduledAt && parsedTime) {
+    scheduledAt.setHours(parsedTime.hours, parsedTime.minutes, 0, 0)
+  }
+  const isPastTime = Boolean(scheduledAt && scheduledAt.getTime() < Date.now() - 60_000)
+
+  async function save(overrideStatus?: 'planned' | 'done') {
     if (!userId) return
-    const parsedTime = parseTime(time)
     if (!name.trim()) return setFormError('Name the workout, e.g. “Upper body”.')
-    if (!parsedTime) return setFormError('Enter a start time like 18:00 or 6pm.')
+    if (!parsedTime || !scheduledAt) return setFormError('Enter a start time like 18:00 or 6pm.')
     const plan = exercises
       .filter((exercise) => exercise.name.trim())
       .map((exercise) => {
@@ -110,9 +147,11 @@ export default function WorkoutEditorScreen() {
         }
       })
     if (plan.length === 0) return setFormError('Add at least one exercise.')
+    if (isPastTime && !overrideStatus && !showPastPrompt) {
+      setShowPastPrompt(true)
+      return
+    }
     setFormError(null)
-    const scheduledAt = new Date(`${day}T00:00:00`)
-    scheduledAt.setHours(parsedTime.hours, parsedTime.minutes, 0, 0)
     setSaving(true)
     try {
       await createWorkout(userId, {
@@ -120,6 +159,7 @@ export default function WorkoutEditorScreen() {
         scheduledAt,
         plannedMinutes: Math.round(parseDecimal(minutes) ?? 0) || undefined,
         exercises: plan,
+        status: overrideStatus ?? 'planned',
       })
       router.back()
     } catch (err) {
@@ -135,16 +175,24 @@ export default function WorkoutEditorScreen() {
     >
       <ScreenHeader title="Plan a workout" right={<IconButton icon="close" accessibilityLabel="Close" onPress={() => router.back()} />} />
       {state.error ? <ErrorNote message={state.error} onRetry={state.reload} /> : null}
-      {state.data && state.data.recent.length > 0 ? (
-        <Card style={styles.gap}>
-          <Txt variant="subheading">Repeat a past workout</Txt>
-          <View style={styles.chips}>
-            {state.data.recent.map((workout) => (
-              <Chip key={workout.$id} label={workout.name} selected={false} onPress={() => void copyFrom(workout)} />
-            ))}
-          </View>
-        </Card>
-      ) : null}
+      <Card style={styles.gap}>
+        <Txt variant="subheading">Sample templates</Txt>
+        <View style={styles.chips}>
+          {SAMPLE_WORKOUT_TEMPLATES.map((tmpl) => (
+            <Chip key={tmpl.id} label={tmpl.label} selected={false} onPress={() => applySampleTemplate(tmpl)} />
+          ))}
+        </View>
+        {state.data && state.data.recent.length > 0 ? (
+          <>
+            <Txt variant="subheading">Repeat a past workout</Txt>
+            <View style={styles.chips}>
+              {state.data.recent.map((workout) => (
+                <Chip key={workout.$id} label={workout.name} selected={false} onPress={() => void copyFrom(workout)} />
+              ))}
+            </View>
+          </>
+        ) : null}
+      </Card>
       <View style={styles.gap} key={formKey}>
         <Card style={styles.gap}>
           <Field label="Workout name" defaultValue={name} placeholder="Upper body" onChangeText={setName} maxLength={128} testID="workout-name" />
@@ -165,7 +213,23 @@ export default function WorkoutEditorScreen() {
             })}
           </View>
           <View style={styles.row}>
-            <Field label="Start time" defaultValue={time} onChangeText={setTime} maxLength={8} testID="workout-time" />
+            <View style={styles.flexField}>
+              <Field
+                label="Start time"
+                defaultValue={time}
+                onChangeText={(text) => {
+                  setTime(text)
+                  setShowPastPrompt(false)
+                }}
+                maxLength={8}
+                testID="workout-time"
+              />
+              {isPastTime ? (
+                <Txt variant="caption" color={c.amberInk ?? '#b45309'} style={styles.pastNotice}>
+                  ⚠️ Start time is in the past
+                </Txt>
+              ) : null}
+            </View>
             <Field label="Planned length" defaultValue={minutes} onChangeText={setMinutes} keyboardType="number-pad" suffix="min" />
           </View>
         </Card>
@@ -219,6 +283,19 @@ export default function WorkoutEditorScreen() {
         {exercises.length < 12 ? (
           <UButton label="Add exercise" tone="mint" size="sm" onPress={() => setExercises((current) => [...current, newExercise()])} style={styles.start} testID="add-exercise" />
         ) : null}
+        {showPastPrompt ? (
+          <Card tone="amber" style={styles.gap}>
+            <Txt variant="subheading">Start time is in the past</Txt>
+            <Txt variant="body">
+              The start time ({time}) has already passed. Would you like to log this as a completed workout now or schedule it for the future?
+            </Txt>
+            <View style={styles.promptButtons}>
+              <UButton label="Log as completed" size="sm" tone="primary" onPress={() => void save('done')} testID="log-completed" />
+              <UButton label="Schedule anyway" size="sm" tone="secondary" onPress={() => void save('planned')} testID="schedule-anyway" />
+              <UButton label="Change time" size="sm" tone="ghost" onPress={() => setShowPastPrompt(false)} testID="change-time" />
+            </View>
+          </Card>
+        ) : null}
         {formError ? <ErrorNote message={formError} /> : null}
       </View>
     </ScreenScroll>
@@ -228,8 +305,11 @@ export default function WorkoutEditorScreen() {
 const styles = StyleSheet.create({
   gap: { gap: 14 },
   row: { flexDirection: 'row', gap: 12 },
+  flexField: { flex: 1, gap: 4 },
   wide: { flex: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   exerciseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   start: { alignSelf: 'flex-start' },
+  pastNotice: { marginTop: 2 },
+  promptButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 })

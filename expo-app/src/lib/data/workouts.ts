@@ -90,19 +90,37 @@ export function listRecentWorkouts(userId: string, limit = 10): Promise<Workout[
 
 export async function createWorkout(
   userId: string,
-  input: { name: string; scheduledAt: Date; focus?: string; plannedMinutes?: number; exercises: ExercisePlan[] },
+  input: {
+    name: string
+    scheduledAt: Date
+    focus?: string
+    plannedMinutes?: number
+    exercises: ExercisePlan[]
+    status?: 'planned' | 'done'
+  },
 ): Promise<Workout> {
   const name = input.name.trim().slice(0, 128)
   if (!name) throw new Error('Name the workout.')
   const exercises = input.exercises.filter((exercise) => exercise.name.trim() && exercise.sets > 0)
   if (exercises.length === 0) throw new Error('Add at least one exercise with one set.')
+  const status = input.status ?? 'planned'
+  const isDone = status === 'done'
+  const durationMin = input.plannedMinutes ?? 45
+  const finishedAt = isDone ? new Date(input.scheduledAt.getTime() + durationMin * 60_000) : null
+  const totalCompletedSets = isDone ? exercises.reduce((acc, ex) => acc + Math.min(ex.sets, 10), 0) : 0
+  const estimate = isDone ? netStrengthKcal({ elapsedMinutes: durationMin, completedSets: totalCompletedSets }) : { kcal: null }
+
   const workout = await workoutsStore.create(userId, {
     name,
     day: dayKey(input.scheduledAt),
     scheduled_at: input.scheduledAt.toISOString(),
-    status: 'planned',
+    status,
     focus: input.focus?.trim().slice(0, 64) || exercises[0].muscleGroup || null,
     planned_minutes: input.plannedMinutes ?? null,
+    started_at: isDone ? input.scheduledAt.toISOString() : null,
+    finished_at: finishedAt ? finishedAt.toISOString() : null,
+    duration_min: isDone ? durationMin : null,
+    kcal_burned: isDone ? estimate.kcal : null,
   })
   let order = 0
   for (const exercise of exercises) {
@@ -115,10 +133,10 @@ export async function createWorkout(
         set_number: setNumber,
         target_reps: Math.max(1, Math.round(exercise.reps)),
         target_weight: Math.max(0, exercise.weightKg),
-        weight: null,
-        reps: null,
-        done: false,
-        completed_at: null,
+        weight: isDone ? Math.max(0, exercise.weightKg) || null : null,
+        reps: isDone ? Math.max(1, Math.round(exercise.reps)) : null,
+        done: isDone,
+        completed_at: finishedAt ? finishedAt.toISOString() : null,
       })
     }
     order += 1
