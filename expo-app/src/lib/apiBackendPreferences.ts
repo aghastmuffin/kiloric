@@ -26,6 +26,11 @@ export function isApiBackendChoice(value: unknown): value is ApiBackendChoice {
 export async function loadApiBackendChoice(): Promise<ApiBackendChoice> {
   try {
     const value = await AsyncStorage.getItem(STORAGE_KEY)
+    if (value === 'legacy') {
+      cachedBackend = 'ords'
+      void AsyncStorage.setItem(STORAGE_KEY, 'ords').catch(() => {})
+      return 'ords'
+    }
     if (isApiBackendChoice(value)) {
       cachedBackend = value
       return value
