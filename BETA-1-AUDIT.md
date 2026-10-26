@@ -45,10 +45,11 @@ API origin: https://api.kiloric.co, with /v1 routes. Root landing page remains s
    publication until unauthenticated /v1/me/prefs returns 401, demonstrating that
    the new route is deployed. See server/deploy/deploy.txt. No host deployment
    credentials or automatic backend deployment workflow were available.
-2. The GitHub integration returns HTTP 403, "Resource not accessible by
-   integration", when creating/updating Pages configuration. Enable GitHub
-   Actions as the Pages source, set custom domain kiloric.co, and ensure DNS points
-   to GitHub Pages. Keep api.kiloric.co on its existing Cloudflare/API origin.
+2. Pages configuration was initially blocked with integration HTTP 403. A later
+   read confirmed that Pages now uses GitHub Actions with custom domain kiloric.co.
+   The newly added repository-wide uploader was replaced with the checked release
+   workflow, which uploads only website/. DNS/HTTPS and the final production app
+   still require verification after deployment.
 3. Food contributions/photo uploads still use the legacy Appwrite service. The
    new JWT session does not authenticate there. This feature requires its own API
    migration and is not certified working for b-1. No legacy user/data migration

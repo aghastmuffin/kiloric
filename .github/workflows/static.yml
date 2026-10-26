@@ -2,9 +2,9 @@ name: Publish b-1 website
 on:
   push:
     branches: [master]
-    paths: ['expo-app/**', 'server/**', 'website/**', '.github/workflows/pages.yml']
+    paths: ['expo-app/**', 'server/**', 'website/**', '.github/workflows/static.yml']
   pull_request:
-    paths: ['expo-app/**', 'server/**', 'website/**', '.github/workflows/pages.yml']
+    paths: ['expo-app/**', 'server/**', 'website/**', '.github/workflows/static.yml']
   workflow_dispatch:
 permissions:
   contents: read
