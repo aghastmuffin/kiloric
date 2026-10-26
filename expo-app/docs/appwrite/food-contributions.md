@@ -105,6 +105,6 @@ Also ensure the `images_to_check` bucket allows `create("users")` (already in `a
 
 - Module: [`src/lib/foodContributions.ts`](../../src/lib/foodContributions.ts)
 - Screen: [`src/app/contribute-food.tsx`](../../src/app/contribute-food.tsx). It's a five-step capture flow: barcode (auto-read and auto-snapped with `CameraView` barcode scanning, which also works on web), front, ingredients, nutrition label (optional), then details (name, brand, serving and one extra photo, all optional). Each photo step uses the in-app camera ([`CaptureCamera`](../../src/components/contribute/CaptureCamera.tsx)) with a framing guide and retake, and falls back to the library or file picker. Next comes an upload screen with per-photo progress and retry, then a thank-you screen with a confetti burst ([`ThanksBurst`](../../src/components/contribute/ThanksBurst.tsx), skipped when Reduce Motion is on).
-- Entry points: "Can't find it? Add a food" on Log food (also the action on an empty search), the barcode-not-found state in `review-log`, and `Additions` / `LogFoodMultiView`, which prefill OFF fields through route params.
+- Entry points: "Can't find it? Add a food" on Log food (also the action on an empty search), the barcode-not-found state in `review-log`, and `additions` / `LogFoodMultiView`, which prefill OFF fields through route params.
 
 Contributions are **not** read back into meal logging or ORDS search. They are a write-only queue until a later pipeline promotes them.

@@ -284,13 +284,25 @@ export default function AdditionsScreen() {
             <Ionicons name="alert-circle-outline" size={28} color={colors.danger} />
             <Text style={styles.stateTitle}>Product details unavailable</Text>
             <Text style={styles.errorText}>{error}</Text>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-              onPress={handleContribute}
-            >
-              <Text style={styles.secondaryButtonText}>Contribute this product</Text>
-            </Pressable>
+            <View style={styles.errorActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Search foods"
+                style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                onPress={() => router.replace('/(tabs)/logfood')}
+              >
+                <Ionicons name="search" size={18} color={colors.onBrand} />
+                <Text style={styles.primaryButtonText}>Search foods</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Contribute this product"
+                style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+                onPress={handleContribute}
+              >
+                <Text style={styles.secondaryButtonText}>Contribute this product</Text>
+              </Pressable>
+            </View>
           </View>
         ) : product ? (
           <MotionView
@@ -569,6 +581,13 @@ const makeStyles = (c: ThemeColors) =>
       ...typography.body,
       color: c.danger,
       textAlign: 'center',
+    },
+    errorActions: {
+      marginTop: spacing.sm,
+      width: '100%',
+      maxWidth: 320,
+      gap: spacing.xs,
+      alignItems: 'center',
     },
     barcode: {
       ...typography.overline,

@@ -29,7 +29,7 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 | `prep-edit.tsx` | `/prep-edit` | Schedule the week's prep session and its dishes (`?week=`) |
 | `grocery.tsx` | `/grocery` | Weekly grocery checklist (`?week=`) |
 | `workout-editor.tsx` | `/workout-editor` | Schedule a workout with exercises, sets, reps and target weights |
-| `Additions.tsx` | `/Additions` | Product detail and add-to-meal |
+| `additions.tsx` | `/additions` | Product detail and add-to-meal |
 | `config.tsx` | `/config` | Profile, goals, nutrition targets, and appearance preferences |
 | `contribute-food.tsx` | `/contribute-food` | Add a food with guided photos (barcode, front, ingredients, label) for review |
 | `privacy-policy.tsx` | `/privacy-policy` | Privacy and retention policy |
