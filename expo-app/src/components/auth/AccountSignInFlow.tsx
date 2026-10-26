@@ -46,29 +46,35 @@ export function AccountSignInFlow() {
     const [submitting, setSubmitting] = useState(false)
     const [sendingReset, setSendingReset] = useState(false)
     const [authError, setAuthError] = useState<string | null>(null)
+    const [authNotice, setAuthNotice] = useState<string | null>(null)
 
     function goToEmail() {
         setAuthError(null)
+        setAuthNotice(null)
         setStep('email')
     }
 
     function goToPassword() {
         if (!isValidIdentity(email)) {
+            setAuthNotice(null)
             setAuthError('Enter a valid email address or username.')
             return
         }
         setAuthError(null)
+        setAuthNotice(null)
         setStep('password')
     }
 
     async function handleSignIn() {
         if (!isValidPassword(password)) {
+            setAuthNotice(null)
             setAuthError('Password must be at least 8 characters.')
             return
         }
 
         setSubmitting(true)
         setAuthError(null)
+        setAuthNotice(null)
         try {
             const signedIn = await signIn(email.trim(), password)
             if (!signedIn) {
@@ -89,14 +95,16 @@ export function AccountSignInFlow() {
 
     async function handleForgotPassword() {
         if (!isValidEmail(email) || sendingReset) {
+            setAuthNotice(null)
             setAuthError('Enter a valid email address before requesting a reset link.')
             return
         }
         setSendingReset(true)
         setAuthError(null)
+        setAuthNotice(null)
         try {
             await sendPasswordReset(email.trim())
-            setAuthError('Check your inbox for a password reset link. The link is valid for one hour.')
+            setAuthNotice('Check your inbox for a password reset link. The link is valid for one hour.')
         } catch (err) {
             setAuthError(getAuthErrorMessage(err))
         } finally {
@@ -106,6 +114,7 @@ export function AccountSignInFlow() {
 
     function goBack() {
         setAuthError(null)
+        setAuthNotice(null)
         if (step === 'password') {
             setStep('email')
             return
@@ -227,6 +236,13 @@ export function AccountSignInFlow() {
                         <Text style={styles.eyebrow}>SIGN IN · 01</Text>
                         <Text accessibilityRole="header" style={styles.title}>Your email</Text>
                         <Text style={styles.subtitle}>We&apos;ll use this to sign you in on this device.</Text>
+
+                        {authNotice ? (
+                            <View accessibilityLiveRegion="polite" style={styles.noticeBox}>
+                                <Text style={styles.noticeTitle}>Check your inbox</Text>
+                                <Text style={styles.noticeText}>{authNotice}</Text>
+                            </View>
+                        ) : null}
 
                         {authError ? (
                             <View accessibilityRole="alert" style={styles.errorBox}>
@@ -461,6 +477,23 @@ const makeStyles = (c: ThemeColors) =>
         },
         errorText: {
             color: c.danger,
+            ...typography.bodySmall,
+        },
+        noticeBox: {
+            backgroundColor: c.surfaceAlt,
+            borderColor: c.success,
+            borderLeftWidth: 3,
+            paddingLeft: 14,
+            paddingVertical: 8,
+            marginBottom: 20,
+        },
+        noticeTitle: {
+            color: c.success,
+            ...typography.label,
+            marginBottom: 4,
+        },
+        noticeText: {
+            color: c.text,
             ...typography.bodySmall,
         },
         button: {
