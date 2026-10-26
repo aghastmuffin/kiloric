@@ -4,7 +4,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { showApiError } from '@/lib/apiErrors';
-import { useAuth } from '@/lib/AuthContext';
+import { useAuth, type AuthUser } from '@/lib/AuthContext';
 import { resolveGoalState } from '@/lib/goals';
 import { triggerSelectionHaptic } from '@/lib/haptics';
 import { getTodayMeals, type MealDocument } from '@/lib/meals';
@@ -31,7 +31,6 @@ import {
     Text,
     View
 } from 'react-native';
-import type { Models } from 'react-native-appwrite';
 import Animated, {
     FadeIn,
     FadeOut,
@@ -40,8 +39,6 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-type AppwriteUser = Models.User<Models.Preferences>;
 
 export default function AccountScreen() {
   const { user, loading } = useAuth();
@@ -77,6 +74,15 @@ export default function AccountScreen() {
           Version {process.env.APP_VERSION ?? '1.0.0'}
           {process.env.APP_BUILD_NUMBER ? ` · build ${process.env.APP_BUILD_NUMBER}` : ''}
         </Text>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityHint="Opens the CPRA and CCPA privacy portal"
+          onPress={() => router.push('/cpra-portal')}
+          style={({ pressed }) => [styles.footerLink, pressed && styles.headerPressed]}
+        >
+          <Text style={styles.footerLinkText}>CPRA & CCPA Privacy Portal</Text>
+          <Ionicons name="shield-checkmark-outline" size={15} color={colors.brand} />
+        </Pressable>
         <Pressable
           accessibilityRole="link"
           accessibilityHint="Opens the legal and privacy policy"
@@ -174,7 +180,7 @@ export function SettingsDrop() {
   );
 }
 
-function LoggedInPanel({ user }: { user: AppwriteUser }) {
+function LoggedInPanel({ user }: { user: AuthUser }) {
   const { deleteAccount, signOut } = useAuth();
   const router = useRouter();
   const styles = useThemedStyles(makeStyles);

@@ -105,6 +105,10 @@ function RootNavigation() {
                   name="privacy-policy"
                   options={{ headerShown: true, headerTitle: "Privacy Policy" }}
                 />
+                <Stack.Screen
+                  name="cpra-portal"
+                  options={{ headerShown: true, headerTitle: "Privacy Portal" }}
+                />
                 <Stack.Screen name="credits" options={{ headerShown: true, headerTitle: "Credits" }} />
                 <Stack.Screen name="review-log" options={{ headerShown: false }} />
                 <Stack.Screen name="plan-entry" options={{ headerShown: false, presentation: 'modal' }} />

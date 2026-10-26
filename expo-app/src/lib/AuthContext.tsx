@@ -1,6 +1,6 @@
 import { purgeAccountData } from '@/lib/accountDeletion'
 import { apiClient, clearTokens, getAccessToken, setTokens } from '@/lib/apiClient'
-import { clearAppwriteSession, restoreAppwriteSession } from '@/lib/appwriteSession'
+import { clearAppwriteSession } from '@/lib/appwriteSession'
 import {
   validateConfirmPasswordResetInput,
   validateSendPasswordResetInput,
