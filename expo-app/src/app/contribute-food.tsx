@@ -25,7 +25,7 @@ import { usePalette } from '@/lib/theme/palette'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useMemo, useRef, useState, type ComponentProps } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
 import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
 
@@ -134,7 +134,32 @@ export default function ContributeFoodScreen() {
   const [result, setResult] = useState<FoodContributionResult | null>(null)
   const [contributionCount, setContributionCount] = useState<number | null>(null)
   const typedCode = useRef(false)
+  const userEditedName = useRef(false)
+  const userEditedCode = useRef(false)
+  const userEditedBrand = useRef(false)
+  const userEditedServing = useRef(false)
   const uploaded = useRef<Partial<Record<ContributionPhotoKind, { uri: string; fileId: string }>>>({})
+
+  useEffect(() => {
+    const q = param(params.query)
+    const pName = param(params.product_name) || (/^\d{8,14}$/.test(q) ? '' : q)
+    if (pName && !userEditedName.current) {
+      setName(pName)
+    }
+
+    const pCode = param(params.code) || (/^\d{8,14}$/.test(q) ? q : '')
+    if (pCode && !userEditedCode.current) {
+      setCode(pCode)
+    }
+
+    if (prefill.brands && !userEditedBrand.current) {
+      setBrand(prefill.brands)
+    }
+
+    if (prefill.serving_size && !userEditedServing.current) {
+      setServing(prefill.serving_size)
+    }
+  }, [params.query, params.product_name, params.code, params.brands, params.serving_size, prefill.brands, prefill.serving_size])
 
   const stepKey = STEP_KEYS[stepIndex]
   const photoStep = PHOTO_STEPS.find((step) => step.key === stepKey) ?? null
@@ -215,21 +240,34 @@ export default function ContributeFoodScreen() {
     setStatus(Object.fromEntries(photoKinds.map((kind) => [kind, uploaded.current[kind]?.uri === photos[kind]?.uri ? 'done' : 'waiting'])))
     try {
       const owner = await confirmContributor(user.$id)
-      for (const kind of photoKinds) {
-        const photo = photos[kind]!
-        if (uploaded.current[kind]?.uri === photo.uri) continue
-        setStatus((current) => ({ ...current, [kind]: 'uploading' }))
-        try {
-          const fileId = await uploadContributionPhoto(owner, photo, (fraction) =>
-            setProgress((current) => ({ ...current, [kind]: fraction })),
-          )
-          uploaded.current[kind] = { uri: photo.uri, fileId }
-          setStatus((current) => ({ ...current, [kind]: 'done' }))
-        } catch (uploadError) {
-          setStatus((current) => ({ ...current, [kind]: 'failed' }))
-          throw uploadError
-        }
+
+      let uploadErrorOccurred: unknown = null
+
+      await Promise.all(
+        photoKinds.map(async (kind) => {
+          const photo = photos[kind]!
+          if (uploaded.current[kind]?.uri === photo.uri) {
+            setStatus((current) => ({ ...current, [kind]: 'done' }))
+            return
+          }
+          setStatus((current) => ({ ...current, [kind]: 'uploading' }))
+          try {
+            const fileId = await uploadContributionPhoto(owner, photo, (fraction) =>
+              setProgress((current) => ({ ...current, [kind]: fraction })),
+            )
+            uploaded.current[kind] = { uri: photo.uri, fileId }
+            setStatus((current) => ({ ...current, [kind]: 'done' }))
+          } catch (uploadError) {
+            setStatus((current) => ({ ...current, [kind]: 'failed' }))
+            if (!uploadErrorOccurred) uploadErrorOccurred = uploadError
+          }
+        }),
+      )
+
+      if (uploadErrorOccurred) {
+        throw uploadErrorOccurred
       }
+
       const fields: Partial<Record<OffStringField | OffNumberField, string>> = { ...prefill }
       if (brand.trim()) fields.brands = brand.trim()
       else delete fields.brands
@@ -255,6 +293,10 @@ export default function ContributeFoodScreen() {
   function startOver() {
     uploaded.current = {}
     typedCode.current = false
+    userEditedName.current = false
+    userEditedCode.current = false
+    userEditedBrand.current = false
+    userEditedServing.current = false
     setPhotos({})
     setProgress({})
     setStatus({})
@@ -418,7 +460,7 @@ export default function ContributeFoodScreen() {
     <View style={styles.copy}>
       <View style={styles.titleRow}>
         <Txt variant="title">{photoStep.title}</Txt>
-        {photoStep.optional ? <Badge label="Optional" tone="card" /> : null}
+        {photoStep.optional ? <Badge label="Optional step" tone="peach" /> : null}
       </View>
       <Txt variant="body" tone="muted">
         {photoStep.body}
@@ -451,8 +493,14 @@ export default function ContributeFoodScreen() {
           />
           {canContinue || photoStep.optional ? (
             <UButton
-              label={photoStep.key === 'barcode' ? 'Continue with the number' : 'Skip, there’s no label'}
-              tone="ghost"
+              label={
+                photoStep.key === 'barcode'
+                  ? 'Continue with the number'
+                  : photoStep.optional
+                    ? 'Skip nutrition step (Optional)'
+                    : 'Skip this step'
+              }
+              tone={photoStep.optional ? 'chip' : 'ghost'}
               fullWidth
               onPress={next}
               testID="skip-step"
@@ -466,7 +514,7 @@ export default function ContributeFoodScreen() {
   const barcodeField =
     stepKey === 'barcode' ? (
       <Field
-        key={`code-${codeVersion}`}
+        key={`code-${codeVersion}-${code}`}
         label={scannedCode ? 'Barcode number (read from the scan)' : 'Barcode number'}
         defaultValue={code}
         placeholder="Scan it, or type the digits under the bars"
@@ -475,6 +523,7 @@ export default function ContributeFoodScreen() {
         onChangeText={(text) => {
           const digits = text.replace(/\D/g, '')
           typedCode.current = digits.length > 0
+          userEditedCode.current = true
           setCode(digits)
           setScannedCode(false)
         }}
@@ -486,10 +535,43 @@ export default function ContributeFoodScreen() {
     stepKey === 'details' ? (
       <View style={styles.details}>
         <Card style={styles.detailCard}>
-          <Field label="Product name" defaultValue={name} placeholder="e.g. Greek yogurt, plain" onChangeText={setName} maxLength={256} testID="contribute-name" />
+          <Field
+            key={`name-${name}`}
+            label="Product name"
+            defaultValue={name}
+            placeholder="e.g. Greek yogurt, plain"
+            onChangeText={(text) => {
+              userEditedName.current = true
+              setName(text)
+            }}
+            maxLength={256}
+            testID="contribute-name"
+          />
           <View style={[styles.fieldRow, !wide && styles.fieldColumn]}>
-            <Field label="Brand" defaultValue={brand} placeholder="e.g. Fage" onChangeText={setBrand} maxLength={256} testID="contribute-brand" />
-            <Field label="Serving size" defaultValue={serving} placeholder="e.g. 170 g" onChangeText={setServing} maxLength={64} testID="contribute-serving" />
+            <Field
+              key={`brand-${brand}`}
+              label="Brand"
+              defaultValue={brand}
+              placeholder="e.g. Fage"
+              onChangeText={(text) => {
+                userEditedBrand.current = true
+                setBrand(text)
+              }}
+              maxLength={256}
+              testID="contribute-brand"
+            />
+            <Field
+              key={`serving-${serving}`}
+              label="Serving size"
+              defaultValue={serving}
+              placeholder="e.g. 170 g"
+              onChangeText={(text) => {
+                userEditedServing.current = true
+                setServing(text)
+              }}
+              maxLength={64}
+              testID="contribute-serving"
+            />
           </View>
         </Card>
         <Card style={styles.detailCard}>
@@ -579,7 +661,7 @@ export default function ContributeFoodScreen() {
               </View>
             ) : (
               <Txt variant="caption" tone={active ? 'ink' : 'muted'} numberOfLines={1}>
-                {step?.label ?? 'Details'}
+                {step ? (step.optional ? `${step.label} (Opt)` : step.label) : 'Details'}
               </Txt>
             )}
           </Pressable>
