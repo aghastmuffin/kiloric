@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router'
 import {
   Card,
   Divider,
@@ -33,7 +34,7 @@ function formatLogTime(isoString: string): string {
   }
 }
 
-export default function WaterScreen() {
+function WaterScreen() {
   const { user } = useAuth()
   const router = useRouter()
   const c = usePalette()
@@ -314,3 +315,8 @@ const styles = StyleSheet.create({
   historyIconBox: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   historyTextGroup: { flex: 1, gap: 2 },
 })
+
+// Water logging is not shipped yet; keep the route inaccessible.
+export default function WaterRoute() {
+  return <Redirect href="/" />
+}

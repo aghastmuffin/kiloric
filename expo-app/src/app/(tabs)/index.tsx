@@ -2,7 +2,6 @@ import { CaloriesCard } from '@/components/cards/CaloriesCard'
 import { PlanChecklist } from '@/components/cards/PlanChecklist'
 import { PrepCard } from '@/components/cards/PrepCard'
 import { CaloriesWeekCard, WeightCard } from '@/components/cards/ProgressCards'
-import { WaterCard } from '@/components/cards/WaterCard'
 import { ErrorNote, LoadingBlock, ScreenHeader, ScreenScroll, UButton, useShell } from '@/components/ds'
 import { useAuth } from '@/lib/AuthContext'
 import { greetingFor, longDate } from '@/lib/data/dateKeys'
@@ -10,7 +9,6 @@ import { setPlanEntryLogged, type PlanEntry } from '@/lib/data/mealPlan'
 import { loadDashboard, loadToday, type PrepOverview, type ProgressData, type TodayOverview } from '@/lib/data/overview'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import type { Workout } from '@/lib/data/workouts'
-import { addWaterEntry, deleteWaterEntry } from '@/lib/water'
 import { showApiError } from '@/lib/apiErrors'
 import { fonts, usePalette } from '@/lib/theme/palette'
 import { Ionicons } from '@expo/vector-icons'
@@ -83,26 +81,6 @@ export default function TodayScreen() {
     router.navigate({ pathname: '/train', params: { workout: workout.$id } })
   }
 
-  async function handleAddWater(amountMl: number) {
-    if (!userId) return
-    try {
-      await addWaterEntry(userId, amountMl)
-      await dashboard.reload()
-    } catch (err) {
-      showApiError(err, 'appwrite')
-    }
-  }
-
-  async function handleUndoWater(documentId: string) {
-    if (!userId) return
-    try {
-      await deleteWaterEntry(userId, documentId)
-      await dashboard.reload()
-    } catch (err) {
-      showApiError(err, 'appwrite')
-    }
-  }
-
   const header = (
     <ScreenHeader
       overline={longDate(now)}
@@ -151,16 +129,6 @@ export default function TodayScreen() {
         {dashboard.error ? <ErrorNote message={dashboard.error} onRetry={dashboard.reload} /> : null}
         <View style={styles.gridRow}>
           <CaloriesCard eaten={today.eaten} burned={today.burned} credit={today.exerciseCredit} targets={today.summary.targets} remaining={today.remaining} layout="wide" />
-          <WaterCard
-            totalMl={today.waterTotalMl}
-            targetFluidMl={today.summary.targets.fluidMl}
-            units={today.summary.units}
-            waterEntries={today.waterEntries}
-            onAddWater={handleAddWater}
-            onUndoWater={handleUndoWater}
-            onOpenDetails={() => router.push('/water')}
-            layout="wide"
-          />
           {checklist}
           <PrepCard
             prep={prep}
@@ -189,15 +157,6 @@ export default function TodayScreen() {
       {header}
       {dashboard.error ? <ErrorNote message={dashboard.error} onRetry={dashboard.reload} /> : null}
       <CaloriesCard eaten={today.eaten} burned={today.burned} credit={today.exerciseCredit} targets={today.summary.targets} remaining={today.remaining} layout="mobile" />
-      <WaterCard
-        totalMl={today.waterTotalMl}
-        targetFluidMl={today.summary.targets.fluidMl}
-        units={today.summary.units}
-        waterEntries={today.waterEntries}
-        onAddWater={handleAddWater}
-        onUndoWater={handleUndoWater}
-        onOpenDetails={() => router.push('/water')}
-      />
       {checklist}
     </ScreenScroll>
   )
