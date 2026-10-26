@@ -2,6 +2,7 @@ import {
   Badge,
   Card,
   CheckCircle,
+  Chip,
   Divider,
   EmptyState,
   ErrorNote,
@@ -16,6 +17,7 @@ import {
   UButton,
   useShell,
 } from '@/components/ds'
+import { SAMPLE_WORKOUT_TEMPLATES } from '@/lib/data/workoutTemplates'
 import { showApiError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
 import { dayKey, longDate, parseDayKey, shortMonthDay, shortWeekday, timeLabel } from '@/lib/data/dateKeys'
@@ -125,14 +127,31 @@ function TrainHome({ onOpen }: { onOpen: (id: string) => void }) {
     <Card style={styles.gap} testID="upcoming-workouts">
       <SectionTitle title="Up next" />
       {upcomingPlanned.length === 0 ? (
-        <EmptyState
-          compact
-          icon="barbell-outline"
-          title="No workouts scheduled"
-          body="Plan a session with your exercises, sets and target weights."
-          actionLabel="Plan a workout"
-          onAction={() => router.push('/workout-editor')}
-        />
+        <>
+          <EmptyState
+            compact
+            icon="barbell-outline"
+            title="No workouts scheduled"
+            body="Plan a custom session with your exercises, sets, and target weights, or start from a sample template."
+            actionLabel="Build your first workout"
+            onAction={() => router.push('/workout-editor')}
+          />
+          <View style={styles.templateSection}>
+            <Txt variant="caption" tone="muted">
+              Or pick a sample template to start:
+            </Txt>
+            <View style={styles.chipsRow}>
+              {SAMPLE_WORKOUT_TEMPLATES.map((tmpl) => (
+                <Chip
+                  key={tmpl.id}
+                  label={tmpl.label}
+                  selected={false}
+                  onPress={() => router.push({ pathname: '/workout-editor', params: { template: tmpl.id } })}
+                />
+              ))}
+            </View>
+          </View>
+        </>
       ) : (
         upcomingPlanned.map((workout, index) => {
           const when = new Date(workout.scheduled_at)
@@ -180,7 +199,12 @@ function TrainHome({ onOpen }: { onOpen: (id: string) => void }) {
     <Card style={styles.gap} testID="workout-history">
       <SectionTitle title="History" />
       {recent.length === 0 ? (
-        <EmptyState compact icon="time-outline" title="No finished workouts yet" body="Completed sessions and calories burned show up here." />
+        <EmptyState
+          compact
+          icon="time-outline"
+          title="No finished workouts yet"
+          body="Completed sessions and calories burned show up here after you finish a workout."
+        />
       ) : (
         recent.map((workout, index) => (
           <Fragment key={workout.$id}>
@@ -569,6 +593,8 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   gap: { gap: 10 },
+  templateSection: { marginTop: 4, gap: 8 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   wideRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
   workoutRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   dateTile: { width: 50, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

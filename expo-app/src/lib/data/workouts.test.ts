@@ -43,7 +43,8 @@ vi.mock('react-native-appwrite', () => {
   }
 })
 
-const { completeSet, finishWorkout, getWorkout, previousPerformance } = await import('./workouts')
+const { completeSet, createWorkout, finishWorkout, getWorkout, previousPerformance } = await import('./workouts')
+const { getSampleTemplate, SAMPLE_WORKOUT_TEMPLATES } = await import('./workoutTemplates')
 const { resetRecordStoreSession } = await import('./recordStore')
 
 beforeEach(() => {
@@ -168,5 +169,59 @@ describe('finishWorkout', () => {
     expect(finished.status).toBe('done')
     expect(finished.duration_min).toBeGreaterThanOrEqual(29)
     expect(finished.kcal_burned).toBeGreaterThan(0)
+  })
+})
+
+describe('createWorkout with status parameter', () => {
+  it('creates planned workout by default', async () => {
+    mocks.createDocument.mockImplementation(async (opts) => ({
+      $id: 'created-w1',
+      ...opts.data,
+    }))
+
+    const scheduled = new Date('2025-01-15T18:00:00Z')
+    const workout = await createWorkout('u1', {
+      name: 'Upper Body',
+      scheduledAt: scheduled,
+      plannedMinutes: 45,
+      exercises: [{ name: 'Bench Press', muscleGroup: 'Chest', sets: 2, reps: 8, weightKg: 60 }],
+    })
+
+    expect(workout.status).toBe('planned')
+    expect(workout.name).toBe('Upper Body')
+    expect(mocks.createDocument).toHaveBeenCalled()
+  })
+
+  it('creates completed workout when status is done', async () => {
+    mocks.createDocument.mockImplementation(async (opts) => ({
+      $id: 'created-w2',
+      ...opts.data,
+    }))
+
+    const scheduled = new Date('2025-01-15T18:00:00Z')
+    const workout = await createWorkout('u1', {
+      name: 'Upper Body',
+      scheduledAt: scheduled,
+      plannedMinutes: 45,
+      exercises: [{ name: 'Bench Press', muscleGroup: 'Chest', sets: 2, reps: 8, weightKg: 60 }],
+      status: 'done',
+    })
+
+    expect(workout.status).toBe('done')
+    expect(workout.duration_min).toBe(45)
+    expect(workout.kcal_burned).toBeGreaterThan(0)
+  })
+})
+
+describe('workoutTemplates', () => {
+  it('defines sample templates and getSampleTemplate lookup', () => {
+    expect(SAMPLE_WORKOUT_TEMPLATES.length).toBe(3)
+    const upper = getSampleTemplate('upper')
+    expect(upper?.name).toBe('Upper Body')
+    expect(upper?.label).toBe('Sample: Upper Body')
+    expect(upper?.exercises.length).toBeGreaterThan(0)
+
+    expect(getSampleTemplate(null)).toBeUndefined()
+    expect(getSampleTemplate('nonexistent')).toBeUndefined()
   })
 })
