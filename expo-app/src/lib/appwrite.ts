@@ -1,6 +1,6 @@
-import { apiAccount, createApiDatabases } from './apiPersistence'
+import { apiAccount, apiStorage, createApiDatabases } from './apiPersistence'
 import { Platform } from 'react-native'
-import { Client, Databases, Storage } from 'react-native-appwrite'
+import { Client, Databases } from 'react-native-appwrite'
 
 const endpoint = process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1'
 const projectId = process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID || 'default'
@@ -26,5 +26,5 @@ const client = new Client()
 
 export const account = apiAccount
 export const databases = createApiDatabases(new Databases(client))
-export const storage = new Storage(client)
+export const storage = apiStorage
 export { client }

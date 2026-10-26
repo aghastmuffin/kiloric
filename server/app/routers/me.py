@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import (
+    ContributionUpload,
+    FoodContribution,
     FoodEntry,
     GroceryItem,
     Meal,
@@ -25,6 +27,7 @@ from app.models import (
     WorkoutSet,
 )
 from app.routers.crud import _model_to_dict
+from app.routers.contributions import contribution_document, upload_metadata
 from app.schemas import ProfilePatch, UserResponse
 
 router = APIRouter(prefix="/v1/me", tags=["me"])
@@ -56,6 +59,8 @@ def update_prefs(
 
 def _export_user_collections(db: Session, user: User) -> dict:
     return {
+        "food_contributions": [contribution_document(row) for row in db.query(FoodContribution).filter(FoodContribution.owner_id == user.id).all()],
+        "uploaded_files": [upload_metadata(row) for row in db.query(ContributionUpload).filter(ContributionUpload.owner_id == user.id).all()],
         "profile": UserResponse.from_orm_user(user).model_dump(mode="json", by_alias=True),
         "meals": [_model_to_dict(m) for m in db.query(Meal).filter(Meal.owner_id == user.id).all()],
         "water_logs": [_model_to_dict(w) for w in db.query(WaterLog).filter(WaterLog.owner_id == user.id).all()],

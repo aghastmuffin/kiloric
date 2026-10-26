@@ -118,6 +118,8 @@ def logout(body: RefreshRequest, db: Session = Depends(get_db)):
 @router.post("/reset-password-request", status_code=204)
 def request_password_reset(body: PasswordResetRequest, db: Session = Depends(get_db)):
     from app.config import settings
+    if not settings.SMTP_HOST:
+        raise HTTPException(status_code=503, detail="Password reset email is temporarily unavailable. Contact support.")
     user = db.query(User).filter(User.email == body.email.lower()).first()
     if not user:
         return  # don't reveal whether email exists
@@ -175,3 +177,4 @@ def _send_reset_email(to_email: str, raw_token: str):
     except Exception as exc:
         import logging
         logging.getLogger(__name__).warning("Failed to send reset email: %s", exc)
+        raise HTTPException(status_code=503, detail="Password reset email could not be sent. Try again later.")

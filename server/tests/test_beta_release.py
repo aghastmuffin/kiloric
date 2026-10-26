@@ -74,3 +74,39 @@ class BetaReleaseTests(unittest.TestCase):
         self.assertEqual(len(result.json()['documents']), 1)
         cors = self.client.options('/v1/auth/login', headers={'Origin': 'https://kiloric.co', 'Access-Control-Request-Method': 'POST'})
         self.assertEqual(cors.headers.get('access-control-allow-origin'), 'https://kiloric.co')
+
+    def test_photo_upload_contribution_export_and_account_cleanup(self):
+        # Transport validates signature/type, size and ownership; images remain private.
+        photo = b'\xff\xd8\xff' + b'example-photo-bytes'
+        upload = self.client.post('/v1/files', headers=self.headers, files={'file': ('photo.jpg', photo, 'image/jpeg')})
+        self.assertEqual(upload.status_code, 201, upload.text)
+        file_id = upload.json()['$id']
+        self.assertEqual(self.client.get('/v1/files/' + file_id, headers=self.headers).content, photo)
+        bad = self.client.post('/v1/files', headers=self.headers, files={'file': ('bad.jpg', b'not-an-image', 'image/jpeg')})
+        self.assertEqual(bad.status_code, 422)
+        contribution = self.client.post('/v1/food-contributions', headers=self.headers, json={'product_name': 'Test food', 'photo_file_id': file_id, 'owner': 'other', 'status': 'approved'})
+        self.assertEqual(contribution.status_code, 201, contribution.text)
+        self.assertEqual(contribution.json()['status'], 'pending')
+        self.assertEqual(contribution.json()['owner'], self.tokens['user']['$id'])
+        self.assertEqual(self.client.get('/v1/food-contributions', headers=self.headers).json()['total'], 1)
+        exported = self.client.get('/v1/me/export', headers=self.headers).json()
+        self.assertEqual(len(exported['food_contributions']), 1)
+        self.assertEqual(len(exported['uploaded_files']), 1)
+        other = self.client.post('/v1/auth/register', json={'email': 'photo-other@kiloricdev.co', 'username': 'photo_other', 'password': 'beta-test-password'}).json()
+        headers = {'Authorization': 'Bearer ' + other['access_token']}
+        self.assertEqual(self.client.get('/v1/files/' + file_id, headers=headers).status_code, 404)
+        self.assertEqual(self.client.post('/v1/food-contributions', headers=headers, json={'product_name': 'Other food', 'photo_file_id': file_id}).status_code, 422)
+        self.assertEqual(self.client.delete('/v1/me', headers=self.headers).status_code, 204)
+        from app.models import ContributionUpload, FoodContribution
+        with self.sessions() as db:
+            self.assertEqual(db.query(ContributionUpload).count(), 0)
+            self.assertEqual(db.query(FoodContribution).count(), 0)
+
+    def test_password_reset_reports_unavailable_mail_service(self):
+        from unittest.mock import patch
+        from app.config import settings
+        with patch.object(settings, 'SMTP_HOST', None):
+            response = self.client.post('/v1/auth/reset-password-request', json={'email': 'beta@kiloricdev.co'})
+            self.assertEqual(response.status_code, 503)
+            unknown = self.client.post('/v1/auth/reset-password-request', json={'email': 'missing@kiloricdev.co'})
+            self.assertEqual(unknown.status_code, 503)

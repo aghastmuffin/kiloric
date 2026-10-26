@@ -81,7 +81,7 @@ class MeRouterTests(unittest.TestCase):
         expected_keys = {
             "profile", "meals", "water_logs", "food_entries", "saved_meals",
             "meal_plan_entries", "prep_sessions", "grocery_items", "workouts",
-            "workout_sets", "weight_logs", "tasks",
+            "workout_sets", "weight_logs", "tasks", "food_contributions", "uploaded_files",
         }
         self.assertEqual(set(data.keys()), expected_keys)
 

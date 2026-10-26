@@ -8,6 +8,10 @@ B-1 production deployment (existing host, behind Cloudflare)
    APP_RESET_URL=https://kiloric.co/app/reset-password
    JWT_SECRET must be a randomly generated secret, never CHANGE_ME.
    Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and EMAIL_FROM.
+   Ensure the existing API proxy permits 12 MB request bodies (nginx:
+   client_max_body_size 12m). Photo payloads themselves are capped at 10 MB.
+   Back up and provision capacity for contribution_uploads and food_contributions;
+   uploaded images are stored privately in the API database.
 5. Restart: sudo systemctl restart kiloric-server
 6. Through Cloudflare, verify:
    curl https://api.kiloric.co/health

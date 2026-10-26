@@ -1,6 +1,6 @@
 import { Platform } from 'react-native'
-import { AppwriteException, type Models } from 'react-native-appwrite'
-import { client, storage } from './appwrite'
+import { type Models } from 'react-native-appwrite'
+import { apiClient } from './apiClient'
 
 export type ImageSource = {
   uri: string
@@ -21,8 +21,6 @@ export type PreparedImage = {
 }
 
 export const MAX_UPLOAD_BYTES = 10_000_000
-/** Above this the SDK switches to chunked uploads, which a single multipart XHR can't do. */
-const SINGLE_REQUEST_LIMIT = 5 * 1024 * 1024
 const WEB_MAX_EDGE = 1600
 const WEB_JPEG_QUALITY = 0.85
 
@@ -98,86 +96,19 @@ export async function prepareImageForUpload(source: ImageSource, fallbackName = 
   return prepared
 }
 
-function sdkHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { ...client.headers, 'X-Appwrite-Project': client.config.project }
-  delete headers['content-type']
-  if (Platform.OS !== 'web') headers.Origin = `appwrite-${Platform.OS}://${client.config.platform}`
-  return headers
-}
-
-function parseResponse(xhr: XMLHttpRequest): Models.File {
-  let data: Record<string, unknown> = {}
-  try {
-    data = JSON.parse(xhr.responseText || '{}')
-  } catch {
-    data = { message: xhr.responseText }
-  }
-  if (xhr.status >= 400 || xhr.status === 0) {
-    throw new AppwriteException(
-      typeof data.message === 'string' && data.message ? data.message : 'Upload failed.',
-      xhr.status,
-      typeof data.type === 'string' ? data.type : '',
-      xhr.responseText,
-    )
-  }
-  return data as unknown as Models.File
-}
-
-/**
- * Multipart upload with progress. The SDK's `createFile` only reports progress for chunked
- * uploads and can't send a browser `Blob`, so single-request uploads go through XHR with the
- * same session cookies and project headers the SDK uses.
- */
-export function uploadImageToBucket({
-  bucketId,
-  fileId,
-  image,
-  permissions,
-  onProgress,
-}: {
+/** Multipart photos use the same API bearer session and refresh behavior as user data. */
+export async function uploadImageToBucket({ image, onProgress }: {
   bucketId: string
   fileId: string
   image: PreparedImage
   permissions: string[]
   onProgress?: (fraction: number) => void
 }): Promise<Models.File> {
-  if (image.size > SINGLE_REQUEST_LIMIT && !(image.body instanceof Blob)) {
-    return storage.createFile({
-      bucketId,
-      fileId,
-      file: { ...(image.body as NativeFilePart), size: image.size },
-      permissions,
-      onProgress: (progress) => onProgress?.(Math.min(1, progress.progress / 100)),
-    })
-  }
-
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${client.config.endpoint}/storage/buckets/${encodeURIComponent(bucketId)}/files`)
-    xhr.withCredentials = true
-    xhr.timeout = 120_000
-    for (const [key, value] of Object.entries(sdkHeaders())) xhr.setRequestHeader(key, value)
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && event.total > 0) onProgress?.(Math.min(0.99, event.loaded / event.total))
-    }
-    xhr.onload = () => {
-      try {
-        const file = parseResponse(xhr)
-        onProgress?.(1)
-        resolve(file)
-      } catch (error) {
-        reject(error)
-      }
-    }
-    xhr.onerror = () => reject(new AppwriteException('Upload failed. Check your connection and try again.', 0, 'network_error'))
-    xhr.ontimeout = () => reject(new AppwriteException('The upload timed out. Try again on a stronger connection.', 0, 'network_timeout'))
-
-    const form = new FormData()
-    form.append('fileId', fileId)
-    if (image.body instanceof Blob) form.append('file', image.body, image.name)
-    else form.append('file', image.body as unknown as Blob)
-    for (const permission of permissions) form.append('permissions[]', permission)
-    xhr.send(form)
-  })
+  const form = new FormData()
+  if (image.body instanceof Blob) form.append('file', image.body, image.name)
+  else form.append('file', image.body as unknown as Blob)
+  onProgress?.(0.02)
+  const file = await apiClient.post<Models.File>('/v1/files', form)
+  onProgress?.(1)
+  return file
 }

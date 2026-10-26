@@ -13,13 +13,15 @@ API origin: https://api.kiloric.co, with /v1 routes. Root landing page remains s
   on the server; user ownership remains enforced independently of client filters.
 - Logout submits its refresh token for revocation. Account deletion calls the
   cascading server endpoint and reports failures instead of hiding them.
+- Missing SMTP or an SMTP delivery failure now produces a clear 503 error instead
+  of reporting that a reset email was sent.
 - Reset-password accepts the token query parameter emitted by the server.
   Production reset links target https://kiloric.co/app/reset-password.
 - Fixed an existing React Compiler lint error and a missing icon asset reference.
 - Reproducible web export goes to website/app, uses /app asset paths, supplies
   directory indexes for route reloads and marks the release in app/release.json.
   The original root page is retained; privacy content is also preserved.
-- The public privacy form now prepares a real email draft and clearly requires
+- Both public and in-app privacy forms now prepare a real email draft and clearly require
   the user to send it, instead of inventing a ticket and claiming email delivery.
 - GitHub Actions validates the app, checks that the new API is deployed, exports
   website/app, and uploads the entire website directory to Pages.
@@ -28,9 +30,9 @@ API origin: https://api.kiloric.co, with /v1 routes. Root landing page remains s
 
 - TypeScript: passed. ESLint: passed with existing warnings.
 - Vitest: 40 files, 286 tests passed.
-- Server: 6 tests passed, including real register/profile/preferences flows,
+- Server: 8 tests passed, including real register/profile/preferences flows,
   refresh rotation and logout, owner isolation, validation errors, timestamp
-  queries, data export, deletion and production-origin CORS.
+  queries, data export, deletion, private contribution uploads and production-origin CORS.
   Command: CORS_ORIGINS=https://kiloric.co .venv/bin/python -m unittest discover -s tests
 - Production static export completed successfully. No browser automation tool was
   available in this session; interactive visual flows and native devices are not verified.
@@ -50,13 +52,17 @@ API origin: https://api.kiloric.co, with /v1 routes. Root landing page remains s
    The newly added repository-wide uploader was replaced with the checked release
    workflow, which uploads only website/. DNS/HTTPS and the final production app
    still require verification after deployment.
-3. Food contributions/photo uploads still use the legacy Appwrite service. The
-   new JWT session does not authenticate there. This feature requires its own API
-   migration and is not certified working for b-1. No legacy user/data migration
-   was run; existing Appwrite accounts/data are not automatically transferred.
-4. The in-app privacy-request helper still creates only a local confirmation;
-   manual privacy requests need a server-side request queue or email handoff.
-   Immediate data export and account deletion are separate API operations.
+3. Food contributions and bounded private photo uploads now use /v1 API endpoints,
+   with signature/type checks, a 10 MB per-photo limit, 200 MB account quota,
+   ownership checks, exports and cascading account deletion. These routes need
+   the same backend deployment and still require browser/native verification.
+   Uploaded photos are stored in the API database; include these new tables in
+   database backup/capacity plans. Exports include authenticated photo download paths.
+   Existing Appwrite accounts/data are not automatically transferred; no legacy
+   account/data migration was run.
+4. Manual privacy requests open email drafts; users must send them. In-app data
+   export now uses the server's complete collections export rather than a limited
+   and potentially partial local aggregation. No email is claimed as sent.
 5. Configure SMTP and a strong production JWT_SECRET on the actual host. Password
    email delivery and account recovery require a configured email service and
    were not verified end to end. Existing .env values override config defaults,

@@ -1,7 +1,7 @@
 /** Compatibility boundary for existing feature stores during the API migration.
  * User data always uses the same bearer session as authentication.
  */
-import { AppwriteException, type Account, type Databases } from 'react-native-appwrite'
+import { AppwriteException, type Account, type Databases, type Storage } from 'react-native-appwrite'
 import { ApiError, apiClient, getAccessToken } from './apiClient'
 
 type DocumentArgs = {
@@ -19,6 +19,7 @@ const routes: Record<string, string> = {
   meal_plan_entries: 'meal-plan-entries', prep_sessions: 'prep-sessions',
   grocery_items: 'grocery-items', workouts: 'workouts', workout_sets: 'workout-sets',
   weight_logs: 'weight-logs',
+  [process.env.EXPO_PUBLIC_APPWRITE_FOOD_CONTRIBUTIONS_COLLECTION_ID || 'food_contributions']: 'food-contributions',
 }
 const profilesId = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID || 'users'
 
@@ -74,3 +75,7 @@ export function createApiDatabases(legacy: Databases): Databases {
     },
   } as unknown as Databases
 }
+
+export const apiStorage = {
+  deleteFile: ({ fileId }: { fileId: string }) => apiClient.delete(`/v1/files/${encodeURIComponent(fileId)}`),
+} as unknown as Storage
