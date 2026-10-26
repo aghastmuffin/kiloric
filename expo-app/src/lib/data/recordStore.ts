@@ -1,5 +1,6 @@
 import { account, databases } from '@/lib/appwrite'
 import { withTimeout } from '@/lib/asyncUtils'
+import { getSessionUserId } from '@/lib/sessionAuth'
 import { AppwriteException, ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
 
 /**
@@ -53,8 +54,8 @@ export async function assertSessionUser(userId: string): Promise<string> {
   if (sessionCheck && sessionCheck.userId === userId && sessionCheck.expiresAt > Date.now()) {
     return userId
   }
-  const me = await withTimeout(account.get(), 10000, 'Session verification timed out.')
-  if (me.$id !== userId) {
+  const sessionUserId = await withTimeout(getSessionUserId(), 10000, 'Session verification timed out.')
+  if (sessionUserId !== userId) {
     sessionCheck = null
     throw new Error('Unauthorized: you can only access your own records.')
   }
