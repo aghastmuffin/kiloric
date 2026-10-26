@@ -8,6 +8,8 @@ import {
   formatHeightMetric,
   formatWeightImperial,
   formatWeightMetric,
+  kgToLbs,
+  lbsToKg,
   mlToFlOz,
   parseDisplayUnitsPreference,
   prefersImperialDisplay,
@@ -53,6 +55,13 @@ describe('units', () => {
     expect(formatHeightMetric(175)).toBe('175 cm')
     expect(formatWeightMetric(70)).toBe('70 kg')
     expect(formatHeightImperial(175)).toBe('5\'9"')
-    expect(formatWeightImperial(70)).toBe('154 lb')
+    expect(formatWeightImperial(70)).toBe('154.3 lb')
+  })
+
+  it('preserves decimal precision when converting imperial weight', () => {
+    const lbs = 179.5
+    const kg = lbsToKg(lbs) // ~81.4 kg
+    expect(kgToLbs(kg)).toBe(179.5)
+    expect(formatWeightImperial(kg)).toBe('179.5 lb')
   })
 })

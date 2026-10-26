@@ -1638,7 +1638,9 @@ const makeStyles = (c: ThemeColors) =>
       color: c.onBrand,
     },
     discardBtn: {
-      backgroundColor: c.dangerButtonBg,
+      backgroundColor: c.surfaceMuted,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.borderStrong,
       borderRadius: 999,
       minHeight: 48,
       paddingHorizontal: 18,
@@ -1651,7 +1653,7 @@ const makeStyles = (c: ThemeColors) =>
     discardBtnText: {
       ...typography.body,
       fontWeight: '600',
-      color: c.danger,
+      color: c.text,
     },
     mealSlotRow: {
       flexDirection: 'row',
