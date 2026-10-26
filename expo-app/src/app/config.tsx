@@ -156,6 +156,16 @@ export default function ConfigScreen() {
 
   const isRequired = !profileComplete;
 
+  const countryPickerOptions = useMemo(() => {
+    if (isBarredResidency(country)) {
+      return [
+        { label: `${getCountryName(country)} (Unavailable)`, value: country },
+        ...COUNTRY_OPTIONS,
+      ];
+    }
+    return COUNTRY_OPTIONS;
+  }, [country]);
+
   // Real-time suggested nutrition plan based on current body & goal selections
   const computedPlan: NutritionPlan = useMemo(() => {
     return buildNutritionPlan({
@@ -630,7 +640,7 @@ export default function ConfigScreen() {
                 <NativeEnumPicker
                   accessibilityLabel="Country of residence"
                   value={country}
-                  options={COUNTRY_OPTIONS}
+                  options={countryPickerOptions}
                   onChange={(val) => {
                     setCountry(val);
                     setResidesInAsia((current) => nextAsiaAnswer(current, country, val));

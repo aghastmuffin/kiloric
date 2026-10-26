@@ -32,7 +32,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { buildGoalStateFromPlan } from '@/lib/goals'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
-import { COUNTRY_OPTIONS } from '@/lib/countries'
+import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries'
 import {
   isAsianCountry,
   isBarredResidency,
@@ -237,7 +237,6 @@ export function OnboardingWizard() {
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [ageBlocked, setAgeBlocked] = useState(false)
-  const [dateOfBirthConfirmed, setDateOfBirthConfirmed] = useState(false)
   const [bodyFatText, setBodyFatText] = useState('')
 
   const visibleSteps = useMemo(
@@ -254,6 +253,16 @@ export function OnboardingWizard() {
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === visibleSteps.length - 1
   const residencyBarred = isBarredResidency(form.country)
+
+  const countryOptions = useMemo(() => {
+    if (isBarredResidency(form.country)) {
+      return [
+        { label: `${getCountryName(form.country)} (Unavailable)`, value: form.country },
+        ...COUNTRY_OPTIONS,
+      ]
+    }
+    return COUNTRY_OPTIONS
+  }, [form.country])
 
   const plan: NutritionPlan = useMemo(
     () =>
@@ -416,7 +425,6 @@ export function OnboardingWizard() {
               }
             : null,
         })
-        setDateOfBirthConfirmed(Boolean(profile.dateOfBirth))
         setBodyFatText(saved.bodyFatPct != null ? String(saved.bodyFatPct) : '')
 
         // Central eligibility enforcement: an existing session whose saved date
@@ -453,7 +461,9 @@ export function OnboardingWizard() {
         if (form.username.trim().length > 64) return 'Username must be 64 characters or fewer.'
         return null
       case 'eligibility':
-        if (!dateOfBirthConfirmed) return 'Select your date of birth to continue.'
+        if (!form.dateOfBirth || Number.isNaN(form.dateOfBirth.getTime())) {
+          return 'Select your date of birth to continue.'
+        }
         if (form.dateOfBirth > new Date()) return 'Choose a valid date of birth.'
         if (!isRaceValue(form.race)) return 'Select your race to continue.'
         if (form.residesInAsia == null && !isAsianCountry(form.country)) {
@@ -805,10 +815,7 @@ export function OnboardingWizard() {
             <NativeDatePicker
               accessibilityLabel="Date of birth"
               value={form.dateOfBirth}
-              onChange={(value) => {
-                updateForm('dateOfBirth', value)
-                setDateOfBirthConfirmed(true)
-              }}
+              onChange={(value) => updateForm('dateOfBirth', value)}
               disabled={saving}
               minimumDate={new Date(1900, 0, 1)}
               maximumDate={new Date()}
@@ -817,7 +824,7 @@ export function OnboardingWizard() {
             <NativeEnumPicker
               accessibilityLabel="Country of residence"
               value={form.country}
-              options={COUNTRY_OPTIONS}
+              options={countryOptions}
               onChange={(value) => {
                 setForm((current) => ({
                   ...current,
