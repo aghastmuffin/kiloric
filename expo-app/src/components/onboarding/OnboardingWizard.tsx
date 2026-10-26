@@ -32,7 +32,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { buildGoalStateFromPlan } from '@/lib/goals'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import { useOnboardingStyles } from '@/lib/theme/useThemedStyles'
-import { COUNTRY_OPTIONS } from '@/lib/countries'
+import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries'
 import {
   isAsianCountry,
   isBarredResidency,
@@ -254,6 +254,16 @@ export function OnboardingWizard() {
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === visibleSteps.length - 1
   const residencyBarred = isBarredResidency(form.country)
+
+  const countryOptions = useMemo(() => {
+    if (isBarredResidency(form.country)) {
+      return [
+        { label: `${getCountryName(form.country)} (Unavailable)`, value: form.country },
+        ...COUNTRY_OPTIONS,
+      ]
+    }
+    return COUNTRY_OPTIONS
+  }, [form.country])
 
   const plan: NutritionPlan = useMemo(
     () =>
@@ -816,7 +826,7 @@ export function OnboardingWizard() {
             <NativeEnumPicker
               accessibilityLabel="Country of residence"
               value={form.country}
-              options={COUNTRY_OPTIONS}
+              options={countryOptions}
               onChange={(value) => {
                 setForm((current) => ({
                   ...current,
