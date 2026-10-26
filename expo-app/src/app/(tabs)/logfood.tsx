@@ -18,6 +18,7 @@ import {
 } from '@/components/ds'
 import { authenticatedRequest } from '@/lib/apiUtils'
 import { showApiError } from '@/lib/apiErrors'
+import { withTimeout } from '@/lib/asyncUtils'
 import { useAuth } from '@/lib/AuthContext'
 import {
   entryMacros,
@@ -241,7 +242,11 @@ export default function LogFoodScreen() {
     if (!userId) return
     setSavingMeal(true)
     try {
-      await saveMealFromEntries(userId, mealName || `My ${mealType.toLowerCase()}`, mealType, loggedForMeal)
+      await withTimeout(
+        saveMealFromEntries(userId, mealName || `My ${mealType.toLowerCase()}`, mealType, loggedForMeal),
+        10000,
+        'Saving meal timed out. Please check your connection and try again.',
+      )
       setMealName('')
       setSavePanelOpen(false)
       setTab('meals')
