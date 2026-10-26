@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   calculateAge,
   auditNutritionTargets,
+  buildGoalPlainText,
+  buildNutritionPlan,
   calculateBmr,
   calculateDailyCalories,
   calculateDailyFluid,
@@ -65,5 +67,52 @@ describe('nutrition calculations', () => {
       expect.stringContaining('1200 kcal'),
       expect.stringContaining('1500 kcal above'),
     ]))
+  })
+
+  it('formats goal plain text with correct display units', () => {
+    const metricText = buildGoalPlainText({
+      goal: 'lose',
+      diet: 'balanced',
+      targetWeight: 75.1,
+      currentWeight: 80,
+      estimatedWeeklyChangeKg: -0.5,
+      units: 'metric',
+    })
+    expect(metricText).toContain('75.1 kg')
+    expect(metricText).toContain('80 kg')
+    expect(metricText).toContain('kg / week')
+
+    const imperialText = buildGoalPlainText({
+      goal: 'lose',
+      diet: 'balanced',
+      targetWeight: 75.1,
+      currentWeight: 80,
+      estimatedWeeklyChangeKg: -0.5,
+      units: 'imperial',
+    })
+    expect(imperialText).toContain('166 lb')
+    expect(imperialText).toContain('176 lb')
+    expect(imperialText).toContain('lb / week')
+    expect(imperialText).not.toContain('kg')
+  })
+
+  it('builds nutrition plan honoring display units and decimal target weight', () => {
+    const plan = buildNutritionPlan({
+      dateOfBirth: new Date(1990, 0, 1),
+      sex: 'female',
+      heightCm: 170,
+      weightKg: 80,
+      activity: 'moderate',
+      goal: 'lose',
+      pace: 'moderate',
+      diet: 'balanced',
+      targetWeight: 75.1,
+      displayUnits: 'imperial',
+    })
+
+    expect(plan.targetWeight).toBe(75.1)
+    expect(plan.goalPlain).toContain('166 lb')
+    expect(plan.goalPlain).toContain('176 lb')
+    expect(plan.goalPlain).not.toContain('kg')
   })
 })
