@@ -57,13 +57,13 @@ export type OnboardingFormState = {
   /** Explicit answer to “Do you reside in any country in Asia?” */
   residesInAsia: boolean | null
   bio: string
-  sex: Sex
+  sex: Sex | null
   height: number
   weight: number
   /** Optional measured body-fat %; switches BMR to Katch–McArdle. */
   bodyFatPct: number | null
   activity: ActivityLevel
-  goal: FitnessGoal
+  goal: FitnessGoal | null
   pace: GoalPace
   diet: DietStyle
   targetWeight: number | null
@@ -82,12 +82,12 @@ export function createDefaultFormState(email?: string | null): OnboardingFormSta
     race: '',
     residesInAsia: isAsianCountry(country) ? true : null,
     bio: '',
-    sex: 'female',
+    sex: null,
     height: 170,
     weight: 70,
     bodyFatPct: null,
     activity: 'moderate',
-    goal: 'maintain',
+    goal: null,
     pace: 'moderate',
     diet: 'balanced',
     targetWeight: null,

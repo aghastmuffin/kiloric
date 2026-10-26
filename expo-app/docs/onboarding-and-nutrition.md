@@ -34,14 +34,14 @@ questions are shown; the restriction screen explains that adult nutrition target
 offers a way to correct an accidental date, and otherwise signs the account out without saving a
 profile or plan. Eligibility is checked again immediately before the final save.
 
-Country of residence is required and saved on the profile (`country`). Race is required and saved
-on `race`. The Asia-residence answer is saved on `resides_in_asia`. Residents of the EU (including
-outermost regions), Russia, or Vietnam cannot continue; the screen shows the version 101926 legal
-notice and does not create or update a profile. A yes answer, or any country of residence in Asia,
-shows a red Helicobacter pylori screening warning and still allows every other country through.
-The Congressional App Challenge note, with `mailto:admin@taeson.co`, is on this step and on the
-success screen. The profile editor at `/config` asks for the same race, country of residence, and
-Asia answer, and applies the same bar and warning.
+Country of residence is required and saved on the profile (`country`). Demographic fields (race and
+Asia-residence answer) are optional and saved on `race` and `resides_in_asia`. Biological sex and
+primary goal start unselected as neutral form defaults. Residents of the EU (including outermost
+regions), Russia, or Vietnam cannot continue; the screen shows the version 101926 legal notice and
+does not create or update a profile. A yes answer, or any country of residence in Asia, shows a red
+Helicobacter pylori screening warning and still allows every other country through. The Congressional
+App Challenge note, with `mailto:admin@taeson.co`, appears on the Credits screen and the success screen.
+The profile editor at `/config` offers the same country, race, and Asia fields and applies the same bar and warning.
 
 UI building blocks: `ProgressHeader`, `StepTransition`, `SelectionCard`, `BodyMetricPickers`, `UnitToggle`, `ConfirmDialog`.
 
