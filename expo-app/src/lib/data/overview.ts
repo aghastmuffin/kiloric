@@ -43,7 +43,7 @@ export function targetsFromProfile(profile: ProfileDocument | null): Targets {
 
 export function goalFromProfile(profile: ProfileDocument | null): GoalInfo {
   if (!profile) return { targetWeightKg: null, targetDate: null }
-  const targetWeightKg = profile.goal_target_weight_kg ?? null
+  const targetWeightKg = profile.goal_target_weight_kg ?? profile.target_weight ?? null
   let targetDate: Date | null = null
   if (profile.goal_start_date && profile.goal_estimated_weeks && profile.goal_type !== 'maintain') {
     targetDate = addDays(new Date(profile.goal_start_date), profile.goal_estimated_weeks * 7)

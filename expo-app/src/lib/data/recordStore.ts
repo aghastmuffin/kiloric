@@ -1,4 +1,6 @@
 import { account, databases } from '@/lib/appwrite'
+import { withTimeout } from '@/lib/asyncUtils'
+import { getSessionUserId } from '@/lib/sessionAuth'
 import { AppwriteException, ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
 
 /**
@@ -52,8 +54,8 @@ export async function assertSessionUser(userId: string): Promise<string> {
   if (sessionCheck && sessionCheck.userId === userId && sessionCheck.expiresAt > Date.now()) {
     return userId
   }
-  const me = await account.get()
-  if (me.$id !== userId) {
+  const sessionUserId = await withTimeout(getSessionUserId(), 10000, 'Session verification timed out.')
+  if (sessionUserId !== userId) {
     sessionCheck = null
     throw new Error('Unauthorized: you can only access your own records.')
   }
@@ -74,7 +76,11 @@ let prefsWriteChain: Promise<unknown> = Promise.resolve()
 
 function readPrefs(): Promise<PrefsShape> {
   if (prefsCache && prefsCache.expiresAt > Date.now()) return prefsCache.value
-  const value = account.getPrefs<PrefsShape>().then((prefs) => ({ ...(prefs ?? {}) }))
+  const value = withTimeout(
+    account.getPrefs<PrefsShape>().then((prefs) => ({ ...(prefs ?? {}) })),
+    10000,
+    'Reading preferences timed out.',
+  )
   prefsCache = { value, expiresAt: Date.now() + PREFS_CACHE_MS }
   value.catch(() => {
     prefsCache = null
@@ -107,11 +113,19 @@ function trimToBudget(prefs: PrefsShape): PrefsShape {
 function mutatePrefs(mutator: (prefs: PrefsShape) => void): Promise<PrefsShape> {
   const run = prefsWriteChain.then(async () => {
     prefsCache = null
-    const current = await account.getPrefs<PrefsShape>()
+    const current = await withTimeout(
+      account.getPrefs<PrefsShape>(),
+      10000,
+      'Reading preferences timed out.',
+    )
     const next: PrefsShape = { ...(current ?? {}) }
     mutator(next)
     const trimmed = trimToBudget(next)
-    await account.updatePrefs({ prefs: trimmed })
+    await withTimeout(
+      account.updatePrefs({ prefs: trimmed }),
+      10000,
+      'Saving preferences timed out.',
+    )
     prefsCache = { value: Promise.resolve(trimmed), expiresAt: Date.now() + PREFS_CACHE_MS }
     return trimmed
   })
@@ -244,7 +258,7 @@ export function createRecordStore<T extends Record<string, unknown>>(config: Sto
   async function withTable<R>(table: () => Promise<R>, fallback: () => Promise<R>): Promise<R> {
     if (modeByCollection[collectionId] === 'prefs') return fallback()
     try {
-      const result = await table()
+      const result = await withTimeout(table(), 10000, 'Database request timed out.')
       modeByCollection[collectionId] = 'table'
       return result
     } catch (err) {
