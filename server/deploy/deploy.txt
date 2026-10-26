@@ -1,0 +1,19 @@
+    # 1. Install PostgreSQL & dependencies
+    sudo apt update && sudo apt install -y postgresql postgresql-contrib python3-pip
+    
+    # 2. Setup PostgreSQL database & user
+    sudo -u postgres psql -c "CREATE USER kiloric WITH PASSWORD 'YOUR_STRONG_PASSWORD';"
+    sudo -u postgres psql -c "CREATE DATABASE kiloric OWNER kiloric;"
+
+    # 3. Setup server directory and environment
+    cd /opt/kiloric/server
+    cp .env.example .env
+    # Edit .env with:
+    # DATABASE_URL=postgresql://kiloric:YOUR_STRONG_PASSWORD@localhost:5432/kiloric
+    # JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_hex(64))")
+
+    # 4. Install dependencies and start systemd service
+    pip install -r requirements.txt # or: uv sync
+    sudo cp deploy/kiloric-server.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now kiloric-server

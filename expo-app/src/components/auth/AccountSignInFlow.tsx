@@ -3,7 +3,7 @@ import { setHasSkippedSignIn } from '@/components/ProfileGate';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext';
 import { showApiError } from '@/lib/apiErrors';
-import { isValidEmail, isValidPassword } from '@/lib/authValidation';
+import { isValidEmail, isValidIdentity, isValidPassword } from '@/lib/authValidation';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
@@ -55,9 +55,9 @@ export function AccountSignInFlow() {
     }
 
     function goToPassword() {
-        if (!isValidEmail(email)) {
+        if (!isValidIdentity(email)) {
             setAuthNotice(null)
-            setAuthError('Enter a valid email address.')
+            setAuthError('Enter a valid email address or username.')
             return
         }
         setAuthError(null)
@@ -251,14 +251,14 @@ export function AccountSignInFlow() {
                             </View>
                         ) : null}
 
-                        <Text style={styles.label}>Email</Text>
+                        <Text style={styles.label}>Email or Username</Text>
                         <TextInput
                             value={email}
                             onChangeText={setEmail}
-                            placeholder="you@example.com"
+                            placeholder="you@example.com or username"
                             placeholderTextColor={colors.textFaint}
                             autoCapitalize="none"
-                            keyboardType="email-address"
+                            keyboardType="default"
                             maxLength={254}
                             autoFocus
                             accessibilityLabel="Email address"

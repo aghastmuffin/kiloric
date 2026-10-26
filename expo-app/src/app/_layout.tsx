@@ -98,7 +98,7 @@ function RootNavigation() {
                 <Stack.Screen name="reset-password" options={{ headerShown: true, headerTitle: "Reset password" }} />
                 <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
                 <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
-                <Stack.Screen name="Additions" options={{ headerShown: false }} />
+                <Stack.Screen name="additions" options={{ headerShown: false }} />
                 <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
                 <Stack.Screen name="contribute-food" options={{ headerShown: false }} />
                 <Stack.Screen

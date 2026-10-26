@@ -515,9 +515,6 @@ export async function deleteProfile(userId: string): Promise<void> {
 }
 
 export async function getProfile(userId: string): Promise<ProfileDocument | null> {
-  // Assert user ownership before retrieving profile document to prevent BOLA/IDOR vulnerabilities
-  await assertAuthenticatedUserId(userId)
-
   // 1. Check if we have a valid, unexpired cached profile for this user
   if (cachedProfile && cachedProfile.userId === userId && cachedProfile.expiresAt > Date.now()) {
     return cachedProfile.profile
@@ -528,15 +525,29 @@ export async function getProfile(userId: string): Promise<ProfileDocument | null
     return inflightProfilePromise
   }
 
-  // 3. Initiate the request with deduplication
+  // 3. Initiate the request with deduplication and timeout protection
   inflightProfileUserId = userId
   inflightProfilePromise = (async () => {
+    let timerId: ReturnType<typeof setTimeout> | undefined
     try {
-      const profile = (await databases.getDocument({
-        databaseId: DATABASE_ID,
-        collectionId: USER_PROFILES_COLLECTION_ID,
-        documentId: userId,
-      })) as ProfileDocument
+      const workPromise = (async () => {
+        // Assert user ownership before retrieving profile document to prevent BOLA/IDOR vulnerabilities
+        await assertAuthenticatedUserId(userId)
+
+        return (await databases.getDocument({
+          databaseId: DATABASE_ID,
+          collectionId: USER_PROFILES_COLLECTION_ID,
+          documentId: userId,
+        })) as ProfileDocument
+      })()
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timerId = setTimeout(() => {
+          reject(new Error('Profile load timed out. Please try again.'))
+        }, 10000)
+      })
+
+      const profile = await Promise.race([workPromise, timeoutPromise])
 
       // Cache the result for 15 seconds to prevent hammering of profile reads
       cachedProfile = {
@@ -558,6 +569,9 @@ export async function getProfile(userId: string): Promise<ProfileDocument | null
       }
       throw err
     } finally {
+      if (timerId !== undefined) {
+        clearTimeout(timerId)
+      }
       if (inflightProfileUserId === userId) {
         inflightProfilePromise = null
         inflightProfileUserId = null
@@ -623,6 +637,30 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
     logAppwriteError('createProfile', err)
     throw new Error(formatProfileSaveError(err))
   }
+}
+
+export const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15)
+
+/**
+ * Parses an ISO date string (e.g. YYYY-MM-DDTHH:mm:ss... or YYYY-MM-DD) into a local `Date`
+ * object matching the recorded calendar date. This avoids timezone conversion shifts where
+ * UTC midnight (e.g. 1990-06-15T00:00:00.000+00:00) shifts back to the previous day in
+ * negative UTC offsets (e.g. 1990-06-14 in UTC-7).
+ */
+export function parseProfileDate(value?: string, fallback = DEFAULT_DATE_OF_BIRTH): Date {
+  if (!value) return fallback
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  if (match) {
+    const year = parseInt(match[1], 10)
+    const month = parseInt(match[2], 10) - 1
+    const day = parseInt(match[3], 10)
+    const date = new Date(year, month, day)
+    if (!Number.isNaN(date.getTime())) {
+      return date
+    }
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed
 }
 
 /** `YYYY-MM-DD` → Appwrite datetime string */
