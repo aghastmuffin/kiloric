@@ -6,6 +6,7 @@ import {
 } from '@/lib/apiErrors'
 import { getCachedResponse, getCacheTtl, normalizeCacheKey, setCachedResponse } from '@/lib/apiCache'
 import {
+  type ApiBackendChoice,
   resolveApiBackendChoice,
   resolveBackendRequest,
 } from '@/lib/apiBackendPreferences'
@@ -18,11 +19,11 @@ type RequestOptions = Omit<RequestInit, 'headers'> & {
 
 const inflightRequests = new Map<string, Promise<unknown>>()
 
-async function performBackendRequest(
+async function performBackendRequestWithChoice(
+  choice: ApiBackendChoice,
   logicalEndpoint: string,
   options: RequestOptions = {},
 ): Promise<unknown> {
-  const choice = await resolveApiBackendChoice()
   const { url, requiresAuth } = resolveBackendRequest(choice, logicalEndpoint)
 
   const headers: Record<string, string> = {
@@ -63,6 +64,45 @@ async function performBackendRequest(
   }
 
   return data
+}
+
+async function performBackendRequest(
+  logicalEndpoint: string,
+  options: RequestOptions = {},
+): Promise<unknown> {
+  const choice = await resolveApiBackendChoice()
+
+  if (choice === 'legacy') {
+    try {
+      const { url, requiresAuth } = resolveBackendRequest('legacy', logicalEndpoint)
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      }
+      if (requiresAuth) {
+        const token = await getAccessToken()
+        if (!token) {
+          throw new ApiRequestError('No active login session found. Please log in.')
+        }
+        headers.Authorization = `Bearer ${token}`
+      }
+      const response = await fetch(url, { ...options, headers })
+      let data: unknown = null
+      try {
+        data = await response.json()
+      } catch {
+        data = null
+      }
+      if (response.ok) {
+        return data
+      }
+    } catch (legacyErr) {
+      console.warn('[apiUtils] Legacy backend request failed, falling back to Oracle ORDS:', legacyErr)
+    }
+    return performBackendRequestWithChoice('ords', logicalEndpoint, options)
+  }
+
+  return performBackendRequestWithChoice('ords', logicalEndpoint, options)
 }
 
 /**
