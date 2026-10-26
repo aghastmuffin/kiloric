@@ -417,6 +417,17 @@ describe('meals authorization checks', () => {
       expect(mockCreateDocument).toHaveBeenCalledTimes(1)
     })
 
+    it('accepts custom meal types up to the column limit', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      await expect(
+        mealsModule.createMeal({ owner: 'user-123', type: 'a'.repeat(17) })
+      ).rejects.toThrow('16 characters')
+      const outcome = await mealsModule
+        .createMeal({ owner: 'user-123', type: 'Pre-workout' })
+        .then(() => null, (err: unknown) => (err instanceof Error ? err.message : String(err)))
+      expect(outcome ?? '').not.toMatch(/type must/)
+    })
+
     it('rejects empty or excessively long meal types', async () => {
       mockGetAccount.mockResolvedValue({ $id: 'user-123' })
 
@@ -425,8 +436,8 @@ describe('meals authorization checks', () => {
       ).rejects.toThrow('type must be a non-empty string.')
 
       await expect(
-        mealsModule.createMeal({ owner: 'user-123', type: 'a'.repeat(65) })
-      ).rejects.toThrow('type must be 64 characters or fewer.')
+        mealsModule.createMeal({ owner: 'user-123', type: 'a'.repeat(17) })
+      ).rejects.toThrow('type must be 16 characters or fewer.')
     })
   })
 

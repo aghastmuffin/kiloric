@@ -522,18 +522,12 @@
                 },
                 {
                     "key": "type",
-                    "type": "string",
+                    "type": "varchar",
                     "required": false,
                     "array": false,
+                    "size": 16,
                     "default": null,
-                    "format": "enum",
-                    "elements": [
-                        "Breakfast",
-                        "Lunch",
-                        "Dinner",
-                        "Snack",
-                        "Other"
-                    ]
+                    "encrypt": false
                 },
                 {
                     "key": "kcal",

@@ -91,7 +91,9 @@ function EntryEditorModal({
   onSave,
   onDelete,
   onClose,
+  mealTypes,
 }: {
+  mealTypes: readonly LogMealType[]
   visible: boolean
   entry: FoodEntry | null
   saving: boolean
@@ -183,7 +185,7 @@ function EntryEditorModal({
               Meal
             </Txt>
             <View style={editorStyles.mealTypeRow}>
-              {LOG_MEAL_TYPES.map((type) => (
+              {(entry && !mealTypes.includes(entry.meal_type) ? [...mealTypes, entry.meal_type] : mealTypes).map((type) => (
                 <Chip
                   key={type}
                   label={type}
@@ -823,6 +825,7 @@ export default function LogFoodScreen() {
 
       <EntryEditorModal
         visible={!!editingEntry}
+        mealTypes={activeMealNames}
         entry={editingEntry}
         saving={savingEntry}
         onSave={(updates) => void performEntrySave(updates)}

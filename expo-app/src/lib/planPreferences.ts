@@ -9,7 +9,7 @@ import {
   type GoalPace,
   type Sex,
 } from './nutrition'
-import { MEAL_TYPE_OPTIONS, type MealType } from './meals'
+import { MEAL_TYPE_MAX_LENGTH, MEAL_TYPE_OPTIONS, type MealType } from './meals'
 import type { DisplayUnits } from './units'
 import type { Models } from 'react-native-appwrite'
 
@@ -83,8 +83,8 @@ function normalizeSlots(value: unknown): MealSlotPreference[] {
   value.forEach((entry, index) => {
     if (!entry || typeof entry !== 'object') return
     const raw = entry as Partial<MealSlotPreference>
-    const rawKey = typeof raw.key === 'string' && raw.key.trim() ? raw.key.trim().slice(0, 64) : ''
-    const rawName = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 64) : ''
+    const rawKey = typeof raw.key === 'string' && raw.key.trim() ? raw.key.trim().slice(0, MEAL_TYPE_MAX_LENGTH) : ''
+    const rawName = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, MEAL_TYPE_MAX_LENGTH) : ''
     const name = rawName || rawKey
     if (!name) return
 

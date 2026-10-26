@@ -92,4 +92,14 @@ describe('mealTypePreferences', () => {
     expect(reloaded).toBe('Lunch')
     expect(AsyncStorage.getItem).toHaveBeenCalledTimes(2)
   })
+
+  it('keeps a saved custom meal type instead of dropping it', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce('Pre-workout')
+    expect(await loadSelectedMealType()).toBe('Pre-workout')
+  })
+
+  it('falls back to the default for over-long stored values', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce('x'.repeat(17))
+    expect(await loadSelectedMealType()).toBe(DEFAULT_MEAL_TYPE)
+  })
 })

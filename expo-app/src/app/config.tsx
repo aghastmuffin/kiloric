@@ -1,3 +1,4 @@
+import { MEAL_TYPE_MAX_LENGTH } from '@/lib/meals'
 import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { MotionView } from '@/components/MotionView';
@@ -1183,7 +1184,7 @@ export default function ConfigScreen() {
                     onChangeText={(val) => handleRenameSlot(slot.key, val)}
                     placeholder="Meal name"
                     placeholderTextColor={colors.textFaint}
-                    maxLength={32}
+                    maxLength={MEAL_TYPE_MAX_LENGTH}
                     accessibilityLabel={`Meal name for ${slot.name}`}
                     style={[styles.input, styles.mealSlotInput, !slot.enabled && styles.inputDisabled]}
                   />
@@ -1236,7 +1237,7 @@ export default function ConfigScreen() {
                   onChangeText={setNewMealSlotName}
                   placeholder="e.g. Pre-workout, Evening Snack"
                   placeholderTextColor={colors.textFaint}
-                  maxLength={32}
+                  maxLength={MEAL_TYPE_MAX_LENGTH}
                   accessibilityLabel="New meal type name"
                   style={[styles.input, { flex: 1 }]}
                 />
