@@ -146,7 +146,6 @@ describe('profile lib security & functionality', () => {
         expect(currentIso).toBe(originalIso)
       }
     })
-    })
   })
 
   it('times out after 10 seconds and clears inflight cache when document request hangs', async () => {
