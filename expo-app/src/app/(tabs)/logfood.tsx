@@ -43,7 +43,7 @@ import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
 import { usePalette } from '@/lib/theme/palette'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 type ListTab = 'recent' | 'frequent' | 'meals' | 'results'
@@ -99,6 +99,20 @@ export default function LogFoodScreen() {
   const [searchError, setSearchError] = useState<string | null>(null)
   const [results, setResults] = useState<FoodItem[]>([])
   const [adding, setAdding] = useState(false)
+
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeSearchQueryRef = useRef<string>('')
+
+  function clearSearchDebounce() {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    return () => clearSearchDebounce()
+  }, [])
   const [mealName, setMealName] = useState('')
   const [savingMeal, setSavingMeal] = useState(false)
   const [savePanelOpen, setSavePanelOpen] = useState(false)
@@ -189,9 +203,17 @@ export default function LogFoodScreen() {
   }
 
   async function runSearch(text: string) {
+    clearSearchDebounce()
     const trimmed = text.trim()
-    if (!trimmed) return
+    activeSearchQueryRef.current = trimmed
+    if (!trimmed) {
+      setResults([])
+      setSearching(false)
+      setSearchError(null)
+      return
+    }
     if (/^\d{8,14}$/.test(trimmed)) {
+      setSearching(false)
       router.push({ pathname: '/review-log', params: { barcode: trimmed, source: 'search', meal: mealType } })
       return
     }
@@ -200,15 +222,44 @@ export default function LogFoodScreen() {
     setTab('results')
     try {
       const response = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(trimmed)}`)
+      if (activeSearchQueryRef.current !== trimmed) return
       const items = parseSearchItems(response).map(foodItemFromProduct).filter((item) => item.perServing.kcal > 0 || item.name)
       setResults(items.slice(0, 25))
-      if (items.length === 0) setSearchError('No matches. Try another name or scan the barcode.')
+      if (items.length === 0) setSearchError(`No matches for “${trimmed}”.`)
     } catch (err) {
+      if (activeSearchQueryRef.current !== trimmed) return
       setResults([])
       setSearchError(err instanceof Error ? err.message : 'Search failed.')
     } finally {
-      setSearching(false)
+      if (activeSearchQueryRef.current === trimmed) {
+        setSearching(false)
+      }
     }
+  }
+
+  function handleQueryChange(text: string) {
+    setQuery(text)
+    clearSearchDebounce()
+    const trimmed = text.trim()
+    if (!trimmed) {
+      activeSearchQueryRef.current = ''
+      setSearching(false)
+      setSearchError(null)
+      setResults([])
+      if (tab === 'results') setTab('recent')
+      return
+    }
+    setTab('results')
+    setSearching(true)
+    setSearchError(null)
+    searchTimeoutRef.current = setTimeout(() => {
+      void runSearch(text)
+    }, 300)
+  }
+
+  function handleSearchSubmit(text: string) {
+    clearSearchDebounce()
+    void runSearch(text)
   }
 
   async function addSelected() {
@@ -278,7 +329,10 @@ export default function LogFoodScreen() {
     recent: { title: 'Nothing logged yet', body: 'Search or scan a food to log your first item.' },
     frequent: { title: 'No favourites yet', body: 'Foods you log more than once show up here.' },
     meals: { title: 'No saved meals', body: 'Log a few foods, then save them together as a meal below.' },
-    results: { title: searchError ?? 'Search for a food', body: 'Try a brand, a dish, or a barcode number.' },
+    results: {
+      title: searchError ?? (query.trim() ? `No results for “${query.trim()}”` : 'Search for a food'),
+      body: query.trim() ? 'Try another name or scan the barcode, or contribute it below.' : 'Try a brand, a dish, or a barcode number.',
+    },
   }
 
   return (
@@ -301,8 +355,8 @@ export default function LogFoodScreen() {
       <View style={styles.searchRow}>
         <SearchField
           placeholder="Search foods, brands, meals"
-          onChangeText={setQuery}
-          onSubmit={(text) => void runSearch(text)}
+          onChangeText={handleQueryChange}
+          onSubmit={handleSearchSubmit}
           testID="food-search"
         />
         <IconButton
@@ -337,7 +391,7 @@ export default function LogFoodScreen() {
             icon="nutrition-outline"
             title={emptyCopy[tab].title}
             body={emptyCopy[tab].body}
-            actionLabel={tab === 'results' && searchError ? 'Add this food' : undefined}
+            actionLabel={tab === 'results' && (searchError || query.trim()) ? 'Add this food' : undefined}
             onAction={tab === 'results' ? openContribute : undefined}
           />
         ) : (

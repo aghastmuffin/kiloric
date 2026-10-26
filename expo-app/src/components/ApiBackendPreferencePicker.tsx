@@ -8,8 +8,8 @@ import { useThemedStyles } from '@/lib/theme/useThemedStyles';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-const BACKEND_OPTIONS: ApiBackendChoice[] = ['ords', 'legacy']
-const BACKEND_LABELS = ['Oracle ORDS', 'Legacy (deprecated)']
+const BACKEND_OPTIONS: ApiBackendChoice[] = ['ords']
+const BACKEND_LABELS = ['Oracle ORDS']
 
 export function ApiBackendPreferencePicker() {
   const { apiBackend, setApiBackend } = useApiBackendPreferences()
@@ -34,22 +34,16 @@ export function ApiBackendPreferencePicker() {
         Food data source
       </Text>
       <Text style={styles.hint}>
-        Oracle ORDS looks up products by barcode and name search. Legacy FastAPI is deprecated and
-        may be removed later.
+        Oracle ORDS looks up products by barcode and name search.
       </Text>
       <ThemedSegmentedControl
         values={BACKEND_LABELS}
-        selectedIndex={Math.max(0, BACKEND_OPTIONS.indexOf(apiBackend))}
+        selectedIndex={0}
         onChange={handleIndexChange}
         enabled={!saving}
         accessibilityLabel="Food data source selection"
         accessibilityHint="Selects the API backend server for food lookup"
       />
-      {apiBackend === 'legacy' ? (
-        <Text accessibilityRole="alert" style={styles.warning}>
-          Legacy backend is deprecated. Prefer Oracle ORDS when possible.
-        </Text>
-      ) : null}
     </View>
   )
 }
