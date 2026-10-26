@@ -1,28 +1,31 @@
-import { account } from '@/lib/appwrite';
-import { purgeAccountData } from '@/lib/accountDeletion';
+import { purgeAccountData } from '@/lib/accountDeletion'
+import { apiClient, clearTokens, getAccessToken, setTokens } from '@/lib/apiClient'
+import { clearAppwriteSession, restoreAppwriteSession } from '@/lib/appwriteSession'
 import {
-    clearAppwriteSession,
-    persistAppwriteSession,
-    restoreAppwriteSession,
-} from '@/lib/appwriteSession';
-import {
-    validateConfirmPasswordResetInput,
-    validateSendPasswordResetInput,
-    validateSignInInput,
-    validateSignUpInput,
-} from '@/lib/authValidation';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
-import { ID, type Models } from 'react-native-appwrite';
+  validateConfirmPasswordResetInput,
+  validateSendPasswordResetInput,
+  validateSignInInput,
+  validateSignUpInput,
+} from '@/lib/authValidation'
+import { setCachedUserId } from '@/lib/sessionAuth'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
-type AppwriteUser = Models.User<Models.Preferences>
+export type AuthUser = {
+  $id: string
+  id: string
+  email: string
+  name: string
+  username: string
+  prefs: Record<string, unknown>
+  [key: string]: unknown
+}
 
 export type SignUpResult = 'signed_in' | 'verification_required'
 
 type AuthContextValue = {
-  user: AppwriteUser | null
+  user: AuthUser | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<boolean>
+  signIn: (identity: string, password: string) => Promise<boolean>
   signUp: (email: string, password: string) => Promise<SignUpResult>
   signOut: () => Promise<void>
   sendPasswordReset: (email: string) => Promise<void>
@@ -37,29 +40,45 @@ function authErrorMessage(err: unknown): string {
   return 'Unknown error'
 }
 
-async function establishSession(email: string, password: string): Promise<AppwriteUser> {
-  const session = await account.createEmailPasswordSession({ email, password })
-  await persistAppwriteSession(session)
-  return account.get()
-}
-
-function passwordResetUrl(): string {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return `${window.location.origin}/reset-password`
+function normalizeAuthUser(raw: Record<string, unknown>): AuthUser {
+  const id = (raw.$id as string) || (raw.id as string) || ''
+  const email = (raw.email as string) || ''
+  const username = (raw.username as string) || email.split('@')[0] || ''
+  return {
+    ...raw,
+    $id: id,
+    id,
+    email,
+    username,
+    name: username || email,
+    prefs: (raw.prefs as Record<string, unknown>) || {},
   }
-  return 'calorie://reset-password'
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AppwriteUser | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refreshUser = useCallback(async () => {
     try {
-      await restoreAppwriteSession()
-      setUser(await account.get())
+      const token = await getAccessToken()
+      if (!token) {
+        setUser(null)
+        setCachedUserId(null)
+        return
+      }
+      const raw = await apiClient.get<Record<string, unknown>>('/v1/me')
+      if (raw && (raw.$id || raw.id)) {
+        const u = normalizeAuthUser(raw)
+        setUser(u)
+        setCachedUserId(u.$id)
+      } else {
+        setUser(null)
+        setCachedUserId(null)
+      }
     } catch {
       setUser(null)
+      setCachedUserId(null)
     }
   }, [])
 
@@ -67,33 +86,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser().finally(() => setLoading(false))
   }, [refreshUser])
 
-  const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
-    validateSignInInput(email, password)
-    const signedInUser = await establishSession(email, password)
-    setUser(signedInUser)
-    return Boolean(signedInUser?.$id)
+  const signIn = useCallback(async (identity: string, password: string): Promise<boolean> => {
+    validateSignInInput(identity, password)
+    const res = await apiClient.post<{
+      access_token: string
+      refresh_token: string
+      user: Record<string, unknown>
+    }>('/v1/auth/login', { identity: identity.trim(), password }, { skipAuth: true })
+
+    if (res?.access_token) {
+      await setTokens(res.access_token, res.refresh_token)
+      const u = normalizeAuthUser(res.user)
+      setUser(u)
+      setCachedUserId(u.$id)
+      return true
+    }
+    return false
   }, [])
 
   const signUp = useCallback(async (email: string, password: string): Promise<SignUpResult> => {
     validateSignUpInput(email, password)
-    await account.create({ userId: ID.unique(), email, password })
+    const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 32) || 'user'
+    const username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`
 
-    try {
-      setUser(await establishSession(email, password))
+    const res = await apiClient.post<{
+      access_token: string
+      refresh_token: string
+      user: Record<string, unknown>
+    }>('/v1/auth/register', { email: email.trim().toLowerCase(), username, password }, { skipAuth: true })
+
+    if (res?.access_token) {
+      await setTokens(res.access_token, res.refresh_token)
+      const u = normalizeAuthUser(res.user)
+      setUser(u)
+      setCachedUserId(u.$id)
       return 'signed_in'
-    } catch {
-      return 'verification_required'
     }
+    return 'verification_required'
   }, [])
 
   const clearUserState = useCallback(async () => {
+    await clearTokens()
     await clearAppwriteSession()
+    setCachedUserId(null)
     setUser(null)
   }, [])
 
   const signOut = useCallback(async () => {
     try {
-      await account.deleteSession({ sessionId: 'current' })
+      await apiClient.post('/v1/auth/logout', {}).catch(() => {})
     } finally {
       await clearUserState()
     }
@@ -101,25 +142,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const sendPasswordReset = useCallback(async (email: string) => {
     validateSendPasswordResetInput(email)
-    await account.createRecovery({ email, url: passwordResetUrl() })
+    await apiClient.post('/v1/auth/reset-password-request', { email: email.trim().toLowerCase() }, { skipAuth: true })
   }, [])
 
   const confirmPasswordReset = useCallback(
     async (userId: string, secret: string, password: string) => {
       validateConfirmPasswordResetInput(userId, secret, password)
-      await account.updateRecovery({ userId, secret, password })
+      await apiClient.post(
+        '/v1/auth/reset-password-confirm',
+        { token: secret, new_password: password },
+        { skipAuth: true },
+      )
     },
     [],
   )
 
   const deleteAccount = useCallback(async () => {
     if (!user?.$id) throw new Error('No signed-in account to delete.')
-
-    // Client permissions remove the profile immediately. Appwrite then blocks
-    // the authentication record permanently; remaining service records are
-    // purged under the documented retention process.
     await purgeAccountData(user.$id)
-    await account.updateStatus()
+    await apiClient.delete('/v1/me').catch(() => {})
     await clearUserState()
   }, [clearUserState, user])
 

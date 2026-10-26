@@ -1,3 +1,4 @@
+import { CongressionalNote } from '@/components/onboarding/ResidencyNotices'
 import { AppScreenHeader } from '@/components/ui/AppScreenHeader'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
@@ -93,6 +94,8 @@ export default function CreditsScreen() {
           Built with Expo, React Native, Appwrite, and the generosity of open-source maintainers.
         </Text>
       </View>
+
+      <CongressionalNote />
     </ScrollView>
   )
 }

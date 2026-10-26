@@ -1,3 +1,5 @@
+import { formatPaceRate, kgToLbs, type DisplayUnits } from './units'
+
 export type Sex = 'male' | 'female'
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
@@ -431,6 +433,7 @@ export function buildGoalPlainText(params: {
   targetWeight: number
   currentWeight: number
   estimatedWeeklyChangeKg: number
+  units?: DisplayUnits
 }): string {
   const dietLabel = getDietLabel(params.diet)
   const goalLabel = getGoalLabel(params.goal)
@@ -440,12 +443,22 @@ export function buildGoalPlainText(params: {
   }
 
   const direction = params.goal === 'lose' ? 'Reach' : 'Build toward'
+  const units = params.units ?? 'metric'
+  const isImperial = units === 'imperial'
+
+  const targetStr = isImperial
+    ? `${kgToLbs(params.targetWeight)} lb`
+    : `${params.targetWeight} kg`
+  const currentStr = isImperial
+    ? `${kgToLbs(params.currentWeight)} lb`
+    : `${params.currentWeight} kg`
+
   const pace =
     params.estimatedWeeklyChangeKg === 0
       ? ''
-      : ` (~${Math.abs(params.estimatedWeeklyChangeKg)} kg/week)`
+      : ` (${formatPaceRate(units, params.estimatedWeeklyChangeKg)})`
 
-  return `${direction} ${params.targetWeight} kg from ${params.currentWeight} kg${pace} · ${dietLabel} plan`
+  return `${direction} ${targetStr} from ${currentStr}${pace} · ${dietLabel} plan`
 }
 
 export function buildMealsLabel(diet: DietStyle): string {
@@ -463,6 +476,7 @@ export function buildNutritionPlan(input: {
   diet: DietStyle
   targetWeight?: number | null
   bodyFatPct?: number | null
+  displayUnits?: DisplayUnits
 }): NutritionPlan {
   const age = calculateAge(input.dateOfBirth)
   const bmrFormula = bmrFormulaFor(input.bodyFatPct)
@@ -503,6 +517,7 @@ export function buildNutritionPlan(input: {
       targetWeight,
       currentWeight: input.weightKg,
       estimatedWeeklyChangeKg,
+      units: input.displayUnits,
     }),
   }
 }

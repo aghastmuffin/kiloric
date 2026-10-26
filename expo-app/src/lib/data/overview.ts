@@ -1,17 +1,18 @@
-import { account } from '@/lib/appwrite'
-import { exerciseCreditKcal } from '@/lib/exercise'
-import { getTodayMeals, type MealDocument } from '@/lib/meals'
-import { resolvePlanInputs, type PlanInputs } from '@/lib/planInputs'
-import { planPreferencesFromUser, type PlanPreferences } from '@/lib/planPreferences'
-import { getProfile, type ProfileDocument } from '@/lib/profile'
-import { kgToLbs, parseDisplayUnitsPreference, type DisplayUnits } from '@/lib/units'
+import { account } from '../appwrite'
+import { exerciseCreditKcal } from '../exercise'
+import { getTodayMeals, type MealDocument } from '../meals'
+import { resolvePlanInputs, type PlanInputs } from '../planInputs'
+import { planPreferencesFromUser, type PlanPreferences } from '../planPreferences'
+import { getProfile, type ProfileDocument } from '../profile'
+import { kgToLbs, parseDisplayUnitsPreference, type DisplayUnits } from '../units'
 import { addDays, dayKey, lastNDayKeys, startOfDay, startOfWeek, weekDayKeys } from './dateKeys'
-import { dailyKcalByDay, listEntriesForDay, listMealsSince, loggingStreak, mealTotals, type FoodEntry } from './foodLog'
+import { dailyKcalByDay, foodEntriesStore, listEntriesForDay, listMealsSince, loggingStreak, mealTotals, type FoodEntry } from './foodLog'
 import type { Macros } from './foodItem'
 import { getPrepSession, listGroceryItems, listPlanEntries, parsePrepItems, type GroceryItem, type PlanEntry, type PrepItem, type PrepSession } from './mealPlan'
 import { burnedOn, listWorkoutsBetween, type Workout } from './workouts'
 import { dailyWeightSeries, listWeightsSince, type WeightPoint } from './weight'
 import { estimateAdaptiveTdee, weightTrend, type AdaptiveTdee, type TrendPoint } from '@/lib/weightTrend'
+import { listWaterEntries, totalWaterMl, type WaterDocument } from '@/lib/water'
 
 export type Targets = Macros & { fluidMl: number | null }
 
@@ -42,7 +43,7 @@ export function targetsFromProfile(profile: ProfileDocument | null): Targets {
 
 export function goalFromProfile(profile: ProfileDocument | null): GoalInfo {
   if (!profile) return { targetWeightKg: null, targetDate: null }
-  const targetWeightKg = profile.goal_target_weight_kg ?? null
+  const targetWeightKg = profile.goal_target_weight_kg ?? profile.target_weight ?? null
   let targetDate: Date | null = null
   if (profile.goal_start_date && profile.goal_estimated_weeks && profile.goal_type !== 'maintain') {
     targetDate = addDays(new Date(profile.goal_start_date), profile.goal_estimated_weeks * 7)
@@ -99,6 +100,8 @@ export type TodayOverview = {
   plan: PlanEntry[]
   workouts: Workout[]
   streak: number
+  waterEntries: WaterDocument[]
+  waterTotalMl: number
 }
 
 const STREAK_LOOKBACK_DAYS = 365
@@ -109,25 +112,32 @@ export function exerciseCreditFor(summary: ProfileSummary, burned: number): numb
 
 export async function loadStreak(userId: string): Promise<number> {
   const since = addDays(startOfDay(), -STREAK_LOOKBACK_DAYS)
-  const meals = await listMealsSince(userId, since)
+  const sinceKey = dayKey(since)
+  const [meals, entries] = await Promise.all([
+    listMealsSince(userId, since).catch(() => []),
+    foodEntriesStore.list(userId, [{ field: 'day', op: 'gte', value: sinceKey }]).catch(() => []),
+  ])
   const days = new Set<string>()
   for (const [day, kcal] of dailyKcalByDay(meals)) if (kcal > 0) days.add(day)
+  for (const entry of entries) if (entry.kcal > 0 || entry.servings > 0) days.add(entry.day)
   return loggingStreak(days)
 }
 
 export async function loadToday(userId: string, accountName?: string): Promise<TodayOverview> {
   const today = dayKey()
-  const [summary, meals, entries, plan, workouts, streak] = await Promise.all([
+  const [summary, meals, entries, plan, workouts, streak, waterEntries] = await Promise.all([
     loadProfileSummary(userId, accountName),
     getTodayMeals(userId),
     listEntriesForDay(userId, today),
     listPlanEntries(userId, today, today),
     listWorkoutsBetween(userId, today, today),
     loadStreak(userId),
+    listWaterEntries(userId),
   ])
   const eaten = mealTotals(meals)
   const burned = burnedOn(workouts, today)
   const exerciseCredit = exerciseCreditFor(summary, burned)
+  const waterTotalMl = totalWaterMl(waterEntries)
   return {
     summary,
     eaten,
@@ -139,6 +149,8 @@ export async function loadToday(userId: string, accountName?: string): Promise<T
     plan,
     workouts,
     streak,
+    waterEntries,
+    waterTotalMl,
   }
 }
 
