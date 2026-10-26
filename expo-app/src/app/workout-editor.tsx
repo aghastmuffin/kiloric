@@ -225,7 +225,7 @@ export default function WorkoutEditorScreen() {
                 testID="workout-time"
               />
               {isPastTime ? (
-                <Txt variant="caption" color={c.amberInk ?? '#b45309'} style={styles.pastNotice}>
+                <Txt variant="caption" color={c.peachInk} style={styles.pastNotice}>
                   ⚠️ Start time is in the past
                 </Txt>
               ) : null}
@@ -284,14 +284,14 @@ export default function WorkoutEditorScreen() {
           <UButton label="Add exercise" tone="mint" size="sm" onPress={() => setExercises((current) => [...current, newExercise()])} style={styles.start} testID="add-exercise" />
         ) : null}
         {showPastPrompt ? (
-          <Card tone="amber" style={styles.gap}>
+          <Card tone="peach" style={styles.gap}>
             <Txt variant="subheading">Start time is in the past</Txt>
             <Txt variant="body">
               The start time ({time}) has already passed. Would you like to log this as a completed workout now or schedule it for the future?
             </Txt>
             <View style={styles.promptButtons}>
               <UButton label="Log as completed" size="sm" tone="primary" onPress={() => void save('done')} testID="log-completed" />
-              <UButton label="Schedule anyway" size="sm" tone="secondary" onPress={() => void save('planned')} testID="schedule-anyway" />
+              <UButton label="Schedule anyway" size="sm" tone="card" onPress={() => void save('planned')} testID="schedule-anyway" />
               <UButton label="Change time" size="sm" tone="ghost" onPress={() => setShowPastPrompt(false)} testID="change-time" />
             </View>
           </Card>
