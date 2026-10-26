@@ -282,6 +282,7 @@ type Props = {
   mealPickerOpen: boolean
   addStatuses: Record<number, AddStatus>
   favorites: FavoriteFood[]
+  mealOptions?: string[]
   onToggleMealPicker: () => void
   onSelectMealType: (type: MealType) => void
   onAdd: (item: SearchResult, index: number) => void
@@ -300,6 +301,7 @@ export function LogFoodMultiView({
   mealPickerOpen,
   addStatuses,
   favorites,
+  mealOptions,
   onToggleMealPicker,
   onSelectMealType,
   onAdd,
@@ -320,6 +322,8 @@ export function LogFoodMultiView({
     () => new Set(favorites.map((f) => f.barcode)),
     [favorites],
   )
+
+  const activeMealOptions = mealOptions ?? MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other')
 
   const toggleExpanded = (index: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -370,7 +374,7 @@ export function LogFoodMultiView({
           </Pressable>
           {mealPickerOpen ? (
             <View style={styles.mealMenu}>
-              {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type) => (
+              {activeMealOptions.map((type) => (
                 <Pressable
                   key={type}
                   accessibilityRole="button"

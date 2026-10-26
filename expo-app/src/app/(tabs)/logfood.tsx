@@ -25,7 +25,6 @@ import {
   entryMacros,
   foodItemFromEntry,
   frequentFoods,
-  LOG_MEAL_TYPES,
   listEntriesForDay,
   listRecentEntries,
   logFood,
@@ -36,6 +35,7 @@ import {
   type FoodEntrySource,
   type LogMealType,
 } from '@/lib/data/foodLog'
+import { effectiveMealNames, loadPlanPreferences } from '@/lib/planPreferences'
 import { formatAmount, formatKcal, foodItemFromProduct, scaleMacros, type FoodItem } from '@/lib/data/foodItem'
 import { loadTodayBudget } from '@/lib/data/overview'
 import { stashReviewItem } from '@/lib/data/reviewHandoff'
@@ -67,11 +67,6 @@ type Row = {
   onOpen?: () => void
 }
 
-const MEAL_OPTIONS = LOG_MEAL_TYPES.map((type) => ({ value: type, label: type }))
-
-function asLogMealType(value: string): LogMealType {
-  return (LOG_MEAL_TYPES as readonly string[]).includes(value) ? (value as LogMealType) : 'Snack'
-}
 
 function servingSubtitle(label: string | null | undefined, servings: number): string {
   const base = (label ?? '1 serving').replace(/^1 serving = /, '')
@@ -96,7 +91,9 @@ function EntryEditorModal({
   onSave,
   onDelete,
   onClose,
+  mealTypes,
 }: {
+  mealTypes: readonly LogMealType[]
   visible: boolean
   entry: FoodEntry | null
   saving: boolean
@@ -188,7 +185,7 @@ function EntryEditorModal({
               Meal
             </Txt>
             <View style={editorStyles.mealTypeRow}>
-              {LOG_MEAL_TYPES.map((type) => (
+              {(entry && !mealTypes.includes(entry.meal_type) ? [...mealTypes, entry.meal_type] : mealTypes).map((type) => (
                 <Chip
                   key={type}
                   label={type}
@@ -257,7 +254,6 @@ export default function LogFoodScreen() {
   const userId = user?.$id ?? null
   const { selectedMealType, setSelectedMealType } = useMealTypePreferences()
   const { wide } = useShell()
-  const mealType = asLogMealType(selectedMealType)
 
   const [tab, setTab] = useState<ListTab>('recent')
   const [selected, setSelected] = useState<Map<string, Selection>>(new Map())
@@ -292,18 +288,33 @@ export default function LogFoodScreen() {
   const [undoSnack, setUndoSnack] = useState<{ entry: FoodEntry; timeoutId: ReturnType<typeof setTimeout> } | null>(null)
 
   const state = useFocusLoader(async () => {
-    const [budget, recent, todayEntries, savedMeals, favs] = await Promise.all([
+    const [budget, recent, todayEntries, savedMeals, planPrefs, favs] = await Promise.all([
       loadTodayBudget(userId!, user?.name),
       listRecentEntries(userId!),
       listEntriesForDay(userId!),
       listSavedMeals(userId!),
+      userId ? loadPlanPreferences(userId).catch(() => null) : Promise.resolve(null),
       loadFavoriteFoods(userId!),
     ])
     setFavorites(favs)
-    return { budget, recent, todayEntries, savedMeals, favs }
+    return { budget, recent, todayEntries, savedMeals, planPrefs, favs }
   }, userId)
 
   const data = state.data
+  const activeMealNames = useMemo(() => {
+    if (!data?.planPrefs) return ['Breakfast', 'Lunch', 'Snack', 'Dinner']
+    return effectiveMealNames(data.planPrefs)
+  }, [data?.planPrefs])
+
+  const mealOptions = useMemo(
+    () => activeMealNames.map((type) => ({ value: type, label: type })),
+    [activeMealNames],
+  )
+
+  const mealType: LogMealType = activeMealNames.includes(selectedMealType)
+    ? selectedMealType
+    : (activeMealNames[0] ?? 'Snack')
+
   const recent = useMemo(() => (data ? recentFoods(data.recent) : []), [data])
   const frequent = useMemo(() => (data ? frequentFoods(data.recent) : []), [data])
   const loggedForMeal = useMemo(
@@ -623,7 +634,7 @@ export default function LogFoodScreen() {
         }
       />
       <Segmented
-        options={MEAL_OPTIONS}
+        options={mealOptions}
         value={mealType}
         onChange={(value) => void setSelectedMealType(value)}
         testID="meal-segment"
@@ -814,6 +825,7 @@ export default function LogFoodScreen() {
 
       <EntryEditorModal
         visible={!!editingEntry}
+        mealTypes={activeMealNames}
         entry={editingEntry}
         saving={savingEntry}
         onSave={(updates) => void performEntrySave(updates)}

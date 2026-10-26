@@ -2,6 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createDefaultPlanPreferences,
+  effectiveMealNames,
+  effectiveMealSlots,
   loadPlanPreferences,
   normalizePlanPreferences,
   savePlanPreferences,
@@ -60,6 +62,26 @@ describe('planPreferences normalization', () => {
     expect(normalized.targetWeightKg).toBe(75)
     expect(normalized.displayUnits).toBe('imperial')
     expect(normalized.overrides.targetKcal).toBe(2800)
+  })
+
+  it('normalizes custom meal slots and returns effective slots and names', () => {
+    const customSlots = [
+      { key: 'breakfast', name: 'First Breakfast', enabled: true, order: 0 },
+      { key: 'pre_workout', name: 'Pre-workout', enabled: true, order: 1 },
+      { key: 'snack', name: 'Snack', enabled: false, order: 2 },
+      { key: 'dinner', name: 'Supper', enabled: true, order: 3 },
+    ]
+
+    const normalized = normalizePlanPreferences({ mealSlots: customSlots })
+    expect(normalized.mealSlots).toHaveLength(4)
+    expect(normalized.mealSlots[1].name).toBe('Pre-workout')
+
+    const activeSlots = effectiveMealSlots(normalized)
+    expect(activeSlots).toHaveLength(3)
+    expect(activeSlots.map((s) => s.name)).toEqual(['First Breakfast', 'Pre-workout', 'Supper'])
+
+    const activeNames = effectiveMealNames(normalized)
+    expect(activeNames).toEqual(['First Breakfast', 'Pre-workout', 'Supper'])
   })
 })
 

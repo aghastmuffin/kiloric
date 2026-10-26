@@ -397,6 +397,50 @@ describe('meals authorization checks', () => {
     ).rejects.toThrow('Unauthorized: You can only move products from your own meals.')
   })
 
+  describe('createMeal and updateMeal payload validations', () => {
+    it('accepts custom meal type names during createMeal', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      mockCreateDocument.mockResolvedValue({
+        $id: 'meal-custom',
+        owner: 'user-123',
+        type: 'Pre-workout',
+        friendlyname: 'Pre-workout',
+      })
+
+      const doc = await mealsModule.createMeal({
+        owner: 'user-123',
+        type: 'Pre-workout',
+        friendlyname: 'Pre-workout',
+      })
+
+      expect(doc.type).toBe('Pre-workout')
+      expect(mockCreateDocument).toHaveBeenCalledTimes(1)
+    })
+
+    it('accepts custom meal types up to the column limit', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+      await expect(
+        mealsModule.createMeal({ owner: 'user-123', type: 'a'.repeat(17) })
+      ).rejects.toThrow('16 characters')
+      const outcome = await mealsModule
+        .createMeal({ owner: 'user-123', type: 'Pre-workout' })
+        .then(() => null, (err: unknown) => (err instanceof Error ? err.message : String(err)))
+      expect(outcome ?? '').not.toMatch(/type must/)
+    })
+
+    it('rejects empty or excessively long meal types', async () => {
+      mockGetAccount.mockResolvedValue({ $id: 'user-123' })
+
+      await expect(
+        mealsModule.createMeal({ owner: 'user-123', type: '   ' })
+      ).rejects.toThrow('type must be a non-empty string.')
+
+      await expect(
+        mealsModule.createMeal({ owner: 'user-123', type: 'a'.repeat(17) })
+      ).rejects.toThrow('type must be 16 characters or fewer.')
+    })
+  })
+
   describe('getMeal', () => {
     it('returns null immediately for malformed meal IDs', async () => {
       expect(await mealsModule.getMeal('invalid id!')).toBeNull()

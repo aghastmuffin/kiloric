@@ -15,7 +15,8 @@ import {
 import { authenticatedRequest } from '@/lib/apiUtils'
 import { showApiError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
-import { LOG_MEAL_TYPES, logFood, type FoodEntrySource, type LogMealType } from '@/lib/data/foodLog'
+import { logFood, type FoodEntrySource, type LogMealType } from '@/lib/data/foodLog'
+import { effectiveMealNames, loadPlanPreferences } from '@/lib/planPreferences'
 import {
   formatAmount,
   formatGrams,
@@ -47,9 +48,6 @@ const QUICK_PICKS: Record<AmountMode, number[]> = {
 
 const STEP: Record<AmountMode, number> = { servings: 0.5, grams: 10 }
 
-function asLogMealType(value: string | undefined): LogMealType | null {
-  return value && (LOG_MEAL_TYPES as readonly string[]).includes(value) ? (value as LogMealType) : null
-}
 
 function asSource(value: string | undefined): FoodEntrySource {
   return value === 'scan' || value === 'search' || value === 'recent' || value === 'plan' ? value : 'search'
@@ -73,17 +71,22 @@ export default function ReviewLogScreen() {
 
   const [mode, setMode] = useState<AmountMode>('servings')
   const [amount, setAmount] = useState(handoff?.servings ?? 1)
-  const [meal, setMeal] = useState<LogMealType>(asLogMealType(params.meal) ?? asLogMealType(selectedMealType) ?? 'Snack')
+  const [meal, setMeal] = useState<LogMealType>(params.meal ?? selectedMealType ?? 'Snack')
   const [logging, setLogging] = useState(false)
 
   const source = handoff?.source ?? asSource(params.source)
   const state = useFocusLoader(async () => {
-    const [budget, item] = await Promise.all([
+    const [budget, item, planPrefs] = await Promise.all([
       loadTodayBudget(userId!, user?.name),
       handoff ? Promise.resolve(handoff.item) : params.barcode ? fetchBarcode(params.barcode) : Promise.resolve(null),
+      userId ? loadPlanPreferences(userId).catch(() => null) : Promise.resolve(null),
     ])
-    return { budget, item }
+    return { budget, item, planPrefs }
   }, userId ? `${userId}:${params.id ?? ''}:${params.barcode ?? ''}` : null)
+
+  const activeMealNames = state.data?.planPrefs
+    ? effectiveMealNames(state.data.planPrefs)
+    : ['Breakfast', 'Lunch', 'Snack', 'Dinner']
 
   const item = state.data?.item ?? null
   const budget = state.data?.budget ?? null
@@ -229,7 +232,7 @@ export default function ReviewLogScreen() {
       </Card>
 
       <View style={styles.mealRow}>
-        {LOG_MEAL_TYPES.map((type) => (
+        {activeMealNames.map((type) => (
           <Chip key={type} label={type} selected={meal === type} onPress={() => setMeal(type)} size="md" testID={`meal-${type}`} />
         ))}
       </View>
