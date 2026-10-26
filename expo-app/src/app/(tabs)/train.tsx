@@ -19,6 +19,7 @@ import {
 import { showApiError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
 import { dayKey, longDate, parseDayKey, shortMonthDay, shortWeekday, timeLabel } from '@/lib/data/dateKeys'
+import { netStrengthKcal } from '@/lib/exercise'
 import { loadProfileSummary, weightUnitLabel } from '@/lib/data/overview'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import {
@@ -44,8 +45,18 @@ import { Fragment, useEffect, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 const REST_SECONDS = 90
+const ACTION_TIMEOUT_MS = 15_000
 
-function toDisplay(kg: number, units: DisplayUnits): string {
+function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  let timerId: ReturnType<typeof setTimeout>
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timerId = setTimeout(() => reject(new Error(message)), ACTION_TIMEOUT_MS)
+  })
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timerId))
+}
+
+function toDisplay(kg: number | null | undefined, units: DisplayUnits): string {
+  if (kg == null || kg <= 0) return ''
   const value = units === 'imperial' ? kgToLbs(kg) : kg
   return String(Math.round(value * 2) / 2)
 }
@@ -95,6 +106,7 @@ function TrainHome({ onOpen }: { onOpen: (id: string) => void }) {
   const upcoming = state.data?.upcoming ?? []
   const recent = state.data?.recent ?? []
   const active = upcoming.find((workout) => workout.status === 'active')
+  const upcomingPlanned = upcoming.filter((workout) => workout.status === 'planned')
 
   async function remove(workout: Workout) {
     if (!userId) return
@@ -112,7 +124,7 @@ function TrainHome({ onOpen }: { onOpen: (id: string) => void }) {
   const upcomingCard = (
     <Card style={styles.gap} testID="upcoming-workouts">
       <SectionTitle title="Up next" />
-      {upcoming.length === 0 ? (
+      {upcomingPlanned.length === 0 ? (
         <EmptyState
           compact
           icon="barbell-outline"
@@ -122,7 +134,7 @@ function TrainHome({ onOpen }: { onOpen: (id: string) => void }) {
           onAction={() => router.push('/workout-editor')}
         />
       ) : (
-        upcoming.map((workout, index) => {
+        upcomingPlanned.map((workout, index) => {
           const when = new Date(workout.scheduled_at)
           const isToday = workout.day === dayKey()
           return (
@@ -241,6 +253,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [busy, setBusy] = useState<string | null>(null)
+  const [completedSetsCount, setCompletedSetsCount] = useState<number | null>(null)
 
   const state = useFocusLoader(async () => {
     const [workout, sets, summary] = await Promise.all([
@@ -287,14 +300,17 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
   async function toggleSet(set: WorkoutSet) {
     if (!userId) return
     const draft = drafts[set.$id]
-    const weight = draft ? parseDecimal(draft.weight) : null
-    const reps = draft ? parseDecimal(draft.reps) : null
+    const weightInput = draft ? parseDecimal(draft.weight) : null
+    const repsInput = draft ? parseDecimal(draft.reps) : null
     setBusy(set.$id)
     try {
       await begin()
+      const savedWeight = weightInput != null
+        ? fromDisplay(weightInput, units)
+        : (set.weight != null ? set.weight : (set.target_weight > 0 ? set.target_weight : null))
       const saved = await completeSet(userId, set, {
-        weight: weight != null ? fromDisplay(weight, units) : (set.weight ?? set.target_weight),
-        reps: reps ?? set.reps ?? set.target_reps,
+        weight: savedWeight,
+        reps: repsInput ?? set.reps ?? set.target_reps,
         done: !set.done,
       })
       setSetOverrides((current) => ({ ...current, [set.$id]: saved }))
@@ -310,10 +326,26 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
   }
 
   async function startSession() {
+    if (!userId || !workout) return
     setBusy('start')
+    const prevWorkout = workout
+    const optimisticStarted: Workout = {
+      ...workout,
+      status: 'active',
+      started_at: workout.started_at ?? new Date().toISOString(),
+      day: dayKey(),
+    }
+    setWorkoutOverride(optimisticStarted)
+    setNow(Date.now())
+
     try {
-      await begin()
+      const started = await withTimeout(
+        begin(),
+        'Starting workout timed out. Please check your connection and try again.',
+      )
+      setWorkoutOverride(started)
     } catch (err) {
+      setWorkoutOverride(prevWorkout)
       showApiError(err, 'appwrite')
     } finally {
       setBusy(null)
@@ -323,14 +355,42 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
   async function finish() {
     if (!userId || !workout) return
     setBusy('finish')
+    const prevWorkout = workout
+    const completedCount = sets.filter((set) => set.done).length
+    setCompletedSetsCount(completedCount)
+
+    const finishedAt = new Date()
+    const startedAt = workout.started_at ? new Date(workout.started_at) : finishedAt
+    const elapsedMinutes = Math.max(1, Math.round((finishedAt.getTime() - startedAt.getTime()) / 60_000))
+    const estimate = netStrengthKcal({
+      elapsedMinutes,
+      completedSets: completedCount,
+      bodyWeightKg: state.data?.summary.currentWeightKg,
+    })
+
+    const optimisticFinished: Workout = {
+      ...workout,
+      status: 'done',
+      finished_at: finishedAt.toISOString(),
+      duration_min: elapsedMinutes,
+      kcal_burned: estimate.kcal,
+    }
+
+    setWorkoutOverride(optimisticFinished)
+    setRestEndsAt(null)
+
     try {
-      const finished = await finishWorkout(userId, workout, {
-        bodyWeightKg: state.data?.summary.currentWeightKg,
-        completedSets: sets.filter((set) => set.done).length,
-      })
+      const finished = await withTimeout(
+        finishWorkout(userId, workout, {
+          bodyWeightKg: state.data?.summary.currentWeightKg,
+          completedSets: completedCount,
+        }),
+        'Finishing workout timed out. Please check your connection and try again.',
+      )
       setWorkoutOverride(finished)
-      setRestEndsAt(null)
     } catch (err) {
+      setWorkoutOverride(prevWorkout)
+      setCompletedSetsCount(null)
       showApiError(err, 'appwrite')
     } finally {
       setBusy(null)
@@ -338,10 +398,11 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
   }
 
   function updateDraft(set: WorkoutSet, field: keyof Draft, text: string) {
+    const weightVal = set.weight != null && set.weight > 0 ? set.weight : (set.target_weight > 0 ? set.target_weight : null)
     setDrafts((current) => ({
       ...current,
       [set.$id]: {
-        weight: current[set.$id]?.weight ?? toDisplay(set.weight ?? set.target_weight, units),
+        weight: current[set.$id]?.weight ?? toDisplay(weightVal, units),
         reps: current[set.$id]?.reps ?? String(set.reps ?? set.target_reps),
         [field]: text,
       },
@@ -364,7 +425,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
     )
   }
 
-  const doneSets = sets.filter((set) => set.done).length
+  const doneSets = completedSetsCount ?? sets.filter((set) => set.done).length
   const previous = state.data?.previous.get(group.name)
   const overline = isDone
     ? `${workout.name} · finished`
@@ -402,7 +463,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
             Nice work
           </Txt>
           <Txt variant="body" color={c.mintInk}>
-            {doneSets} sets in {workout.duration_min ?? 0} min
+            {doneSets} {doneSets === 1 ? 'set' : 'sets'} in {workout.duration_min ?? 0} min
             {workout.kcal_burned ? ` · about ${workout.kcal_burned} kcal burned beyond resting` : ''}.
           </Txt>
         </Card>
@@ -432,16 +493,18 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
         </View>
         {group.sets.map((set) => {
           const prev = previous?.get(set.set_number)
+          const prevWeightStr = prev && prev.weight != null && prev.weight > 0 ? toDisplay(prev.weight, units) : null
+          const currentWeightVal = set.weight != null && set.weight > 0 ? set.weight : (set.target_weight > 0 ? set.target_weight : null)
           const current = !set.done && group.sets.find((candidate) => !candidate.done)?.$id === set.$id
           return (
             <View key={set.$id} style={[styles.setRow, current && { backgroundColor: c.mint, borderRadius: 16 }]}>
               <Text style={[styles.td, styles.colSet, { color: c.ink }]}>{set.set_number}</Text>
               <Text style={[styles.tdMuted, styles.colPrev, { color: c.inkMuted }]}>
-                {prev ? `${toDisplay(prev.weight, units)} × ${prev.reps}` : '—'}
+                {prev ? (prevWeightStr ? `${prevWeightStr} × ${prev.reps}` : `${prev.reps} reps`) : '—'}
               </Text>
               <View style={styles.colInput}>
                 <NumberCell
-                  defaultValue={toDisplay(set.weight ?? set.target_weight, units)}
+                  defaultValue={toDisplay(currentWeightVal, units)}
                   onChangeText={(text) => updateDraft(set, 'weight', text)}
                   accessibilityLabel={`Set ${set.set_number} weight in ${unit}`}
                   highlighted={set.done}
@@ -493,7 +556,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
             <Txt variant="subheading">{nextGroup.name}</Txt>
             <Txt variant="caption" tone="muted">
               {nextGroup.sets.length} × {nextGroup.sets[0]?.target_reps ?? 0}
-              {nextGroup.sets[0]?.target_weight ? ` · ${toDisplay(nextGroup.sets[0].target_weight, units)} ${unit}` : ''}
+              {nextGroup.sets[0]?.target_weight && nextGroup.sets[0].target_weight > 0 ? ` · ${toDisplay(nextGroup.sets[0].target_weight, units)} ${unit}` : ''}
             </Txt>
           </View>
           <IconButton icon="arrow-forward" tone="chip" accessibilityLabel={`Go to ${nextGroup.name}`} onPress={() => setExerciseIndex(index + 1)} />

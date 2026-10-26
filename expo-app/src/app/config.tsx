@@ -51,10 +51,12 @@ import { planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferen
 import { loadDemographics, saveDemographics } from '@/lib/demographics';
 import {
     dateToIso,
+    DEFAULT_DATE_OF_BIRTH,
     DEFAULT_PROFILE_ROLE,
     formatProfileSaveError,
     getProfile,
     isProfileComplete,
+    parseProfileDate,
     PROFILE_ROLE_OPTIONS,
     saveProfileFields,
     type ProfileRole,
@@ -93,15 +95,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15);
-
 const CONFIG_TABS = ['Profile', 'Body & Goals', 'Targets', 'Preferences'] as const;
-
-function parseProfileDate(value?: string): Date {
-  if (!value) return DEFAULT_DATE_OF_BIRTH;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? DEFAULT_DATE_OF_BIRTH : parsed;
-}
 
 export default function ConfigScreen() {
   const { user, loading } = useAuth();
@@ -155,6 +149,16 @@ export default function ConfigScreen() {
 
   const isRequired = !profileComplete;
 
+  const countryPickerOptions = useMemo(() => {
+    if (isBarredResidency(country)) {
+      return [
+        { label: `${getCountryName(country)} (Unavailable)`, value: country },
+        ...COUNTRY_OPTIONS,
+      ];
+    }
+    return COUNTRY_OPTIONS;
+  }, [country]);
+
   // Real-time suggested nutrition plan based on current body & goal selections
   const computedPlan: NutritionPlan = useMemo(() => {
     return buildNutritionPlan({
@@ -168,8 +172,9 @@ export default function ConfigScreen() {
       pace,
       diet,
       targetWeight,
+      displayUnits,
     });
-  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight]);
+  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight, displayUnits]);
 
   const activeTargetKcal = targetKcal ?? computedPlan.targetKcal;
   const activeTargetProtein = targetProtein ?? computedPlan.targetProtein;
@@ -291,7 +296,7 @@ export default function ConfigScreen() {
 
         const parsedTargetWeight = normalizeStoredTargetWeightKg(
           userCountry,
-          profile.target_weight,
+          profile.goal_target_weight_kg ?? profile.target_weight,
           profile.height ?? 170,
         );
         setTargetWeight(parsedTargetWeight);
@@ -369,6 +374,7 @@ export default function ConfigScreen() {
             targetWeight: roundMetric(targetWeight ?? computedPlan.targetWeight),
             currentWeight: roundMetric(weight),
             estimatedWeeklyChangeKg: currentWeeklyChangeKg,
+            units: displayUnits,
           });
 
       const goalPlainWithUnits = appendDisplayUnitsToGoalPlain(finalGoalBase, displayUnits);
@@ -621,7 +627,7 @@ export default function ConfigScreen() {
                 <NativeEnumPicker
                   accessibilityLabel="Country of residence"
                   value={country}
-                  options={COUNTRY_OPTIONS}
+                  options={countryPickerOptions}
                   onChange={(val) => {
                     setCountry(val);
                     setResidesInAsia((current) => nextAsiaAnswer(current, country, val));
