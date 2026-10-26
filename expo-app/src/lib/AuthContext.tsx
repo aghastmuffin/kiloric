@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       access_token: string
       refresh_token: string
       user: Record<string, unknown>
-    }>('/v1/auth/register', { email: email.trim().toLowerCase(), username, password }, { skipAuth: true })
+    }>('api.kiloric.co/v1/auth/register', { email: email.trim().toLowerCase(), username, password }, { skipAuth: true })
 
     if (res?.access_token) {
       await setTokens(res.access_token, res.refresh_token)
