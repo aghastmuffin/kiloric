@@ -4,11 +4,11 @@
     "slug": "taesonco-kiloric",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
+    "icon": "./assets/images/icon.jpeg",
     "scheme": "calorie",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/app-icon.png",
+      "icon": "./assets/images/icon.jpeg",
       "bundleIdentifier": "co.taeson.kiloric",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -17,8 +17,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#B74435",
-        "foregroundImage": "./assets/images/app-mark.png",
-        "monochromeImage": "./assets/images/app-mark-monochrome.png"
+        "foregroundImage": "./assets/images/icon.jpeg",
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -28,20 +27,10 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/app-icon.png"
+      "favicon": "./assets/images/icon.jpeg"
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#B74435",
-          "android": {
-            "image": "./assets/images/app-mark.png",
-            "imageWidth": 112
-          }
-        }
-      ],
       "expo-image",
       [
         "expo-camera",
