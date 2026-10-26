@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { CongressionalNote } from '@/components/onboarding/ResidencyNotices'
 import { useTheme } from '@/lib/theme/ThemeContext'
 import type { ThemeColors } from '@/lib/theme/tokens'
@@ -155,7 +156,7 @@ export default function OnboardingSuccess() {
           </View>
           <Text accessibilityRole="header" style={styles.title}>Your plan is ready.</Text>
           <Text style={styles.subtitle}>
-            Your calorie, macro, and hydration targets are set. Start with today’s meals and let
+            Your calorie and macro targets are set. Start with today’s meals and let
             the pattern build from there.
           </Text>
           <CongressionalNote />
@@ -169,10 +170,12 @@ export default function OnboardingSuccess() {
               <Text style={styles.ledgerLabel}>MACRO BALANCE</Text>
               <Text style={styles.ledgerValue}>CALCULATED</Text>
             </View>
-            <View style={styles.ledgerRow}>
-              <Text style={styles.ledgerLabel}>HYDRATION</Text>
-              <Text style={styles.ledgerValue}>READY</Text>
-            </View>
+            {FEATURES.water ? (
+              <View style={styles.ledgerRow}>
+                <Text style={styles.ledgerLabel}>HYDRATION</Text>
+                <Text style={styles.ledgerValue}>READY</Text>
+              </View>
+            ) : null}
           </View>
 
           <Pressable

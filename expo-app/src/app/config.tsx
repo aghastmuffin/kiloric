@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { MEAL_TYPE_MAX_LENGTH } from '@/lib/meals'
 import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
@@ -385,7 +386,9 @@ export default function ConfigScreen() {
     setDailyFluid(null);
     Alert.alert(
       'Reset to Recommended',
-      'Daily calories, macros, and hydration have been refreshed to match your body and goals.',
+      FEATURES.water
+        ? 'Daily calories, macros, and hydration have been refreshed to match your body and goals.'
+        : 'Daily calories and macros have been refreshed to match your body and goals.',
     );
   }
 
@@ -1062,6 +1065,8 @@ export default function ConfigScreen() {
                 />
               </View>
 
+              {FEATURES.water ? (
+              <>
               <View style={styles.divider} />
 
               <View style={[styles.row, compactLayout && styles.rowCompact]}>
@@ -1083,6 +1088,8 @@ export default function ConfigScreen() {
                   formatLabel={(value) => `${value} ml`}
                 />
               </View>
+              </>
+              ) : null}
             </View>
 
             <View style={[styles.sectionHeader, { marginTop: 16 }]}>
@@ -1158,7 +1165,7 @@ export default function ConfigScreen() {
             </View>
 
             <Text style={styles.fieldHint}>
-              Customize, rename, or toggle visibility for your daily meal slots (e.g. Pre-workout, Second breakfast).
+              Customize, rename, or toggle visibility for your daily meal slots (e.g. Second breakfast, Evening snack).
             </Text>
 
             <View style={styles.card}>
@@ -1235,7 +1242,7 @@ export default function ConfigScreen() {
                 <TextInput
                   value={newMealSlotName}
                   onChangeText={setNewMealSlotName}
-                  placeholder="e.g. Pre-workout, Evening Snack"
+                  placeholder="e.g. Second breakfast, Evening snack"
                   placeholderTextColor={colors.textFaint}
                   maxLength={MEAL_TYPE_MAX_LENGTH}
                   accessibilityLabel="New meal type name"

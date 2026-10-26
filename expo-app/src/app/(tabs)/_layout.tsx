@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { ShellContext, WIDE_BREAKPOINT, type ShellInfo } from '@/components/ds'
 import { ProfileGate } from '@/components/ProfileGate'
 import { useAuth } from '@/lib/AuthContext'
@@ -15,13 +16,15 @@ type IconName = ComponentProps<typeof Ionicons>['name']
 
 type NavItem = { name: string; label: string; sidebarLabel: string; icon: IconName; activeIcon: IconName }
 
-const NAV: NavItem[] = [
+const ALL_NAV: NavItem[] = [
   { name: 'index', label: 'Today', sidebarLabel: 'Today', icon: 'home-outline', activeIcon: 'home' },
   { name: 'plan', label: 'Plan', sidebarLabel: 'Meal plan', icon: 'calendar-outline', activeIcon: 'calendar' },
   { name: 'logfood', label: 'Log', sidebarLabel: 'Food log', icon: 'restaurant-outline', activeIcon: 'restaurant' },
   { name: 'train', label: 'Train', sidebarLabel: 'Workouts', icon: 'barbell-outline', activeIcon: 'barbell' },
   { name: 'progress', label: 'Progress', sidebarLabel: 'Progress', icon: 'trending-up-outline', activeIcon: 'trending-up' },
 ]
+
+const NAV: NavItem[] = ALL_NAV.filter((item) => item.name !== 'train' || FEATURES.workouts)
 
 const BAR_HEIGHT = 74
 
@@ -83,7 +86,9 @@ function AddButton(props: TabTriggerSlotProps) {
 function BottomBar() {
   const c = usePalette()
   const insets = useSafeAreaInsets()
-  const [today, plan, , train, progress] = NAV
+  const today = NAV.find((item) => item.name === 'index')!
+  const plan = NAV.find((item) => item.name === 'plan')!
+  const right = NAV.filter((item) => item.name === 'train' || item.name === 'progress')
   return (
     <View
       accessibilityRole="tablist"
@@ -100,7 +105,7 @@ function BottomBar() {
       <TabTrigger name="logfood" asChild>
         <AddButton />
       </TabTrigger>
-      {[train, progress].map((item) => (
+      {right.map((item) => (
         <TabTrigger key={item.name} name={item.name} asChild>
           <NavButton item={item} variant="bar" />
         </TabTrigger>

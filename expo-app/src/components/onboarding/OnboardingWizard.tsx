@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import {
   NativeDatePicker,
@@ -773,12 +774,12 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              A quick setup so kiloric can personalize calories, macros, and hydration for you.
+              A quick setup so kiloric can personalize calories and macros for you.
             </Text>
             <View style={onboardingStyles.infoCard}>
               <Text style={onboardingStyles.infoCardTitle}>We&apos;ll handle the math</Text>
               <Text style={onboardingStyles.infoCardText}>
-                TDEE, macro targets, weekly pace, and hydration are calculated automatically from
+                TDEE, macro targets, and weekly pace are calculated automatically from
                 your body stats and goals.
               </Text>
             </View>
@@ -1079,9 +1080,11 @@ export function OnboardingWizard() {
               formatLabel={(value) => `${value} g`}
             />
 
-            <Text style={onboardingStyles.label}>
-              Hydration · {formatFluid(form.displayUnits, plan.dailyFluid)}
-            </Text>
+            {FEATURES.water ? (
+              <Text style={onboardingStyles.label}>
+                Hydration · {formatFluid(form.displayUnits, plan.dailyFluid)}
+              </Text>
+            ) : null}
             <Text style={onboardingStyles.hintInline}>TDEE (maintenance): {plan.tdee} kcal</Text>
 
             {renderTargetWeightPicker()}

@@ -1,3 +1,5 @@
+import { FEATURES } from '@/lib/features'
+import { Redirect } from 'expo-router'
 import {
   Badge,
   Card,
@@ -67,7 +69,7 @@ function fromDisplay(value: number, units: DisplayUnits): number {
   return units === 'imperial' ? lbsToKg(value) : value
 }
 
-export default function TrainScreen() {
+function TrainScreen() {
   const params = useLocalSearchParams<{ workout?: string }>()
   const router = useRouter()
   const [openId, setOpenId] = useState<string | null>(params.workout || null)
@@ -615,3 +617,8 @@ const styles = StyleSheet.create({
   restTime: { fontFamily: fonts.heavy, fontSize: 32, letterSpacing: -1 },
   nextCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
 })
+
+export default function TrainScreenRoute() {
+  if (!FEATURES.workouts) return <Redirect href="/" />
+  return <TrainScreen />
+}
