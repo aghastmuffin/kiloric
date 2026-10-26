@@ -64,6 +64,7 @@ import {
   formatProfileSaveError,
   getProfile,
   isProfileComplete,
+  parseProfileDate,
   saveProfileFields,
 } from '@/lib/profile'
 import { loadPlanPreferences, planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences'
@@ -196,11 +197,6 @@ function AgeRestrictionScreen({
   )
 }
 
-function parseProfileDate(value?: string): Date {
-  if (!value) return DEFAULT_DATE_OF_BIRTH
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? DEFAULT_DATE_OF_BIRTH : parsed
-}
 
 function getEffectiveMacros(plan: NutritionPlan, overrides: MacroOverrides | null): MacroOverrides {
   if (overrides) return overrides

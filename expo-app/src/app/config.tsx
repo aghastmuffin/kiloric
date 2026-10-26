@@ -52,10 +52,12 @@ import { planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferen
 import { loadDemographics, saveDemographics } from '@/lib/demographics';
 import {
     dateToIso,
+    DEFAULT_DATE_OF_BIRTH,
     DEFAULT_PROFILE_ROLE,
     formatProfileSaveError,
     getProfile,
     isProfileComplete,
+    parseProfileDate,
     PROFILE_ROLE_OPTIONS,
     saveProfileFields,
     type ProfileRole,
@@ -94,15 +96,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15);
-
 const CONFIG_TABS = ['Profile', 'Body & Goals', 'Targets', 'Preferences'] as const;
-
-function parseProfileDate(value?: string): Date {
-  if (!value) return DEFAULT_DATE_OF_BIRTH;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? DEFAULT_DATE_OF_BIRTH : parsed;
-}
 
 export default function ConfigScreen() {
   const { user, loading } = useAuth();
