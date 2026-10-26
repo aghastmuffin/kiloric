@@ -514,7 +514,7 @@ export default function LogFoodScreen() {
       setSelected(new Map())
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setAdding(false)
     }
@@ -528,7 +528,7 @@ export default function LogFoodScreen() {
       setEditingEntry(null)
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSavingEntry(false)
     }
@@ -550,7 +550,7 @@ export default function LogFoodScreen() {
       setUndoSnack({ entry, timeoutId })
       triggerNotificationHaptic('success')
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     }
   }
 
@@ -571,7 +571,7 @@ export default function LogFoodScreen() {
       await state.reload()
       triggerNotificationHaptic('success')
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     }
   }
 
@@ -589,7 +589,7 @@ export default function LogFoodScreen() {
       setTab('meals')
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSavingMeal(false)
     }

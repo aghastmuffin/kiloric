@@ -534,7 +534,7 @@ export default function ConfigScreen() {
     } catch (err) {
       const message = formatProfileSaveError(err);
       setSaveError(message);
-      showApiError(message, 'appwrite');
+      showApiError(message, 'server');
     } finally {
       setSaving(false);
     }

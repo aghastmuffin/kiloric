@@ -30,7 +30,7 @@ type Props = {
 
 const SOURCE_LABEL: Record<ApiErrorSource, string> = {
   oracle: 'Backend',
-  appwrite: 'Appwrite',
+  server: 'Server',
 }
 
 export function ApiErrorToast({ error, onDismiss }: Props) {

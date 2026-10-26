@@ -1,9 +1,9 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/appwrite', () => ({ account: {}, databases: {} }))
-vi.mock('react-native-appwrite', () => ({
-  AppwriteException: class extends Error {},
+vi.mock('@/lib/serverData', () => ({ account: {}, databases: {} }))
+vi.mock('@/lib/serverTypes', () => ({
+  PersistenceError: class extends Error {},
   ID: { unique: () => 'id' },
   Permission: { read: () => 'read', update: () => 'update', delete: () => 'delete' },
   Role: { user: (id: string) => `user:${id}` },

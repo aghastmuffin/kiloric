@@ -1,5 +1,6 @@
-import type { Models } from 'react-native-appwrite'
-import { account } from './appwrite'
+import type { Models } from '@/lib/serverTypes'
+import { account } from './serverData'
+import { updateAccountPreferences } from './accountPreferences'
 import { isRaceValue, type RaceValue } from './residency'
 
 const PREFS_KEY = 'calcountDemographics'
@@ -29,7 +30,7 @@ export async function loadDemographics(expectedUserId?: string): Promise<Demogra
   if (expectedUserId && user.$id !== expectedUserId) {
     throw new Error('Unauthorized: You are not permitted to modify preferences for another user.')
   }
-  return demographicsFromPrefs(user.prefs)
+  return demographicsFromPrefs(user.prefs as Record<string, unknown> | undefined)
 }
 
 export async function saveDemographics(
@@ -41,11 +42,6 @@ export async function saveDemographics(
     throw new Error('Unauthorized: You are not permitted to modify preferences for another user.')
   }
   const normalized = demographicsFromPrefs({ [PREFS_KEY]: demographics })
-  await account.updatePrefs({
-    prefs: {
-      ...(user.prefs as Record<string, unknown>),
-      [PREFS_KEY]: normalized,
-    },
-  })
+  await updateAccountPreferences((current) => ({ ...current, [PREFS_KEY]: normalized }))
   return normalized
 }

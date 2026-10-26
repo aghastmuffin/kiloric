@@ -22,7 +22,7 @@ Expo Router file-based routes live under `src/app/`. Typed routes are enabled.
 | `signin.tsx` | `/signin` | Neutral kiloric introduction and password sign-in |
 | `onboarding.tsx` | `/onboarding` | Eligibility-first account creation and profile setup |
 | `onboard_success.tsx` | `/onboard_success` | Setup completion screen |
-| `reset-password.tsx` | `/reset-password` | Completes Appwrite email recovery links |
+| `reset-password.tsx` | `/reset-password` | Completes Kiloric API email recovery links |
 | `cameraview.tsx` | `/cameraview` | Barcode scanner; opened only from an explicit scan action, hands off to `/review-log` |
 | `review-log.tsx` | `/review-log` | Review & log a food: servings / grams, quick picks, meal, macro impact on today, kcal left |
 | `plan-entry.tsx` | `/plan-entry` | Add or edit a planned meal (`?day=`, `?meal=`, `?id=`) |

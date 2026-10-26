@@ -118,7 +118,7 @@ export default function ReviewLogScreen() {
       void setSelectedMealType(meal)
       close()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setLogging(false)
     }

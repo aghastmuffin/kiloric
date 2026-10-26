@@ -122,7 +122,7 @@ export default function PlanEntryScreen() {
       else await addPlanEntry(userId, payload)
       router.back()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSaving(false)
     }
@@ -135,7 +135,7 @@ export default function PlanEntryScreen() {
       await deletePlanEntry(userId, existing.$id)
       router.back()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSaving(false)
     }

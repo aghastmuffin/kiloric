@@ -14,13 +14,14 @@ const { mockAccountGet, mockUpdatePrefs } = vi.hoisted(() => ({
   mockUpdatePrefs: vi.fn(),
 }))
 
-vi.mock('react-native-appwrite', () => ({
+vi.mock('@/lib/serverTypes', () => ({
   Models: {},
 }))
 
-vi.mock('./appwrite', () => ({
+vi.mock('./serverData', () => ({
   account: {
     get: mockAccountGet,
+    getPrefs: mockAccountGet,
     updatePrefs: mockUpdatePrefs,
   },
 }))

@@ -42,6 +42,7 @@ export default function CpraPortalScreen() {
   const [doNotSell, setDoNotSell] = useState(true);
   const [limitSensitive, setLimitSensitive] = useState(true);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [preferenceError, setPreferenceError] = useState<string | null>(null);
 
   // Export State
   const [exporting, setExporting] = useState(false);
@@ -87,13 +88,27 @@ export default function CpraPortalScreen() {
   async function handleToggleDoNotSell(val: boolean) {
     triggerSelectionHaptic();
     setDoNotSell(val);
-    await setDoNotSellSharePreference(val);
+    setPreferenceError(null);
+    try {
+      await setDoNotSellSharePreference(val);
+    } catch {
+      setDoNotSell(!val);
+      setPreferenceError('We could not save that preference. Please try again.');
+      triggerNotificationHaptic('error');
+    }
   }
 
   async function handleToggleLimitSensitive(val: boolean) {
     triggerSelectionHaptic();
     setLimitSensitive(val);
-    await setLimitSensitiveDataPreference(val);
+    setPreferenceError(null);
+    try {
+      await setLimitSensitiveDataPreference(val);
+    } catch {
+      setLimitSensitive(!val);
+      setPreferenceError('We could not save that preference. Please try again.');
+      triggerNotificationHaptic('error');
+    }
   }
 
   async function handleGenerateExport() {
@@ -280,6 +295,11 @@ export default function CpraPortalScreen() {
             (see above note)
           </Text>
         </View>
+        {preferenceError ? (
+          <Text accessibilityRole="alert" style={styles.errorText}>
+            {preferenceError}
+          </Text>
+        ) : null}
       </View>
 
       {/* Right to Access / Export Data */}

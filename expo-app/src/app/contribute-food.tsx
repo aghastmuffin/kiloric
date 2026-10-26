@@ -1,7 +1,7 @@
 import { CaptureCamera, type CaptureGuide } from '@/components/contribute/CaptureCamera'
 import { ThanksBurst } from '@/components/contribute/ThanksBurst'
 import { Badge, Card, ErrorNote, Field, IconButton, ScreenScroll, Txt, UButton, WIDE_BREAKPOINT } from '@/components/ds'
-import { formatAppwriteError } from '@/lib/apiErrors'
+import { formatServerError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
 import {
   NUMBER_OFF_FIELDS,
@@ -286,7 +286,7 @@ export default function ContributeFoodScreen() {
       setPhase('done')
     } catch (sendError) {
       triggerNotificationHaptic('error')
-      setError(formatAppwriteError(sendError))
+      setError(formatServerError(sendError))
     }
   }
 

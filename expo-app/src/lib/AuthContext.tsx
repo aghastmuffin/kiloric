@@ -1,5 +1,5 @@
 import { apiClient, clearTokens, getAccessToken, revokeSession, setTokens } from '@/lib/apiClient'
-import { clearAppwriteSession } from '@/lib/appwriteSession'
+import { clearSessionState } from '@/lib/sessionState'
 import {
   validateConfirmPasswordResetInput,
   validateSendPasswordResetInput,
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       access_token: string
       refresh_token: string
       user: Record<string, unknown>
-    }>('api.kiloric.co/v1/auth/register', { email: email.trim().toLowerCase(), username, password }, { skipAuth: true })
+    }>('/v1/auth/register', { email: email.trim().toLowerCase(), username, password }, { skipAuth: true })
 
     if (res?.access_token) {
       await setTokens(res.access_token, res.refresh_token)
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearUserState = useCallback(async () => {
     await clearTokens()
-    await clearAppwriteSession()
+    clearSessionState()
     setCachedUserId(null)
     setUser(null)
   }, [])

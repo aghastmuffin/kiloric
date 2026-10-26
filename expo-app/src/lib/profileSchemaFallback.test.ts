@@ -7,13 +7,13 @@ const { getDocument, updateDocument, getAccount } = vi.hoisted(() => ({
   getAccount: vi.fn(),
 }))
 
-vi.mock('./appwrite', () => ({
+vi.mock('./serverData', () => ({
   databases: { getDocument, updateDocument, createDocument: vi.fn() },
   account: { get: getAccount },
 }))
 
-vi.mock('react-native-appwrite', () => ({
-  AppwriteException: class extends Error {
+vi.mock('@/lib/serverTypes', () => ({
+  PersistenceError: class extends Error {
     code: number
     type: string
     constructor(message: string, code: number, type: string) {
@@ -26,7 +26,7 @@ vi.mock('react-native-appwrite', () => ({
   Role: { user: (id: string) => `user:${id}` },
 }))
 
-const { AppwriteException } = await import('react-native-appwrite')
+const { PersistenceError } = await import('@/lib/serverTypes')
 const profile = await import('./profile')
 
 describe('profile writes before the v5 columns are provisioned', () => {
@@ -38,9 +38,9 @@ describe('profile writes before the v5 columns are provisioned', () => {
     getDocument.mockResolvedValue({ $id: 'u1', username: 'a' })
   })
 
-  it('retries without the new columns when Appwrite reports an unknown attribute', async () => {
+  it('retries without the new columns when Persistence reports an unknown attribute', async () => {
     updateDocument
-      .mockRejectedValueOnce(new AppwriteException('Invalid document structure: Unknown attribute: "sex"', 400, 'document_invalid_structure'))
+      .mockRejectedValueOnce(new PersistenceError('Invalid document structure: Unknown attribute: "sex"', 400, 'document_invalid_structure'))
       .mockResolvedValueOnce({ $id: 'u1' })
     await profile.saveProfileFields('u1', { target_kcal: 2000, sex: 'male', body_fat_pct: 18.25 })
     expect(updateDocument).toHaveBeenCalledTimes(2)
@@ -54,14 +54,14 @@ describe('profile writes before the v5 columns are provisioned', () => {
   })
 
   it('surfaces other errors', async () => {
-    updateDocument.mockRejectedValueOnce(new AppwriteException('Server error', 500, 'general_unknown'))
+    updateDocument.mockRejectedValueOnce(new PersistenceError('Server error', 500, 'general_unknown'))
     await expect(profile.saveProfileFields('u1', { sex: 'female' })).rejects.toThrow()
     expect(updateDocument).toHaveBeenCalledTimes(1)
   })
 
   it('drops an unprovisioned race column without discarding nutrition inputs', async () => {
     updateDocument
-      .mockRejectedValueOnce(new AppwriteException('Invalid document structure: Unknown attribute: "race"', 400, 'document_invalid_structure'))
+      .mockRejectedValueOnce(new PersistenceError('Invalid document structure: Unknown attribute: "race"', 400, 'document_invalid_structure'))
       .mockResolvedValueOnce({ $id: 'u1' })
     await profile.saveProfileFields('u1', {
       target_kcal: 2000,

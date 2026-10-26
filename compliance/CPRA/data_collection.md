@@ -24,7 +24,7 @@
 1. **Active Account Data**:
    Profiles, meal entries, water logs, tasks, and physical metrics are retained while the user account is active.
 2. **Account Deletion Request**:
-   Upon deletion request, user account access is disabled immediately. All primary records (profile, meals, water, tasks, custom contributions) are hard-deleted from Appwrite databases within 30 calendar days.
+   Upon deletion request, user account access is disabled immediately. All primary records (profile, meals, water, tasks, custom contributions) are hard-deleted from Kiloric API databases within 30 calendar days.
 3. **Backup Rotation Cycles**:
    System backup snapshots containing residual data are completely overwritten and purged within 30 calendar days.
 4. **Inactive Accounts**:

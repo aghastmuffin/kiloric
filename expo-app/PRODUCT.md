@@ -39,7 +39,7 @@ Core workflows include:
 ## Capabilities and Constraints
 
 - kiloric is an Expo SDK 56 React Native application that deliberately supports iOS, Android, and responsive web from one product. Native use is currently portrait-oriented, and web is statically exported.
-- Authentication, profiles, meals, tasks, and food contributions use a hosted Appwrite backend. User-created records must retain per-user ownership and permissions.
+- Authentication, profiles, meals, tasks, and food contributions use the hosted Kiloric API. User-created records retain per-user ownership through bearer-token authorization enforced by the server.
 - Food lookup currently uses hosted search APIs, with Oracle ORDS as the in-app default and a deprecated FastAPI option still present. The long-term canonical food-search backend remains undecided.
 - Profiles store height and weight in metric units while allowing metric or imperial display.
 - Nutrition targets are planning estimates. The current calculation uses sex-specific Mifflin-St Jeor inputs and enforces adult calorie floors. Changing those constraints requires an explicit product and health-safety decision.
@@ -56,7 +56,7 @@ The established product voice is clear, calm, direct, and evidence-conscious. It
 
 ## Evidence on Hand
 
-The repository contains implemented account, onboarding, food search, meal logging, daily review, statistics, profile, preference, and contribution workflows; nutrition and data-layer tests; Appwrite schema configuration; legal/privacy copy; and source logo assets.
+The repository contains implemented account, onboarding, food search, meal logging, daily review, statistics, profile, preference, and contribution workflows; nutrition and data-layer tests; the FastAPI server; legal/privacy copy; and source logo assets.
 
 There are no confirmed testimonials, customer logos, user counts, clinical outcomes, weight-loss results, retention metrics, awards, ratings, pricing, subscriptions, or app-store status. Future work must not fabricate or imply them. Source-level formula tests demonstrate implementation behavior, not clinical efficacy. Privacy, security, retention, and moderation statements require owner validation before being reused as external proof.
 

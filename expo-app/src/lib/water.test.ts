@@ -18,7 +18,7 @@ const {
   }
 })
 
-vi.mock('./appwrite', () => {
+vi.mock('./serverData', () => {
   return {
     databases: {
       listDocuments: mockListDocuments,
@@ -32,9 +32,9 @@ vi.mock('./appwrite', () => {
   }
 })
 
-vi.mock('react-native-appwrite', () => {
+vi.mock('@/lib/serverTypes', () => {
   return {
-    AppwriteException: class extends Error {
+    PersistenceError: class extends Error {
       code: number
       type: string
       constructor(message: string, code: number, type: string) {
@@ -64,8 +64,6 @@ vi.mock('react-native-appwrite', () => {
   }
 })
 
-process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID = 'test-db'
-process.env.EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID = 'test-water-col'
 
 let waterModule: any
 
@@ -222,8 +220,8 @@ describe('water', () => {
 
       expect(mockGetDocument).toHaveBeenCalledTimes(1)
       expect(mockDeleteDocument).toHaveBeenCalledWith({
-        databaseId: 'test-db',
-        collectionId: 'test-water-col',
+        databaseId: 'kiloric',
+        collectionId: 'water_logs',
         documentId: 'water-doc-1',
       })
       expect(mockListDocuments).toHaveBeenCalledTimes(2)

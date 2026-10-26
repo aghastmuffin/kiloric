@@ -30,7 +30,7 @@ function nutriscoreToDensity(grade: unknown): number | null {
   return map[grade.trim().toLowerCase()] ?? null
 }
 
-/** Map barcode / fuzzy API product JSON → Appwrite meal fields. */
+/** Map barcode or fuzzy-search product JSON to meal API fields. */
 export function buildMealInputFromProduct(
   ownerId: string,
   data: Record<string, unknown>,

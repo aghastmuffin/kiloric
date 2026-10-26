@@ -1,7 +1,7 @@
 # Formulas (version 5)
 
 Every number kiloric shows comes from the pure functions below. They have no
-Appwrite or UI imports and are covered by Vitest (`src/lib/formulas.test.ts`,
+Kiloric API or UI imports and are covered by Vitest (`src/lib/formulas.test.ts`,
 `src/lib/nutrition.test.ts`, `src/lib/data/foodItem.test.ts`,
 `src/lib/data/planning.test.ts`). `NUTRITION_FORMULA_VERSION` is `5` and is
 stored on the profile (`formula_version`) when targets are saved.

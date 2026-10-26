@@ -1,11 +1,11 @@
-# Backend API (Oracle / FastAPI)
+# Kiloric API
 
-Food and barcode data come from a **FastAPI backend**, not Appwrite. The app authenticates with a **JWT minted from the active Appwrite session**.
+Account and user-created data are handled exclusively by the FastAPI service. Access and refresh tokens come from its auth endpoints and every user-data request uses the bearer access token.
 
 ## Base URL
 
 ```
-https://kiloric.kiloric.co
+https://api.kiloric.co
 ```
 
 Defined via `src/lib/apiBackendPreferences.ts` and requested through `src/lib/apiUtils.ts`.
@@ -21,17 +21,12 @@ const results = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(quer
 
 ### How it works
 
-1. `getAccessToken()` calls `account.createJWT()` on the Appwrite client.
+1. `getAccessToken()` reads the current FastAPI access token.
 2. Request sends `Authorization: Bearer <jwt>` and `Content-Type: application/json`.
 3. On failure, `showApiError(..., 'oracle')` displays a toast via `ApiErrorProvider`.
 4. Throws `ApiRequestError` so callers can catch without double-toasting.
 
-### When to use JWT vs Appwrite session
-
-| Target | Auth mechanism |
-|--------|----------------|
-| Appwrite Databases | Session on `client` (via `signIn` / `restoreAppwriteSession`) |
-| FastAPI backend | JWT from `getAccessToken()` |
+All authenticated endpoints use the same bearer token. A 401 triggers one refresh-token rotation and one retry.
 
 ## Endpoints used in the app
 
@@ -48,7 +43,7 @@ Response shapes vary; screens defensively read common keys (`product_name`, `cod
 - Network errors: shown in toast + logged to console.
 - Missing login: *"No active login session found. Please log in."*
 
-Users must be signed in to Appwrite before backend calls succeed.
+Users must be signed in before protected requests succeed.
 
 ## Testing JWT from Account tab
 

@@ -9,16 +9,13 @@ const { mockGetAccount, mockListDocuments, mockCreateDocument, mockUpdateDocumen
   mockDeleteDocument: vi.fn(),
 }))
 
-let mockPrefs: Record<string, unknown> = {}
+let records: Record<string, unknown>[] = []
 
-vi.mock('../appwrite', () => ({
+vi.mock('../serverData', () => ({
   account: {
     get: mockGetAccount,
-    getPrefs: vi.fn().mockImplementation(() => Promise.resolve({ ...mockPrefs })),
-    updatePrefs: vi.fn().mockImplementation((args: any) => {
-      mockPrefs = { ...(args?.prefs ?? {}) }
-      return Promise.resolve(mockPrefs)
-    }),
+    getPrefs: vi.fn().mockResolvedValue({}),
+    updatePrefs: vi.fn().mockResolvedValue({}),
   },
   databases: {
     listDocuments: mockListDocuments,
@@ -38,15 +35,10 @@ vi.mock('../meals', () => ({
   MEALS_COLLECTION_ID: 'meals',
 }))
 
-class MockAppwriteException extends Error {
-  code = 404
-  type = 'collection_not_found'
-}
-
 let idSeq = 0
 
-vi.mock('react-native-appwrite', () => ({
-  AppwriteException: MockAppwriteException,
+vi.mock('@/lib/serverTypes', () => ({
+  PersistenceError: class extends Error {},
   ID: { unique: () => `id_${++idSeq}` },
   Permission: { read: () => 'read', update: () => 'update', delete: () => 'delete' },
   Role: { user: (id: string) => `user:${id}` },
@@ -64,18 +56,30 @@ let overviewModule: any
 
 beforeAll(async () => {
   mockGetAccount.mockResolvedValue({ $id: 'user_123', email: 'test@kiloricdev.co' })
-  mockListDocuments.mockRejectedValue(new MockAppwriteException('Collection not found'))
-  mockCreateDocument.mockRejectedValue(new MockAppwriteException('Collection not found'))
-  mockUpdateDocument.mockRejectedValue(new MockAppwriteException('Collection not found'))
-  mockGetDocument.mockRejectedValue(new MockAppwriteException('Collection not found'))
-  mockDeleteDocument.mockRejectedValue(new MockAppwriteException('Collection not found'))
-
   foodLogModule = await import('./foodLog')
   overviewModule = await import('./overview')
 })
 
 beforeEach(() => {
-  mockPrefs = {}
+  records = []
+  mockListDocuments.mockImplementation(async ({ queries = [] }: { queries?: { field?: string; op?: string; value?: unknown }[] }) => ({
+    documents: records.filter((record) => queries.every((q) => !q.field || q.op !== 'eq' || record[q.field] === q.value)),
+    total: records.length,
+  }))
+  mockCreateDocument.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+    const record = { $id: `id_${++idSeq}`, $createdAt: new Date().toISOString(), $updatedAt: new Date().toISOString(), owner: 'user_123', ...data }
+    records.push(record)
+    return record
+  })
+  mockGetDocument.mockImplementation(async ({ documentId }: { documentId: string }) => records.find((record) => record.$id === documentId))
+  mockUpdateDocument.mockImplementation(async ({ documentId, data }: { documentId: string; data: Record<string, unknown> }) => {
+    const index = records.findIndex((record) => record.$id === documentId)
+    records[index] = { ...records[index], ...data }
+    return records[index]
+  })
+  mockDeleteDocument.mockImplementation(async ({ documentId }: { documentId: string }) => {
+    records = records.filter((record) => record.$id !== documentId)
+  })
 })
 
 describe('foodLog unit tests', () => {

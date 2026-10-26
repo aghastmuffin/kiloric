@@ -14,7 +14,7 @@ const { mocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@/lib/appwrite', () => ({
+vi.mock('@/lib/serverData', () => ({
   account: { get: mocks.get, getPrefs: mocks.getPrefs, updatePrefs: mocks.updatePrefs },
   databases: {
     listDocuments: mocks.listDocuments,
@@ -25,9 +25,9 @@ vi.mock('@/lib/appwrite', () => ({
   },
 }))
 
-vi.mock('react-native-appwrite', () => {
+vi.mock('@/lib/serverTypes', () => {
   return {
-    AppwriteException: class extends Error {},
+    PersistenceError: class extends Error {},
     ID: { unique: () => 'id-1' },
     Permission: { read: (r: string) => `read(${r})`, update: (r: string) => `update(${r})`, delete: (r: string) => `delete(${r})` },
     Role: { user: (id: string) => `user:${id}` },

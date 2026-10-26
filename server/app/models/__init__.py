@@ -1,7 +1,7 @@
 """
-All SQLAlchemy ORM models — matches the Appwrite schema exactly.
+All SQLAlchemy ORM models — matches the Kiloric API schema exactly.
 Every table has:
-  - id (UUID string primary key, like Appwrite's $id)
+  - id (UUID string primary key, like Kiloric API's $id)
   - owner_id (FK to users.id) — enforced at the DB level
   - created_at / updated_at auto-timestamps
 """
@@ -38,7 +38,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    # Profile fields (mirrors Appwrite users collection)
+    # Profile fields (mirrors Kiloric API users collection)
     date_of_birth: Mapped[str] = mapped_column(String(32), nullable=True)  # ISO-8601 date
     weight: Mapped[float | None] = mapped_column(Double, nullable=True)
     height: Mapped[float | None] = mapped_column(Double, nullable=True)

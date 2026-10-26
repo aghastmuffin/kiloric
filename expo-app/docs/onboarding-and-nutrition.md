@@ -1,6 +1,6 @@
 # Onboarding and nutrition
 
-First-time setup collects profile data, computes a nutrition plan, and saves everything to Appwrite.
+First-time setup collects profile data, computes a nutrition plan, and saves everything to Kiloric API.
 
 ## Entry points
 
@@ -65,7 +65,7 @@ On confirm, wizard calls `saveProfileFields(user.$id, { ... })` with:
 - Machine-readable goal state from `buildGoalState()` / `buildGoalStateFromPlan()`:
   - `goal_type`, `goal_pace_kg_per_week`, `goal_start_weight_kg`, `goal_target_weight_kg`
   - `goal_start_date`, `goal_estimated_weeks`
-- Plan inputs (formula version 5): `sex`, `activity_level`, `body_fat_pct`, `diet_style`, `goal_pace`, `bmr`, `formula_version`. If the Appwrite collection doesn't have these columns yet, `saveProfileFields` retries without them. The same values are always mirrored in account prefs (`kiloricPlan`).
+- Plan inputs (formula version 5): `sex`, `activity_level`, `body_fat_pct`, `diet_style`, `goal_pace`, `bmr`, `formula_version`. If the Kiloric API collection doesn't have these columns yet, `saveProfileFields` retries without them. The same values are always mirrored in account prefs (`kiloricPlan`).
 
 The `meals` relationship field is **never** written as plain text.
 
@@ -137,4 +137,4 @@ The progress math reads the new `goal_*` columns and falls back to legacy `targe
 
 ## Error UX
 
-Save failures use `formatProfileSaveError()` and `showApiError(..., 'appwrite')`. Common Console misconfigurations (missing Create permission, relationship type mismatch) include inline fix hints.
+Save failures use `formatProfileSaveError()` and `showApiError(..., 'server')`. Common Console misconfigurations (missing Create permission, relationship type mismatch) include inline fix hints.

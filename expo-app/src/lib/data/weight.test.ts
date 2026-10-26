@@ -15,7 +15,7 @@ const { mocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@/lib/appwrite', () => ({
+vi.mock('@/lib/serverData', () => ({
   account: { get: mocks.get, getPrefs: mocks.getPrefs, updatePrefs: mocks.updatePrefs },
   databases: {
     listDocuments: mocks.listDocuments,
@@ -30,9 +30,9 @@ vi.mock('@/lib/profile', () => ({
   updateProfile: mocks.updateProfile,
 }))
 
-vi.mock('react-native-appwrite', () => {
+vi.mock('@/lib/serverTypes', () => {
   return {
-    AppwriteException: class extends Error {},
+    PersistenceError: class extends Error {},
     ID: { unique: () => 'id-weight-1' },
     Permission: { read: (r: string) => `read(${r})`, update: (r: string) => `update(${r})`, delete: (r: string) => `delete(${r})` },
     Role: { user: (id: string) => `user:${id}` },
@@ -151,7 +151,7 @@ describe('listWeightsSince', () => {
     expect(mocks.listDocuments).toHaveBeenCalledWith(
       expect.objectContaining({
         collectionId: 'weight_logs',
-        queries: expect.arrayContaining(['equal:owner:u1', `gte:logged_at:${since.toISOString()}`]),
+        queries: expect.arrayContaining([`gte:logged_at:${since.toISOString()}`]),
       }),
     )
   })

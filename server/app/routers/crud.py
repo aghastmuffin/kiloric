@@ -2,7 +2,7 @@
 Generic CRUD factory — every user-owned collection uses this.
 Returns a FastAPI router with list / get / create / patch / delete endpoints.
 
-All responses use Appwrite-compatible field names ($id, $createdAt, owner, …).
+All responses use Kiloric API-compatible field names ($id, $createdAt, owner, …).
 """
 from __future__ import annotations
 import json
@@ -20,7 +20,7 @@ from app.models import User
 
 
 def _model_to_dict(obj: Any) -> dict:
-    """Convert ORM row → Appwrite-style dict."""
+    """Convert ORM row → Kiloric API-style dict."""
     d: dict = {
         "$id": obj.id,
         "$createdAt": obj.created_at.isoformat() if obj.created_at else None,

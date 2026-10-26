@@ -45,13 +45,13 @@ export type ExercisePlan = {
 }
 
 export const workoutsStore = createRecordStore<WorkoutFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_WORKOUTS_COLLECTION_ID ?? 'workouts',
+  collectionId: 'workouts',
   fallbackLimit: 30,
   recencyField: 'scheduled_at',
 })
 
 export const workoutSetsStore = createRecordStore<WorkoutSetFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_WORKOUT_SETS_COLLECTION_ID ?? 'workout_sets',
+  collectionId: 'workout_sets',
   fallbackLimit: 160,
   recencyField: '$createdAt',
 })

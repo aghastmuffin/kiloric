@@ -15,14 +15,14 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   },
 }))
 
-vi.mock('./appwrite', () => ({
+vi.mock('./serverData', () => ({
   client: { setSession: vi.fn() },
   account: { get: vi.fn() },
   databases: {},
 }))
 
-vi.mock('react-native-appwrite', () => ({
-  AppwriteException: class extends Error {},
+vi.mock('@/lib/serverTypes', () => ({
+  PersistenceError: class extends Error {},
   ID: { unique: () => 'mock-id' },
   Permission: { read: () => '', update: () => '', delete: () => '' },
   Role: { user: () => '' },

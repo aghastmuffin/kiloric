@@ -11,7 +11,7 @@ export type WeightLogFields = {
 export type WeightLog = StoredRecord<WeightLogFields>
 
 export const weightLogsStore = createRecordStore<WeightLogFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_WEIGHT_LOGS_COLLECTION_ID ?? 'weight_logs',
+  collectionId: 'weight_logs',
   fallbackLimit: 120,
   recencyField: 'logged_at',
 })

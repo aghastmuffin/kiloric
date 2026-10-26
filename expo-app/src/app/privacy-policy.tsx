@@ -57,7 +57,7 @@ export default function PrivacyPolicyScreen() {
             {
               title: 'Account & Authentication Information',
               description:
-                'Email address, name/display name, and encrypted authentication credentials (managed via our backend service, Appwrite).',
+                'Email address, name/display name, and password credentials protected by the Kiloric API.',
             },
             {
               title: 'Profile & Demographic Information',
@@ -144,9 +144,9 @@ export default function PrivacyPolicyScreen() {
         <BulletList
           items={[
             {
-              title: 'Backend & Database Hosting (Appwrite)',
+              title: 'Backend & Database Hosting (Kiloric API)',
               description:
-                'User accounts, database records, and media storage are hosted on our dedicated Appwrite infrastructure (appwrite.kiloric.kiloric.co).',
+                'User accounts, database records, and contributed media are handled by our dedicated API infrastructure at api.kiloric.co.',
             },
             {
               title: 'Nutrition & Food Database APIs',
@@ -248,9 +248,9 @@ export default function PrivacyPolicyScreen() {
         </Paragraph>
         <NumberedList
           items={[
-            'Primary Database Records: All profile documents, goal records, weight logs, meal logs, and water records associated with the user ID are permanently purged from Appwrite databases.',
-            'File Storage: All images and files uploaded by the user in Appwrite storage buckets are permanently removed.',
-            'Authentication Record: Account access is blocked immediately. The authentication record is then hard-deleted through the server-side Appwrite Users API within 30 days.',
+            'Primary Database Records: Profile, goal, weight, meal, water, planning, workout, task, and contribution records associated with the user ID are deleted by the Kiloric API.',
+            'File Storage: Images and files uploaded by the user are removed with the account.',
+            'Authentication Record: The authentication record and active refresh tokens are deleted when the account deletion request succeeds.',
             'Backups: Residual data in automated system backups will be overwritten in accordance with standard backup rotation cycles (not exceeding 30 days).',
           ]}
         />

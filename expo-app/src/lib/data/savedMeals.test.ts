@@ -14,7 +14,7 @@ const { mocks } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@/lib/appwrite', () => ({
+vi.mock('@/lib/serverData', () => ({
   account: { get: mocks.get, getPrefs: mocks.getPrefs, updatePrefs: mocks.updatePrefs },
   databases: {
     listDocuments: mocks.listDocuments,
@@ -25,8 +25,8 @@ vi.mock('@/lib/appwrite', () => ({
   },
 }))
 
-vi.mock('react-native-appwrite', () => {
-  class AppwriteException extends Error {
+vi.mock('@/lib/serverTypes', () => {
+  class PersistenceError extends Error {
     code: number
     type: string
     constructor(message: string, code: number, type: string) {
@@ -37,7 +37,7 @@ vi.mock('react-native-appwrite', () => {
   }
   let counter = 0
   return {
-    AppwriteException,
+    PersistenceError,
     ID: { unique: () => `id-${(counter += 1)}` },
     Permission: { read: (r: string) => `read(${r})`, update: (r: string) => `update(${r})`, delete: (r: string) => `delete(${r})` },
     Role: { user: (id: string) => `user:${id}` },
@@ -53,30 +53,27 @@ vi.mock('react-native-appwrite', () => {
   }
 })
 
-const { AppwriteException } = await import('react-native-appwrite')
 const { resetRecordStoreSession } = await import('./recordStore')
 const { deleteSavedMeal, listSavedMeals, parseSavedMealItems, saveMealFromEntries } = await import(
   './savedMeals'
 )
 
-const missingTable = () =>
-  new (AppwriteException as unknown as new (m: string, c: number, t: string) => Error)(
-    'missing',
-    404,
-    'collection_not_found',
-  )
-
-let prefs: Record<string, unknown>
+let records: Record<string, unknown>[]
 
 beforeEach(() => {
   vi.clearAllMocks()
   resetRecordStoreSession()
-  prefs = {}
+  records = []
   mocks.get.mockResolvedValue({ $id: 'u1' })
-  mocks.getPrefs.mockImplementation(async () => structuredClone(prefs))
-  mocks.updatePrefs.mockImplementation(async ({ prefs: next }: { prefs: Record<string, unknown> }) => {
-    prefs = structuredClone(next)
-    return next
+  mocks.createDocument.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+    const record = { $id: `meal-${records.length + 1}`, $createdAt: '2026-01-01', $updatedAt: '2026-01-01', owner: 'u1', ...data }
+    records.push(record)
+    return record
+  })
+  mocks.listDocuments.mockImplementation(async () => ({ documents: [...records], total: records.length }))
+  mocks.getDocument.mockImplementation(async ({ documentId }: { documentId: string }) => records.find((row) => row.$id === documentId))
+  mocks.deleteDocument.mockImplementation(async ({ documentId }: { documentId: string }) => {
+    records = records.filter((row) => row.$id !== documentId)
   })
 })
 
@@ -108,10 +105,7 @@ describe('saveMealFromEntries & listSavedMeals', () => {
     )
   })
 
-  it('saves meal to prefs fallback when table is 404', async () => {
-    mocks.createDocument.mockRejectedValue(missingTable())
-    mocks.listDocuments.mockRejectedValue(missingTable())
-
+  it('saves a meal to the server', async () => {
     const mockEntries = [
       {
         $id: 'e1',
@@ -145,9 +139,6 @@ describe('saveMealFromEntries & listSavedMeals', () => {
   })
 
   it('deletes saved meal', async () => {
-    mocks.createDocument.mockRejectedValue(missingTable())
-    mocks.listDocuments.mockRejectedValue(missingTable())
-
     const mockEntries = [
       {
         $id: 'e1',

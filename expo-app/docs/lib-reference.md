@@ -2,32 +2,32 @@
 
 Shared logic modules. Import via `@/lib/...`.
 
-## Appwrite client
+## Kiloric API client
 
-### `appwrite.ts`
+### `serverPersistence.ts`
 
-Creates the shared `Client`, `Account`, and `Databases` instances. Sets endpoint, project, and platform ID (`co.taeson.kiloric` on native; web uses hostname or `EXPO_PUBLIC_APPWRITE_PLATFORM_WEB`).
+`serverPersistence.ts` maps the app's profile and feature-store operations to FastAPI routes. `apiClient.ts` owns the base URL, bearer tokens, refresh rotation, JSON requests, and error parsing.
 
-Throws if required env vars are missing.
+The production API URL is the default; `EXPO_PUBLIC_API_URL` can override it.
 
-### `appwriteSession.ts`
+### `apiClient.ts`
 
 | Function | Purpose |
 |----------|---------|
-| `applyAppwriteSession(secret)` | `client.setSession(secret)` |
-| `persistAppwriteSession(session)` | Apply + save to AsyncStorage |
-| `restoreAppwriteSession()` | Load from storage on cold start |
-| `clearAppwriteSession()` | Clear client + storage on sign out |
+| `initApiClient()` | Restore access and refresh tokens from AsyncStorage |
+| `setTokens(access, refresh)` | Save a successful API session |
+| `revokeSession()` | Revoke the refresh token through `/v1/auth/logout` |
+| `clearTokens()` | Remove the local API session |
 
-Storage key: `appwrite_session_<projectId>`.
+Storage keys: `@kiloric/access_token` and `@kiloric/refresh_token`.
 
 ### `AuthContext.tsx`
 
-React context for auth. See [appwrite/auth-and-db.md](../appwrite/auth-and-db.md).
+React context for registration, sign-in, token restoration, sign-out, and account state.
 
 ### `getAccessToken.ts`
 
-`account.createJWT()` → JWT string for FastAPI. Returns `null` if no session.
+Returns the current API bearer token, or `null` if no session exists.
 
 ---
 
@@ -42,12 +42,12 @@ Types: `ProfileFields`, `ProfileCreate`, `ProfileDocument`, `ProfileRole`.
 | `getProfile(userId)` | Fetch profile doc; `null` if not found |
 | `saveProfileFields(userId, fields)` | Create or patch profile |
 | `isProfileComplete(profile)` | All required create fields present |
-| `dateToIso(date)` / `dateInputToIso(str)` | Date formatting for Appwrite datetime |
-| `logAppwriteError(ctx, err)` | Structured console logging |
+| `dateToIso(date)` / `dateInputToIso(str)` | Date formatting for Kiloric API datetime |
+| `logPersistenceError(ctx, err)` | Structured console logging |
 | `formatProfileSaveError(err)` | UI-friendly error strings |
 | `normalizeProfileWritePayload(data)` | Coerce numbers, skip `meals` relationship |
 
-Profile document ID always equals Appwrite Auth `user.$id`.
+Profile document ID always equals the signed-in API user's `$id`.
 
 ---
 
@@ -85,7 +85,7 @@ Related modules: `exercise.ts` (net workout calories and the activity allowance)
 
 ### `units.ts`
 
-Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml).
+Display and storage unit helpers. **Kiloric API always stores metric** (kg, cm, ml).
 
 | Function | Purpose |
 |----------|---------|
@@ -100,7 +100,7 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 ---
 
-## Preferences (AsyncStorage)
+## Device preferences (AsyncStorage)
 
 ### `fontPreferences.ts`
 
@@ -118,6 +118,8 @@ Display and storage unit helpers. **Appwrite always stores metric** (kg, cm, ml)
 
 - `FontPreferencesContext.tsx` — `useFontPreferences()`
 - `MealTypePreferencesContext.tsx` — `useMealTypePreferences()`
+
+Signed-in account preferences use `accountPreferences.ts` and `/v1/me/prefs`. This includes favorite foods, plan settings, demographics, and privacy controls. Updates are serialized so concurrent settings changes do not overwrite one another.
 
 ---
 
@@ -160,7 +162,7 @@ TTL-based `AsyncStorage` caching for backend requests. Reduces network usage and
 
 ### `mealFromProduct.ts`
 
-Maps raw API JSON from the FastAPI backend (Oracle) to the `CreateMealInput` shape expected by Appwrite.
+Maps raw API JSON from the FastAPI backend (Oracle) to the `CreateMealInput` shape expected by Kiloric API.
 
 - Handles field aliasing (`energy-kcal` vs `calories`).
 - Infers default `MealType` from system clock.
@@ -181,8 +183,8 @@ Maps raw API JSON from the FastAPI backend (Oracle) to the `CreateMealInput` sha
 | Export | Purpose |
 |--------|---------|
 | `ApiRequestError` | Thrown after toast shown |
-| `showApiError(err, source)` | Global toast (`'appwrite' \| 'oracle'`) |
-| `formatAppwriteError` / `formatOracleError` | Message extraction |
+| `showApiError(err, source)` | Global toast (`'server' \| 'oracle'`) |
+| `formatKiloric APIError` / `formatOracleError` | Message extraction |
 | `registerApiErrorListener` | Used by `ApiErrorProvider` |
 
 ---

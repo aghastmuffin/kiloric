@@ -1,16 +1,15 @@
-import { AppwriteException, Permission, Role, type Models } from 'react-native-appwrite'
-import { databases } from './appwrite'
+import { PersistenceError, Permission, Role, type Models } from '@/lib/serverTypes'
+import { databases } from './serverData'
 import { getSessionUserId } from './sessionAuth'
 import { isUserBlockedError, notifyUserBlocked } from './userBlocked'
 import type { ActivityLevel, DietStyle, FitnessGoal, GoalPace, Sex } from './nutrition'
 import { isRaceValue, type RaceValue } from './residency'
 
-const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
-const USER_PROFILES_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID!
+const DATABASE_ID = 'kiloric'
+const USER_PROFILES_COLLECTION_ID = 'users'
 
 /**
- * Must match the `role` enum values in your Appwrite collection exactly.
- * Update this union if your console enum differs.
+ * Must match the `role` values accepted by the profile API.
  */
 export const PROFILE_ROLE_OPTIONS = ['user'] as const
 
@@ -18,7 +17,7 @@ export type ProfileRole = (typeof PROFILE_ROLE_OPTIONS)[number]
 
 export const DEFAULT_PROFILE_ROLE: ProfileRole = 'user'
 
-/** Writable profile attributes — mirrors the Appwrite `users` collection schema. */
+/** Writable profile attributes accepted by `/v1/me`. */
 export type ProfileFields = {
   username: string // string, max 64, required
   email: string // email, required
@@ -65,8 +64,8 @@ export type ProfileFields = {
 }
 
 /**
- * Columns added with formula v5. Until they're provisioned, Appwrite rejects them as
- * unknown attributes, so writes retry without them (the same values live in account prefs).
+ * Columns added with formula v5. Older servers may reject them as unknown attributes,
+ * so writes retry without them (the same values live in account preferences).
  */
 export const EXTENDED_PROFILE_KEYS = [
   'sex',
@@ -86,7 +85,7 @@ let demographicColumnsMissing = false
 
 export function isUnknownAttributeError(err: unknown): boolean {
   return (
-    err instanceof AppwriteException &&
+    err instanceof PersistenceError &&
     err.code === 400 &&
     (err.type === 'document_invalid_structure' || err.type === 'row_invalid_structure') &&
     /unknown attribute/i.test(err.message)
@@ -225,12 +224,12 @@ function profileDocumentPermissions(userId: string): string[] {
 }
 
 function isDocumentNotFound(err: unknown): boolean {
-  return err instanceof AppwriteException && err.code === 404 && err.type === 'document_not_found'
+  return err instanceof PersistenceError && err.code === 404 && err.type === 'document_not_found'
 }
 
-/** Logs the full Appwrite error to the JS console so it shows in Metro / dev tools. */
-export function logAppwriteError(context: string, err: unknown): void {
-  if (err instanceof AppwriteException) {
+/** Logs the full persistence error to the JS console so it shows in Metro / dev tools. */
+export function logPersistenceError(context: string, err: unknown): void {
+  if (err instanceof PersistenceError) {
     console.error(
       `[profile] ${context} failed →`,
       JSON.stringify(
@@ -256,7 +255,7 @@ export function logAppwriteError(context: string, err: unknown): void {
 
 /** Concise user-facing profile error. Technical details stay in diagnostics. */
 export function formatProfileSaveError(err: unknown): string {
-  if (!(err instanceof AppwriteException)) {
+  if (!(err instanceof PersistenceError)) {
     return err instanceof Error && err.message.startsWith('First profile save')
       ? 'Your profile is missing required information. Review each setup step and try again.'
       : 'We couldn’t save your profile. Check your connection and try again.'
@@ -277,10 +276,10 @@ const CREATE_FIELD_KEYS: (keyof ProfileCreate)[] = [
   'role',
 ]
 
-/** Fields the app must never write as plain strings (Appwrite Relationship columns). */
+/** Relationship fields the app must never write as plain strings. */
 const RELATIONSHIP_FIELD_KEYS = new Set<keyof ProfileFields>(['meals'])
 
-/** Appwrite integer columns — must be whole numbers, not floats. */
+/** API integer fields — must be whole numbers, not floats. */
 const INTEGER_FIELD_KEYS = new Set<keyof ProfileFields>([
   'target_kcal',
   'target_protein',
@@ -295,7 +294,7 @@ const INTEGER_FIELD_KEYS = new Set<keyof ProfileFields>([
   'formula_version',
 ])
 
-/** Appwrite double columns — keep one decimal place. */
+/** API decimal fields — keep one decimal place. */
 const DOUBLE_FIELD_KEYS = new Set<keyof ProfileFields>([
   'weight',
   'height',
@@ -309,7 +308,7 @@ function roundDouble(value: number): number {
   return Math.round(value * 10) / 10
 }
 
-/** Coerce app values to types Appwrite expects before create/update. */
+/** Coerce app values to the API types before create/update. */
 export function normalizeProfileWritePayload(data: Partial<ProfileFields>): Partial<ProfileFields> {
   const normalized: Partial<ProfileFields> = {}
 
@@ -418,13 +417,13 @@ function pickWritablePayload(
 }
 
 // ⚡ Bolt: Memory Cache and Promise Deduplication for profile documents to prevent
-// redundant Appwrite round-trips and simultaneous duplicate requests across different
+// redundant server round-trips and simultaneous duplicate requests across different
 // focus/mount effects (e.g. ProfileGate and Dial components loading concurrently).
 let cachedProfile: { userId: string; profile: ProfileDocument | null; expiresAt: number } | null = null
 let inflightProfilePromise: Promise<ProfileDocument | null> | null = null
 let inflightProfileUserId: string | null = null
 
-/** Create profile row keyed by Appwrite Auth user id */
+/** Create the profile keyed by the authenticated API user ID. */
 export async function createProfile(userId: string, data: ProfileCreate) {
   await assertAuthenticatedUserId(userId)
 
@@ -450,16 +449,16 @@ export async function createProfile(userId: string, data: ProfileCreate) {
 }
 
 /**
- * Confirms an active Appwrite session before writing. Returns the auth user id,
+ * Confirms an active API session before writing. Returns the authenticated user ID,
  * or throws a clear error the UI can show.
  */
 export async function assertActiveSession(): Promise<string> {
   try {
     return await getSessionUserId()
   } catch (err) {
-    logAppwriteError('account.get (session check)', err)
+    logPersistenceError('account.get (session check)', err)
     throw new Error(
-      'No active Appwrite session. Sign out and sign in again before saving your profile.',
+      'No active server session. Sign out and sign in again before saving your profile.',
     )
   }
 }
@@ -600,7 +599,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
   try {
     existing = await getProfile(userId)
   } catch (err) {
-    logAppwriteError('getProfile', err)
+    logPersistenceError('getProfile', err)
     throw new Error(formatProfileSaveError(err))
   }
 
@@ -608,7 +607,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
     try {
       return await writeWithSchemaFallback(pickWritablePayload(normalized), (payload) => updateProfile(userId, payload))
     } catch (err) {
-      logAppwriteError('updateProfile', err)
+      logPersistenceError('updateProfile', err)
       throw new Error(formatProfileSaveError(err))
     }
   }
@@ -634,7 +633,7 @@ export async function saveProfileFields(userId: string, data: Partial<ProfileFie
     }
     return await writeWithSchemaFallback(optionalPayload, (payload) => updateProfile(userId, payload))
   } catch (err) {
-    logAppwriteError('createProfile', err)
+    logPersistenceError('createProfile', err)
     throw new Error(formatProfileSaveError(err))
   }
 }
@@ -663,12 +662,12 @@ export function parseProfileDate(value?: string, fallback = DEFAULT_DATE_OF_BIRT
   return Number.isNaN(parsed.getTime()) ? fallback : parsed
 }
 
-/** `YYYY-MM-DD` → Appwrite datetime string */
+/** `YYYY-MM-DD` → API datetime string */
 export function dateInputToIso(date: string): string {
   return `${date}T00:00:00.000+00:00`
 }
 
-/** Local `Date` (date-only fields) → Appwrite datetime string */
+/** Local `Date` (date-only fields) → API datetime string */
 export function dateToIso(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')

@@ -12,7 +12,6 @@ import { StepTransition } from '@/components/onboarding/StepTransition'
 import { makeOnboardingStyles } from '@/components/onboarding/styles'
 import {
   createDefaultFormState,
-  DEFAULT_DATE_OF_BIRTH,
   AUTH_ONBOARDING_STEPS,
   getOnboardingSteps,
   ONBOARDING_STEPS,
@@ -517,7 +516,7 @@ export function OnboardingWizard() {
         setNavDirection('forward')
         setStep('welcome')
       } catch (err) {
-        showApiError(err, 'appwrite')
+        showApiError(err, 'server')
         setAuthError(err instanceof Error ? err.message : 'Could not create your account.')
       } finally {
         setSaving(false)
@@ -559,7 +558,7 @@ export function OnboardingWizard() {
       setLogoutDialogVisible(false)
       router.replace('/(tabs)/account')
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSigningOut(false)
     }
@@ -673,7 +672,7 @@ export function OnboardingWizard() {
     } catch (err) {
       const message = formatProfileSaveError(err)
       console.error('[onboarding] save failed:', message)
-      showApiError(message, 'appwrite')
+      showApiError(message, 'server')
       setSaveError(message)
     } finally {
       setSaving(false)

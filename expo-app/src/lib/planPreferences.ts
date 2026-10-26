@@ -1,4 +1,5 @@
-import { account } from './appwrite'
+import { account } from './serverData'
+import { updateAccountPreferences } from './accountPreferences'
 import {
   DIET_MACRO_PERCENTAGES,
   isValidBodyFatPct,
@@ -182,12 +183,7 @@ export async function savePlanPreferences(
   if (expectedUserId && user.$id !== expectedUserId) {
     throw new Error('Unauthorized: You are not permitted to modify preferences for another user.')
   }
-  await account.updatePrefs({
-    prefs: {
-      ...(user.prefs as Record<string, unknown>),
-      [PREFS_KEY]: normalized,
-    },
-  })
+  await updateAccountPreferences((current) => ({ ...current, [PREFS_KEY]: normalized }))
   return normalized
 }
 

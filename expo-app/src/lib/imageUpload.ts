@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import { type Models } from 'react-native-appwrite'
+import { type Models } from '@/lib/serverTypes'
 import { apiClient } from './apiClient'
 
 export type ImageSource = {

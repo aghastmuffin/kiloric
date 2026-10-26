@@ -1,6 +1,6 @@
 # Preferences and fonts
 
-User settings persisted in AsyncStorage and exposed via React contexts.
+Account preferences are stored by the Kiloric API. Presentation choices that are needed before sign-in, such as theme and font, remain on the device and are exposed through React contexts.
 
 ## Search mode
 
@@ -80,7 +80,10 @@ const styles = useThemedStyles((c) => StyleSheet.create({
 | Key | Used by |
 |-----|---------|
 | `saved_barcode` | Camera scan → scan tab result display |
-| `appwrite_session_<projectId>` | Appwrite session secret |
+| `@kiloric/access_token` | Kiloric API access token |
+| `@kiloric/refresh_token` | Kiloric API refresh token |
+
+Favorite foods, nutrition-plan settings, demographics, and privacy choices are stored in `/v1/me/prefs` for the signed-in account.
 
 ---
 

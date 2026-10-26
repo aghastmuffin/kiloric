@@ -1,6 +1,6 @@
-import { AppwriteException } from 'react-native-appwrite'
+import { PersistenceError } from '@/lib/serverTypes'
 
-export type ApiErrorSource = 'oracle' | 'appwrite'
+export type ApiErrorSource = 'oracle' | 'server'
 
 export class ApiRequestError extends Error {
   readonly shown = true
@@ -15,12 +15,12 @@ export function isApiRequestError(err: unknown): err is ApiRequestError {
   return err instanceof ApiRequestError
 }
 
-export function formatAppwriteError(err: unknown): string {
-  if (err instanceof AppwriteException) {
-    return err.message || `Appwrite error (${err.code})`
+export function formatServerError(err: unknown): string {
+  if (err instanceof PersistenceError) {
+    return err.message || `Server error (${err.code})`
   }
   if (err instanceof Error) return err.message
-  return 'Unknown Appwrite error'
+  return 'Unknown server error'
 }
 
 export function formatOracleError(status: number, body: unknown): string {
@@ -36,7 +36,7 @@ export function formatOracleError(status: number, body: unknown): string {
 
 export function formatApiError(error: unknown, source: ApiErrorSource): string {
   if (typeof error === 'string') return error
-  if (source === 'appwrite') return formatAppwriteError(error)
+  if (source === 'server') return formatServerError(error)
   if (error instanceof Error) return error.message
   return 'Something went wrong'
 }
@@ -56,7 +56,7 @@ export function registerApiErrorListener(next: ApiErrorListener | null): void {
   listener = next
 }
 
-export function showApiError(error: unknown, source: ApiErrorSource = 'appwrite'): void {
+export function showApiError(error: unknown, source: ApiErrorSource = 'server'): void {
   nextId += 1
   listener?.({
     id: nextId,

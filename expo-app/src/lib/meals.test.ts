@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { AppwriteException } from 'react-native-appwrite'
+import { PersistenceError } from '@/lib/serverTypes'
 
 // Create hoisted mock functions
 const {
@@ -22,7 +22,7 @@ const {
 })
 
 // Mock transitive dependencies using the hoisted functions
-vi.mock('./appwrite', () => {
+vi.mock('./serverData', () => {
   return {
     databases: {
       listDocuments: mockListDocuments,
@@ -39,7 +39,7 @@ vi.mock('./appwrite', () => {
 
 vi.mock('./profile', () => {
   return {
-    logAppwriteError: vi.fn(),
+    logPersistenceError: vi.fn(),
   }
 })
 
@@ -49,9 +49,9 @@ vi.mock('./mealFromProduct', () => {
   }
 })
 
-vi.mock('react-native-appwrite', () => {
+vi.mock('@/lib/serverTypes', () => {
   return {
-    AppwriteException: class extends Error {
+    PersistenceError: class extends Error {
       code: number
       type: string
       constructor(message: string, code: number, type: string) {
@@ -84,8 +84,6 @@ vi.mock('react-native-appwrite', () => {
 })
 
 // Set up environment variables
-process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID = 'test-db'
-process.env.EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID = 'test-col'
 
 // Dynamically import meals module inside beforeAll to avoid ES module hoisting/TDZ issues
 let mealsModule: any
@@ -144,7 +142,7 @@ describe('meals caching & deduplication', () => {
     expect(mockListDocuments).toHaveBeenCalledTimes(1)
   })
 
-  it('getTodayMeals falls back only when Appwrite reports a missing index', async () => {
+  it('getTodayMeals falls back only when Persistence reports a missing index', async () => {
     const mockMeals = [{
       $id: 'meal-fallback',
       $createdAt: new Date().toISOString(),
@@ -152,7 +150,7 @@ describe('meals caching & deduplication', () => {
       kcal: 400,
     }]
     mockListDocuments
-      .mockRejectedValueOnce(new AppwriteException('Query requires an index', 400, 'general_query_invalid'))
+      .mockRejectedValueOnce(new PersistenceError('Query requires an index', 400, 'general_query_invalid'))
       .mockResolvedValueOnce({ documents: mockMeals })
 
     await expect(mealsModule.getTodayMeals('user-123')).resolves.toEqual(mockMeals)
@@ -165,7 +163,7 @@ describe('meals caching & deduplication', () => {
 
   it('getTodayMeals does not mask non-index failures with a second request', async () => {
     mockListDocuments.mockRejectedValue(
-      new AppwriteException('Service unavailable', 503, 'general_server_error'),
+      new PersistenceError('Service unavailable', 503, 'general_server_error'),
     )
 
     await expect(mealsModule.getTodayMeals('user-123')).rejects.toThrow('Service unavailable')
@@ -216,7 +214,7 @@ describe('meals caching & deduplication', () => {
       owner: 'user-123',
     }
     mockListDocuments
-      .mockRejectedValueOnce(new AppwriteException('Query requires an index', 400, 'general_query_invalid'))
+      .mockRejectedValueOnce(new PersistenceError('Query requires an index', 400, 'general_query_invalid'))
       .mockResolvedValueOnce({ documents: [older, newer] })
 
     await expect(mealsModule.listHistoricMeals('user-123', 20)).resolves.toEqual([newer, older])
@@ -464,8 +462,8 @@ describe('meals authorization checks', () => {
       await mealsModule.getTodayMeals('user-123')
 
       expect(mockDeleteDocument).toHaveBeenCalledWith({
-        databaseId: 'test-db',
-        collectionId: 'test-col',
+        databaseId: 'kiloric',
+        collectionId: 'meals',
         documentId: 'meal-123',
       })
       expect(mockListDocuments).toHaveBeenCalledTimes(2)

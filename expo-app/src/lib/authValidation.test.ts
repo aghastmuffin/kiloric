@@ -57,7 +57,7 @@ describe('isValidPassword', () => {
 })
 
 describe('isValidUserId', () => {
-  it('should accept valid Appwrite user IDs', () => {
+  it('should accept valid Persistence user IDs', () => {
     expect(isValidUserId('user_12345')).toBe(true)
     expect(isValidUserId('64f1a2b3c4d5e6f7a8b9c0d1')).toBe(true)
     expect(isValidUserId('a-b.c_123')).toBe(true)

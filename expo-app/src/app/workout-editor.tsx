@@ -1,5 +1,5 @@
 import { FEATURES } from '@/lib/features'
-import { Redirect } from 'expo-router'
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router'
 import {
   Card,
   Chip,
@@ -21,7 +21,6 @@ import { createWorkout, groupSets, listRecentWorkouts, listSets, type Workout } 
 import { getSampleTemplate, SAMPLE_WORKOUT_TEMPLATES, type WorkoutTemplate } from '@/lib/data/workoutTemplates'
 import { usePalette } from '@/lib/theme/palette'
 import { kgToLbs, lbsToKg, type DisplayUnits } from '@/lib/units'
-import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
@@ -45,6 +44,21 @@ function parseTime(text: string): { hours: number; minutes: number } | null {
   return { hours, minutes }
 }
 
+function exercisesFromTemplate(tmpl: WorkoutTemplate, displayUnits: DisplayUnits): DraftExercise[] {
+  return tmpl.exercises.map((exercise) => {
+    const weight = exercise.weightKg > 0
+      ? (displayUnits === 'imperial' ? kgToLbs(exercise.weightKg) : exercise.weightKg)
+      : 0
+    return newExercise({
+      name: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      sets: String(exercise.sets),
+      reps: String(exercise.reps),
+      weight: weight > 0 ? String(Math.round(weight * 2) / 2) : '',
+    })
+  })
+}
+
 function WorkoutEditorScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<{ template?: string }>()
@@ -62,6 +76,7 @@ function WorkoutEditorScreen() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [showPastPrompt, setShowPastPrompt] = useState(false)
+  const [mountedAt] = useState(() => Date.now())
 
   const state = useFocusLoader(async () => {
     const [summary, recent] = await Promise.all([loadProfileSummary(userId!, user?.name), listRecentWorkouts(userId!, 6)])
@@ -70,31 +85,26 @@ function WorkoutEditorScreen() {
   const units = state.data?.summary.units ?? 'metric'
   const unit = weightUnitLabel(units)
 
-  useEffect(() => {
-    if (params.template) {
-      const template = getSampleTemplate(params.template)
-      if (template) applySampleTemplate(template, units)
-    }
-  }, [params.template, units])
-
   function applySampleTemplate(tmpl: WorkoutTemplate, displayUnits: DisplayUnits = units) {
     setName(tmpl.name)
     setMinutes(String(tmpl.plannedMinutes))
-    setExercises(
-      tmpl.exercises.map((ex) => {
-        const weight = ex.weightKg > 0 ? (displayUnits === 'imperial' ? kgToLbs(ex.weightKg) : ex.weightKg) : 0
-        return newExercise({
-          name: ex.name,
-          muscleGroup: ex.muscleGroup,
-          sets: String(ex.sets),
-          reps: String(ex.reps),
-          weight: weight > 0 ? String(Math.round(weight * 2) / 2) : '',
-        })
-      }),
-    )
+    setExercises(exercisesFromTemplate(tmpl, displayUnits))
     setFormKey((value) => value + 1)
     setShowPastPrompt(false)
   }
+
+  useEffect(() => {
+    if (params.template) {
+      const template = getSampleTemplate(params.template)
+      if (template) {
+        setName(template.name)
+        setMinutes(String(template.plannedMinutes))
+        setExercises(exercisesFromTemplate(template, units))
+        setFormKey((value) => value + 1)
+        setShowPastPrompt(false)
+      }
+    }
+  }, [params.template, units])
 
   function update(key: string, field: keyof Omit<DraftExercise, 'key'>, value: string) {
     setExercises((current) => current.map((exercise) => (exercise.key === key ? { ...exercise, [field]: value } : exercise)))
@@ -121,7 +131,7 @@ function WorkoutEditorScreen() {
       if (workout.planned_minutes) setMinutes(String(workout.planned_minutes))
       setFormKey((value) => value + 1)
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     }
   }
 
@@ -130,7 +140,7 @@ function WorkoutEditorScreen() {
   if (scheduledAt && parsedTime) {
     scheduledAt.setHours(parsedTime.hours, parsedTime.minutes, 0, 0)
   }
-  const isPastTime = Boolean(scheduledAt && scheduledAt.getTime() < Date.now() - 60_000)
+  const isPastTime = Boolean(scheduledAt && scheduledAt.getTime() < mountedAt - 60_000)
 
   async function save(overrideStatus?: 'planned' | 'done') {
     if (!userId) return
@@ -165,7 +175,7 @@ function WorkoutEditorScreen() {
       })
       router.back()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSaving(false)
     }

@@ -72,7 +72,7 @@ export default function TodayScreen() {
       await setPlanEntryLogged(userId, entry, !entry.logged)
       await dashboard.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setBusyId(null)
     }

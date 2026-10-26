@@ -1,14 +1,14 @@
 /**
- * Food contributions — Appwrite transport for the standalone contribute module.
+ * Food contributions — server transport for the standalone contribute module.
  *
  * Public field names are Open Food Facts (OFF). Mapping lives in
  * `foodContributionFields.ts` so UI + tests stay transport-agnostic.
  *
- * Photos → `images_to_check` bucket. Rows → `food_contributions` in the `foods` DB.
+ * Photos → `/v1/files`. Rows → `/v1/food-contributions`.
  */
 import { Platform } from 'react-native'
-import { ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
-import { account, databases, storage } from './appwrite'
+import { ID, Permission, Query, Role, type Models } from '@/lib/serverTypes'
+import { account, databases, storage } from './serverData'
 import {
   FOOD_CONTRIBUTIONS_COLLECTION_ID as COLLECTION_ID,
   FOOD_IMAGES_BUCKET_ID as BUCKET_ID,
@@ -31,7 +31,7 @@ export {
   FOOD_CONTRIBUTIONS_COLLECTION_ID,
   FOOD_IMAGES_BUCKET_ID,
   FOODS_DATABASE_ID,
-  OFF_TO_APPWRITE,
+  OFF_TO_SERVER,
   STRING_OFF_FIELDS,
   NUMBER_OFF_FIELDS,
   buildContributionPayload,

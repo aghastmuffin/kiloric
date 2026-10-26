@@ -1,4 +1,4 @@
-import { databases } from '../appwrite'
+import { databases } from '../serverData'
 import {
   clearTodayMealsCache,
   createMeal,
@@ -9,7 +9,7 @@ import {
   type MealDocument,
   type MealType,
 } from '../meals'
-import { Query, type Models } from 'react-native-appwrite'
+import { Query, type Models } from '@/lib/serverTypes'
 import { dayKey } from './dateKeys'
 import { scaleMacros, sumMacros, type FoodItem, type Macros } from './foodItem'
 import { assertSessionUser, createRecordStore, type StoredRecord } from './recordStore'
@@ -40,12 +40,12 @@ export type FoodEntryFields = {
 export type FoodEntry = StoredRecord<FoodEntryFields>
 
 export const foodEntriesStore = createRecordStore<FoodEntryFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_FOOD_ENTRIES_COLLECTION_ID ?? 'food_entries',
+  collectionId: 'food_entries',
   fallbackLimit: 120,
   recencyField: 'logged_at',
 })
 
-const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID ?? ''
+const DATABASE_ID = 'kiloric'
 
 export function entryMacros(entry: Pick<FoodEntryFields, 'kcal' | 'protein' | 'carbs' | 'fat'>): Macros {
   return { kcal: entry.kcal ?? 0, protein: entry.protein ?? 0, carbs: entry.carbs ?? 0, fat: entry.fat ?? 0 }

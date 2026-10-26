@@ -6,7 +6,7 @@ import {
 } from '@/components/LogFoodMultiView'
 import { MotionView } from '@/components/MotionView'
 import { useAuth } from '@/lib/AuthContext'
-import { addProductToMeal, type MealType } from '@/lib/meals'
+import { addProductToMeal } from '@/lib/meals'
 import { effectiveMealNames, loadPlanPreferences } from '@/lib/planPreferences'
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
 import { isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'

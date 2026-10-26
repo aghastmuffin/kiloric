@@ -1,4 +1,4 @@
-import { account } from './appwrite'
+import { account } from './serverData'
 
 let cachedUserId: string | null = null
 
@@ -11,7 +11,7 @@ export async function getSessionUserId(): Promise<string> {
   try {
     if (typeof account?.get === 'function') {
       const me = await account.get()
-      if (me?.$id) {
+      if (typeof me?.$id === 'string' && me.$id) {
         return me.$id
       }
     }

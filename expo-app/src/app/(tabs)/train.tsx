@@ -1,5 +1,5 @@
 import { FEATURES } from '@/lib/features'
-import { Redirect } from 'expo-router'
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router'
 import {
   Badge,
   Card,
@@ -44,7 +44,6 @@ import {
 } from '@/lib/data/workouts'
 import { kgToLbs, lbsToKg, type DisplayUnits } from '@/lib/units'
 import { fonts, usePalette } from '@/lib/theme/palette'
-import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Fragment, useEffect, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
@@ -119,7 +118,7 @@ function TrainHome({ onOpen }: { onOpen: (id: string) => void }) {
       await deleteWorkout(userId, workout)
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setBusy(null)
     }
@@ -345,7 +344,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
         setNow(Date.now())
       }
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setBusy(null)
     }
@@ -372,7 +371,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
       setWorkoutOverride(started)
     } catch (err) {
       setWorkoutOverride(prevWorkout)
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setBusy(null)
     }
@@ -417,7 +416,7 @@ function WorkoutSession({ workoutId, onClose }: { workoutId: string; onClose: ()
     } catch (err) {
       setWorkoutOverride(prevWorkout)
       setCompletedSetsCount(null)
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setBusy(null)
     }

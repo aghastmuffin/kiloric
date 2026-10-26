@@ -1,5 +1,5 @@
 import { FEATURES } from '@/lib/features'
-import { Redirect } from 'expo-router'
+import { Redirect, useRouter } from 'expo-router'
 import {
   Card,
   Divider,
@@ -22,7 +22,6 @@ import { fonts, usePalette } from '@/lib/theme/palette'
 import { flOzToMl, formatFluid, mlToFlOz } from '@/lib/units'
 import { addWaterEntry, deleteWaterEntry, listWaterEntries, totalWaterMl, type WaterDocument } from '@/lib/water'
 import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
 import { Fragment, useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
@@ -83,7 +82,7 @@ function WaterScreen() {
       triggerNotificationHaptic('success')
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSubmitting(false)
     }
@@ -96,7 +95,7 @@ function WaterScreen() {
 
     const amountMl = isImperial ? flOzToMl(parsed) : Math.round(parsed)
     if (amountMl < 25 || amountMl > 4000) {
-      showApiError(new Error('Water amount must be between 25 ml (~1 oz) and 4000 ml (~135 oz).'), 'appwrite')
+      showApiError(new Error('Water amount must be between 25 ml (~1 oz) and 4000 ml (~135 oz).'), 'server')
       return
     }
 
@@ -108,7 +107,7 @@ function WaterScreen() {
       setCustomInput('')
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSubmitting(false)
     }
@@ -122,7 +121,7 @@ function WaterScreen() {
       await deleteWaterEntry(userId, documentId)
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSubmitting(false)
     }

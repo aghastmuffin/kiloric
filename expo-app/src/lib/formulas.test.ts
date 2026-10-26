@@ -15,8 +15,8 @@ import { resolvePlanInputs } from './planInputs'
 import { createDefaultPlanPreferences } from './planPreferences'
 import { estimateAdaptiveTdee, weightSlopeKgPerDay, weightTrend } from './weightTrend'
 
-vi.mock('./appwrite', () => ({ account: {}, databases: {}, storage: {} }))
-vi.mock('react-native-appwrite', () => ({ ID: { unique: () => 'id' }, Query: {}, Permission: {}, Role: {} }))
+vi.mock('./serverData', () => ({ account: {}, databases: {}, storage: {} }))
+vi.mock('@/lib/serverTypes', () => ({ ID: { unique: () => 'id' }, Query: {}, Permission: {}, Role: {} }))
 
 function kcalOf(macros: { protein: number; carbs: number; fat: number }) {
   return macros.protein * 4 + macros.carbs * 4 + macros.fat * 9

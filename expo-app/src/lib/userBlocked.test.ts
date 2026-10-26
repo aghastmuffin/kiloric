@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { AppwriteException } from 'react-native-appwrite'
+import { PersistenceError } from '@/lib/serverTypes'
 import {
   isUserBlockedError,
   parseUserBlockedDetails,
@@ -8,14 +8,14 @@ import {
   notifyUserBlocked,
 } from './userBlocked'
 
-vi.mock('react-native-appwrite', () => {
+vi.mock('@/lib/serverTypes', () => {
   return {
-    AppwriteException: class extends Error {
+    PersistenceError: class extends Error {
       code: number
       type: string
       constructor(message: string, code: number = 0, type: string = '') {
         super(message)
-        this.name = 'AppwriteException'
+        this.name = 'PersistenceError'
         this.code = code
         this.type = type
       }
@@ -35,14 +35,14 @@ describe('userBlocked utility', () => {
       expect(isUserBlockedError('')).toBe(false)
     })
 
-    it('identifies AppwriteException with user_blocked type or message', () => {
-      const errType = new AppwriteException('User is blocked', 401, 'user_blocked')
+    it('identifies PersistenceError with user_blocked type or message', () => {
+      const errType = new PersistenceError('User is blocked', 401, 'user_blocked')
       expect(isUserBlockedError(errType)).toBe(true)
 
-      const errMsg = new AppwriteException('The user has been blocked by admin', 401, 'general_error')
+      const errMsg = new PersistenceError('The user has been blocked by admin', 401, 'general_error')
       expect(isUserBlockedError(errMsg)).toBe(true)
 
-      const errNormal = new AppwriteException('Network request failed', 500, 'network_error')
+      const errNormal = new PersistenceError('Network request failed', 500, 'network_error')
       expect(isUserBlockedError(errNormal)).toBe(false)
     })
 
@@ -60,13 +60,13 @@ describe('userBlocked utility', () => {
   })
 
   describe('parseUserBlockedDetails', () => {
-    it('formats AppwriteException details without leaking sensitive internals', () => {
-      const appwriteErr = new AppwriteException('User is disabled', 401, 'user_blocked')
-      const details = parseUserBlockedDetails(appwriteErr)
+    it('formats PersistenceError details without leaking sensitive internals', () => {
+      const persistenceErr = new PersistenceError('User is disabled', 401, 'user_blocked')
+      const details = parseUserBlockedDetails(persistenceErr)
       expect(details.message).toBe('User is disabled')
       expect(details.code).toBe(401)
       expect(details.type).toBe('user_blocked')
-      expect(details.details).toContain('Appwrite Error 401')
+      expect(details.details).toContain('Server error 401')
     })
 
     it('does not expose internal stack traces when parsing standard Error instances', () => {

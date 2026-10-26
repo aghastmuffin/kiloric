@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 import { openURL } from 'expo-linking';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readAccountPreferences, updateAccountPreferences } from './accountPreferences';
 import { isValidEmail } from './authValidation';
 import { type Workout } from './data/workouts';
 import { type MealDocument } from './meals';
@@ -53,9 +53,9 @@ export type UserDataExport = {
 
 export async function getDoNotSellSharePreference(): Promise<boolean> {
   try {
-    const value = await AsyncStorage.getItem(DO_NOT_SELL_SHARE_KEY);
+    const value = (await readAccountPreferences())[DO_NOT_SELL_SHARE_KEY];
     // Defaults to true because kiloric NEVER sells or shares data
-    return value !== null ? value === 'true' : true;
+    return typeof value === 'boolean' ? value : true;
   } catch {
     return true;
   }
@@ -63,17 +63,21 @@ export async function getDoNotSellSharePreference(): Promise<boolean> {
 
 export async function setDoNotSellSharePreference(optedOut: boolean): Promise<void> {
   try {
-    await AsyncStorage.setItem(DO_NOT_SELL_SHARE_KEY, String(optedOut));
+    await updateAccountPreferences((current) => ({
+      ...current,
+      [DO_NOT_SELL_SHARE_KEY]: optedOut,
+    }));
   } catch (err) {
     console.warn('[CPRA] Failed to save Do Not Sell/Share preference:', err);
+    throw err;
   }
 }
 
 export async function getLimitSensitiveDataPreference(): Promise<boolean> {
   try {
-    const value = await AsyncStorage.getItem(LIMIT_SENSITIVE_DATA_KEY);
+    const value = (await readAccountPreferences())[LIMIT_SENSITIVE_DATA_KEY];
     // Defaults to true to limit sensitive data use strictly to core features
-    return value !== null ? value === 'true' : true;
+    return typeof value === 'boolean' ? value : true;
   } catch {
     return true;
   }
@@ -81,9 +85,13 @@ export async function getLimitSensitiveDataPreference(): Promise<boolean> {
 
 export async function setLimitSensitiveDataPreference(limited: boolean): Promise<void> {
   try {
-    await AsyncStorage.setItem(LIMIT_SENSITIVE_DATA_KEY, String(limited));
+    await updateAccountPreferences((current) => ({
+      ...current,
+      [LIMIT_SENSITIVE_DATA_KEY]: limited,
+    }));
   } catch (err) {
     console.warn('[CPRA] Failed to save Limit Sensitive Data preference:', err);
+    throw err;
   }
 }
 

@@ -2,9 +2,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { demographicsFromPrefs } from './demographics'
 
-vi.mock('react-native-appwrite', () => ({ Models: {} }))
-vi.mock('./appwrite', () => ({
-  account: { get: vi.fn(), updatePrefs: vi.fn() },
+vi.mock('@/lib/serverTypes', () => ({ Models: {} }))
+vi.mock('./serverData', () => ({
+  account: { get: vi.fn(), getPrefs: vi.fn(), updatePrefs: vi.fn() },
 }))
 
 describe('demographics prefs', () => {

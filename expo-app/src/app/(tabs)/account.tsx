@@ -187,7 +187,7 @@ function LoggedInPanel({ user }: { user: AuthUser }) {
       await signOut();
       setSignOutDialogVisible(false);
     } catch (err) {
-      showApiError(err, 'appwrite');
+      showApiError(err, 'server');
     } finally {
       setSigningOut(false);
     }
@@ -201,7 +201,7 @@ function LoggedInPanel({ user }: { user: AuthUser }) {
       setDeleteDialogVisible(false);
     } catch (err) {
       setDeleteError('We couldn’t delete your account right now. Please try again or contact data_privacy@kiloric.co.');
-      showApiError(err, 'appwrite');
+      showApiError(err, 'server');
     } finally {
       setDeletingAccount(false);
     }

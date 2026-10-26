@@ -1,4 +1,4 @@
-import { account } from '../appwrite'
+import { account } from '../serverData'
 import { exerciseCreditKcal } from '../exercise'
 import { getTodayMeals, type MealDocument } from '../meals'
 import { resolvePlanInputs, type PlanInputs } from '../planInputs'

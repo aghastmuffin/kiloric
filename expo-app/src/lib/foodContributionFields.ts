@@ -1,15 +1,12 @@
 /**
  * OFF ↔ storage field mapping and payload builders.
- * No Appwrite / network imports — safe for unit tests and Oracle swap.
+ * No persistence or network imports — safe for unit tests and catalog-provider changes.
  */
-import type { Models } from 'react-native-appwrite'
+import type { Models } from '@/lib/serverTypes'
 
-export const FOODS_DATABASE_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOODS_DATABASE_ID ?? '6a4577f00008c718d204'
-export const FOOD_CONTRIBUTIONS_COLLECTION_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOOD_CONTRIBUTIONS_COLLECTION_ID ?? 'food_contributions'
-export const FOOD_IMAGES_BUCKET_ID =
-  process.env.EXPO_PUBLIC_APPWRITE_FOOD_IMAGES_BUCKET_ID ?? '6a32e0dd000f9dee7b98'
+export const FOODS_DATABASE_ID = 'kiloric'
+export const FOOD_CONTRIBUTIONS_COLLECTION_ID = 'food_contributions'
+export const FOOD_IMAGES_BUCKET_ID = 'food_images'
 
 export type FoodContributionDocument = Models.Document & {
   owner: string
@@ -27,7 +24,7 @@ export type FoodContributionDocument = Models.Document & {
 }
 
 /** OFF canonical name → snake_case storage column key. */
-export const OFF_TO_APPWRITE: Record<string, string> = {
+export const OFF_TO_SERVER: Record<string, string> = {
   code: 'code',
   product_name: 'product_name',
   brands: 'brands',
@@ -164,14 +161,14 @@ export type ContributionFileIds = Partial<Record<Exclude<ContributionPhotoKind, 
   extra?: string[]
 }
 
-const FILE_URL_SCHEME = 'appwrite-files://'
+const FILE_URL_SCHEME = 'persistence-files://'
 
 /** `photo_file_id` is required, so prefer the front shot and fall back to any uploaded photo. */
 export function primaryFileId(files: ContributionFileIds): string | null {
   return files.front ?? files.nutrition ?? files.ingredients ?? files.barcode ?? files.extra?.[0] ?? null
 }
 
-/** Dedicated file columns; they exist once `npm run appwrite:setup-features` has run. */
+/** Dedicated file columns; they exist once `npm run persistence:setup-features` has run. */
 export function contributionFileColumns(files: ContributionFileIds): Record<string, string | string[]> {
   const columns: Record<string, string | string[]> = {}
   if (files.front) columns.front_file_id = files.front
@@ -195,7 +192,7 @@ export function encodeContributionFiles(files: ContributionFileIds): string {
   return `${FILE_URL_SCHEME}${parts.join(';')}`
 }
 
-/** Reads both the labelled format and the older unlabelled `appwrite-files://a,b,c` list. */
+/** Reads both the labelled format and the older unlabelled `persistence-files://a,b,c` list. */
 export function decodeContributionFiles(value: string | null | undefined): ContributionFileIds | null {
   if (!value?.startsWith(FILE_URL_SCHEME)) return null
   const body = value.slice(FILE_URL_SCHEME.length)
@@ -285,7 +282,7 @@ export function buildContributionPayload(
 
   for (const offKey of STRING_OFF_FIELDS) {
     if (offKey === 'product_name' || offKey === 'code') continue
-    const mapped = OFF_TO_APPWRITE[offKey]
+    const mapped = OFF_TO_SERVER[offKey]
     const value = trimOrNull(fields[offKey])
     if (value) {
       if (value.length > MAX_STRING_FIELD_LENGTH) {
@@ -296,7 +293,7 @@ export function buildContributionPayload(
   }
 
   for (const offKey of NUMBER_OFF_FIELDS) {
-    const mapped = OFF_TO_APPWRITE[offKey]
+    const mapped = OFF_TO_SERVER[offKey]
     const raw = fields[offKey]
     if (raw === null || raw === undefined || raw === '') continue
     const value = toFiniteNumber(raw)

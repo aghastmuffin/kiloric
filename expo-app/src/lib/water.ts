@@ -1,9 +1,9 @@
-import { account, databases } from './appwrite'
+import { account, databases } from './serverData'
 import { localDayBounds, totalWaterMl as sumWaterMl } from './waterUtils'
-import { AppwriteException, ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
+import { PersistenceError, ID, Permission, Query, Role, type Models } from '@/lib/serverTypes'
 
-const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
-const WATER_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_WATER_COLLECTION_ID ?? 'water_logs'
+const DATABASE_ID = 'kiloric'
+const WATER_COLLECTION_ID = 'water_logs'
 
 export type WaterFields = {
   owner: string
@@ -72,7 +72,7 @@ export function listWaterEntries(
       })
       return response.documents as unknown as WaterDocument[]
     } catch (error) {
-      if (error instanceof AppwriteException && error.code === 404) return []
+      if (error instanceof PersistenceError && error.code === 404) return []
       throw error
     }
   })

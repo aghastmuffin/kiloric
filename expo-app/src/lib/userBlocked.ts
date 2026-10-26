@@ -1,4 +1,4 @@
-import { AppwriteException } from 'react-native-appwrite'
+import { PersistenceError } from '@/lib/serverTypes'
 
 export type UserBlockedDetails = {
   message: string
@@ -18,7 +18,7 @@ export function registerUserBlockedListener(next: UserBlockedListener | null): v
 export function isUserBlockedError(err: unknown): boolean {
   if (!err) return false
 
-  if (err instanceof AppwriteException) {
+  if (err instanceof PersistenceError) {
     if (err.type === 'user_blocked' || err.type === 'user_status_blocked') {
       return true
     }
@@ -87,10 +87,10 @@ export function isUserBlockedError(err: unknown): boolean {
 }
 
 export function parseUserBlockedDetails(err: unknown): UserBlockedDetails {
-  if (err instanceof AppwriteException) {
+  if (err instanceof PersistenceError) {
     return {
       message: err.message || 'The current user account has been blocked.',
-      details: `Appwrite Error ${err.code} (${err.type}): ${err.message}`,
+      details: `Server error ${err.code} (${err.type}): ${err.message}`,
       code: err.code,
       type: err.type,
     }

@@ -93,7 +93,7 @@ export function productHasUnknownDetails(product: Record<string, unknown>): bool
 }
 
 /**
- * Snake_case ORDS / Appwrite nutrient columns → nutriment + root aliases
+ * Snake_case ORDS and meal nutrient columns → nutriment and root aliases
  * used by meal helpers and older OFF-shaped code.
  */
 const NUTRIENT_ALIASES: Record<string, string[]> = {

@@ -179,7 +179,7 @@ class ProfilePatch(BaseModel):
 # ── Generic record response ───────────────────────────────────────────────────
 
 def record_response(obj: Any, extra: dict | None = None) -> dict:
-    """Builds Appwrite-compatible response dict from any ORM row."""
+    """Builds Kiloric API-compatible response dict from any ORM row."""
     d: dict = {
         "$id": obj.id,
         "$createdAt": _dt(obj.created_at),

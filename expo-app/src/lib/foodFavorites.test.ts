@@ -9,6 +9,16 @@ import {
   type FavoriteFood,
 } from './foodFavorites'
 
+const { mockReadAccountPreferences, mockUpdateAccountPreferences } = vi.hoisted(() => ({
+  mockReadAccountPreferences: vi.fn(),
+  mockUpdateAccountPreferences: vi.fn(),
+}))
+
+vi.mock('./accountPreferences', () => ({
+  readAccountPreferences: mockReadAccountPreferences,
+  updateAccountPreferences: mockUpdateAccountPreferences,
+}))
+
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: vi.fn(() => Promise.resolve(null)),
@@ -30,6 +40,8 @@ describe('food favorites cache', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     clearFavoriteFoodsCache()
+    mockReadAccountPreferences.mockResolvedValue({})
+    mockUpdateAccountPreferences.mockImplementation(async (update) => update({}))
   })
 
   it('caches successful loads and deduplicates concurrent reads', async () => {
@@ -120,5 +132,21 @@ describe('food favorites cache', () => {
     await expect(toggleFavoriteFood(food)).resolves.toEqual([])
     expect(AsyncStorage.getItem).toHaveBeenCalledTimes(1)
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(2)
+  })
+
+  it('loads and saves signed-in favorites through server account preferences', async () => {
+    mockReadAccountPreferences.mockResolvedValueOnce({ favoriteFoods: [apple] })
+
+    await expect(loadFavoriteFoods('user-123')).resolves.toEqual([apple])
+    const replacement = [{ ...apple, barcode: '654321', title: 'Banana' }]
+    await saveFavoriteFoods('user-123', replacement)
+
+    expect(mockUpdateAccountPreferences).toHaveBeenCalledOnce()
+    expect(mockUpdateAccountPreferences.mock.calls[0][0]({ existing: true })).toEqual({
+      existing: true,
+      favoriteFoods: replacement,
+    })
+    expect(AsyncStorage.getItem).not.toHaveBeenCalled()
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled()
   })
 })

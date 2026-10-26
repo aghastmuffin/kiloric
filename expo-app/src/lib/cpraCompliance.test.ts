@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-unresolved
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   exportUserData,
   getDoNotSellSharePreference,
@@ -11,6 +11,18 @@ import {
   type CpraPrivacyRequest,
 } from './cpraCompliance';
 
+const serverPrefs: Record<string, unknown> = {};
+
+vi.mock('./accountPreferences', () => ({
+  readAccountPreferences: vi.fn(async () => ({ ...serverPrefs })),
+  updateAccountPreferences: vi.fn(async (update: (current: Record<string, unknown>) => Record<string, unknown>) => {
+    const next = update({ ...serverPrefs });
+    Object.keys(serverPrefs).forEach((key) => delete serverPrefs[key]);
+    Object.assign(serverPrefs, next);
+    return next;
+  }),
+}));
+
 vi.mock('./apiClient', () => ({ apiClient: { get: vi.fn(async () => ({
   profile: { $id: 'user_123', username: 'testuser' },
   meals: [{ $id: 'meal_1' }], water_logs: [{ $id: 'water_1' }], tasks: [{ $id: 'task_1' }], workouts: [{ $id: 'workout_1' }],
@@ -18,27 +30,6 @@ vi.mock('./apiClient', () => ({ apiClient: { get: vi.fn(async () => ({
 })) } }));
 
 vi.mock('expo-linking', () => ({ openURL: vi.fn(async () => {}) }));
-
-vi.mock('@react-native-async-storage/async-storage', () => {
-  const store = new Map<string, string>();
-  return {
-    default: {
-      getItem: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
-      setItem: vi.fn((key: string, value: string) => {
-        store.set(key, value);
-        return Promise.resolve();
-      }),
-      removeItem: vi.fn((key: string) => {
-        store.delete(key);
-        return Promise.resolve();
-      }),
-      clear: vi.fn(() => {
-        store.clear();
-        return Promise.resolve();
-      }),
-    },
-  };
-});
 
 vi.mock('./profile', () => ({
   getProfile: vi.fn((userId: string) =>
@@ -85,6 +76,10 @@ vi.mock('./data/workouts', () => ({
 }));
 
 describe('cpraCompliance', () => {
+  beforeEach(() => {
+    Object.keys(serverPrefs).forEach((key) => delete serverPrefs[key]);
+  });
+
   describe('preferences', () => {
     it('defaults Do Not Sell/Share preference to true', async () => {
       const pref = await getDoNotSellSharePreference();

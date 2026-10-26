@@ -45,19 +45,19 @@ export type GroceryItemFields = {
 export type GroceryItem = StoredRecord<GroceryItemFields>
 
 export const planEntriesStore = createRecordStore<PlanEntryFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_PLAN_ENTRIES_COLLECTION_ID ?? 'meal_plan_entries',
+  collectionId: 'meal_plan_entries',
   fallbackLimit: 70,
   recencyField: 'day',
 })
 
 export const prepSessionsStore = createRecordStore<PrepSessionFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_PREP_SESSIONS_COLLECTION_ID ?? 'prep_sessions',
+  collectionId: 'prep_sessions',
   fallbackLimit: 8,
   recencyField: 'week_start',
 })
 
 export const groceryItemsStore = createRecordStore<GroceryItemFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_GROCERY_ITEMS_COLLECTION_ID ?? 'grocery_items',
+  collectionId: 'grocery_items',
   fallbackLimit: 60,
   recencyField: 'week_start',
 })

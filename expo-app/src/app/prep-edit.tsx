@@ -100,7 +100,7 @@ export default function PrepEditScreen() {
       })
       router.back()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSaving(false)
     }

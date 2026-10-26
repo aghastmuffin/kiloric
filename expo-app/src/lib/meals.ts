@@ -1,15 +1,15 @@
-import { databases } from './appwrite'
+import { databases } from './serverData'
 import { startOfLocalDay } from './dates'
 import { buildMealInputFromProduct } from './mealFromProduct'
-import { logAppwriteError } from './profile'
+import { logPersistenceError } from './profile'
 import { getSessionUserId } from './sessionAuth'
-import { AppwriteException, ID, Permission, Role, Query, type Models } from 'react-native-appwrite'
+import { PersistenceError, ID, Permission, Role, Query, type Models } from '@/lib/serverTypes'
 
-const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID!
-const MEALS_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID!
+const DATABASE_ID = 'kiloric'
+const MEALS_COLLECTION_ID = 'meals'
 const MEALS_CACHE_TTL_MS = 15_000
 
-/** Must match the `type` enum values in Appwrite Console exactly. */
+/** Built-in meal types; custom account meal slots are also accepted. */
 export const MEAL_TYPE_OPTIONS = [
   'Breakfast',
   'Lunch',
@@ -20,7 +20,7 @@ export const MEAL_TYPE_OPTIONS = [
 
 export type MealType = string
 
-/** Max length of a meal type name; Appwrite meal_type/type columns are varchar(16). */
+/** Maximum meal type length accepted by the API. */
 export const MEAL_TYPE_MAX_LENGTH = 16
 
 export type MealFields = {
@@ -149,8 +149,8 @@ async function assertActiveSession(): Promise<string> {
   try {
     return await getSessionUserId()
   } catch (err) {
-    logAppwriteError('account.get (meal session check)', err)
-    throw new Error('No active Appwrite session. Sign in before logging a meal.')
+    logPersistenceError('account.get (meal session check)', err)
+    throw new Error('No active server session. Sign in before logging a meal.')
   }
 }
 
@@ -231,7 +231,7 @@ export async function moveProductBetweenMeals(
     nutrition: ProductNutrition,
 ): Promise<void> {
   if (isMealsConfigMissing()) {
-    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+    throw new Error('Meal storage is not configured.')
   }
 
   const sessionUserId = await assertActiveSession()
@@ -313,7 +313,7 @@ export async function removeProductFromMeal(
     nutrition: ProductNutrition,
 ): Promise<void> {
   if (isMealsConfigMissing()) {
-    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+    throw new Error('Meal storage is not configured.')
   }
 
   const sessionUserId = await assertActiveSession()
@@ -351,7 +351,7 @@ export async function removeProductFromMeal(
 
 export async function createMeal(input: CreateMealInput): Promise<MealDocument> {
   if (isMealsConfigMissing()) {
-    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+    throw new Error('Meal storage is not configured.')
   }
 
   const normalized = normalizeMealWritePayload(input)
@@ -381,14 +381,14 @@ export async function createMeal(input: CreateMealInput): Promise<MealDocument> 
     clearTodayMealsCache(sessionUserId)
     return doc
   } catch (err) {
-    logAppwriteError('createMeal', err)
+    logPersistenceError('createMeal', err)
     throw new Error(formatMealError(err))
   }
 }
 
 export async function deleteMeal(userId: string, mealId: string): Promise<void> {
   if (isMealsConfigMissing()) {
-    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+    throw new Error('Meal storage is not configured.')
   }
 
   const sessionUserId = await assertActiveSession()
@@ -423,7 +423,7 @@ export async function getMeal(mealId: string): Promise<MealDocument | null> {
       queries: [Query.select(['*', 'owner.$id'])],
     })
   } catch (err) {
-    if (err instanceof AppwriteException && err.code === 404) return null
+    if (err instanceof PersistenceError && err.code === 404) return null
     throw err
   }
 }
@@ -433,7 +433,7 @@ export async function updateMeal(
     data: Partial<Omit<MealFields, 'owner'>>,
 ): Promise<MealDocument> {
   if (isMealsConfigMissing()) {
-    throw new Error('Missing EXPO_PUBLIC_APPWRITE_DATABASE_ID or EXPO_PUBLIC_APPWRITE_MEALS_COLLECTION_ID in .env')
+    throw new Error('Meal storage is not configured.')
   }
 
   const sessionUserId = await assertActiveSession()
@@ -460,19 +460,16 @@ export async function updateMeal(
     clearTodayMealsCache(sessionUserId)
     return doc
   } catch (err) {
-    logAppwriteError('updateMeal', err)
+    logPersistenceError('updateMeal', err)
     throw new Error(formatMealError(err))
   }
 }
 
 export function formatMealError(err: unknown): string {
-  if (!(err instanceof AppwriteException)) {
+  if (!(err instanceof PersistenceError)) {
     return err instanceof Error ? err.message : 'Unknown meal error'
   }
-  const raw = `Appwrite ${err.code} (${err.type || 'error'}): ${err.message}`
-  if (err.code === 401 && err.message.toLowerCase().includes('create')) {
-    return [raw, '', 'Grant Users → Create on the meals collection in Appwrite Console.', 'See docs/appwrite/meals.md'].join('\n')
-  }
+  const raw = `Server ${err.code} (${err.type || 'error'}): ${err.message}`
   if (err.type === 'relationship_value_invalid') {
     return `${raw}\n\nowner must be a valid profile document id (auth user id).`
   }
@@ -480,7 +477,7 @@ export function formatMealError(err: unknown): string {
 }
 
 function isMissingIndexError(err: unknown): boolean {
-  return err instanceof AppwriteException && err.code === 400 && /index/i.test(err.message)
+  return err instanceof PersistenceError && err.code === 400 && /index/i.test(err.message)
 }
 
 type MealsCacheEntry = {
@@ -546,7 +543,7 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
       return response.documents
     } catch (err) {
       if (!isMissingIndexError(err)) {
-        logAppwriteError('getTodayMeals', err)
+        logPersistenceError('getTodayMeals', err)
         throw new Error(formatMealError(err))
       }
       console.warn('[getTodayMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
@@ -563,7 +560,7 @@ export function getTodayMeals(userId: string): Promise<MealDocument[]> {
         })
         return response.documents.filter((doc) => new Date(doc.$createdAt) >= todayStart)
       } catch (fallbackErr) {
-        logAppwriteError('getTodayMeals fallback', fallbackErr)
+        logPersistenceError('getTodayMeals fallback', fallbackErr)
         throw new Error(formatMealError(fallbackErr))
       }
     }
@@ -626,7 +623,7 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
       return response.documents
     } catch (err) {
       if (!isMissingIndexError(err)) {
-        logAppwriteError('listHistoricMeals', err)
+        logPersistenceError('listHistoricMeals', err)
         throw new Error(formatMealError(err))
       }
       console.warn('[listHistoricMeals] Optimized query failed (likely missing index). Falling back to client-side filtering.', err)
@@ -645,7 +642,7 @@ export function listHistoricMeals(userId: string, limit = 20, offset = 0): Promi
           .sort((left, right) => right.$createdAt.localeCompare(left.$createdAt))
         return filtered.slice(offset, offset + limit)
       } catch (fallbackErr) {
-        logAppwriteError('listHistoricMeals fallback', fallbackErr)
+        logPersistenceError('listHistoricMeals fallback', fallbackErr)
         throw new Error(formatMealError(fallbackErr))
       }
     }

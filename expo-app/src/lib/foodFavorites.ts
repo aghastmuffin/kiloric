@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { readAccountPreferences, updateAccountPreferences } from './accountPreferences'
 
 const STORAGE_PREFIX = '@kiloric/food_favorites:'
 const LEGACY_STORAGE_KEY = 'vitality_food_favorites_v1'
+const PREFS_KEY = 'favoriteFoods'
 
 export type FavoriteFood = {
   barcode: string
@@ -89,8 +91,9 @@ export function loadFavoriteFoods(userKeyOrEmpty?: string): Promise<FavoriteFood
           // ignore legacy cleanup error
         }
       }
-      const raw = await AsyncStorage.getItem(storageKey(userKey))
-      const entries = parseFavoriteFoods(raw)
+      const entries = userKey === 'local'
+        ? parseFavoriteFoods(await AsyncStorage.getItem(storageKey(userKey)))
+        : parseFavoriteFoods(JSON.stringify((await readAccountPreferences())[PREFS_KEY]))
       loadedSuccessfully = true
       return entries
     } catch {
@@ -126,7 +129,11 @@ export async function saveFavoriteFoods(
   const cache = getUserCache(userKey)
   const generation = cache.generation
 
-  await AsyncStorage.setItem(storageKey(userKey), JSON.stringify(entries))
+  if (userKey === 'local') {
+    await AsyncStorage.setItem(storageKey(userKey), JSON.stringify(entries))
+  } else {
+    await updateAccountPreferences((current) => ({ ...current, [PREFS_KEY]: entries }))
+  }
   if (cache.generation !== generation) return
   cache.generation += 1
   cache.favorites = entries

@@ -22,7 +22,7 @@ export type SavedMealFields = {
 export type SavedMeal = StoredRecord<SavedMealFields>
 
 export const savedMealsStore = createRecordStore<SavedMealFields>({
-  collectionId: process.env.EXPO_PUBLIC_APPWRITE_SAVED_MEALS_COLLECTION_ID ?? 'saved_meals',
+  collectionId: 'saved_meals',
   fallbackLimit: 30,
   recencyField: '$createdAt',
 })

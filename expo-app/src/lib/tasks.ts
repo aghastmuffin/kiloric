@@ -1,8 +1,8 @@
-import { account, databases } from './appwrite'
-import { AppwriteException, ID, Permission, Query, Role, type Models } from 'react-native-appwrite'
+import { account, databases } from './serverData'
+import { PersistenceError, ID, Permission, Query, Role, type Models } from '@/lib/serverTypes'
 
-const TASKS_DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_TASKS_DATABASE_ID ?? 'tasks'
-const TASKS_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_TASKS_COLLECTION_ID ?? 'tasks'
+const TASKS_DATABASE_ID = 'kiloric'
+const TASKS_COLLECTION_ID = 'tasks'
 
 const TITLE_MAX = 256
 const DESCRIPTION_MAX = 1000
@@ -94,7 +94,7 @@ export function listTasks(userId: string): Promise<TaskDocument[]> {
       })
       return response.documents as unknown as TaskDocument[]
     } catch (error) {
-      if (error instanceof AppwriteException && error.code === 404) return []
+      if (error instanceof PersistenceError && error.code === 404) return []
       throw error
     }
   })
@@ -161,7 +161,7 @@ export async function getTask(taskId: string): Promise<TaskDocument | null> {
       documentId: taskId,
     })) as TaskDocument
   } catch (err) {
-    if (err instanceof AppwriteException && err.code === 404) return null
+    if (err instanceof PersistenceError && err.code === 404) return null
     throw err
   }
 }

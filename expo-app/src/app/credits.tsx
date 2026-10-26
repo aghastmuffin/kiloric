@@ -91,7 +91,7 @@ export default function CreditsScreen() {
       <View style={styles.note}>
         <Ionicons name="leaf-outline" size={22} color={colors.brand} />
         <Text style={styles.noteText}>
-          Built with Expo, React Native, Appwrite, and the generosity of open-source maintainers.
+          Built with Expo, React Native, FastAPI, SQLAlchemy, and the generosity of open-source maintainers.
         </Text>
       </View>
 

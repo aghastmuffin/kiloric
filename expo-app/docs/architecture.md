@@ -4,9 +4,8 @@
 
 - **Expo SDK 56** with **Expo Router** (typed routes, React Compiler enabled)
 - **React Native 0.85** / **React 19**
-- **Appwrite** (`react-native-appwrite`) for auth + databases
-- **FastAPI** backend at `https://kiloric.kiloric.co` for food/barcode APIs
-- **AsyncStorage** for session persistence and user preferences
+- **Kiloric API**, backed by FastAPI at `https://api.kiloric.co`, for authentication and all account data
+- **AsyncStorage** for access/refresh tokens, pre-auth presentation choices, and bounded API caches
 
 Path alias: `@/*` → `src/*` (see `tsconfig.json`).
 
@@ -19,7 +18,7 @@ SafeAreaProvider
 └─ FontPreferencesProvider          (custom font choice + navigation theme)
    └─ ThemeProvider (expo-router dark theme)
       └─ ApiErrorProvider          (global error toast)
-         └─ AuthProvider           (Appwrite session + user)
+         └─ AuthProvider           (Kiloric API session + user)
             └─ Stack               (modal/stack screens)
                └─ (tabs)           (tab navigator)
 ```
@@ -36,7 +35,7 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 | Provider | Hook | Purpose |
 |----------|------|---------|
 | `FontPreferencesProvider` | `useFontPreferences()` | System vs custom Redaction font; remounts tree on font change |
-| `ApiErrorProvider` | `useApiError()` | Shows `ApiErrorToast` for Appwrite and backend errors |
+| `ApiErrorProvider` | `useApiError()` | Shows `ApiErrorToast` for Kiloric API and backend errors |
 | `AuthProvider` | `useAuth()` | `user`, `loading`, `signIn`, `signUp`, `signOut` |
 | `MealTypePreferencesProvider` | `useMealTypePreferences()` | Selected meal bucket (Breakfast, Lunch, …) |
 
@@ -68,7 +67,7 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 
 ```text
 App launch
-  └─ AuthProvider restores AsyncStorage session → account.get()
+  └─ AuthProvider restores API tokens → GET /v1/me
   └─ ProfileGate (tabs only)
        └─ if user && !isProfileComplete → router.replace('/onboarding')
        └─ else → show tabs
@@ -89,10 +88,10 @@ Log tab → Open Camera → /cameraview
 
 ## Meal logging flow
 
-Search, scan, and favorites on the Log tab write straight to today's Appwrite meal document (`addProductToMeal`). There is no local barcode staging list.
+Search and scan results write straight to the signed-in account's API records. Favorite foods also persist in `/v1/me/prefs`; the temporary barcode handoff from the camera remains device-local.
 
 ## Build and deploy
 
 - **EAS**: `eas.json` defines `development` (dev client), `preview`, and `production` profiles.
-- **Bundle ID**: `co.taeson.kiloric` (iOS + Android) — must match `EXPO_PUBLIC_APPWRITE_PLATFORM_ID`.
+- **Bundle ID**: `co.taeson.kiloric` (iOS + Android).
 - **Deep link scheme**: `calorie://`

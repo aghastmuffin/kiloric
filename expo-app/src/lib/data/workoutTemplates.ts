@@ -3,13 +3,13 @@ export type WorkoutTemplate = {
   name: string
   label: string
   plannedMinutes: number
-  exercises: Array<{
+  exercises: {
     name: string
     muscleGroup: string
     sets: number
     reps: number
     weightKg: number
-  }>
+  }[]
 }
 
 export const SAMPLE_WORKOUT_TEMPLATES: WorkoutTemplate[] = [

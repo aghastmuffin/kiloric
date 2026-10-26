@@ -7,7 +7,7 @@ import {
   encodeContributionFiles,
   fallbackProductName,
   primaryFileId,
-  OFF_TO_APPWRITE,
+  OFF_TO_SERVER,
   NUMBER_OFF_FIELDS,
   STRING_OFF_FIELDS,
 } from './foodContributionFields'
@@ -21,7 +21,7 @@ const { mockAccountGet, mockCreateFile, mockDeleteFile, mockCreateDocument } = v
 
 vi.mock('react-native', () => ({ Platform: { OS: 'ios' } }))
 
-vi.mock('./appwrite', () => ({
+vi.mock('./serverData', () => ({
   client: {
     headers: { 'x-sdk-name': 'React Native', 'content-type': 'application/json' },
     config: { endpoint: 'https://aw.test/v1', project: 'proj', platform: 'co.test.app' },
@@ -34,8 +34,8 @@ vi.mock('./appwrite', () => ({
   databases: { createDocument: mockCreateDocument },
 }))
 
-vi.mock('react-native-appwrite', () => ({
-  AppwriteException: class extends Error {
+vi.mock('@/lib/serverTypes', () => ({
+  PersistenceError: class extends Error {
     code: number
     type: string
     constructor(message: string, code = 0, type = '') {
@@ -60,19 +60,19 @@ beforeEach(() => {
 })
 
 describe('foodContributionFields map', () => {
-  it('maps hyphenated OFF keys to Appwrite snake_case', () => {
-    expect(OFF_TO_APPWRITE['energy-kcal_100g']).toBe('energy_kcal_100g')
-    expect(OFF_TO_APPWRITE['carbon-footprint_100g']).toBe('carbon_footprint_100g')
-    expect(OFF_TO_APPWRITE['added-sugars_100g']).toBe('added_sugars_100g')
-    expect(OFF_TO_APPWRITE['vitamin-b12_100g']).toBe('vitamin_b12_100g')
+  it('maps hyphenated OFF keys to Persistence snake_case', () => {
+    expect(OFF_TO_SERVER['energy-kcal_100g']).toBe('energy_kcal_100g')
+    expect(OFF_TO_SERVER['carbon-footprint_100g']).toBe('carbon_footprint_100g')
+    expect(OFF_TO_SERVER['added-sugars_100g']).toBe('added_sugars_100g')
+    expect(OFF_TO_SERVER['vitamin-b12_100g']).toBe('vitamin_b12_100g')
   })
 
   it('covers every declared string and number OFF field', () => {
     for (const key of STRING_OFF_FIELDS) {
-      expect(OFF_TO_APPWRITE[key]).toBeTruthy()
+      expect(OFF_TO_SERVER[key]).toBeTruthy()
     }
     for (const key of NUMBER_OFF_FIELDS) {
-      expect(OFF_TO_APPWRITE[key]).toBeTruthy()
+      expect(OFF_TO_SERVER[key]).toBeTruthy()
     }
   })
 })
@@ -192,14 +192,14 @@ describe('contribution file IDs', () => {
 
   it('round-trips labelled IDs through image_url and fits the 1024-char column', () => {
     const encoded = encodeContributionFiles(files)
-    expect(encoded).toBe('appwrite-files://barcode=b1;front=f1;ingredients=i1;nutrition=n1;extra=x1,x2')
+    expect(encoded).toBe('persistence-files://barcode=b1;front=f1;ingredients=i1;nutrition=n1;extra=x1,x2')
     expect(decodeContributionFiles(encoded)).toEqual(files)
     const long = 'a'.repeat(36)
     expect(encodeContributionFiles({ barcode: long, front: long, ingredients: long, nutrition: long, extra: [long] }).length).toBeLessThan(1024)
   })
 
   it('still reads the older unlabelled list', () => {
-    expect(decodeContributionFiles('appwrite-files://a,b')).toEqual({ extra: ['a', 'b'] })
+    expect(decodeContributionFiles('persistence-files://a,b')).toEqual({ extra: ['a', 'b'] })
     expect(decodeContributionFiles('https://images.example/x.jpg')).toBeNull()
   })
 
@@ -242,9 +242,9 @@ describe('createContributionRecord', () => {
   })
 
   it('packs the IDs into image_url when the collection lacks the file columns', async () => {
-    const { AppwriteException } = await import('react-native-appwrite')
+    const { PersistenceError } = await import('@/lib/serverTypes')
     mockCreateDocument
-      .mockRejectedValueOnce(new AppwriteException('Invalid document structure: Unknown attribute: "front_file_id"', 400, 'document_invalid_structure'))
+      .mockRejectedValueOnce(new PersistenceError('Invalid document structure: Unknown attribute: "front_file_id"', 400, 'document_invalid_structure'))
       .mockResolvedValueOnce({ $id: 'doc-2', status: 'pending' })
     const { createContributionRecord } = await import('./foodContributions')
     const result = await createContributionRecord('u1', { product_name: 'Oat bar', files: { front: 'f1', ingredients: 'i1' } })
@@ -252,17 +252,17 @@ describe('createContributionRecord', () => {
     const retry = mockCreateDocument.mock.calls[1][0].data
     expect(retry).not.toHaveProperty('front_file_id')
     expect(retry).not.toHaveProperty('submitted_from')
-    expect(retry.image_url).toBe('appwrite-files://front=f1;ingredients=i1')
+    expect(retry.image_url).toBe('persistence-files://front=f1;ingredients=i1')
 
     mockCreateDocument.mockResolvedValueOnce({ $id: 'doc-3', status: 'pending' })
     await createContributionRecord('u1', { product_name: 'Second bar', files: { front: 'f2' } })
     expect(mockCreateDocument).toHaveBeenCalledTimes(3)
-    expect(mockCreateDocument.mock.calls[2][0].data.image_url).toBe('appwrite-files://front=f2')
+    expect(mockCreateDocument.mock.calls[2][0].data.image_url).toBe('persistence-files://front=f2')
   })
 
   it('does not retry other failures', async () => {
-    const { AppwriteException } = await import('react-native-appwrite')
-    mockCreateDocument.mockRejectedValueOnce(new AppwriteException('Missing required attribute', 400, 'document_missing_data'))
+    const { PersistenceError } = await import('@/lib/serverTypes')
+    mockCreateDocument.mockRejectedValueOnce(new PersistenceError('Missing required attribute', 400, 'document_missing_data'))
     const { createContributionRecord } = await import('./foodContributions')
     await expect(createContributionRecord('u1', { product_name: 'Oat bar', files: { front: 'f1' } })).rejects.toThrow('Missing required attribute')
     expect(mockCreateDocument).toHaveBeenCalledTimes(1)

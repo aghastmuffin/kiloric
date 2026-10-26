@@ -163,7 +163,7 @@ export default function ProgressScreen() {
       setWeightDate(new Date())
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setSaving(false)
     }
@@ -176,7 +176,7 @@ export default function ProgressScreen() {
       await applyMaintenanceEstimate(userId, data.summary, tdee)
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setApplying(false)
     }

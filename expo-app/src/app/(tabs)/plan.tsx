@@ -80,7 +80,7 @@ export default function PlanScreen() {
       await action()
       await state.reload()
     } catch (err) {
-      showApiError(err, 'appwrite')
+      showApiError(err, 'server')
     } finally {
       setBusy(null)
     }

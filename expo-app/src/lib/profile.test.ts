@@ -8,7 +8,7 @@ const { mockGetDocument, mockGetAccount } = vi.hoisted(() => {
   }
 })
 
-vi.mock('./appwrite', () => {
+vi.mock('./serverData', () => {
   return {
     databases: {
       getDocument: mockGetDocument,
@@ -21,9 +21,9 @@ vi.mock('./appwrite', () => {
   }
 })
 
-vi.mock('react-native-appwrite', () => {
+vi.mock('@/lib/serverTypes', () => {
   return {
-    AppwriteException: class extends Error {
+    PersistenceError: class extends Error {
       code: number
       type: string
       constructor(message: string, code: number, type: string) {
@@ -43,8 +43,6 @@ vi.mock('react-native-appwrite', () => {
   }
 })
 
-process.env.EXPO_PUBLIC_APPWRITE_DATABASE_ID = 'test-db'
-process.env.EXPO_PUBLIC_APPWRITE_PROFILES_COLLECTION_ID = 'test-profiles-col'
 
 let profileModule: any
 

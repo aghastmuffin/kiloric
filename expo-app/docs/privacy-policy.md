@@ -20,7 +20,7 @@ Welcome to **kiloric** ("Service", "App"), operated by **Taeson NORTH AMERICA Lt
 We collect information directly from you when you register, complete onboarding, configure your settings, log nutrition/water data, or interact with our features:
 
 1. **Account & Authentication Information**
-   - Email address, name/display name, and encrypted authentication credentials (managed via our backend service, Appwrite).
+   - Email address, name/display name, and encrypted authentication credentials (managed via our backend service, Kiloric API).
 2. **Profile & Demographic Information**
    - Biological sex, date of birth / age, self-reported race, country of residence, whether you reside in any country in Asia, and account roles. kiloric is not offered to residents of the European Union, Russia, or Vietnam.
 3. **Physical & Health Metrics**
@@ -53,7 +53,7 @@ We process your data for the following purposes:
 ### 4. Third-Party Service Providers & Sub-processors
 
 We share data only with trusted service providers necessary to operate the App:
-- **Backend & Database Hosting (Appwrite):** User accounts, database records, and media storage are hosted on our dedicated Appwrite infrastructure (`appwrite.kiloric.kiloric.co`).
+- **Backend & Database Hosting (Kiloric API):** User accounts, database records, and media storage are hosted on our dedicated Kiloric API infrastructure (`api.kiloric.co`).
 - **Nutrition & Food Database APIs:** External food search APIs (such as Open Food Facts, USDA FoodData Central) to look up product nutrition facts. Queries sent to these APIs contain product search strings or barcodes, not your personal health profile.
 - **Crash Reporting & Telemetry (e.g., Sentry):** Error and diagnostic logs to diagnose app crashes and ensure stability.
 
@@ -102,9 +102,9 @@ Taeson NORTH AMERICA Ltd. Liability Co. retains your personal data only for as l
 
 ### 3. Deletion and Purge Procedures
 When an account deletion request is processed:
-1. **Primary Database Records:** All profile documents, goal records, weight logs, meal logs, and water records associated with the user ID are permanently purged from Appwrite databases.
-2. **File Storage:** All images and files uploaded by the user in Appwrite storage buckets are permanently removed.
-3. **Authentication Record:** Account access is blocked immediately. The authentication record is then hard-deleted through the server-side Appwrite Users API within 30 days.
+1. **Primary Database Records:** All profile documents, goal records, weight logs, meal logs, and water records associated with the user ID are permanently purged from Kiloric API databases.
+2. **File Storage:** All images and files uploaded by the user in Kiloric API storage buckets are permanently removed.
+3. **Authentication Record:** Account access is blocked immediately. The authentication record is then hard-deleted through the server-side Kiloric API Users API within 30 days.
 4. **Backups:** Residual data in automated system backups will be overwritten in accordance with standard backup rotation cycles (not exceeding 30 days).
 
 ---

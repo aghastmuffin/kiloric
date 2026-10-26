@@ -86,7 +86,7 @@ export function AccountSignInFlow() {
         } catch (err) {
             const message = getAuthErrorMessage(err)
             console.error('[auth] sign in failed:', message)
-            showApiError(err, 'appwrite')
+            showApiError(err, 'server')
             setAuthError(message)
         } finally {
             setSubmitting(false)
