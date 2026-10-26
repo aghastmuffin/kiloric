@@ -46,8 +46,6 @@ export function SearchModeSwapButton({ current }: Props) {
             triggerSelectionHaptic()
             if (target === 'scan') {
               router.push('/cameraview')
-            } else if (router.canGoBack()) {
-              router.back()
             } else {
               router.replace('/(tabs)/logfood')
             }

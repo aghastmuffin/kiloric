@@ -18,6 +18,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
   type AppStateStatus,
 } from 'react-native';
@@ -46,6 +47,97 @@ const BARCODE_TYPES: BarcodeType[] = [
   'upc_a',
 ];
 
+function ManualBarcodeForm({
+  value,
+  onChangeText,
+  onSubmit,
+  autoFocus = false,
+  lightTheme = false,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  onSubmit: () => void;
+  autoFocus?: boolean;
+  lightTheme?: boolean;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={manualStyles.container}>
+      <Text style={[manualStyles.label, { color: lightTheme ? colors.textMuted : 'rgba(255, 255, 255, 0.8)' }]}>
+        Manual barcode entry
+      </Text>
+      <View style={manualStyles.inputRow}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          onSubmitEditing={onSubmit}
+          placeholder="e.g. 0123456789012"
+          placeholderTextColor={lightTheme ? colors.textMuted : '#999999'}
+          keyboardType="number-pad"
+          autoFocus={autoFocus}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          accessibilityLabel="Manual barcode number input"
+          accessibilityHint="Type the barcode digits from product packaging"
+          style={[
+            manualStyles.input,
+            {
+              backgroundColor: lightTheme ? colors.surfaceMuted : 'rgba(0, 0, 0, 0.6)',
+              color: lightTheme ? colors.text : '#FFFFFF',
+              borderColor: lightTheme ? colors.borderStrong : 'rgba(255, 255, 255, 0.3)',
+            },
+          ]}
+        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Look up barcode"
+          onPress={onSubmit}
+          disabled={!value.trim()}
+          style={({ pressed }) => [
+            manualStyles.submitButton,
+            { backgroundColor: colors.brand, opacity: !value.trim() ? 0.4 : pressed ? 0.8 : 1 },
+          ]}
+        >
+          <Ionicons name="arrow-forward" size={20} color={colors.onBrand} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const manualStyles = StyleSheet.create({
+  container: {
+    width: '100%',
+    maxWidth: 380,
+    marginTop: spacing.sm,
+    gap: 4,
+  },
+  label: {
+    ...typography.labelSmall,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  input: {
+    flex: 1,
+    height: 48,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    ...typography.body,
+  },
+  submitButton: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
 export default function CameraScannerScreen() {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
@@ -56,6 +148,8 @@ export default function CameraScannerScreen() {
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [handoffError, setHandoffError] = useState<string | null>(null);
+  const [manualBarcode, setManualBarcode] = useState('');
+  const [showManual, setShowManual] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const router = useRouter();
 
@@ -102,6 +196,23 @@ export default function CameraScannerScreen() {
     }, [resetScanState]),
   );
 
+  // Detect web platform missing camera devices
+  useEffect(() => {
+    if (Platform.OS === 'web' && permission?.granted) {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.enumerateDevices) {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then((devices) => {
+            const hasVideo = devices.some((d) => d.kind === 'videoinput');
+            if (!hasVideo) {
+              setCameraError('No camera found. Type the barcode instead.');
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [permission?.granted]);
+
   const handleBarcodeScanned = useCallback(
     async ({ data }: { data: string }) => {
       const barcode = data.trim();
@@ -122,13 +233,19 @@ export default function CameraScannerScreen() {
     [router, scanned],
   );
 
+  const handleManualSubmit = useCallback(
+    (codeToSubmit?: string) => {
+      const barcode = (codeToSubmit ?? manualBarcode).trim();
+      if (!barcode) return;
+      triggerSelectionHaptic();
+      router.replace({ pathname: '/review-log', params: { barcode, source: 'scan' } });
+    },
+    [manualBarcode, router],
+  );
+
   const handleExit = useCallback(() => {
     triggerSelectionHaptic();
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(tabs)/logfood');
-    }
+    router.replace('/(tabs)/logfood');
   }, [router]);
 
   if (Platform.OS === 'ios' && !Device.isDevice) {
@@ -145,14 +262,20 @@ export default function CameraScannerScreen() {
         </Pressable>
         <View style={[styles.statePanel, { marginHorizontal: gutter }]}>
           <View style={styles.stateIcon}>
-            <Ionicons name="phone-portrait-outline" size={26} color={colors.brand} />
+            <Ionicons name="barcode-outline" size={26} color={colors.brand} />
           </View>
           <Text style={styles.stateEyebrow}>BARCODE SCANNER</Text>
-          <Text style={styles.stateTitle}>A physical camera is required.</Text>
+          <Text style={styles.stateTitle}>No camera found. Type the barcode instead.</Text>
           <Text style={styles.message}>
-            The iOS Simulator cannot scan barcodes. Open this screen on a physical iPhone, Android
-            device, or supported web browser.
+            The iOS Simulator cannot scan barcodes. Type the barcode number below to look up the item.
           </Text>
+          <ManualBarcodeForm
+            value={manualBarcode}
+            onChangeText={setManualBarcode}
+            onSubmit={() => handleManualSubmit()}
+            autoFocus
+            lightTheme
+          />
         </View>
         <SearchModeSwapButton current="scan" />
       </View>
@@ -202,8 +325,8 @@ export default function CameraScannerScreen() {
           <Text style={styles.stateTitle}>Allow camera access to scan.</Text>
           <Text style={styles.message}>
             {openSystemSettings
-              ? 'Camera access is blocked. Enable it in system settings, then return here.'
-              : 'kiloric uses the camera only to read a barcode in the scanning frame.'}
+              ? 'Camera access is blocked. Enable it in settings, or type the barcode number below.'
+              : 'Allow camera access to scan, or type the barcode number below.'}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -214,6 +337,13 @@ export default function CameraScannerScreen() {
               {openSystemSettings ? 'Open settings' : 'Allow camera'}
             </Text>
           </Pressable>
+
+          <ManualBarcodeForm
+            value={manualBarcode}
+            onChangeText={setManualBarcode}
+            onSubmit={() => handleManualSubmit()}
+            lightTheme
+          />
         </View>
         <SearchModeSwapButton current="scan" />
       </View>
@@ -235,7 +365,18 @@ export default function CameraScannerScreen() {
           barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
           onBarcodeScanned={scanned || detailLoading ? undefined : handleBarcodeScanned}
           onCameraReady={() => setCameraError(null)}
-          onMountError={({ message }) => setCameraError(message || 'The camera could not start.')}
+          onMountError={({ message }) => {
+            const raw = message || '';
+            if (
+              raw.includes('NotFoundError') ||
+              raw.includes('Requested device not found') ||
+              raw.includes('DevicesNotFoundError')
+            ) {
+              setCameraError('No camera found. Type the barcode instead.');
+            } else {
+              setCameraError(raw || 'No camera found. Type the barcode instead.');
+            }
+          }}
         />
       ) : (
         <View style={styles.camera} />
@@ -286,9 +427,26 @@ export default function CameraScannerScreen() {
       {cameraError ? (
         <View accessibilityRole="alert" accessibilityViewIsModal style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
           <View style={[styles.errorPanel, { marginHorizontal: gutter }]}>
-            <Ionicons name="camera-outline" size={28} color={colors.danger} />
-            <Text style={styles.stateTitle}>Camera unavailable</Text>
-            <Text style={styles.message}>{cameraError}</Text>
+            <Ionicons name="barcode-outline" size={32} color={colors.brand} />
+            <Text style={styles.stateTitle}>No camera found. Type the barcode instead.</Text>
+            <Text style={styles.message}>
+              {cameraError.includes('No camera') ? cameraError : `Camera issue: ${cameraError}`}
+            </Text>
+            <ManualBarcodeForm
+              value={manualBarcode}
+              onChangeText={setManualBarcode}
+              onSubmit={() => handleManualSubmit()}
+              autoFocus
+              lightTheme
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Return to food log"
+              onPress={handleExit}
+              style={styles.exitLink}
+            >
+              <Text style={styles.exitLinkText}>Return to food log</Text>
+            </Pressable>
           </View>
         </View>
       ) : null}
@@ -306,17 +464,54 @@ export default function CameraScannerScreen() {
       )}
 
       {!cameraError && !detailLoading ? (
-      <View style={[styles.buttonContainer, { bottom: Math.max(insets.bottom, spacing.lg) }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Switch between front and back camera"
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-          onPress={toggleCameraFacing}
-        >
-          <Ionicons name="camera-reverse-outline" size={20} color={colors.text} />
-          <Text style={styles.buttonText}>Flip camera</Text>
-        </Pressable>
-      </View>
+        <View style={[styles.buttonContainer, { bottom: Math.max(insets.bottom, spacing.lg) }]}>
+          {showManual ? (
+            <View style={styles.activeManualCard}>
+              <View style={styles.activeManualHeader}>
+                <Text style={styles.activeManualTitle}>Type barcode digits</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close manual barcode input"
+                  onPress={() => setShowManual(false)}
+                  hitSlop={8}
+                >
+                  <Ionicons name="close" size={20} color={colors.text} />
+                </Pressable>
+              </View>
+              <ManualBarcodeForm
+                value={manualBarcode}
+                onChangeText={setManualBarcode}
+                onSubmit={() => handleManualSubmit()}
+                autoFocus
+                lightTheme
+              />
+            </View>
+          ) : (
+            <View style={styles.activeActionRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Switch between front and back camera"
+                style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+                onPress={toggleCameraFacing}
+              >
+                <Ionicons name="camera-reverse-outline" size={20} color={colors.text} />
+                <Text style={styles.buttonText}>Flip camera</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Type barcode number manually"
+                style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+                onPress={() => {
+                  triggerSelectionHaptic();
+                  setShowManual(true);
+                }}
+              >
+                <Ionicons name="keypad-outline" size={20} color={colors.text} />
+                <Text style={styles.buttonText}>Type barcode</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
       ) : null}
 
       <SearchModeSwapButton current="scan" />
@@ -375,7 +570,7 @@ const makeStyles = (c: ThemeColors) =>
     },
     permissionButton: {
       minHeight: 48,
-      marginTop: spacing.sm,
+      marginTop: spacing.xs,
       paddingHorizontal: spacing.xl,
       borderRadius: borderRadius.pill,
       backgroundColor: c.brand,
@@ -488,30 +683,57 @@ const makeStyles = (c: ThemeColors) =>
     buttonContainer: {
       position: 'absolute',
       zIndex: 3,
-      flexDirection: 'row',
-      backgroundColor: 'transparent',
       width: '100%',
       paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+    },
+    activeActionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'center',
+      gap: spacing.md,
     },
     button: {
       minHeight: 48,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: spacing.sm,
+      gap: spacing.xs,
       backgroundColor: c.surfaceMuted,
       borderWidth: 1,
       borderColor: c.borderStrong,
-      paddingHorizontal: spacing.lg,
+      paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      minWidth: 160,
-      maxWidth: 200,
+      minWidth: 140,
       borderRadius: borderRadius.pill,
     },
     buttonText: {
       color: c.text,
       ...typography.label,
+    },
+    activeManualCard: {
+      width: '100%',
+      maxWidth: 400,
+      backgroundColor: c.surface,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    activeManualHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.xs,
+    },
+    activeManualTitle: {
+      ...typography.headline,
+      color: c.text,
     },
     loadingOverlay: {
       flex: 1,
@@ -545,6 +767,15 @@ const makeStyles = (c: ThemeColors) =>
       padding: spacing.xl,
       borderRadius: borderRadius.lg,
       backgroundColor: c.surface,
+    },
+    exitLink: {
+      marginTop: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+    },
+    exitLinkText: {
+      ...typography.label,
+      color: c.brand,
     },
     pressed: {
       opacity: 0.72,
