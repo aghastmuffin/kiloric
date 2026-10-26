@@ -1,3 +1,5 @@
+import { isBarredResidency } from './residency'
+
 const COUNTRY_LIST: Record<string, string> = {
   AF: 'Afghanistan',
   AL: 'Albania',
@@ -250,10 +252,12 @@ const COUNTRY_LIST: Record<string, string> = {
   AX: 'Åland Islands',
 }
 
-export const COUNTRY_OPTIONS = Object.entries(COUNTRY_LIST).map(([code, name]) => ({
-  label: name,
-  value: code,
-}))
+export const COUNTRY_OPTIONS = Object.entries(COUNTRY_LIST)
+  .filter(([code]) => !isBarredResidency(code))
+  .map(([code, name]) => ({
+    label: name,
+    value: code,
+  }))
 
 export function getCountryName(code: string): string {
   return COUNTRY_LIST[code.toUpperCase()] ?? code
