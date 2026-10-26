@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { CaloriesWeekCard, WeightCard } from '@/components/cards/ProgressCards'
 import {
   Card,
@@ -246,12 +247,14 @@ export default function ProgressScreen() {
         unit={avg != null ? 'kcal/day' : undefined}
         detail={avg != null && target > 0 ? `${avg <= target ? formatKcal(target - avg) + ' under' : formatKcal(avg - target) + ' over'} goal` : 'Log meals to see your average'}
       />
-      <StatCard
-        label="Workouts"
-        value={`${data.workoutsDone}`}
-        unit={`of ${data.workoutsPlanned}`}
-        detail="this week"
-      />
+      {FEATURES.workouts ? (
+        <StatCard
+          label="Workouts"
+          value={`${data.workoutsDone}`}
+          unit={`of ${data.workoutsPlanned}`}
+          detail="this week"
+        />
+      ) : null}
     </View>
   ) : null
 

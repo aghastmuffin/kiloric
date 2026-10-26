@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { Redirect } from 'expo-router'
 import {
   Card,
@@ -318,5 +319,6 @@ const styles = StyleSheet.create({
 
 // Water logging is not shipped yet; keep the route inaccessible.
 export default function WaterRoute() {
-  return <Redirect href="/" />
+  if (!FEATURES.water) return <Redirect href="/" />
+  return <WaterScreen />
 }

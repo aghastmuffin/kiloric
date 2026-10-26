@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { CaloriesCard } from '@/components/cards/CaloriesCard'
 import { PlanChecklist } from '@/components/cards/PlanChecklist'
 import { PrepCard } from '@/components/cards/PrepCard'
@@ -112,7 +113,7 @@ export default function TodayScreen() {
   const checklist = (
     <PlanChecklist
       plan={today.plan}
-      workouts={today.workouts}
+      workouts={FEATURES.workouts ? today.workouts : []}
       onToggleMeal={toggleMeal}
       onOpenWorkout={openWorkout}
       onPlan={() => router.navigate('/plan')}

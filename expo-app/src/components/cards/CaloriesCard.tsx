@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { Card, MacroBar, ProgressRing, Txt } from '@/components/ds'
 import { formatKcal, type Macros } from '@/lib/data/foodItem'
 import type { Targets } from '@/lib/data/overview'
@@ -43,11 +44,11 @@ export function CaloriesCard({ eaten, burned, credit, targets, remaining, layout
         </ProgressRing>
         <View style={[styles.stats, wide && styles.statsWide]}>
           <Stat label="Eaten" value={formatKcal(eaten.kcal)} inline={wide} />
-          <Stat label="Burned" value={formatKcal(burned)} inline={wide} />
+          {FEATURES.workouts ? <Stat label="Burned" value={formatKcal(burned)} inline={wide} /> : null}
           <Stat label={wide ? 'Goal' : 'Daily goal'} value={targets.kcal > 0 ? formatKcal(targets.kcal) : '—'} inline={wide} />
         </View>
       </View>
-      {covered > 0 ? (
+      {FEATURES.workouts && covered > 0 ? (
         <Txt variant="caption" tone="muted" style={wide ? undefined : styles.creditNote}>
           {credit > 0
             ? `+${formatKcal(credit)} kcal added back. Your activity level already covers the other ${formatKcal(covered)}.`

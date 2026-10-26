@@ -1,3 +1,5 @@
+import { FEATURES } from '@/lib/features'
+import { Redirect } from 'expo-router'
 import {
   Card,
   Chip,
@@ -43,7 +45,7 @@ function parseTime(text: string): { hours: number; minutes: number } | null {
   return { hours, minutes }
 }
 
-export default function WorkoutEditorScreen() {
+function WorkoutEditorScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<{ template?: string }>()
   const { user } = useAuth()
@@ -313,3 +315,8 @@ const styles = StyleSheet.create({
   pastNotice: { marginTop: 2 },
   promptButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 })
+
+export default function WorkoutEditorScreenRoute() {
+  if (!FEATURES.workouts) return <Redirect href="/" />
+  return <WorkoutEditorScreen />
+}

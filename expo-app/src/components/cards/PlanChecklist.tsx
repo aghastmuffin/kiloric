@@ -1,3 +1,4 @@
+import { FEATURES } from '@/lib/features'
 import { Badge, Card, CheckCircle, Divider, EmptyState, Txt, UButton } from '@/components/ds'
 import { timeLabel } from '@/lib/data/dateKeys'
 import type { PlanEntry } from '@/lib/data/mealPlan'
@@ -53,7 +54,7 @@ export function PlanChecklist({ plan, workouts, onToggleMeal, onOpenWorkout, onP
           compact
           icon="calendar-outline"
           title="Nothing planned for today"
-          body="Plan meals or schedule a workout and they'll show up here."
+          body={FEATURES.workouts ? "Plan meals or schedule a workout and they'll show up here." : "Plan meals and they'll show up here."}
           actionLabel="Open meal plan"
           onAction={onPlan}
         />
