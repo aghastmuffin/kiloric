@@ -156,6 +156,16 @@ export default function ConfigScreen() {
 
   const isRequired = !profileComplete;
 
+  const countryPickerOptions = useMemo(() => {
+    if (isBarredResidency(country)) {
+      return [
+        { label: `${getCountryName(country)} (Unavailable)`, value: country },
+        ...COUNTRY_OPTIONS,
+      ];
+    }
+    return COUNTRY_OPTIONS;
+  }, [country]);
+
   // Real-time suggested nutrition plan based on current body & goal selections
   const computedPlan: NutritionPlan = useMemo(() => {
     return buildNutritionPlan({
@@ -169,8 +179,9 @@ export default function ConfigScreen() {
       pace,
       diet,
       targetWeight,
+      displayUnits,
     });
-  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight]);
+  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight, displayUnits]);
 
   const activeTargetKcal = targetKcal ?? computedPlan.targetKcal;
   const activeTargetProtein = targetProtein ?? computedPlan.targetProtein;
@@ -292,7 +303,7 @@ export default function ConfigScreen() {
 
         const parsedTargetWeight = normalizeStoredTargetWeightKg(
           userCountry,
-          profile.target_weight,
+          profile.goal_target_weight_kg ?? profile.target_weight,
           profile.height ?? 170,
         );
         setTargetWeight(parsedTargetWeight);
@@ -379,6 +390,7 @@ export default function ConfigScreen() {
             targetWeight: roundMetric(targetWeight ?? computedPlan.targetWeight),
             currentWeight: roundMetric(weight),
             estimatedWeeklyChangeKg: currentWeeklyChangeKg,
+            units: displayUnits,
           });
 
       const goalPlainWithUnits = appendDisplayUnitsToGoalPlain(finalGoalBase, displayUnits);
@@ -628,7 +640,7 @@ export default function ConfigScreen() {
                 <NativeEnumPicker
                   accessibilityLabel="Country of residence"
                   value={country}
-                  options={COUNTRY_OPTIONS}
+                  options={countryPickerOptions}
                   onChange={(val) => {
                     setCountry(val);
                     setResidesInAsia((current) => nextAsiaAnswer(current, country, val));

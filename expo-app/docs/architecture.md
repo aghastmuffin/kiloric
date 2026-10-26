@@ -60,7 +60,7 @@ ProfileGate                         (redirect incomplete profiles → onboarding
 | `onboarding` | Hidden | Multi-step profile + nutrition wizard |
 | `onboard_success` | Hidden | Post-onboarding confirmation |
 | `config` | Profile | Edit saved profile fields |
-| `Additions` | Hidden | Product detail / add to meal |
+| `additions` | Hidden | Product detail / add to meal |
 | `contribute-food` | Hidden | Submit a food record |
 | `credits` | — | Credits screen |
 
