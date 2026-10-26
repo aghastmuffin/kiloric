@@ -491,6 +491,9 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.background,
     },
     content: {
+      width: '100%',
+      maxWidth: 680,
+      alignSelf: 'center',
       padding: spacing.lg,
       paddingBottom: spacing.xl * 2,
     },

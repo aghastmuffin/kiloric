@@ -23,7 +23,7 @@ export function listWeightsSince(userId: string, since: Date): Promise<WeightLog
   })
 }
 
-/** Records a weigh-in and keeps the profile's current weight in sync. */
+/** Records a weigh-in and keeps the profile's current weight in sync if this is the latest weigh-in. */
 export async function logWeight(userId: string, weightKg: number, at: Date = new Date()): Promise<WeightLog> {
   if (!Number.isFinite(weightKg) || weightKg < 20 || weightKg > 400) {
     throw new Error('Enter a weight between 20 and 400 kg (44–880 lb).')
@@ -34,7 +34,11 @@ export async function logWeight(userId: string, weightKg: number, at: Date = new
     day: dayKey(at),
     logged_at: at.toISOString(),
   })
-  await updateProfile(userId, { weight: rounded })
+  const recentLogs = await weightLogsStore.list(userId, [], { limit: 10 }).catch(() => [])
+  const isLatest = !recentLogs.some((log) => log.logged_at > at.toISOString())
+  if (isLatest) {
+    await updateProfile(userId, { weight: rounded })
+  }
   return entry
 }
 

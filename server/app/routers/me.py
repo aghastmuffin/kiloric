@@ -1,12 +1,28 @@
 """
-/v1/me — current user profile read + update + delete.
+/v1/me — current user profile read + update + delete + export data collection.
 """
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import User
+from app.models import (
+    FoodEntry,
+    GroceryItem,
+    Meal,
+    MealPlanEntry,
+    PrepSession,
+    SavedMeal,
+    Task,
+    User,
+    WaterLog,
+    WeightLog,
+    Workout,
+    WorkoutSet,
+)
+from app.routers.crud import _model_to_dict
 from app.schemas import ProfilePatch, UserResponse
 
 router = APIRouter(prefix="/v1/me", tags=["me"])
@@ -15,6 +31,37 @@ router = APIRouter(prefix="/v1/me", tags=["me"])
 @router.get("", response_model=UserResponse)
 def get_me(user: User = Depends(get_current_user)):
     return UserResponse.from_orm_user(user)
+
+
+def _export_user_collections(db: Session, user: User) -> dict:
+    return {
+        "profile": UserResponse.from_orm_user(user).model_dump(mode="json", by_alias=True),
+        "meals": [_model_to_dict(m) for m in db.query(Meal).filter(Meal.owner_id == user.id).all()],
+        "water_logs": [_model_to_dict(w) for w in db.query(WaterLog).filter(WaterLog.owner_id == user.id).all()],
+        "food_entries": [_model_to_dict(f) for f in db.query(FoodEntry).filter(FoodEntry.owner_id == user.id).all()],
+        "saved_meals": [_model_to_dict(s) for s in db.query(SavedMeal).filter(SavedMeal.owner_id == user.id).all()],
+        "meal_plan_entries": [_model_to_dict(mp) for mp in db.query(MealPlanEntry).filter(MealPlanEntry.owner_id == user.id).all()],
+        "prep_sessions": [_model_to_dict(p) for p in db.query(PrepSession).filter(PrepSession.owner_id == user.id).all()],
+        "grocery_items": [_model_to_dict(g) for g in db.query(GroceryItem).filter(GroceryItem.owner_id == user.id).all()],
+        "workouts": [_model_to_dict(w) for w in db.query(Workout).filter(Workout.owner_id == user.id).all()],
+        "workout_sets": [_model_to_dict(ws) for ws in db.query(WorkoutSet).filter(WorkoutSet.owner_id == user.id).all()],
+        "weight_logs": [_model_to_dict(wl) for wl in db.query(WeightLog).filter(WeightLog.owner_id == user.id).all()],
+        "tasks": [_model_to_dict(t) for t in db.query(Task).filter(Task.owner_id == user.id).all()],
+    }
+
+
+@router.get("/export")
+@router.get("/data")
+def export_me_data(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Package and return all user collections into a single export file/payload."""
+    data = jsonable_encoder(_export_user_collections(db, user))
+    return JSONResponse(
+        content=data,
+        headers={"Content-Disposition": f'attachment; filename="kiloric_user_data_{user.id}.json"'},
+    )
 
 
 @router.patch("", response_model=UserResponse)

@@ -21,7 +21,7 @@ export function roundMetric(value: number): number {
 }
 
 export function kgToLbs(kg: number): number {
-  return Math.round(kg * KG_TO_LBS)
+  return Math.round(kg * KG_TO_LBS * 10) / 10
 }
 
 export function lbsToKg(lbs: number): number {

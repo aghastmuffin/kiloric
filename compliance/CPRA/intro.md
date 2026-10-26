@@ -23,6 +23,7 @@ Every user is guaranteed the following non-discriminatory rights:
 Users and authorized agents may exercise privacy rights via:
 - **In-App CPRA Privacy Portal**: Navigate to `You -> Privacy Portal` or `Account -> CPRA & CCPA Privacy Portal` in the kiloric mobile app for instant automated data export JSON generation, account deletion, and request submission.
 - **Web CPRA Privacy Portal**: Access `https://kiloric.co/privacy-portal` (or `website/index.html`) to submit verified consumer privacy requests online.
+- **Single-File Data Export (API)**: Signed-in users can download all personal data and user-owned records as one JSON file via `GET /v1/me/export`.
 - **Direct Privacy Request Email**: Contact `data_privacy@kiloric.co` with subject line `kiloric - Data Privacy Request`.
 
 ## 4. Consumer Request Verification & Timelines
