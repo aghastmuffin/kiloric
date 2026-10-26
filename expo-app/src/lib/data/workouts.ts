@@ -169,7 +169,7 @@ export async function previousPerformance(
   userId: string,
   exerciseName: string,
   excludeWorkoutId: string,
-): Promise<Map<number, { weight: number; reps: number }>> {
+): Promise<Map<number, { weight: number | null; reps: number }>> {
   const sets = await workoutSetsStore.list(
     userId,
     [
@@ -179,11 +179,12 @@ export async function previousPerformance(
     { orderBy: 'completed_at', desc: true, limit: 50 },
   )
   const latestWorkout = sets.find((set) => set.workout_id !== excludeWorkoutId)?.workout_id
-  const result = new Map<number, { weight: number; reps: number }>()
+  const result = new Map<number, { weight: number | null; reps: number }>()
   if (!latestWorkout) return result
   for (const set of sets) {
     if (set.workout_id !== latestWorkout || result.has(set.set_number)) continue
-    result.set(set.set_number, { weight: set.weight ?? set.target_weight, reps: set.reps ?? set.target_reps })
+    const weight = set.weight != null ? set.weight : (set.target_weight > 0 ? set.target_weight : null)
+    result.set(set.set_number, { weight, reps: set.reps ?? set.target_reps })
   }
   return result
 }
@@ -199,10 +200,10 @@ export function startWorkout(userId: string, workout: Workout): Promise<Workout>
 export function completeSet(
   userId: string,
   set: WorkoutSet,
-  values: { weight: number; reps: number; done: boolean },
+  values: { weight: number | null; reps: number; done: boolean },
 ): Promise<WorkoutSet> {
   return workoutSetsStore.update(userId, set.$id, {
-    weight: Math.max(0, values.weight),
+    weight: values.weight != null ? Math.max(0, values.weight) : null,
     reps: Math.max(0, Math.round(values.reps)),
     done: values.done,
     completed_at: values.done ? new Date().toISOString() : null,

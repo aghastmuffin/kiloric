@@ -22,8 +22,17 @@ export function isValidSecret(value: string): boolean {
   return trimmed.length > 0 && trimmed.length <= 512
 }
 
-export function validateSignInInput(email: string, password: string): void {
-  if (!isValidEmail(email)) throw new Error('Invalid email format.')
+export function isValidUsername(value: string): boolean {
+  const trimmed = value.trim()
+  return /^[a-zA-Z0-9_]{3,32}$/.test(trimmed)
+}
+
+export function isValidIdentity(value: string): boolean {
+  return isValidEmail(value) || isValidUsername(value)
+}
+
+export function validateSignInInput(identity: string, password: string): void {
+  if (!isValidIdentity(identity)) throw new Error('Invalid email format.')
   if (!isValidPassword(password)) throw new Error('Password must be between 8 and 128 characters.')
 }
 

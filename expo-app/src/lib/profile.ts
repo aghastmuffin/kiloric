@@ -515,9 +515,6 @@ export async function deleteProfile(userId: string): Promise<void> {
 }
 
 export async function getProfile(userId: string): Promise<ProfileDocument | null> {
-  // Assert user ownership before retrieving profile document to prevent BOLA/IDOR vulnerabilities
-  await assertAuthenticatedUserId(userId)
-
   // 1. Check if we have a valid, unexpired cached profile for this user
   if (cachedProfile && cachedProfile.userId === userId && cachedProfile.expiresAt > Date.now()) {
     return cachedProfile.profile
@@ -528,15 +525,29 @@ export async function getProfile(userId: string): Promise<ProfileDocument | null
     return inflightProfilePromise
   }
 
-  // 3. Initiate the request with deduplication
+  // 3. Initiate the request with deduplication and timeout protection
   inflightProfileUserId = userId
   inflightProfilePromise = (async () => {
+    let timerId: ReturnType<typeof setTimeout> | undefined
     try {
-      const profile = (await databases.getDocument({
-        databaseId: DATABASE_ID,
-        collectionId: USER_PROFILES_COLLECTION_ID,
-        documentId: userId,
-      })) as ProfileDocument
+      const workPromise = (async () => {
+        // Assert user ownership before retrieving profile document to prevent BOLA/IDOR vulnerabilities
+        await assertAuthenticatedUserId(userId)
+
+        return (await databases.getDocument({
+          databaseId: DATABASE_ID,
+          collectionId: USER_PROFILES_COLLECTION_ID,
+          documentId: userId,
+        })) as ProfileDocument
+      })()
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timerId = setTimeout(() => {
+          reject(new Error('Profile load timed out. Please try again.'))
+        }, 10000)
+      })
+
+      const profile = await Promise.race([workPromise, timeoutPromise])
 
       // Cache the result for 15 seconds to prevent hammering of profile reads
       cachedProfile = {
@@ -558,6 +569,9 @@ export async function getProfile(userId: string): Promise<ProfileDocument | null
       }
       throw err
     } finally {
+      if (timerId !== undefined) {
+        clearTimeout(timerId)
+      }
       if (inflightProfileUserId === userId) {
         inflightProfilePromise = null
         inflightProfileUserId = null

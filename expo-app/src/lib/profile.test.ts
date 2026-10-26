@@ -146,5 +146,44 @@ describe('profile lib security & functionality', () => {
         expect(currentIso).toBe(originalIso)
       }
     })
+    })
+  })
+
+  it('times out after 10 seconds and clears inflight cache when document request hangs', async () => {
+    vi.useFakeTimers()
+    mockGetAccount.mockResolvedValue({ $id: 'user_123' })
+    mockGetDocument.mockImplementation(() => new Promise(() => {}))
+
+    const promise = profileModule.getProfile('user_123')
+
+    vi.advanceTimersByTime(10001)
+
+    await expect(promise).rejects.toThrow('Profile load timed out. Please try again.')
+
+    // Verify that subsequent calls attempt a new request because inflight promise was cleared
+    mockGetDocument.mockResolvedValue({
+      $id: 'user_123',
+      username: 'TestUser',
+    })
+
+    vi.useRealTimers()
+
+    const retryResult = await profileModule.getProfile('user_123')
+    expect(retryResult).toEqual({ $id: 'user_123', username: 'TestUser' })
+  })
+
+  it('clears inflight cache on request rejection so retries can occur', async () => {
+    mockGetAccount.mockResolvedValue({ $id: 'user_123' })
+    mockGetDocument.mockRejectedValueOnce(new Error('Network failure'))
+
+    await expect(profileModule.getProfile('user_123')).rejects.toThrow('Network failure')
+
+    mockGetDocument.mockResolvedValueOnce({
+      $id: 'user_123',
+      username: 'RecoveredUser',
+    })
+
+    const result = await profileModule.getProfile('user_123')
+    expect(result).toEqual({ $id: 'user_123', username: 'RecoveredUser' })
   })
 })
