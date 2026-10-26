@@ -10,10 +10,10 @@ import type { ReactNode } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 const RANGE_PHRASE: Record<string, string> = {
-  week: 'this week',
-  month: 'this month',
-  quarter: 'in 3 months',
-  year: 'this year',
+  week: 'over 7d',
+  month: 'over 30d',
+  quarter: 'over 90d',
+  year: 'over 1y',
 }
 
 export function WeightCard({
