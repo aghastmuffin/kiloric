@@ -237,7 +237,6 @@ export function OnboardingWizard() {
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [ageBlocked, setAgeBlocked] = useState(false)
-  const [dateOfBirthConfirmed, setDateOfBirthConfirmed] = useState(false)
   const [bodyFatText, setBodyFatText] = useState('')
 
   const visibleSteps = useMemo(
@@ -425,7 +424,6 @@ export function OnboardingWizard() {
               }
             : null,
         })
-        setDateOfBirthConfirmed(Boolean(profile.dateOfBirth))
         setBodyFatText(saved.bodyFatPct != null ? String(saved.bodyFatPct) : '')
 
         // Central eligibility enforcement: an existing session whose saved date
@@ -462,7 +460,9 @@ export function OnboardingWizard() {
         if (form.username.trim().length > 64) return 'Username must be 64 characters or fewer.'
         return null
       case 'eligibility':
-        if (!dateOfBirthConfirmed) return 'Select your date of birth to continue.'
+        if (!form.dateOfBirth || Number.isNaN(form.dateOfBirth.getTime())) {
+          return 'Select your date of birth to continue.'
+        }
         if (form.dateOfBirth > new Date()) return 'Choose a valid date of birth.'
         if (!isRaceValue(form.race)) return 'Select your race to continue.'
         if (form.residesInAsia == null && !isAsianCountry(form.country)) {
@@ -814,10 +814,7 @@ export function OnboardingWizard() {
             <NativeDatePicker
               accessibilityLabel="Date of birth"
               value={form.dateOfBirth}
-              onChange={(value) => {
-                updateForm('dateOfBirth', value)
-                setDateOfBirthConfirmed(true)
-              }}
+              onChange={(value) => updateForm('dateOfBirth', value)}
               disabled={saving}
               minimumDate={new Date(1900, 0, 1)}
               maximumDate={new Date()}
