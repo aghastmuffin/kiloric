@@ -90,8 +90,8 @@ describe('nutrition calculations', () => {
       estimatedWeeklyChangeKg: -0.5,
       units: 'imperial',
     })
-    expect(imperialText).toContain('166 lb')
-    expect(imperialText).toContain('176 lb')
+    expect(imperialText).toContain('165.6 lb')
+    expect(imperialText).toContain('176.4 lb')
     expect(imperialText).toContain('lb / week')
     expect(imperialText).not.toContain('kg')
   })
@@ -111,8 +111,8 @@ describe('nutrition calculations', () => {
     })
 
     expect(plan.targetWeight).toBe(75.1)
-    expect(plan.goalPlain).toContain('166 lb')
-    expect(plan.goalPlain).toContain('176 lb')
+    expect(plan.goalPlain).toContain('165.6 lb')
+    expect(plan.goalPlain).toContain('176.4 lb')
     expect(plan.goalPlain).not.toContain('kg')
   })
 })
