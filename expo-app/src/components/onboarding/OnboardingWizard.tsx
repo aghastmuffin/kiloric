@@ -21,7 +21,6 @@ import {
 } from '@/components/onboarding/types'
 import { UnitToggle } from '@/components/onboarding/UnitToggle'
 import {
-  CongressionalNote,
   HPyloriWarning,
   ResidencyBarNotice,
 } from '@/components/onboarding/ResidencyNotices'
@@ -64,6 +63,7 @@ import {
   formatProfileSaveError,
   getProfile,
   isProfileComplete,
+  parseProfileDate,
   saveProfileFields,
 } from '@/lib/profile'
 import { loadPlanPreferences, planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences'
@@ -196,11 +196,6 @@ function AgeRestrictionScreen({
   )
 }
 
-function parseProfileDate(value?: string): Date {
-  if (!value) return DEFAULT_DATE_OF_BIRTH
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? DEFAULT_DATE_OF_BIRTH : parsed
-}
 
 function getEffectiveMacros(plan: NutritionPlan, overrides: MacroOverrides | null): MacroOverrides {
   if (overrides) return overrides
@@ -237,7 +232,6 @@ export function OnboardingWizard() {
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [ageBlocked, setAgeBlocked] = useState(false)
-  const [dateOfBirthConfirmed, setDateOfBirthConfirmed] = useState(false)
   const [bodyFatText, setBodyFatText] = useState('')
 
   const visibleSteps = useMemo(
@@ -269,15 +263,16 @@ export function OnboardingWizard() {
     () =>
       buildNutritionPlan({
         dateOfBirth: form.dateOfBirth,
-        sex: form.sex,
+        sex: form.sex ?? 'female',
         heightCm: form.height,
         weightKg: form.weight,
         bodyFatPct: form.bodyFatPct,
         activity: form.activity,
-        goal: form.goal,
+        goal: form.goal ?? 'maintain',
         pace: form.pace,
         diet: form.diet,
         targetWeight: form.targetWeight,
+        displayUnits: form.displayUnits,
       }),
     [form],
   )
@@ -412,7 +407,7 @@ export function OnboardingWizard() {
           diet: saved.diet,
           targetWeight: normalizeStoredTargetWeightKg(
             country,
-            profile.target_weight,
+            profile.goal_target_weight_kg ?? profile.target_weight,
             profile.height ?? defaults.height,
           ),
           displayUnits: parseDisplayUnitsPreference(profile.goal_plain, country),
@@ -425,7 +420,6 @@ export function OnboardingWizard() {
               }
             : null,
         })
-        setDateOfBirthConfirmed(Boolean(profile.dateOfBirth))
         setBodyFatText(saved.bodyFatPct != null ? String(saved.bodyFatPct) : '')
 
         // Central eligibility enforcement: an existing session whose saved date
@@ -462,20 +456,20 @@ export function OnboardingWizard() {
         if (form.username.trim().length > 64) return 'Username must be 64 characters or fewer.'
         return null
       case 'eligibility':
-        if (!dateOfBirthConfirmed) return 'Select your date of birth to continue.'
-        if (form.dateOfBirth > new Date()) return 'Choose a valid date of birth.'
-        if (!isRaceValue(form.race)) return 'Select your race to continue.'
-        if (form.residesInAsia == null && !isAsianCountry(form.country)) {
-          return 'Answer whether you reside in any country in Asia.'
+        if (!form.dateOfBirth || Number.isNaN(form.dateOfBirth.getTime())) {
+          return 'Select your date of birth to continue.'
         }
+        if (form.dateOfBirth > new Date()) return 'Choose a valid date of birth.'
         return null
       case 'body':
+        if (!form.sex) return 'Select your biological sex to continue.'
         if (form.height <= 0 || form.weight <= 0) return 'Enter your height and weight.'
         if (bodyFatText.trim() && form.bodyFatPct == null) {
           return `Body fat must be between ${BODY_FAT_PCT_RANGE.min}% and ${BODY_FAT_PCT_RANGE.max}%, or leave it blank.`
         }
         return null
       case 'lifestyle':
+        if (!form.goal) return 'Select your primary goal to continue.'
         return null
       case 'diet':
         return null
@@ -586,16 +580,15 @@ export function OnboardingWizard() {
       return
     }
 
-    if (!isRaceValue(form.race)) {
-      Alert.alert('Almost there', 'Select your race to continue.')
-      setStep('eligibility')
-      return
-    }
+    const finalRace = isRaceValue(form.race) ? form.race : 'prefer_not_to_say'
+    const finalAsia = form.residesInAsia === true || isAsianCountry(form.country)
+    const finalSex = form.sex ?? 'female'
+    const finalGoal = form.goal ?? 'maintain'
 
     const targetKg = roundMetric(form.targetWeight ?? plan.targetWeight)
     const goalPlain = appendDisplayUnitsToGoalPlain(plan.goalPlain, form.displayUnits)
     const goalState = buildGoalStateFromPlan(plan, {
-      goal: form.goal,
+      goal: finalGoal,
       pace: form.pace,
       startWeightKg: roundMetric(form.weight),
     })
@@ -613,8 +606,8 @@ export function OnboardingWizard() {
         lastLogin: new Date().toISOString(),
         bio: form.bio.trim() || null,
         country: form.country.trim().toUpperCase() || null,
-        race: form.race,
-        resides_in_asia: form.residesInAsia === true || isAsianCountry(form.country),
+        race: finalRace,
+        resides_in_asia: finalAsia,
         target_kcal: macros.targetKcal,
         target_protein: macros.targetProtein,
         target_carbs: macros.targetCarbs,
@@ -630,7 +623,7 @@ export function OnboardingWizard() {
         goal_target_weight_kg: goalState.targetWeightKg,
         goal_start_date: goalState.startDate,
         goal_estimated_weeks: goalState.estimatedWeeks,
-        sex: form.sex,
+        sex: finalSex,
         activity_level: form.activity,
         body_fat_pct: form.bodyFatPct,
         diet_style: form.diet,
@@ -640,17 +633,17 @@ export function OnboardingWizard() {
       })
       await saveDemographics(
         {
-          race: form.race,
-          residesInAsia: form.residesInAsia === true || isAsianCountry(form.country),
+          race: finalRace,
+          residesInAsia: finalAsia,
         },
         user.$id,
       )
       await savePlanPreferences(
         {
           ...planPreferencesFromUser(user),
-          sex: form.sex,
+          sex: finalSex,
           activity: form.activity,
-          goal: form.goal,
+          goal: finalGoal,
           pace: form.pace,
           diet: form.diet,
           targetWeightKg: targetKg,
@@ -814,10 +807,7 @@ export function OnboardingWizard() {
             <NativeDatePicker
               accessibilityLabel="Date of birth"
               value={form.dateOfBirth}
-              onChange={(value) => {
-                updateForm('dateOfBirth', value)
-                setDateOfBirthConfirmed(true)
-              }}
+              onChange={(value) => updateForm('dateOfBirth', value)}
               disabled={saving}
               minimumDate={new Date(1900, 0, 1)}
               maximumDate={new Date()}
@@ -845,18 +835,19 @@ export function OnboardingWizard() {
                 We&apos;ll show feet and pounds by default — everything is saved in standard metric.
               </Text>
             ) : null}
+            <Text style={onboardingStyles.sectionLabel}>Demographics (optional)</Text>
+            <Text style={onboardingStyles.hintInline}>
+              Race and regional background help provide relevant health notices (such as stomach health screenings) and are stored with your profile.
+            </Text>
             <Text style={onboardingStyles.label}>Race</Text>
             <NativeEnumPicker
               accessibilityLabel="Race"
               value={form.race}
-              options={[{ label: 'Select race', value: '' }, ...RACE_OPTIONS]}
+              options={[{ label: 'Select race (optional)', value: '' }, ...RACE_OPTIONS]}
               onChange={(value) => updateForm('race', isRaceValue(value) ? value : '')}
               disabled={saving}
             />
-            <Text style={onboardingStyles.hintInline}>
-              Self-reported. This is stored with your profile and can be changed later in settings.
-            </Text>
-            <Text style={onboardingStyles.sectionLabel}>Do you reside in any country in Asia?</Text>
+            <Text style={onboardingStyles.sectionLabel}>Do you reside in any country in Asia? (optional)</Text>
             {([
               ['yes', true],
               ['no', false],
@@ -877,7 +868,6 @@ export function OnboardingWizard() {
             ))}
             {isBarredResidency(form.country) ? <ResidencyBarNotice /> : null}
             {showHPyloriWarning(form.country, form.residesInAsia) ? <HPyloriWarning /> : null}
-            <CongressionalNote />
           </>
         )
 
@@ -971,7 +961,7 @@ export function OnboardingWizard() {
                 disabled={saving}
               />
             ))}
-            {form.goal !== 'maintain' ? (
+            {form.goal && form.goal !== 'maintain' ? (
               <>
                 <Text style={onboardingStyles.sectionLabel}>Preferred pace</Text>
                 {PACE_OPTIONS.map((option) => (
@@ -981,7 +971,7 @@ export function OnboardingWizard() {
                     label={option.label}
                     description={`${formatPaceRate(
                       form.displayUnits,
-                      goalPaceKgPerWeek(form.goal, option.value, form.weight),
+                      goalPaceKgPerWeek(form.goal!, option.value, form.weight),
                     )} · ${option.description}`}
                     selected={form.pace === option.value}
                     onPress={(value) => updateForm('pace', value)}
@@ -1111,10 +1101,13 @@ export function OnboardingWizard() {
             <View style={onboardingStyles.infoCard}>
               <Text style={onboardingStyles.infoCardTitle}>Behind the numbers</Text>
               <Text style={onboardingStyles.infoCardText}>
-                {plan.bmrFormula === 'katch_mcardle' ? 'Katch–McArdle' : 'Mifflin–St Jeor'} BMR {plan.bmr} kcal ·
-                Weekly energy balance {weeklyDeficit > 0 ? '+' : ''}
-                {weeklyDeficit} kcal
-                {form.goal !== 'maintain'
+                {plan.bmrFormula === 'katch_mcardle' ? 'Katch–McArdle' : 'Mifflin–St Jeor'} BMR {plan.bmr} kcal ·{' '}
+                {weeklyDeficit > 0
+                  ? `Weekly deficit: ${weeklyDeficit.toLocaleString()} kcal`
+                  : weeklyDeficit < 0
+                  ? `Weekly surplus: ${Math.abs(weeklyDeficit).toLocaleString()} kcal`
+                  : 'Weekly balance: 0 kcal'}
+                {form.goal && form.goal !== 'maintain'
                   ? ` · ${formatPaceRate(form.displayUnits, weeklyChangeKg)}`
                   : ''}
               </Text>
@@ -1259,7 +1252,9 @@ export function OnboardingWizard() {
                 {residencyBarred
                   ? 'Unavailable'
                   : saving
-                  ? step === 'password' && !user?.$id
+                  ? isLastStep
+                    ? 'Finishing setup…'
+                    : step === 'password' && !user?.$id
                     ? 'Creating account…'
                     : 'Saving…'
                   : isLastStep

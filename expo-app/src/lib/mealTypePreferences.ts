@@ -1,5 +1,5 @@
 import { inferMealTypeFromTime } from './mealFromProduct'
-import { MEAL_TYPE_OPTIONS, type MealType } from './meals'
+import { MEAL_TYPE_MAX_LENGTH, type MealType } from './meals'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const STORAGE_KEY = '@kiloric/selected_meal_type'
@@ -34,8 +34,10 @@ export function loadSelectedMealType(): Promise<MealType> {
     let result = DEFAULT_MEAL_TYPE
     try {
       const value = await AsyncStorage.getItem(STORAGE_KEY)
-      if (value && MEAL_TYPE_OPTIONS.includes(value as MealType)) {
-        result = value as MealType
+      const trimmed = value?.trim()
+      if (trimmed && trimmed.length <= MEAL_TYPE_MAX_LENGTH) {
+        // Custom meal types are allowed; callers fall back if it is no longer enabled.
+        result = trimmed
       }
     } catch (err) {
       console.error('[mealTypePreferences] load failed', err)

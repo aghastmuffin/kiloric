@@ -15,8 +15,14 @@ export function PrepCard({ prep, layout, onGrocery, onEdit }: Props) {
   const c = usePalette()
   const session = prep.session
   const when = session ? new Date(session.scheduled_at) : null
-  const groceryCount = prep.groceries.filter((item) => !item.checked).length
-  const groceryLabel = `Grocery list · ${groceryCount} item${groceryCount === 1 ? '' : 's'}`
+  const totalGroceries = prep.groceries.length
+  const checkedGroceries = prep.groceries.filter((item) => item.checked).length
+  const groceryLabel =
+    totalGroceries === 0
+      ? 'Grocery list · 0 items'
+      : checkedGroceries > 0
+      ? `Grocery list · ${checkedGroceries} of ${totalGroceries} done`
+      : `Grocery list · ${totalGroceries} item${totalGroceries === 1 ? '' : 's'}`
   const meta = when
     ? [
         `${shortWeekday(when)} ${timeLabel(when)}`,

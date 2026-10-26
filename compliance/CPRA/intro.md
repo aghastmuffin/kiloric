@@ -1,32 +1,36 @@
 >[!info]
-> legally, this project does not meet any of the criterion of which the CPRA applies, it derives 0% of its revenue from user data (this is a net loss for me to host), we do engage in the commerce of the personal information of 100,000 California residents or households, and we do not have a gross annual revenue of 25 million dollars (USD). As an act of good faith, your data is held 100% in CPRA compliance; any rights beholden to you under California Civil Code 1798.100-1798.199.100. This courtesy extends to all users, not only those resident in California. 
+> Legally, kiloric is operated by Taeson Co. As a courtesy and matter of good faith, your data is held in 100% compliance with the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA), California Civil Code §§ 1798.100–1798.199.100. This protection extends to all users globally regardless of state or national residency.
 
->[!info] Kiloric is intellectual property of TAESON SAN FRANCISCO HOLDINGS Ltd Liability Co. Distributing modified copies of this program is disallowed.
+>[!info] kiloric is intellectual property of TAESON SAN FRANCISCO HOLDINGS Ltd Liability Co. Distributing modified copies of this program is disallowed.
 
->[!warning] You are NOT permitted to use the app if you are from the following nations (informal naming): The Federation of Russia, Vietnam, Brazil, The European Economic Area, China, The United Kingdom or if you area provides extra data compliance and residency. 
+>[!warning] You are NOT permitted to use the app if you are from the following nations or regions: The Federation of Russia, Vietnam, Brazil, The European Economic Area (EEA), China, The United Kingdom, or any jurisdiction providing extra data compliance and residency mandates inconsistent with this policy.
 
-# The Privacy Policy
+# CPRA & CCPA Compliance Framework
 
-Kiloric respects user privacy and strictly minimizes data collection. Personal information and fitness tracking data are used exclusively to deliver application functionality. We do not sell, rent, or share user data with third parties for commercial or advertising purposes.
+## 1. Statutory Scope & Affirmative Statement
+Although kiloric derives 0% of its revenue from user data sales, does not sell personal information, and maintains zero monetization through third-party data brokers, we affirmatively extend all statutory rights granted under California Civil Code §§ 1798.100–1798.199.100 to all registered users.
 
-# The Data Retention Policy
+## 2. California Consumer Privacy Rights (CCPA / CPRA)
+Every user is guaranteed the following non-discriminatory rights:
+- **Right to Know / Access**: Right to request disclosures on categories of personal information collected, sources, business/commercial purposes, third parties with whom data is shared, and specific pieces of personal data held.
+- **Right to Delete**: Right to request permanent deletion of personal data and associated records from active databases and connected sub-processors.
+- **Right to Correct**: Right to request correction of inaccurate or incomplete personal information.
+- **Right to Opt-Out of Sale or Sharing**: Right to direct us not to sell or share your personal information for cross-context behavioral advertising (kiloric does not sell or share user data).
+- **Right to Limit Use of Sensitive Personal Information**: Right to restrict processing of sensitive personal health information (e.g., body weight, height, health metrics) strictly to core application services.
+- **Right to Non-Discrimination**: We do not deny services, charge different prices, or provide a different level or quality of services to consumers who exercise any of their privacy rights.
 
-User data is retained for as long as the user maintains an active account with Kiloric. Upon account deletion request (`DELETE /v1/me`), all user profile data and child database records (meals, water logs, food entries, saved meals, meal plans, prep sessions, grocery items, workouts, workout sets, weight logs, and tasks) are permanently deleted from our active database.
+## 3. Dedicated Privacy Portals
+Users and authorized agents may exercise privacy rights via:
+- **In-App CPRA Privacy Portal**: Navigate to `You -> Privacy Portal` or `Account -> CPRA & CCPA Privacy Portal` in the kiloric mobile app for instant automated data export JSON generation, account deletion, and request submission.
+- **Web CPRA Privacy Portal**: Access `https://kiloric.co/privacy-portal` (or `website/index.html`) to submit verified consumer privacy requests online.
+- **Single-File Data Export (API)**: Signed-in users can download all personal data and user-owned records as one JSON file via `GET /v1/me/export`.
+- **Direct Privacy Request Email**: Contact `data_privacy@kiloric.co` with subject line `kiloric - Data Privacy Request`.
 
-# The Data Collection Policy
+## 4. Consumer Request Verification & Timelines
+- **Acknowledgement**: Requests are acknowledged within 10 business days of receipt.
+- **Fulfillment**: Verified requests are fulfilled within 45 calendar days. In complex cases, an extension of up to 45 additional days may be utilized with written notification.
+- **Identity Verification**: Signed-in requests are verified via account session authentication. Non-signed-in or agent requests require email address verification and confirmation matching account records.
 
-*Audit Completed: October 25th, 2026*
-
-Kiloric collects only data necessary to support user health, nutrition, and exercise tracking:
-
-1. **User Profile & Credentials**: Email, hashed password, username, date of birth, sex, height, weight goals, activity level, and TDEE preferences.
-2. **Nutrition & Meal Tracking**: Logged meals, custom food items, food entry timestamps, macro/micronutrient breakdown, water intake logs, saved meals, meal plan entries, meal prep sessions, and grocery lists.
-3. **Fitness & Workouts**: Logged workouts, exercise types, workout sets (reps, weights), and weight tracking logs.
-4. **App State & Preferences**: User task checklists, font choices, theme preferences, and search mode preferences.
-
-### Data Access, Portability, and Single-File Export
-
-In accordance with California Civil Code 1798.100-1798.199.100 (CPRA) and universal user data privacy standards:
-- **Portability / Export**: Users can export all personal data and user-owned collections in a single packaged JSON file (`GET /v1/me/export`).
-- **Deletion**: Users can request complete account and data removal (`DELETE /v1/me`), which immediately cascades and purges all associated collection records.
-- **Third-Party Data Sourcing**: Catalog food dataset collection is built independently via public domain and open database sources (USDA FoodData Central, Health Canada Canadian Nutrient File, Open Food Facts) and consolidated into a single database package file.
+## 5. Policy Index
+- [CCPA & CPRA Detailed Policy](./ccpa_cpra_policy.md)
+- [Data Collection & Retention Schedule](./data_collection.md)

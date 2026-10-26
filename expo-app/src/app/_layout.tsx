@@ -98,12 +98,16 @@ function RootNavigation() {
                 <Stack.Screen name="reset-password" options={{ headerShown: true, headerTitle: "Reset password" }} />
                 <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
                 <Stack.Screen name="onboard_success" options={{ headerShown: false, gestureEnabled: false }} />
-                <Stack.Screen name="Additions" options={{ headerShown: false }} />
+                <Stack.Screen name="additions" options={{ headerShown: false }} />
                 <Stack.Screen name="config" options={{ headerShown: true, headerTitle: "Profile" }} />
                 <Stack.Screen name="contribute-food" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="privacy-policy"
                   options={{ headerShown: true, headerTitle: "Privacy Policy" }}
+                />
+                <Stack.Screen
+                  name="cpra-portal"
+                  options={{ headerShown: true, headerTitle: "Privacy Portal" }}
                 />
                 <Stack.Screen name="credits" options={{ headerShown: true, headerTitle: "Credits" }} />
                 <Stack.Screen name="review-log" options={{ headerShown: false }} />

@@ -1,4 +1,4 @@
-import { databases } from '@/lib/appwrite'
+import { databases } from '../appwrite'
 import {
   clearTodayMealsCache,
   createMeal,
@@ -8,13 +8,13 @@ import {
   updateMeal,
   type MealDocument,
   type MealType,
-} from '@/lib/meals'
+} from '../meals'
 import { Query, type Models } from 'react-native-appwrite'
 import { dayKey } from './dateKeys'
 import { scaleMacros, sumMacros, type FoodItem, type Macros } from './foodItem'
 import { assertSessionUser, createRecordStore, type StoredRecord } from './recordStore'
 
-export const LOG_MEAL_TYPES = ['Breakfast', 'Lunch', 'Snack', 'Dinner'] as const satisfies readonly MealType[]
+export const LOG_MEAL_TYPES: readonly MealType[] = ['Breakfast', 'Lunch', 'Snack', 'Dinner']
 export type LogMealType = (typeof LOG_MEAL_TYPES)[number]
 
 export type FoodEntrySource = 'scan' | 'search' | 'recent' | 'plan' | 'saved_meal'
@@ -173,6 +173,81 @@ export async function logFood(
   })
   clearTodayMealsCache(userId)
   return entry
+}
+
+export async function updateFoodEntry(
+  userId: string,
+  entry: FoodEntry,
+  updates: {
+    servings?: number
+    mealType?: MealType
+    loggedAt?: string
+  },
+): Promise<FoodEntry> {
+  await assertSessionUser(userId)
+  const baseItem = foodItemFromEntry(entry)
+  const newServings = Math.max(0.01, updates.servings ?? entry.servings)
+  const newMealType = updates.mealType ?? entry.meal_type
+  const newLoggedAt = updates.loggedAt ?? entry.logged_at
+  const newDay = dayKey(new Date(newLoggedAt))
+
+  const newMacros = scaleMacros(baseItem.perServing, newServings)
+  let newMealDocId = entry.meal_doc_id ?? null
+
+  const isSameBucket = newMealType === entry.meal_type && newDay === entry.day
+
+  if (isSameBucket) {
+    if (entry.meal_doc_id) {
+      const meal = await getMeal(entry.meal_doc_id).catch(() => null)
+      if (meal) {
+        const deltaKcal = newMacros.kcal - entry.kcal
+        const deltaProtein = newMacros.protein - entry.protein
+        const deltaCarbs = newMacros.carbs - entry.carbs
+        const deltaFat = newMacros.fat - entry.fat
+        await updateMeal(meal.$id, {
+          kcal: Math.max(0, (meal.kcal ?? 0) + deltaKcal),
+          protein: Math.max(0, (meal.protein ?? 0) + deltaProtein),
+          carbs: Math.max(0, (meal.carbs ?? 0) + deltaCarbs),
+          fat: Math.max(0, (meal.fat ?? 0) + deltaFat),
+        })
+      }
+    }
+  } else {
+    if (entry.meal_doc_id) {
+      const meal = await getMeal(entry.meal_doc_id).catch(() => null)
+      if (meal) {
+        const items = [...(meal.items ?? [])]
+        if (entry.barcode) {
+          const idx = items.indexOf(entry.barcode)
+          if (idx >= 0) items.splice(idx, 1)
+        }
+        await updateMeal(meal.$id, {
+          kcal: Math.max(0, (meal.kcal ?? 0) - entry.kcal),
+          protein: Math.max(0, (meal.protein ?? 0) - entry.protein),
+          carbs: Math.max(0, (meal.carbs ?? 0) - entry.carbs),
+          fat: Math.max(0, (meal.fat ?? 0) - entry.fat),
+          items: items.length > 0 ? items : null,
+        })
+      }
+    }
+    const newMealDoc = await addToMealBucket(userId, newMealType, newMacros, entry.barcode ?? null)
+    newMealDocId = newMealDoc.$id
+  }
+
+  const updated = await foodEntriesStore.update(userId, entry.$id, {
+    servings: Math.round(newServings * 100) / 100,
+    meal_type: newMealType,
+    logged_at: newLoggedAt,
+    day: newDay,
+    kcal: newMacros.kcal,
+    protein: newMacros.protein,
+    carbs: newMacros.carbs,
+    fat: newMacros.fat,
+    meal_doc_id: newMealDocId,
+  })
+
+  clearTodayMealsCache(userId)
+  return updated
 }
 
 export async function removeFoodEntry(userId: string, entry: FoodEntry): Promise<void> {

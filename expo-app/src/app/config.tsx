@@ -1,3 +1,4 @@
+import { MEAL_TYPE_MAX_LENGTH } from '@/lib/meals'
 import { ApiBackendPreferencePicker } from '@/components/ApiBackendPreferencePicker';
 import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { MotionView } from '@/components/MotionView';
@@ -16,7 +17,6 @@ import { isEligibleOnboardingAge, MINIMUM_ONBOARDING_AGE } from '@/lib/ageEligib
 import { useAuth } from '@/lib/AuthContext';
 import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries';
 import {
-  CongressionalNote,
   HPyloriWarning,
   ResidencyBarNotice,
 } from '@/components/onboarding/ResidencyNotices';
@@ -48,14 +48,17 @@ import {
     type Sex,
     NUTRITION_FORMULA_VERSION,
 } from '@/lib/nutrition';
-import { planPreferencesFromUser, savePlanPreferences } from '@/lib/planPreferences';
+import { triggerImpactHaptic, triggerSelectionHaptic } from '@/lib/haptics';
+import { defaultMealSlots, planPreferencesFromUser, savePlanPreferences, type MealSlotPreference } from '@/lib/planPreferences';
 import { loadDemographics, saveDemographics } from '@/lib/demographics';
 import {
     dateToIso,
+    DEFAULT_DATE_OF_BIRTH,
     DEFAULT_PROFILE_ROLE,
     formatProfileSaveError,
     getProfile,
     isProfileComplete,
+    parseProfileDate,
     PROFILE_ROLE_OPTIONS,
     saveProfileFields,
     type ProfileRole,
@@ -94,15 +97,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const DEFAULT_DATE_OF_BIRTH = new Date(1990, 0, 15);
-
 const CONFIG_TABS = ['Profile', 'Body & Goals', 'Targets', 'Preferences'] as const;
-
-function parseProfileDate(value?: string): Date {
-  if (!value) return DEFAULT_DATE_OF_BIRTH;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? DEFAULT_DATE_OF_BIRTH : parsed;
-}
 
 export default function ConfigScreen() {
   const { user, loading } = useAuth();
@@ -154,6 +149,10 @@ export default function ConfigScreen() {
   const [dailyFluid, setDailyFluid] = useState<number | null>(null);
   const [customGoalText, setCustomGoalText] = useState('');
 
+  // Custom meal slots
+  const [mealSlots, setMealSlots] = useState<MealSlotPreference[]>(defaultMealSlots());
+  const [newMealSlotName, setNewMealSlotName] = useState('');
+
   const isRequired = !profileComplete;
 
   const countryPickerOptions = useMemo(() => {
@@ -179,8 +178,9 @@ export default function ConfigScreen() {
       pace,
       diet,
       targetWeight,
+      displayUnits,
     });
-  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight]);
+  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight, displayUnits]);
 
   const activeTargetKcal = targetKcal ?? computedPlan.targetKcal;
   const activeTargetProtein = targetProtein ?? computedPlan.targetProtein;
@@ -250,6 +250,7 @@ export default function ConfigScreen() {
     setPace(savedPlan.pace);
     setDiet(savedPlan.diet);
     setDisplayUnits(savedPlan.displayUnits);
+    setMealSlots(savedPlan.mealSlots);
 
     Promise.all([getProfile(user.$id), loadDemographics(user.$id).catch(() => null)])
       .then(([profile, demographics]) => {
@@ -302,7 +303,7 @@ export default function ConfigScreen() {
 
         const parsedTargetWeight = normalizeStoredTargetWeightKg(
           userCountry,
-          profile.target_weight,
+          profile.goal_target_weight_kg ?? profile.target_weight,
           profile.height ?? 170,
         );
         setTargetWeight(parsedTargetWeight);
@@ -315,6 +316,66 @@ export default function ConfigScreen() {
       active = false;
     };
   }, [user]);
+
+  function handleToggleSlot(key: string) {
+    triggerSelectionHaptic();
+    setMealSlots((current) =>
+      current.map((slot) => {
+        if (slot.key !== key) return slot;
+        return { ...slot, enabled: !slot.enabled };
+      }),
+    );
+  }
+
+  function handleRenameSlot(key: string, name: string) {
+    setMealSlots((current) =>
+      current.map((slot) => {
+        if (slot.key !== key) return slot;
+        return { ...slot, name };
+      }),
+    );
+  }
+
+  function handleMoveSlot(index: number, direction: 'up' | 'down') {
+    triggerSelectionHaptic();
+    setMealSlots((current) => {
+      const next = [...current];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return current;
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next.map((s, order) => ({ ...s, order }));
+    });
+  }
+
+  function handleRemoveSlot(key: string) {
+    triggerImpactHaptic();
+    setMealSlots((current) => {
+      if (current.length <= 1) {
+        Alert.alert('Cannot remove', 'You must keep at least one meal type.');
+        return current;
+      }
+      return current.filter((s) => s.key !== key).map((s, order) => ({ ...s, order }));
+    });
+  }
+
+  function handleAddMealSlot() {
+    const name = newMealSlotName.trim();
+    if (!name) return;
+    triggerSelectionHaptic();
+    const key = name.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 32) || `slot_${Date.now()}`;
+    setMealSlots((current) => [
+      ...current,
+      {
+        key,
+        name,
+        enabled: true,
+        order: current.length,
+      },
+    ]);
+    setNewMealSlotName('');
+  }
 
   function handleResetTargetsToSuggested() {
     setTargetKcal(null);
@@ -359,15 +420,6 @@ export default function ConfigScreen() {
       return;
     }
 
-    if (!isRaceValue(race)) {
-      Alert.alert('Missing details', 'Select your race. This is saved with the rest of your profile.');
-      return;
-    }
-
-    if (residesInAsia == null) {
-      Alert.alert('Missing details', 'Answer whether you reside in any country in Asia.');
-      return;
-    }
 
     // Eligibility is revalidated on every profile change, not just during onboarding.
     if (!isEligibleOnboardingAge(dateOfBirth)) {
@@ -389,6 +441,7 @@ export default function ConfigScreen() {
             targetWeight: roundMetric(targetWeight ?? computedPlan.targetWeight),
             currentWeight: roundMetric(weight),
             estimatedWeeklyChangeKg: currentWeeklyChangeKg,
+            units: displayUnits,
           });
 
       const goalPlainWithUnits = appendDisplayUnitsToGoalPlain(finalGoalBase, displayUnits);
@@ -403,6 +456,9 @@ export default function ConfigScreen() {
         paceKgPerWeek: goal === 'maintain' ? 0 : -currentWeeklyChangeKg,
       });
 
+      const finalRace = isRaceValue(race) ? race : 'prefer_not_to_say';
+      const finalAsia = residesInAsia === true || showHPyloriWarning(country, false);
+
       await saveProfileFields(user.$id, {
         username: username.trim(),
         email: user.email,
@@ -413,8 +469,8 @@ export default function ConfigScreen() {
         lastLogin: new Date().toISOString(),
         bio: bio.trim() || null,
         country: country.trim().toUpperCase() || null,
-        race,
-        resides_in_asia: residesInAsia === true || showHPyloriWarning(country, false),
+        race: finalRace,
+        resides_in_asia: finalAsia,
         target_kcal: activeTargetKcal,
         target_protein: activeTargetProtein,
         target_carbs: activeTargetCarbs,
@@ -440,8 +496,8 @@ export default function ConfigScreen() {
       });
       await saveDemographics(
         {
-          race,
-          residesInAsia: residesInAsia === true || showHPyloriWarning(country, false),
+          race: finalRace,
+          residesInAsia: finalAsia,
         },
         user.$id,
       );
@@ -461,6 +517,7 @@ export default function ConfigScreen() {
             macroGrams: { protein: activeTargetProtein, carbs: activeTargetCarbs, fat: activeTargetFat },
             dailyFluid: activeDailyFluid,
           },
+          mealSlots,
         },
         user.$id,
       );
@@ -689,7 +746,6 @@ export default function ConfigScreen() {
                   />
                 ))}
                 {showHPyloriWarning(country, residesInAsia) ? <HPyloriWarning /> : null}
-                <CongressionalNote />
               </View>
 
               <View style={styles.divider} />
@@ -894,7 +950,13 @@ export default function ConfigScreen() {
               <Text style={styles.infoBannerText}>
                 Based on your stats: BMR is {computedPlan.bmr} kcal/day · TDEE (maintenance) is {computedPlan.tdee} kcal/day.
                 {goal !== 'maintain'
-                  ? ` Projected energy balance: ${currentWeeklyDeficit > 0 ? '+' : ''}${currentWeeklyDeficit} kcal/week (${formatPaceRate(displayUnits, currentWeeklyChangeKg)}).`
+                  ? ` ${
+                      currentWeeklyDeficit > 0
+                        ? `Projected weekly deficit: ${currentWeeklyDeficit.toLocaleString()} kcal/week`
+                        : currentWeeklyDeficit < 0
+                        ? `Projected weekly surplus: ${Math.abs(currentWeeklyDeficit).toLocaleString()} kcal/week`
+                        : 'Projected weekly balance: 0 kcal/week'
+                    } (${formatPaceRate(displayUnits, currentWeeklyChangeKg)}).`
                   : ''}
               </Text>
               <Text style={styles.fieldHint}>
@@ -1086,6 +1148,115 @@ export default function ConfigScreen() {
                   </View>
                 </>
               ) : null}
+            </View>
+
+            <View style={[styles.sectionHeader, { marginTop: 16 }]}>
+              <View style={styles.sectionHeaderIcon}>
+                <Ionicons name="restaurant-outline" size={18} color={colors.accent} />
+              </View>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Custom Meal Types</Text>
+            </View>
+
+            <Text style={styles.fieldHint}>
+              Customize, rename, or toggle visibility for your daily meal slots (e.g. Pre-workout, Second breakfast).
+            </Text>
+
+            <View style={styles.card}>
+              {mealSlots.map((slot, index) => (
+                <View key={slot.key} style={styles.mealSlotRow}>
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: slot.enabled }}
+                    accessibilityLabel={`Toggle visibility for ${slot.name}`}
+                    accessibilityHint={slot.enabled ? 'Hides this meal slot from log food' : 'Shows this meal slot in log food'}
+                    onPress={() => handleToggleSlot(slot.key)}
+                    style={styles.slotCheckBtn}
+                  >
+                    <Ionicons
+                      name={slot.enabled ? 'checkbox' : 'square-outline'}
+                      size={22}
+                      color={slot.enabled ? colors.accent : colors.textMuted}
+                    />
+                  </Pressable>
+
+                  <TextInput
+                    value={slot.name}
+                    onChangeText={(val) => handleRenameSlot(slot.key, val)}
+                    placeholder="Meal name"
+                    placeholderTextColor={colors.textFaint}
+                    maxLength={MEAL_TYPE_MAX_LENGTH}
+                    accessibilityLabel={`Meal name for ${slot.name}`}
+                    style={[styles.input, styles.mealSlotInput, !slot.enabled && styles.inputDisabled]}
+                  />
+
+                  <View style={styles.slotActionCol}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Move ${slot.name} up`}
+                      disabled={index === 0}
+                      onPress={() => handleMoveSlot(index, 'up')}
+                      style={({ pressed }) => [
+                        styles.slotIconButton,
+                        index === 0 && styles.btnDisabled,
+                        pressed && styles.btnPressed,
+                      ]}
+                    >
+                      <Ionicons name="chevron-up" size={16} color={colors.textMuted} />
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Move ${slot.name} down`}
+                      disabled={index === mealSlots.length - 1}
+                      onPress={() => handleMoveSlot(index, 'down')}
+                      style={({ pressed }) => [
+                        styles.slotIconButton,
+                        index === mealSlots.length - 1 && styles.btnDisabled,
+                        pressed && styles.btnPressed,
+                      ]}
+                    >
+                      <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove meal type ${slot.name}`}
+                    onPress={() => handleRemoveSlot(slot.key)}
+                    style={({ pressed }) => [styles.slotIconButton, pressed && styles.btnPressed]}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                  </Pressable>
+                </View>
+              ))}
+
+              <View style={styles.divider} />
+
+              <View style={styles.addSlotRow}>
+                <TextInput
+                  value={newMealSlotName}
+                  onChangeText={setNewMealSlotName}
+                  placeholder="e.g. Pre-workout, Evening Snack"
+                  placeholderTextColor={colors.textFaint}
+                  maxLength={MEAL_TYPE_MAX_LENGTH}
+                  accessibilityLabel="New meal type name"
+                  style={[styles.input, { flex: 1 }]}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Add custom meal type"
+                  accessibilityState={{ disabled: !newMealSlotName.trim() }}
+                  disabled={!newMealSlotName.trim()}
+                  onPress={handleAddMealSlot}
+                  style={({ pressed }) => [
+                    styles.addSlotBtn,
+                    !newMealSlotName.trim() && styles.btnDisabled,
+                    pressed && styles.btnPressed,
+                  ]}
+                >
+                  <Ionicons name="add" size={20} color={colors.onBrand} />
+                  <Text style={styles.addSlotBtnText}>Add</Text>
+                </Pressable>
+              </View>
             </View>
           </MotionView>
         )}
@@ -1467,7 +1638,9 @@ const makeStyles = (c: ThemeColors) =>
       color: c.onBrand,
     },
     discardBtn: {
-      backgroundColor: c.dangerButtonBg,
+      backgroundColor: c.surfaceMuted,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.borderStrong,
       borderRadius: 999,
       minHeight: 48,
       paddingHorizontal: 18,
@@ -1480,6 +1653,57 @@ const makeStyles = (c: ThemeColors) =>
     discardBtnText: {
       ...typography.body,
       fontWeight: '600',
-      color: c.danger,
+      color: c.text,
+    },
+    mealSlotRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    mealSlotInput: {
+      flex: 1,
+      minHeight: 44,
+      paddingVertical: 8,
+    },
+    slotCheckBtn: {
+      padding: 4,
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+    slotActionCol: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    slotIconButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    addSlotRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 12,
+    },
+    addSlotBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: c.brand,
+      borderRadius: 8,
+      minHeight: 44,
+      paddingHorizontal: 14,
+      justifyContent: 'center',
+    },
+    addSlotBtnText: {
+      ...typography.labelSmall,
+      color: c.onBrand,
+      fontWeight: '700',
     },
   });

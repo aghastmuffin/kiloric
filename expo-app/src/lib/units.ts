@@ -21,7 +21,7 @@ export function roundMetric(value: number): number {
 }
 
 export function kgToLbs(kg: number): number {
-  return Math.round(kg * KG_TO_LBS)
+  return Math.round(kg * KG_TO_LBS * 10) / 10
 }
 
 export function lbsToKg(lbs: number): number {
@@ -49,7 +49,11 @@ export function feetInchesToCm(feet: number, inches: number): number {
 }
 
 export function mlToFlOz(ml: number): number {
-  return Math.round(ml / LITER_TO_FL_OZ)
+  return Math.round((ml / 1000) * LITER_TO_FL_OZ)
+}
+
+export function flOzToMl(flOz: number): number {
+  return Math.round((flOz / LITER_TO_FL_OZ) * 1000)
 }
 
 export function kgPerWeekToLbsPerWeek(kg: number): number {

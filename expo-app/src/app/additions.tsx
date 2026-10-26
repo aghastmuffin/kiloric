@@ -6,7 +6,8 @@ import {
 } from '@/components/LogFoodMultiView'
 import { MotionView } from '@/components/MotionView'
 import { useAuth } from '@/lib/AuthContext'
-import { addProductToMeal, MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
+import { addProductToMeal, type MealType } from '@/lib/meals'
+import { effectiveMealNames, loadPlanPreferences } from '@/lib/planPreferences'
 import { useMealTypePreferences } from '@/lib/MealTypePreferencesContext'
 import { isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'
 import {
@@ -73,6 +74,16 @@ export default function AdditionsScreen() {
   const [mealPickerOpen, setMealPickerOpen] = useState(false)
   const [adding, setAdding] = useState(false)
   const [added, setAdded] = useState(false)
+  const [activeMealNames, setActiveMealNames] = useState<string[]>(['Breakfast', 'Lunch', 'Snack', 'Dinner'])
+
+  useEffect(() => {
+    if (!user?.$id) return
+    loadPlanPreferences(user.$id)
+      .then((prefs) => {
+        setActiveMealNames(effectiveMealNames(prefs))
+      })
+      .catch(() => {})
+  }, [user?.$id])
 
   useEffect(() => {
     let active = true
@@ -238,7 +249,7 @@ export default function AdditionsScreen() {
               transition={{ type: 'timing', duration: 140 }}
               style={styles.mealMenu}
             >
-              {MEAL_TYPE_OPTIONS.filter((type) => type !== 'Other').map((type: MealType) => (
+              {activeMealNames.map((type: string) => (
                 <Pressable
                   key={type}
                   accessibilityRole="button"
@@ -284,13 +295,25 @@ export default function AdditionsScreen() {
             <Ionicons name="alert-circle-outline" size={28} color={colors.danger} />
             <Text style={styles.stateTitle}>Product details unavailable</Text>
             <Text style={styles.errorText}>{error}</Text>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-              onPress={handleContribute}
-            >
-              <Text style={styles.secondaryButtonText}>Contribute this product</Text>
-            </Pressable>
+            <View style={styles.errorActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Search foods"
+                style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+                onPress={() => router.replace('/(tabs)/logfood')}
+              >
+                <Ionicons name="search" size={18} color={colors.onBrand} />
+                <Text style={styles.primaryButtonText}>Search foods</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Contribute this product"
+                style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+                onPress={handleContribute}
+              >
+                <Text style={styles.secondaryButtonText}>Contribute this product</Text>
+              </Pressable>
+            </View>
           </View>
         ) : product ? (
           <MotionView
@@ -569,6 +592,13 @@ const makeStyles = (c: ThemeColors) =>
       ...typography.body,
       color: c.danger,
       textAlign: 'center',
+    },
+    errorActions: {
+      marginTop: spacing.sm,
+      width: '100%',
+      maxWidth: 320,
+      gap: spacing.xs,
+      alignItems: 'center',
     },
     barcode: {
       ...typography.overline,

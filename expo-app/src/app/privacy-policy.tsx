@@ -1,13 +1,17 @@
+import { useTheme } from '@/lib/theme/ThemeContext';
 import { borderRadius, spacing, type ThemeColors } from '@/lib/theme/tokens';
 import { typography } from '@/lib/theme/typography';
 import { useThemedStyles } from '@/lib/theme/useThemedStyles';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const SECTION_GAP = spacing.xl;
 const PARAGRAPH_GAP = spacing.md;
 
 export default function PrivacyPolicyScreen() {
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -192,9 +196,23 @@ export default function PrivacyPolicyScreen() {
           ]}
         />
 
+        <Heading level={3}>CPRA & CCPA Privacy Portal</Heading>
+        <Paragraph>
+          Under the California Consumer Privacy Act (CCPA) and California Privacy Rights Act (CPRA), California residents and all kiloric users globally have the right to access, export, correct, or delete personal data, as well as confirm Do Not Sell/Share and Sensitive Data Limitation preferences.
+        </Paragraph>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open CPRA and CCPA Privacy Portal"
+          onPress={() => router.push('/cpra-portal')}
+          style={({ pressed }) => [styles.portalButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="shield-checkmark-outline" size={18} color={colors.onBrand} />
+          <Text style={styles.portalButtonText}>Open CPRA & CCPA Privacy Portal</Text>
+        </Pressable>
+
         <Heading level={3}>How to Submit a Privacy Request</Heading>
         <Paragraph>
-          Signed-in users can start deletion from You, Settings, Delete account.
+          Signed-in users can start deletion or export directly from our Privacy Portal or Account settings.
           Account access is removed immediately and the remaining deletion
           process is completed within 30 days. For exports, updates, or help:
         </Paragraph>
@@ -473,6 +491,9 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.background,
     },
     content: {
+      width: '100%',
+      maxWidth: 680,
+      alignSelf: 'center',
       padding: spacing.lg,
       paddingBottom: spacing.xl * 2,
     },
@@ -582,5 +603,24 @@ const makeStyles = (c: ThemeColors) =>
     tableCellText: {
       ...typography.body,
       color: c.text,
+    },
+    portalButton: {
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      backgroundColor: c.brand,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      marginBottom: PARAGRAPH_GAP,
+    },
+    portalButtonText: {
+      ...typography.label,
+      color: c.onBrand,
+      fontWeight: '600',
+    },
+    pressed: {
+      opacity: 0.8,
     },
   });

@@ -18,7 +18,10 @@ export const MEAL_TYPE_OPTIONS = [
   'Other',
 ] as const
 
-export type MealType = (typeof MEAL_TYPE_OPTIONS)[number]
+export type MealType = string
+
+/** Max length of a meal type name; Appwrite meal_type/type columns are varchar(16). */
+export const MEAL_TYPE_MAX_LENGTH = 16
 
 export type MealFields = {
   owner: string
@@ -122,8 +125,13 @@ function validateMealWritePayload(data: Partial<MealFields>): string | null {
 }
 
 function validateMealPatchPayload(data: Partial<MealFields>): string | null {
-  if (data.type && !MEAL_TYPE_OPTIONS.includes(data.type)) {
-    return `type must be one of: ${MEAL_TYPE_OPTIONS.join(', ')}`
+  if (data.type != null) {
+    if (typeof data.type !== 'string' || !data.type.trim()) {
+      return 'type must be a non-empty string.'
+    }
+    if (data.type.trim().length > MEAL_TYPE_MAX_LENGTH) {
+      return `type must be ${MEAL_TYPE_MAX_LENGTH} characters or fewer.`
+    }
   }
   if (data.kcal != null && (data.kcal < 0 || data.kcal > 50000)) {
     return 'kcal must be between 0 and 50000.'
