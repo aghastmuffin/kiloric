@@ -9,7 +9,9 @@ import { useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
 export default function ResetPasswordScreen() {
-  const { userId, secret } = useLocalSearchParams<{ userId?: string; secret?: string }>()
+  const params = useLocalSearchParams<{ userId?: string; secret?: string; token?: string }>()
+  const userId = params.userId || 'recovery'
+  const secret = params.token || params.secret
   const { confirmPasswordReset } = useAuth()
   const router = useRouter()
   const { colors } = useTheme()

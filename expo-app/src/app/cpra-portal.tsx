@@ -373,7 +373,7 @@ export default function CpraPortalScreen() {
       {/* Submit Formal Privacy Request Form */}
       <View style={styles.section}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
-          Submit Formal Privacy Request (if you forget your password or otherwise lose access to your account) Expect 10 business days for a response until we get more volunteers.
+          Prepare a privacy request email. Send the draft from your email app to submit it. If you cannot sign in, email data_privacy@kiloric.co directly.
         </Text>
         <View style={styles.card}>
           <Text style={styles.formLabel}>Request Type</Text>
@@ -442,7 +442,7 @@ export default function CpraPortalScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Submit Privacy Request"
+            accessibilityLabel="Open Privacy Email Draft"
             onPress={() => void handleSubmitForm()}
             disabled={submittingRequest || !user}
             style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
@@ -452,7 +452,7 @@ export default function CpraPortalScreen() {
             ) : (
               <>
                 <Ionicons name="send-outline" size={18} color={colors.surfaceMuted} />
-                <Text style={styles.primaryButtonText}>Submit Privacy Request</Text>
+                <Text style={styles.primaryButtonText}>Open Privacy Email Draft</Text>
               </>
             )}
           </Pressable>
@@ -461,10 +461,10 @@ export default function CpraPortalScreen() {
             <View accessibilityLiveRegion="polite" style={styles.confirmationCard}>
               <View style={styles.cardHeaderRow}>
                 <Ionicons name="checkmark-circle-outline" size={20} color={colors.success} />
-                <Text style={styles.confirmationTitle}>Request Registered</Text>
+                <Text style={styles.confirmationTitle}>Email Draft Prepared</Text>
               </View>
               <Text style={styles.confirmationText}>
-                <Text style={styles.bold}>Request ID:</Text> {confirmation.requestId}
+                <Text style={styles.bold}>Draft reference:</Text> {confirmation.requestId}
               </Text>
               <Text style={styles.confirmationText}>
                 <Text style={styles.bold}>Type:</Text> {confirmation.requestType}

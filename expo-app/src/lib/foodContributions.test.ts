@@ -297,77 +297,34 @@ describe('createContributionRecord', () => {
   })
 })
 
+vi.mock('./apiClient', () => ({ apiClient: { post: vi.fn() } }))
+
 describe('uploadImageToBucket', () => {
-  class FakeXhr {
-    static last: FakeXhr | null = null
-    headers: Record<string, string> = {}
-    upload: { onprogress?: (event: { lengthComputable: boolean; loaded: number; total: number }) => void } = {}
-    method = ''
-    url = ''
-    body: FormData | null = null
-    status = 0
-    responseText = ''
-    withCredentials = false
-    timeout = 0
-    onload?: () => void
-    onerror?: () => void
-    ontimeout?: () => void
-    constructor() {
-      FakeXhr.last = this
-    }
-    open(method: string, url: string) {
-      this.method = method
-      this.url = url
-    }
-    setRequestHeader(key: string, value: string) {
-      this.headers[key] = value
-    }
-    send(body: FormData) {
-      this.body = body
-    }
-    respond(status: number, body: unknown) {
-      this.status = status
-      this.responseText = JSON.stringify(body)
-      this.onload?.()
-    }
-  }
-
-  beforeEach(() => {
-    vi.stubGlobal('XMLHttpRequest', FakeXhr)
-  })
-
-  const image = { name: 'front.jpg', type: 'image/jpeg' as const, size: 1000, body: { uri: 'file://front.jpg', name: 'front.jpg', type: 'image/jpeg' } }
-
-  it('posts multipart with session cookies, project headers and progress', async () => {
+  const image = { name: 'front.jpg', type: 'image/jpeg' as const, size: 1000, body: new Blob(['photo'], { type: 'image/jpeg' }) }
+  it('uploads multipart through the authenticated API and reports completion', async () => {
+    const { apiClient } = await import('./apiClient')
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ $id: 'file-1' })
     const { uploadImageToBucket } = await import('./imageUpload')
     const progress: number[] = []
-    const pending = uploadImageToBucket({ bucketId: 'bucket', fileId: 'file-1', image, permissions: ['read'], onProgress: (f) => progress.push(f) })
-    const xhr = FakeXhr.last!
-    expect(xhr.method).toBe('POST')
-    expect(xhr.url).toBe('https://aw.test/v1/storage/buckets/bucket/files')
-    expect(xhr.withCredentials).toBe(true)
-    expect(xhr.headers['X-Appwrite-Project']).toBe('proj')
-    expect(xhr.headers.Origin).toBe('appwrite-ios://co.test.app')
-    expect(xhr.headers).not.toHaveProperty('content-type')
-    expect(xhr.body?.get('fileId')).toBe('file-1')
-    expect(xhr.body?.getAll('permissions[]')).toEqual(['read'])
-    xhr.upload.onprogress?.({ lengthComputable: true, loaded: 500, total: 1000 })
-    xhr.respond(201, { $id: 'file-1' })
-    await expect(pending).resolves.toMatchObject({ $id: 'file-1' })
-    expect(progress).toEqual([0.5, 1])
+    const result = await uploadImageToBucket({ bucketId: 'bucket', fileId: 'file-1', image, permissions: [], onProgress: value => progress.push(value) })
+    expect(result.$id).toBe('file-1')
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/files', expect.any(FormData))
+    const form = vi.mocked(apiClient.post).mock.calls.at(-1)![1] as FormData
+    expect(form.get('file')).toBeInstanceOf(Blob)
+    expect(progress).toEqual([0.02, 1])
   })
-
-  it('surfaces Appwrite errors with their code and type', async () => {
+  it('surfaces API validation errors', async () => {
+    const { apiClient } = await import('./apiClient')
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new Error('Photos must be JPG or PNG'))
     const { uploadImageToBucket } = await import('./imageUpload')
-    const pending = uploadImageToBucket({ bucketId: 'bucket', fileId: 'file-1', image, permissions: [] })
-    FakeXhr.last!.respond(400, { message: 'File extension not allowed', type: 'storage_file_type_unsupported' })
-    await expect(pending).rejects.toMatchObject({ message: 'File extension not allowed', code: 400, type: 'storage_file_type_unsupported' })
+    await expect(uploadImageToBucket({ bucketId: 'bucket', fileId: 'file-1', image, permissions: [] })).rejects.toThrow('JPG or PNG')
   })
-
-  it('reports network failures', async () => {
+  it('does not report completion for a failed upload', async () => {
+    const { apiClient } = await import('./apiClient')
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new Error('Network error'))
     const { uploadImageToBucket } = await import('./imageUpload')
-    const pending = uploadImageToBucket({ bucketId: 'bucket', fileId: 'file-1', image, permissions: [] })
-    FakeXhr.last!.onerror?.()
-    await expect(pending).rejects.toThrow(/check your connection/i)
+    const progress = vi.fn()
+    await expect(uploadImageToBucket({ bucketId: 'bucket', fileId: 'file-1', image, permissions: [], onProgress: progress })).rejects.toThrow('Network error')
+    expect(progress).not.toHaveBeenCalledWith(1)
   })
 })

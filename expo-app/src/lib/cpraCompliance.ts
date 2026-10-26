@@ -1,10 +1,12 @@
+import { apiClient } from './apiClient';
+import { openURL } from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isValidEmail } from './authValidation';
-import { listRecentWorkouts, type Workout } from './data/workouts';
-import { listHistoricMeals, type MealDocument } from './meals';
-import { getProfile, type ProfileDocument } from './profile';
-import { listTasks, type TaskDocument } from './tasks';
-import { listWaterEntries, type WaterDocument } from './water';
+import { type Workout } from './data/workouts';
+import { type MealDocument } from './meals';
+import { type ProfileDocument } from './profile';
+import { type TaskDocument } from './tasks';
+import { type WaterDocument } from './water';
 
 export const DO_NOT_SELL_SHARE_KEY = 'kiloric_do_not_sell_share';
 export const LIMIT_SENSITIVE_DATA_KEY = 'kiloric_limit_sensitive_data';
@@ -29,7 +31,7 @@ export type CpraRequestConfirmation = {
   userId: string;
   email: string;
   requestType: CpraPrivacyRequestType;
-  status: 'received' | 'processed';
+  status: 'draft_prepared';
   receivedAt: string;
   message: string;
 };
@@ -122,25 +124,23 @@ export async function submitPrivacyRequest(
     await setLimitSensitiveDataPreference(true);
   }
 
-  let message = 'Your privacy request has been received and logged.';
-  if (request.requestType === 'export_data') {
-    message = 'Your data export request has been acknowledged. You can also generate an immediate export below.';
-  } else if (request.requestType === 'delete_account') {
-    message = 'Your deletion request has been registered. Account access can be disabled directly from Account settings.';
-  } else if (request.requestType === 'opt_out_sale') {
-    message = 'Your opt-out preference is confirmed. kiloric does not sell or share user data.';
-  } else if (request.requestType === 'limit_sensitive_data') {
-    message = 'Your sensitive data restriction is confirmed. Data is processed strictly for core app tracking.';
-  } else if (request.requestType === 'correct_data') {
-    message = 'Your correction request has been registered. Profile details can also be updated directly in settings.';
-  }
+  const subject = `Kiloric privacy request: ${request.requestType}`;
+  const body = [
+    `Account email: ${request.email.trim()}`,
+    `User ID: ${request.userId}`,
+    `Request type: ${request.requestType}`,
+    `Draft reference: ${requestId}`,
+    '', request.notes?.trim() || '',
+  ].join('\n');
+  await openURL(`mailto:data_privacy@kiloric.co?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  const message = 'Your privacy email draft is ready. Send it from your email app to submit the request. No request has been sent or registered by the app.';
 
   return {
     requestId,
     userId: request.userId,
     email: request.email.trim().toLowerCase(),
     requestType: request.requestType,
-    status: 'received',
+    status: 'draft_prepared',
     receivedAt: timestamp,
     message,
   };
@@ -151,35 +151,21 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     throw new Error('User ID is required for generating a data export.');
   }
 
-  const [
-    profileResult,
-    mealsResult,
-    waterResult,
-    tasksResult,
-    workoutsResult,
-    doNotSell,
-    limitSensitive,
-  ] = await Promise.allSettled([
-    getProfile(userId),
-    listHistoricMeals(userId, 365),
-    listWaterEntries(userId),
-    listTasks(userId),
-    listRecentWorkouts(userId, 50),
-    getDoNotSellSharePreference(),
-    getLimitSensitiveDataPreference(),
+  const data = await apiClient.get<Record<string, unknown>>('/v1/me/export');
+  const profile = data.profile as ProfileDocument | null;
+  if (profile?.$id !== userId) throw new Error('Export does not match the signed-in account.');
+  const [doNotSellOrShare, limitSensitiveDataUsage] = await Promise.all([
+    getDoNotSellSharePreference(), getLimitSensitiveDataPreference(),
   ]);
-
-  const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
-  const meals = mealsResult.status === 'fulfilled' ? mealsResult.value : [];
-  const waterLogs = waterResult.status === 'fulfilled' ? waterResult.value : [];
-  const tasks = tasksResult.status === 'fulfilled' ? tasksResult.value : [];
-  const recentWorkouts = workoutsResult.status === 'fulfilled' ? workoutsResult.value : [];
-  const doNotSellOrShare = doNotSell.status === 'fulfilled' ? doNotSell.value : true;
-  const limitSensitiveDataUsage = limitSensitive.status === 'fulfilled' ? limitSensitive.value : true;
+  const meals = data.meals as MealDocument[];
+  const waterLogs = data.water_logs as WaterDocument[];
+  const tasks = data.tasks as TaskDocument[];
+  const recentWorkouts = data.workouts as Workout[];
 
   return {
+    ...data,
     exportedAt: new Date().toISOString(),
-    version: '1.0.0',
+    version: '1.0.0-beta.1',
     userId,
     profile,
     meals,

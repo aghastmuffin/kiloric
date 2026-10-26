@@ -20,6 +20,8 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   },
 }))
 
+vi.mock('./data/recordStore', () => ({ resetRecordStoreSession: vi.fn() }))
+
 vi.mock('./appwrite', () => ({
   client: {
     setSession: vi.fn(),

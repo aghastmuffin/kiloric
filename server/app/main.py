@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, me
+from app.routers import auth, me, contributions
 from app.routers.crud import make_crud_router
 from app.models import (
     FoodEntry,
@@ -56,6 +56,7 @@ app.add_middleware(
 
 # ── auth + profile ────────────────────────────────────────────────────────────
 app.include_router(auth.router)
+app.include_router(contributions.router)
 app.include_router(me.router)
 
 # ── user data collections ─────────────────────────────────────────────────────

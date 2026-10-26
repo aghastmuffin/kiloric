@@ -4,11 +4,11 @@
     "slug": "taesonco-kiloric",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.jpeg",
+    "icon": "./assets/images/logo.jpeg",
     "scheme": "calorie",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.jpeg",
+      "icon": "./assets/images/logo.jpeg",
       "bundleIdentifier": "co.taeson.kiloric",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -17,7 +17,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#B74435",
-        "foregroundImage": "./assets/images/icon.jpeg",
+        "foregroundImage": "./assets/images/logo.jpeg"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -27,7 +27,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/icon.jpeg"
+      "favicon": "./assets/images/logo.jpeg"
     },
     "plugins": [
       "expo-router",
@@ -56,6 +56,7 @@
       "reactCompiler": true
     },
     "extra": {
+      "release": "b-1",
       "router": {},
       "eas": {
         "projectId": "34027bcb-27eb-4a2d-99c2-5beb80814599"

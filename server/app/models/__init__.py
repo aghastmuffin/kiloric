@@ -8,7 +8,7 @@ Every table has:
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Boolean, DateTime, Double, ForeignKey, Integer,
+    Boolean, DateTime, Double, ForeignKey, Integer, LargeBinary,
     String, Text, UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -88,6 +88,8 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     # Relationships
+    contribution_uploads: Mapped[list["ContributionUpload"]] = relationship("ContributionUpload", back_populates="user", cascade="all, delete-orphan")
+    food_contributions: Mapped[list["FoodContribution"]] = relationship("FoodContribution", back_populates="user", cascade="all, delete-orphan")
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     meals: Mapped[list["Meal"]] = relationship("Meal", back_populates="user", cascade="all, delete-orphan")
     water_logs: Mapped[list["WaterLog"]] = relationship("WaterLog", back_populates="user", cascade="all, delete-orphan")
@@ -367,3 +369,24 @@ class Task(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     user: Mapped["User"] = relationship("User", back_populates="tasks")
+
+
+class ContributionUpload(Base):
+    """Private image uploads persisted with the API database and account lifecycle."""
+    __tablename__ = "contribution_uploads"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    user: Mapped["User"] = relationship("User", back_populates="contribution_uploads")
+
+
+class FoodContribution(Base):
+    __tablename__ = "food_contributions"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=_uuid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    user: Mapped["User"] = relationship("User", back_populates="food_contributions")

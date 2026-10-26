@@ -3,12 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 const ACCESS_TOKEN_KEY = '@kiloric/access_token'
 const REFRESH_TOKEN_KEY = '@kiloric/refresh_token'
 
-export const DEFAULT_API_URL = 'http://localhost:8000'
+export const DEFAULT_API_URL = 'https://api.kiloric.co'
 
 export function getApiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL
   if (envUrl && envUrl.trim()) {
-    return envUrl.trim().replace(/\/+$/, '')
+    return envUrl.trim().replace(/\/+$/, '').replace(/\/v1$/, '')
   }
   return DEFAULT_API_URL
 }
@@ -74,6 +74,15 @@ export async function setTokens(access: string, refresh?: string | null): Promis
   if (refresh) {
     cachedRefreshToken = refresh
     await safeSetItem(REFRESH_TOKEN_KEY, refresh)
+  }
+}
+
+export async function revokeSession(): Promise<void> {
+  if (!isInitialized) await initApiClient()
+  if (cachedRefreshToken) {
+    await request('/v1/auth/logout', {
+      method: 'POST', body: { refresh_token: cachedRefreshToken }, skipAuth: true,
+    })
   }
 }
 

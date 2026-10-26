@@ -17,14 +17,14 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    CORS_ORIGINS: str = "http://localhost:8081"
+    CORS_ORIGINS: str = "https://aghastmuffin.github.io,https://kiloric.co,https://www.kiloric.co,http://localhost:8081"
 
     SMTP_HOST: Optional[str] = None
     SMTP_PORT: int = 587
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     EMAIL_FROM: str = "noreply@kiloric.co"
-    APP_RESET_URL: str = "kiloric://reset-password"
+    APP_RESET_URL: str = "https://kiloric.co/app/reset-password"
 
     @property
     def cors_origins_list(self) -> list[str]:

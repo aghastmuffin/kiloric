@@ -11,6 +11,14 @@ import {
   type CpraPrivacyRequest,
 } from './cpraCompliance';
 
+vi.mock('./apiClient', () => ({ apiClient: { get: vi.fn(async () => ({
+  profile: { $id: 'user_123', username: 'testuser' },
+  meals: [{ $id: 'meal_1' }], water_logs: [{ $id: 'water_1' }], tasks: [{ $id: 'task_1' }], workouts: [{ $id: 'workout_1' }],
+  food_entries: [{ $id: 'food_1' }],
+})) } }));
+
+vi.mock('expo-linking', () => ({ openURL: vi.fn(async () => {}) }));
+
 vi.mock('@react-native-async-storage/async-storage', () => {
   const store = new Map<string, string>();
   return {
@@ -156,8 +164,8 @@ describe('cpraCompliance', () => {
       expect(confirmation.userId).toBe('user_123');
       expect(confirmation.email).toBe('user@example.com');
       expect(confirmation.requestType).toBe('export_data');
-      expect(confirmation.status).toBe('received');
-      expect(confirmation.message).toContain('export request');
+      expect(confirmation.status).toBe('draft_prepared');
+      expect(confirmation.message).toContain('Send it from your email app');
     });
 
     it('automatically updates preference when submitting opt_out_sale', async () => {
@@ -176,9 +184,9 @@ describe('cpraCompliance', () => {
       const exported = await exportUserData('user_123');
 
       expect(exported.userId).toBe('user_123');
-      expect(exported.version).toBe('1.0.0');
+      expect(exported.version).toBe('1.0.0-beta.1');
       expect(exported.profile).toBeDefined();
-      expect(exported.profile?.$id).toBe('profile_1');
+      expect(exported.profile?.$id).toBe('user_123');
       expect(exported.meals).toHaveLength(1);
       expect(exported.waterLogs).toHaveLength(1);
       expect(exported.tasks).toHaveLength(1);

@@ -304,7 +304,7 @@ export default function LogFoodScreen() {
   const activeMealNames = useMemo(() => {
     if (!data?.planPrefs) return ['Breakfast', 'Lunch', 'Snack', 'Dinner']
     return effectiveMealNames(data.planPrefs)
-  }, [data?.planPrefs])
+  }, [data])
 
   const mealOptions = useMemo(
     () => activeMealNames.map((type) => ({ value: type, label: type })),
