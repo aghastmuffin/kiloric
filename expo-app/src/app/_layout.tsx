@@ -92,7 +92,7 @@ function RootNavigation() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="cameraview"
-                  options={{ headerShown: true, headerTitle: "Scan barcode" }}
+                  options={{ headerShown: false }}
                 />
                 <Stack.Screen name="signin" options={{ headerShown: false }} />
                 <Stack.Screen name="reset-password" options={{ headerShown: true, headerTitle: "Reset password" }} />
