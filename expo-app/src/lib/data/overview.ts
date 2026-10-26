@@ -1,12 +1,12 @@
-import { account } from '@/lib/appwrite'
-import { exerciseCreditKcal } from '@/lib/exercise'
-import { getTodayMeals, type MealDocument } from '@/lib/meals'
-import { resolvePlanInputs, type PlanInputs } from '@/lib/planInputs'
-import { planPreferencesFromUser, type PlanPreferences } from '@/lib/planPreferences'
-import { getProfile, type ProfileDocument } from '@/lib/profile'
-import { kgToLbs, parseDisplayUnitsPreference, type DisplayUnits } from '@/lib/units'
+import { account } from '../appwrite'
+import { exerciseCreditKcal } from '../exercise'
+import { getTodayMeals, type MealDocument } from '../meals'
+import { resolvePlanInputs, type PlanInputs } from '../planInputs'
+import { planPreferencesFromUser, type PlanPreferences } from '../planPreferences'
+import { getProfile, type ProfileDocument } from '../profile'
+import { kgToLbs, parseDisplayUnitsPreference, type DisplayUnits } from '../units'
 import { addDays, dayKey, lastNDayKeys, startOfDay, startOfWeek, weekDayKeys } from './dateKeys'
-import { dailyKcalByDay, listEntriesForDay, listMealsSince, loggingStreak, mealTotals, type FoodEntry } from './foodLog'
+import { dailyKcalByDay, foodEntriesStore, listEntriesForDay, listMealsSince, loggingStreak, mealTotals, type FoodEntry } from './foodLog'
 import type { Macros } from './foodItem'
 import { getPrepSession, listGroceryItems, listPlanEntries, parsePrepItems, type GroceryItem, type PlanEntry, type PrepItem, type PrepSession } from './mealPlan'
 import { burnedOn, listWorkoutsBetween, type Workout } from './workouts'
@@ -112,9 +112,14 @@ export function exerciseCreditFor(summary: ProfileSummary, burned: number): numb
 
 export async function loadStreak(userId: string): Promise<number> {
   const since = addDays(startOfDay(), -STREAK_LOOKBACK_DAYS)
-  const meals = await listMealsSince(userId, since)
+  const sinceKey = dayKey(since)
+  const [meals, entries] = await Promise.all([
+    listMealsSince(userId, since).catch(() => []),
+    foodEntriesStore.list(userId, [{ field: 'day', op: 'gte', value: sinceKey }]).catch(() => []),
+  ])
   const days = new Set<string>()
   for (const [day, kcal] of dailyKcalByDay(meals)) if (kcal > 0) days.add(day)
+  for (const entry of entries) if (entry.kcal > 0 || entry.servings > 0) days.add(entry.day)
   return loggingStreak(days)
 }
 
