@@ -16,7 +16,6 @@ import { isEligibleOnboardingAge, MINIMUM_ONBOARDING_AGE } from '@/lib/ageEligib
 import { useAuth } from '@/lib/AuthContext';
 import { COUNTRY_OPTIONS, getCountryName } from '@/lib/countries';
 import {
-  CongressionalNote,
   HPyloriWarning,
   ResidencyBarNotice,
 } from '@/components/onboarding/ResidencyNotices';
@@ -354,15 +353,6 @@ export default function ConfigScreen() {
       return;
     }
 
-    if (!isRaceValue(race)) {
-      Alert.alert('Missing details', 'Select your race. This is saved with the rest of your profile.');
-      return;
-    }
-
-    if (residesInAsia == null) {
-      Alert.alert('Missing details', 'Answer whether you reside in any country in Asia.');
-      return;
-    }
 
     // Eligibility is revalidated on every profile change, not just during onboarding.
     if (!isEligibleOnboardingAge(dateOfBirth)) {
@@ -399,6 +389,9 @@ export default function ConfigScreen() {
         paceKgPerWeek: goal === 'maintain' ? 0 : -currentWeeklyChangeKg,
       });
 
+      const finalRace = isRaceValue(race) ? race : 'prefer_not_to_say';
+      const finalAsia = residesInAsia === true || showHPyloriWarning(country, false);
+
       await saveProfileFields(user.$id, {
         username: username.trim(),
         email: user.email,
@@ -409,8 +402,8 @@ export default function ConfigScreen() {
         lastLogin: new Date().toISOString(),
         bio: bio.trim() || null,
         country: country.trim().toUpperCase() || null,
-        race,
-        resides_in_asia: residesInAsia === true || showHPyloriWarning(country, false),
+        race: finalRace,
+        resides_in_asia: finalAsia,
         target_kcal: activeTargetKcal,
         target_protein: activeTargetProtein,
         target_carbs: activeTargetCarbs,
@@ -436,8 +429,8 @@ export default function ConfigScreen() {
       });
       await saveDemographics(
         {
-          race,
-          residesInAsia: residesInAsia === true || showHPyloriWarning(country, false),
+          race: finalRace,
+          residesInAsia: finalAsia,
         },
         user.$id,
       );
@@ -685,7 +678,6 @@ export default function ConfigScreen() {
                   />
                 ))}
                 {showHPyloriWarning(country, residesInAsia) ? <HPyloriWarning /> : null}
-                <CongressionalNote />
               </View>
 
               <View style={styles.divider} />
@@ -890,7 +882,13 @@ export default function ConfigScreen() {
               <Text style={styles.infoBannerText}>
                 Based on your stats: BMR is {computedPlan.bmr} kcal/day · TDEE (maintenance) is {computedPlan.tdee} kcal/day.
                 {goal !== 'maintain'
-                  ? ` Projected energy balance: ${currentWeeklyDeficit > 0 ? '+' : ''}${currentWeeklyDeficit} kcal/week (${formatPaceRate(displayUnits, currentWeeklyChangeKg)}).`
+                  ? ` ${
+                      currentWeeklyDeficit > 0
+                        ? `Projected weekly deficit: ${currentWeeklyDeficit.toLocaleString()} kcal/week`
+                        : currentWeeklyDeficit < 0
+                        ? `Projected weekly surplus: ${Math.abs(currentWeeklyDeficit).toLocaleString()} kcal/week`
+                        : 'Projected weekly balance: 0 kcal/week'
+                    } (${formatPaceRate(displayUnits, currentWeeklyChangeKg)}).`
                   : ''}
               </Text>
               <Text style={styles.fieldHint}>
