@@ -12,6 +12,7 @@ import {
   UButton,
   useShell,
 } from '@/components/ds'
+import { NativeDatePicker } from '@/components/NativePickers'
 import { showApiError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
 import { shortMonthDay } from '@/lib/data/dateKeys'
@@ -27,10 +28,10 @@ import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 const RANGES = [
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
-  { value: 'quarter', label: '3 months' },
-  { value: 'year', label: 'Year' },
+  { value: 'week', label: '7d' },
+  { value: 'month', label: '30d' },
+  { value: 'quarter', label: '90d' },
+  { value: 'year', label: '1y' },
 ] as const
 
 function StatCard({ label, value, unit, detail }: { label: string; value: string; unit?: string; detail?: string }) {
@@ -134,6 +135,7 @@ export default function ProgressScreen() {
   const userId = user?.$id ?? null
   const [range, setRange] = useState<ProgressRange>('month')
   const [logOpen, setLogOpen] = useState(false)
+  const [weightDate, setWeightDate] = useState<Date>(new Date())
   const [weightText, setWeightText] = useState('')
   const [saving, setSaving] = useState(false)
   const [applying, setApplying] = useState(false)
@@ -154,9 +156,10 @@ export default function ProgressScreen() {
     if (value == null) return
     setSaving(true)
     try {
-      await logWeight(userId, units === 'imperial' ? lbsToKg(value) : value)
+      await logWeight(userId, units === 'imperial' ? lbsToKg(value) : value, weightDate)
       setLogOpen(false)
       setWeightText('')
+      setWeightDate(new Date())
       await state.reload()
     } catch (err) {
       showApiError(err, 'appwrite')
@@ -178,7 +181,19 @@ export default function ProgressScreen() {
     }
   }
 
-  const logAction = <UButton label="Log weight" tone="mint" size="sm" onPress={() => setLogOpen(true)} testID="log-weight" />
+  const logAction = (
+    <UButton
+      label="Log weight"
+      tone="mint"
+      size="sm"
+      onPress={() => {
+        setWeightDate(new Date())
+        setWeightText('')
+        setLogOpen(true)
+      }}
+      testID="log-weight"
+    />
+  )
 
   const weightCard = data ? (
     <WeightCard
@@ -187,15 +202,27 @@ export default function ProgressScreen() {
       units={units}
       fallbackKg={data.summary.currentWeightKg}
       range={range}
-      overline={`Weight · ${RANGES.find((option) => option.value === range)?.label.toLowerCase()}`}
+      overline={`Weight · ${RANGES.find((option) => option.value === range)?.label}`}
       action={logOpen ? undefined : logAction}
     />
   ) : null
 
   const logPanel = logOpen ? (
     <Card style={styles.logPanel} testID="weight-form">
+      <View style={styles.dateRow}>
+        <Txt variant="caption" tone="muted">
+          Date
+        </Txt>
+        <NativeDatePicker
+          accessibilityLabel="Weigh-in date"
+          value={weightDate}
+          onChange={setWeightDate}
+          maximumDate={new Date()}
+          disabled={saving}
+        />
+      </View>
       <Field
-        label="Today’s weight"
+        label="Weight"
         placeholder={data?.summary.currentWeightKg ? String(displayWeight(data.summary.currentWeightKg, units)) : undefined}
         keyboardType="decimal-pad"
         suffix={unit}
@@ -266,6 +293,7 @@ const styles = StyleSheet.create({
   statValue: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   statNumber: { fontFamily: fonts.heavy, fontSize: 28, letterSpacing: -0.8 },
   logPanel: { gap: 12 },
+  dateRow: { gap: 6 },
   maintenance: { gap: 6 },
   logActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   wideRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
