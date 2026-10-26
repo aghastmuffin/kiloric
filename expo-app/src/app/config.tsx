@@ -179,8 +179,9 @@ export default function ConfigScreen() {
       pace,
       diet,
       targetWeight,
+      displayUnits,
     });
-  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight]);
+  }, [dateOfBirth, sex, height, weight, bodyFatPct, activity, goal, pace, diet, targetWeight, displayUnits]);
 
   const activeTargetKcal = targetKcal ?? computedPlan.targetKcal;
   const activeTargetProtein = targetProtein ?? computedPlan.targetProtein;
@@ -302,7 +303,7 @@ export default function ConfigScreen() {
 
         const parsedTargetWeight = normalizeStoredTargetWeightKg(
           userCountry,
-          profile.target_weight,
+          profile.goal_target_weight_kg ?? profile.target_weight,
           profile.height ?? 170,
         );
         setTargetWeight(parsedTargetWeight);
@@ -389,6 +390,7 @@ export default function ConfigScreen() {
             targetWeight: roundMetric(targetWeight ?? computedPlan.targetWeight),
             currentWeight: roundMetric(weight),
             estimatedWeeklyChangeKg: currentWeeklyChangeKg,
+            units: displayUnits,
           });
 
       const goalPlainWithUnits = appendDisplayUnitsToGoalPlain(finalGoalBase, displayUnits);

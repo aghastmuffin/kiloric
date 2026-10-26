@@ -277,6 +277,7 @@ export function OnboardingWizard() {
         pace: form.pace,
         diet: form.diet,
         targetWeight: form.targetWeight,
+        displayUnits: form.displayUnits,
       }),
     [form],
   )
@@ -411,7 +412,7 @@ export function OnboardingWizard() {
           diet: saved.diet,
           targetWeight: normalizeStoredTargetWeightKg(
             country,
-            profile.target_weight,
+            profile.goal_target_weight_kg ?? profile.target_weight,
             profile.height ?? defaults.height,
           ),
           displayUnits: parseDisplayUnitsPreference(profile.goal_plain, country),
