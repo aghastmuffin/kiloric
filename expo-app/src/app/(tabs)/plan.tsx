@@ -17,8 +17,8 @@ import {
 import { showApiError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
 import { addDays, dayKey, monthRangeLabel, parseDayKey, startOfWeek, weekdayInitial, weekdayName, weekDayKeys } from '@/lib/data/dateKeys'
-import { formatKcal } from '@/lib/data/foodItem'
-import { frequentFoods, listRecentEntries } from '@/lib/data/foodLog'
+import { formatGrams, formatKcal } from '@/lib/data/foodItem'
+import { entryMacros, frequentFoods, listEntriesForDay, listRecentEntries, type FoodEntry } from '@/lib/data/foodLog'
 import {
   addPlanEntry,
   autofillWeek,
@@ -35,6 +35,7 @@ import { listSavedMeals, type SavedMeal } from '@/lib/data/savedMeals'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import { fonts, usePalette } from '@/lib/theme/palette'
 import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { Fragment, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
@@ -51,19 +52,21 @@ export default function PlanScreen() {
   const [selectedDay, setSelectedDay] = useState(todayKey)
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [collapsedFoodMeals, setCollapsedFoodMeals] = useState<Set<string>>(new Set())
 
   const weekStart = useMemo(() => addDays(startOfWeek(), weekOffset * 7), [weekOffset])
   const weekKeys = useMemo(() => weekDayKeys(weekStart), [weekStart])
   const day = weekKeys.includes(selectedDay) ? selectedDay : weekKeys[0]
 
   const state = useFocusLoader(async () => {
-    const [summary, entries, prep, savedMeals] = await Promise.all([
+    const [summary, entries, prep, savedMeals, todayFoods] = await Promise.all([
       loadProfileSummary(userId!, user?.name),
       listPlanEntries(userId!, weekKeys[0], weekKeys[6]),
       loadPrepOverview(userId!, weekStart),
       listSavedMeals(userId!),
+      listEntriesForDay(userId!),
     ])
-    return { summary, entries, prep, savedMeals }
+    return { summary, entries, prep, savedMeals, todayFoods }
   }, userId ? `${userId}:${weekKeys[0]}` : null)
 
   const data = state.data
@@ -74,6 +77,10 @@ export default function PlanScreen() {
   const dayDate = parseDayKey(day)
   const missingTypes = PLAN_MEAL_TYPES.filter((type) => !dayEntries.some((entry) => entry.meal_type === type))
   const nextType = missingTypes.includes('Snack') ? 'Snack' : (missingTypes[0] ?? 'Snack')
+  const todayFoodTotals = (data?.todayFoods ?? []).reduce((total, entry) => {
+    const macros = entryMacros(entry)
+    return { kcal: total.kcal + macros.kcal, protein: total.protein + macros.protein, carbs: total.carbs + macros.carbs, fat: total.fat + macros.fat }
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
 
   async function run(id: string, action: () => Promise<unknown>) {
     setBusy(id)
@@ -216,6 +223,51 @@ export default function PlanScreen() {
     </Card>
   )
 
+  const todayFoodCard = (
+    <Card style={styles.todayFoodCard} testID="plan-today-food-log">
+      <View style={styles.dayHeader}>
+        <View style={styles.flex}>
+          <Txt variant="subheading">Today’s food log</Txt>
+          <Txt variant="caption" tone="muted">{data ? `${formatKcal(todayFoodTotals.kcal)} kcal eaten · ${data.todayFoods.length} foods` : 'Loading today’s food log…'}</Txt>
+        </View>
+        <UButton label="Food log" tone="chip" size="sm" onPress={() => router.push('/(tabs)/logfood')} />
+      </View>
+      {!data && state.loading ? <LoadingBlock /> : (data?.todayFoods.length ?? 0) === 0 ? (
+        <Txt variant="caption" tone="muted">Foods you log today will appear here, grouped by meal.</Txt>
+      ) : [...new Set(data!.todayFoods.map((entry) => entry.meal_type))].map((type) => {
+        const entries = data!.todayFoods.filter((entry) => entry.meal_type === type)
+        const kcal = entries.reduce((sum, entry) => sum + entry.kcal, 0)
+        const expanded = !collapsedFoodMeals.has(type)
+        return (
+          <View key={type} style={[styles.todayFoodGroup, { borderTopColor: c.line }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              accessibilityLabel={`${type}, ${entries.length} foods, ${formatKcal(kcal)} calories`}
+              onPress={() => setCollapsedFoodMeals((current) => {
+                const next = new Set(current)
+                if (next.has(type)) next.delete(type)
+                else next.add(type)
+                return next
+              })}
+              style={styles.todayFoodHeader}
+            >
+              <Txt variant="bodyStrong" style={styles.flex}>{type} · {entries.length} food{entries.length === 1 ? '' : 's'}</Txt>
+              <Txt variant="bodyStrong">{formatKcal(kcal)} kcal</Txt>
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={c.inkMuted} />
+            </Pressable>
+            {expanded ? entries.map((entry: FoodEntry) => (
+              <View key={entry.$id} style={styles.todayFoodRow}>
+                <Txt variant="caption" numberOfLines={1} style={styles.flex}>{entry.name}</Txt>
+                <Txt variant="caption" tone="muted">{formatKcal(entry.kcal)} kcal · P {formatGrams(entry.protein)} g · C {formatGrams(entry.carbs)} g · F {formatGrams(entry.fat)} g</Txt>
+              </View>
+            )) : null}
+          </View>
+        )
+      })}
+    </Card>
+  )
+
   const savedMealsCard = data ? (
     <Card style={styles.savedMealsCard} testID="plan-saved-meals">
       <View style={styles.dayHeader}>
@@ -308,6 +360,7 @@ export default function PlanScreen() {
         }
       />
       {dayPicker}
+      {todayFoodCard}
       {state.error ? <ErrorNote message={state.error} onRetry={state.reload} /> : null}
       {notice ? (
         <Card tone="mint" style={styles.notice}>
@@ -347,6 +400,10 @@ const styles = StyleSheet.create({
   dayNumber: { fontFamily: fonts.bold, fontSize: 17 },
   dot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
   dayCard: { gap: 4 },
+  todayFoodCard: { gap: 6 },
+  todayFoodGroup: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 4 },
+  todayFoodHeader: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  todayFoodRow: { flexDirection: 'column', alignItems: 'flex-start', gap: 2, paddingVertical: 6, paddingLeft: 10 },
   savedMealsCard: { gap: 8 },
   savedEmpty: { gap: 12, alignItems: 'flex-start' },
   savedMealRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },

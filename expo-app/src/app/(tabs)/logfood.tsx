@@ -48,7 +48,7 @@ import { useRouter } from 'expo-router'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 
-type ListTab = 'frequent' | 'favorites' | 'meals' | 'results'
+type ListTab = 'search' | 'frequent' | 'favorites' | 'meals'
 
 type Selection =
   | { kind: 'food'; key: string; item: FoodItem; servings: number; source: FoodEntrySource }
@@ -253,7 +253,7 @@ export default function LogFoodScreen() {
   const { selectedMealType, setSelectedMealType } = useMealTypePreferences()
   const { wide } = useShell()
 
-  const [tab, setTab] = useState<ListTab>('frequent')
+  const [tab, setTab] = useState<ListTab>('search')
   const [selected, setSelected] = useState<Map<string, Selection>>(new Map())
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -279,7 +279,7 @@ export default function LogFoodScreen() {
   const [savingMeal, setSavingMeal] = useState(false)
   const [savePanelOpen, setSavePanelOpen] = useState(false)
   const [saveTargetType, setSaveTargetType] = useState<string>(selectedMealType)
-  const [collapsedMealTypes, setCollapsedMealTypes] = useState<Set<string>>(new Set())
+  const [expandedMealTypes, setExpandedMealTypes] = useState<Set<string>>(new Set())
   const [foodDetails, setFoodDetails] = useState<{ item: FoodItem; source: FoodEntrySource; servings: number } | null>(null)
 
   // Editing & deletion state
@@ -353,7 +353,7 @@ export default function LogFoodScreen() {
   }
 
   const rows: Row[] = useMemo(() => {
-    if (tab === 'results') {
+    if (tab === 'search') {
       return results.map((item, index) => {
         const barcode = item.barcode ?? item.name
         const key = `result:${barcode}:${index}`
@@ -441,6 +441,7 @@ export default function LogFoodScreen() {
       setResults([])
       setSearching(false)
       setSearchError(null)
+      setTab('search')
       return
     }
     if (/^\d{8,14}$/.test(trimmed)) {
@@ -450,7 +451,7 @@ export default function LogFoodScreen() {
     }
     setSearching(true)
     setSearchError(null)
-    setTab('results')
+    setTab('search')
     try {
       const response = await authenticatedRequest(`/api/fuzzy/${encodeURIComponent(trimmed)}`)
       if (activeSearchQueryRef.current !== trimmed) return
@@ -472,15 +473,17 @@ export default function LogFoodScreen() {
     setQuery(text)
     clearSearchDebounce()
     const trimmed = text.trim()
+    activeSearchQueryRef.current = trimmed
     if (!trimmed) {
       activeSearchQueryRef.current = ''
       setSearching(false)
       setSearchError(null)
       setResults([])
-      if (tab === 'results') setTab('frequent')
+      setTab('search')
       return
     }
-    setTab('results')
+    setResults([])
+    setTab('search')
     setSearching(true)
     setSearchError(null)
     searchTimeoutRef.current = setTimeout(() => {
@@ -588,27 +591,9 @@ export default function LogFoodScreen() {
   }
 
   const dayEntries = data?.todayEntries ?? []
-  const dayMacros = dayEntries.reduce((total, entry) => {
-    const macros = entryMacros(entry)
-    return { kcal: total.kcal + macros.kcal, protein: total.protein + macros.protein, carbs: total.carbs + macros.carbs, fat: total.fat + macros.fat }
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
   const loggedMealTypes = [...new Set([...activeMealNames, ...dayEntries.map((entry) => entry.meal_type)])]
-  const loggedTodayCard = (
-    <Card testID="logged-today" style={styles.daySummary}>
-      <View style={styles.sectionHeader}>
-        <View style={styles.rowText}>
-          <Txt variant="subheading">Today’s food log</Txt>
-          <Txt variant="caption" tone="muted">{dayEntries.length} item{dayEntries.length === 1 ? '' : 's'}</Txt>
-        </View>
-        <Txt variant="metric">{formatKcal(dayMacros.kcal)} kcal</Txt>
-      </View>
-      {dayEntries.length > 0 ? (
-        <View style={styles.dayMacroSummary}>
-          <Txt variant="caption" tone="muted">Protein {formatGrams(dayMacros.protein)} g</Txt>
-          <Txt variant="caption" tone="muted">Carbs {formatGrams(dayMacros.carbs)} g</Txt>
-          <Txt variant="caption" tone="muted">Fat {formatGrams(dayMacros.fat)} g</Txt>
-        </View>
-      ) : <Txt variant="caption" tone="muted">Foods you log today will appear here, grouped by meal.</Txt>}
+  const loggedTodayCard = dayEntries.length > 0 ? (
+    <View testID="logged-today">
       {loggedMealTypes.map((type) => {
         const entries = dayEntries.filter((entry) => entry.meal_type === type)
         if (entries.length === 0) return null
@@ -616,14 +601,14 @@ export default function LogFoodScreen() {
           const value = entryMacros(entry)
           return { kcal: total.kcal + value.kcal, protein: total.protein + value.protein, carbs: total.carbs + value.carbs, fat: total.fat + value.fat }
         }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
-        const expanded = !collapsedMealTypes.has(type)
+        const expanded = expandedMealTypes.has(type)
         return (
           <View key={type} style={[styles.mealGroup, { borderTopColor: c.line }]}>
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ expanded }}
               accessibilityLabel={`${type}, ${entries.length} foods, ${formatKcal(macros.kcal)} calories`}
-              onPress={() => setCollapsedMealTypes((current) => {
+              onPress={() => setExpandedMealTypes((current) => {
                 const next = new Set(current)
                 if (next.has(type)) next.delete(type)
                 else next.add(type)
@@ -632,7 +617,7 @@ export default function LogFoodScreen() {
               style={styles.mealDropdown}
             >
               <View style={styles.rowText}>
-                <Txt variant="bodyStrong">{type}</Txt>
+                <Txt variant="bodyStrong">Your {type}</Txt>
                 <Txt variant="caption" tone="muted">{entries.length} food{entries.length === 1 ? '' : 's'}</Txt>
               </View>
               <Txt variant="bodyStrong">{formatKcal(macros.kcal)} kcal</Txt>
@@ -668,8 +653,8 @@ export default function LogFoodScreen() {
           </View>
         )
       })}
-    </Card>
-  )
+    </View>
+  ) : null
 
   const remaining = data?.budget.remaining
   const overline = remaining != null ? `Today · ${formatKcal(Math.abs(remaining))} kcal ${remaining < 0 ? 'over' : 'left'}` : 'Today'
@@ -688,15 +673,15 @@ export default function LogFoodScreen() {
     ) : null
 
   const emptyCopy: Record<ListTab, { title: string; body: string }> = {
+    search: {
+      title: searchError ?? (query.trim() ? `No results for “${query.trim()}”` : 'Find food to add'),
+      body: query.trim() ? 'Try another name or scan the barcode, or contribute it below.' : 'Search above or scan a barcode to add food to your meal.',
+    },
     frequent: { title: 'No frequent items yet', body: 'Foods you log more than once show up here.' },
     favorites: { title: 'No favorite foods yet', body: 'Tap the star icon on any food to save it as a favorite.' },
     meals: {
       title: 'No reusable meals saved',
-      body: 'Save a logged meal from Today’s food log above, and it will appear here for quick reuse.',
-    },
-    results: {
-      title: searchError ?? (query.trim() ? `No results for “${query.trim()}”` : 'Search for a food'),
-      body: query.trim() ? 'Try another name or scan the barcode, or contribute it below.' : 'Try a brand, a dish, or a barcode number.',
+      body: 'Expand a logged meal above and save it for quick reuse here.',
     },
   }
 
@@ -711,13 +696,6 @@ export default function LogFoodScreen() {
           ) : null
         }
       />
-      <Segmented
-        options={mealOptions}
-        value={mealType}
-        onChange={(value) => void setSelectedMealType(value)}
-        testID="meal-segment"
-      />
-      {loggedTodayCard}
       <View style={styles.searchRow}>
         <SearchField
           placeholder="Search foods, brands, meals"
@@ -735,30 +713,35 @@ export default function LogFoodScreen() {
           testID="scan-button"
         />
       </View>
+      {loggedTodayCard}
+      <Segmented
+        options={mealOptions}
+        value={mealType}
+        onChange={(value) => void setSelectedMealType(value)}
+        testID="meal-segment"
+      />
       <View style={styles.chips}>
+        <Chip label="Search" selected={tab === 'search'} onPress={() => setTab('search')} />
         <Chip label="Frequent" selected={tab === 'frequent'} onPress={() => setTab('frequent')} />
         <Chip label="Favorites" selected={tab === 'favorites'} onPress={() => setTab('favorites')} />
         <Chip label="Saved meals" selected={tab === 'meals'} onPress={() => setTab('meals')} />
-        {results.length > 0 || searchError || searching ? (
-          <Chip label="Results" selected={tab === 'results'} onPress={() => setTab('results')} />
-        ) : null}
       </View>
-      {query.trim() && tab !== 'results' ? (
+      {query.trim() && tab !== 'search' ? (
         <UButton label={`Search “${query.trim()}”`} tone="mint" size="sm" onPress={() => void runSearch(query)} />
       ) : null}
 
       {state.error ? <ErrorNote message={state.error} onRetry={state.reload} /> : null}
 
       <Card padded={false} style={styles.listCard} testID="food-list">
-        {searching || (!data && state.loading) ? (
+        {(tab === 'search' && searching) || (!data && state.loading) ? (
           <LoadingBlock />
         ) : rows.length === 0 ? (
           <EmptyState
             icon="nutrition-outline"
             title={emptyCopy[tab].title}
             body={emptyCopy[tab].body}
-            actionLabel={tab === 'results' && (searchError || query.trim()) ? 'Add this food' : undefined}
-            onAction={tab === 'results' ? openContribute : undefined}
+            actionLabel={tab === 'search' && query.trim() ? 'Add this food' : undefined}
+            onAction={tab === 'search' ? openContribute : undefined}
           />
         ) : (
           rows.map((row, index) => {
@@ -928,11 +911,8 @@ const styles = StyleSheet.create({
   listCard: { paddingHorizontal: 20, paddingVertical: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
   rowText: { flex: 1, gap: 2 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  daySummary: { gap: 10 },
-  dayMacroSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  mealGroup: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 4 },
-  mealDropdown: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  mealGroup: { borderTopWidth: StyleSheet.hairlineWidth },
+  mealDropdown: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   mealGroupBody: { paddingLeft: 8, paddingBottom: 8 },
   loggedRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   savePanel: { gap: 10, marginTop: 10 },

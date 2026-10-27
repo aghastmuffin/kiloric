@@ -54,7 +54,7 @@ export function PlanChecklist({ plan, workouts, onToggleMeal, onOpenWorkout, onP
           compact
           icon="calendar-outline"
           title="Nothing planned for today"
-          body={FEATURES.workouts ? "Plan meals or schedule a workout and they'll show up here." : "Plan meals and they'll show up here."}
+          body={FEATURES.workouts ? "Plan meals or schedule a workout and they'll show up here." : "Plan meals to populate this"}
           actionLabel="Open meal plan"
           onAction={onPlan}
         />
