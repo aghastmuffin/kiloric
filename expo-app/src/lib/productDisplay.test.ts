@@ -51,4 +51,14 @@ describe('productDisplay', () => {
     })
     expect(columns.map(([key]) => key)).toEqual(['energy_kcal_100g', 'proteins_100g'])
   })
+
+  it('keeps both ingredient aliases out of generic detail rows for the dedicated viewer', () => {
+    const columns = listProductColumns({
+      product_name: 'Soup',
+      ingredients: 'Water, oats',
+      ingredients_text: 'Water, oats',
+      energy_kcal_100g: 50,
+    })
+    expect(columns.map(([key]) => key)).toEqual(['energy_kcal_100g'])
+  })
 })

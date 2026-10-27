@@ -10,6 +10,17 @@ import {
 } from './ordsNormalize'
 
 describe('ordsNormalize', () => {
+  it('keeps the legacy ingredients_text field and accepts the new ingredients alias', () => {
+    expect(normalizeOrdsProduct({ ingredients_text: 'Water, oats' })).toMatchObject({
+      ingredients_text: 'Water, oats',
+      ingredients: 'Water, oats',
+    })
+    expect(normalizeOrdsProduct({ ingredients: 'Water, oats' })).toMatchObject({
+      ingredients_text: 'Water, oats',
+      ingredients: 'Water, oats',
+    })
+  })
+
   it('strips Unknown sentinels and maps all nutrient aliases', () => {
     const product = normalizeOrdsProduct({
       code: '2709224',

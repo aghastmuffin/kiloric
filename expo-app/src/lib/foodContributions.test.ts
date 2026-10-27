@@ -117,6 +117,17 @@ describe('buildContributionPayload', () => {
     expect(payload).not.toHaveProperty('brands')
   })
 
+  it('accepts the ingredients parameter and stores the legacy-compatible ingredients_text key', () => {
+    const payload = buildContributionPayload({
+      owner: 'user1',
+      photo_file_id: 'file1',
+      product_name: 'Soup',
+      fields: { ingredients: 'Water, oats' },
+    })
+    expect(payload.ingredients_text).toBe('Water, oats')
+    expect(payload).not.toHaveProperty('ingredients')
+  })
+
   it('rejects non-numeric nutrient values', () => {
     expect(() =>
       buildContributionPayload({

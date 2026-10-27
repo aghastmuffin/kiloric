@@ -17,6 +17,8 @@ export type FoodItem = {
   /** Grams in one serving. Falls back to 100 g when the label has no serving size. */
   servingGrams: number
   servingLabel: string
+  /** Ingredient blob, when the source product record provides it. */
+  ingredients?: string
   /** Nutrition for one serving. */
   perServing: Macros
 }
@@ -148,6 +150,7 @@ export function foodItemFromProduct(raw: Record<string, unknown>): FoodItem {
   const servingLabel = servingSize
     ? `1 serving = ${servingSize}`
     : `1 serving = ${Math.round(servingGrams)} g`
+  const ingredients = cleanString(product.ingredients) ?? cleanString(product.ingredients_text) ?? cleanString(product.ingredients_text_en)
 
   return {
     name: getProductTitle(product, 'Food'),
@@ -155,6 +158,7 @@ export function foodItemFromProduct(raw: Record<string, unknown>): FoodItem {
     barcode: getBarcodeFromProduct(product) ?? getBarcodeFromProduct(raw),
     servingGrams,
     servingLabel,
+    ...(ingredients ? { ingredients } : {}),
     perServing: scaleMacros(per100g, servingGrams / 100),
   }
 }

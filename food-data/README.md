@@ -64,7 +64,7 @@ The `.sql` script contains `foods`, `food_codes` and `build_info` as `CREATE TAB
 | --- | --- |
 | `code` | Barcode as Open Food Facts stores it (EAN-8 stays 8 digits, UPC-A/EAN-13 become 13). Generic foods without a barcode use the USDA FDC ID (as the current ORDS data does) or `cnf-<FoodID>`. |
 | `product_name` | Never empty. ALL-CAPS names are title-cased. Products with no name get `Unnamed product (barcode …)`, the same placeholder the app uses. |
-| `brands`, `categories`, `quantity`, `serving_size`, `ingredients_text` | Readable text, whitespace/HTML cleaned. |
+| `brands`, `categories`, `quantity`, `serving_size`, `ingredients_text`, `ingredients` | Readable text, whitespace/HTML cleaned. `ingredients` is an additive alias; existing clients can keep reading `ingredients_text`. |
 | `serving_quantity` | Grams (or ml) in one serving; `serving_size` always includes the weight, e.g. `1 cup (240 g)`. |
 | `allergens`, `traces_tags` | Comma-separated Open Food Facts tags, e.g. `en:gluten,en:milk`. |
 | `image_url`, `nutriscore_grade` (`a`–`e`), `ecoscore_grade` (`a-plus`–`f`), `nova_group` (1–4), `additives_n`, `carbon_footprint_100g` | From Open Food Facts. |

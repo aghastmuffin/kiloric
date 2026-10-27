@@ -75,6 +75,9 @@ COLUMNS: tuple[Column, ...] = (
     Column("source_ids", TEXT, 1024),
     Column("trust_and_completion_score", INT),
     Column("updated_timestamp", TEXT, 32),
+    # Appended so positional readers of the legacy schema keep their columns.
+    # Existing clients can continue reading ingredients_text.
+    Column("ingredients", TEXT, 2000),
 )
 
 COLUMN_BY_NAME = {c.name: c for c in COLUMNS}

@@ -220,6 +220,7 @@ export function scrubOrdsProduct(item: Record<string, unknown>): Record<string, 
 /** Map ORDS per-100g nutrient fields onto aliases used by meal/product helpers. */
 export function normalizeOrdsProduct(item: Record<string, unknown>): Record<string, unknown> {
   const scrubbed = scrubOrdsProduct(item)
+  const ingredients = scrubbed.ingredients ?? scrubbed.ingredients_text ?? scrubbed.ingredients_text_en
   const nutriments: Record<string, number> = {}
   const aliases: Record<string, number> = {}
 
@@ -235,6 +236,9 @@ export function normalizeOrdsProduct(item: Record<string, unknown>): Record<stri
 
   return {
     ...scrubbed,
+    ...(typeof ingredients === 'string'
+      ? { ingredients, ingredients_text: scrubbed.ingredients_text ?? ingredients }
+      : {}),
     ...aliases,
     ...(Object.keys(nutriments).length > 0 ? { nutriments } : {}),
   }

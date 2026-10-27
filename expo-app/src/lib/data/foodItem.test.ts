@@ -35,6 +35,12 @@ describe('foodItemFromProduct', () => {
     expect(item.perServing).toEqual({ kcal: 380, protein: 0, carbs: 0, fat: 0 })
   })
 
+  it('reads ingredients from either the new alias or the legacy field', () => {
+    expect(foodItemFromProduct({ product_name: 'Oats', ingredients: 'Oats, salt' }).ingredients).toBe('Oats, salt')
+    expect(foodItemFromProduct({ product_name: 'Oats', ingredients_text: 'Oats, salt' }).ingredients).toBe('Oats, salt')
+    expect(foodItemFromProduct({ product_name: 'Oats' }).ingredients).toBeUndefined()
+  })
+
   it('treats impossible kcal values as kilojoules and falls back to kJ', () => {
     expect(foodItemFromProduct({ product_name: 'Snacks, banana chips', energy_kcal_100g: '2170.0' }).perServing.kcal).toBe(519)
     expect(foodItemFromProduct({ product_name: 'Oil', energy_kcal_100g: 884 }).perServing.kcal).toBe(884)

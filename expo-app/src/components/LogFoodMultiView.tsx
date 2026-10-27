@@ -4,6 +4,7 @@ import type { FavoriteFood } from '@/lib/foodFavorites'
 import { triggerSelectionHaptic } from '@/lib/haptics'
 import { MEAL_TYPE_OPTIONS, type MealType } from '@/lib/meals'
 import { isOrdsPresent, productHasUnknownDetails } from '@/lib/ordsNormalize'
+import { inspectIngredients } from '@/lib/ingredientSafety'
 import {
   formatProductLabel,
   formatProductValue,
@@ -21,8 +22,11 @@ import { memo, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   LayoutAnimation,
+  Linking,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   UIManager,
@@ -43,6 +47,7 @@ export type ContributePayload = {
   product_name?: string
   brands?: string
   categories?: string
+  ingredients?: string
   quantity?: string
   serving_size?: string
   serving_quantity?: string
@@ -155,6 +160,7 @@ export function contributeParamsFromProduct(
     product_name: productName || undefined,
     brands: readString(product.brands, product.brand),
     categories: readString(product.categories),
+    ingredients: readString(product.ingredients, product.ingredients_text, product.ingredients_text_en),
     quantity: readString(product.quantity),
     serving_size: readString(product.serving_size),
     serving_quantity: nutrimentValue(product, 'serving_quantity'),
@@ -501,6 +507,11 @@ const ResultCard = memo(
   const columns = useMemo(() => listProductColumns(product), [product])
   const previewColumns = columns.slice(0, expanded ? columns.length : 4)
   const needsLabelPhoto = useMemo(() => productHasUnknownDetails(product), [product])
+  const [ingredientsOpen, setIngredientsOpen] = useState(false)
+  const ingredientsValue = product.ingredients ?? product.ingredients_text ?? product.ingredients_text_en
+  const ingredients = typeof ingredientsValue === 'string' && isOrdsPresent(ingredientsValue)
+    ? ingredientsValue.trim()
+    : null
 
   const header = (
     <View style={styles.cardHeader}>
@@ -613,6 +624,17 @@ const ResultCard = memo(
       )}
 
       <View style={styles.cardActions}>
+        {ingredients ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`View all ingredients for ${title}`}
+            onPress={() => setIngredientsOpen(true)}
+            style={({ pressed }) => [styles.actionChip, pressed && styles.pressed]}
+          >
+            <Ionicons name="list-outline" size={15} color={colors.accent} />
+            <Text style={styles.actionChipText}>View ingredients</Text>
+          </Pressable>
+        ) : null}
         {barcode ? (
           <Pressable
             accessibilityRole="button"
@@ -649,6 +671,13 @@ const ResultCard = memo(
           Some details are missing. We’ll guide you through three quick product photos.
         </Text>
       ) : null}
+      {ingredients ? (
+        <IngredientsModal
+          visible={ingredientsOpen}
+          ingredients={ingredients}
+          onClose={() => setIngredientsOpen(false)}
+        />
+      ) : null}
     </View>
   )
 
@@ -675,6 +704,79 @@ const ResultCard = memo(
   )
 },
 )
+
+function IngredientsModal({
+  visible,
+  ingredients,
+  onClose,
+}: {
+  visible: boolean
+  ingredients: string
+  onClose: () => void
+}) {
+  const styles = useThemedStyles(makeStyles)
+  const { colors } = useTheme()
+  const { segments, flags } = useMemo(() => inspectIngredients(ingredients), [ingredients])
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.ingredientsBackdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close ingredients"
+        />
+        <View style={styles.ingredientsDialog}>
+          <View style={styles.ingredientsHeader}>
+            <Text style={styles.ingredientsTitle}>Ingredients</Text>
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close ingredients"
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={22} color={colors.text} />
+            </Pressable>
+          </View>
+          <ScrollView>
+            <Text style={styles.ingredientsBlob}>
+              {segments.map((segment, index) => (
+                <Text key={`${index}-${segment.text}`} style={segment.flagged ? styles.ingredientFlagged : undefined}>
+                  {segment.text}
+                </Text>
+              ))}
+            </Text>
+            {flags.length ? (
+              <View style={styles.ingredientWarning}>
+                <Text style={styles.ingredientWarningTitle}>Ingredient flags</Text>
+                {flags.map((flag) => (
+                  <Text key={flag.label} style={styles.ingredientWarningText}>
+                    {flag.label} · {flag.classification}
+                  </Text>
+                ))}
+                <Text style={styles.ingredientNote}>
+                  IARC Group 2B means “possibly carcinogenic to humans.” IARC groups describe hazard evidence,
+                  not the risk from this food or serving size.
+                </Text>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => void Linking.openURL('https://monographs.iarc.who.int/agents-classified-by-the-iarc/')}
+                >
+                  <Text style={styles.ingredientSource}>IARC classifications</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={styles.ingredientNote}>
+                No match in the app’s limited ingredient flag list. This is not a safety assessment.
+              </Text>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  )
+}
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
@@ -948,6 +1050,74 @@ const makeStyles = (c: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingBottom: spacing.md,
       lineHeight: 18,
+    },
+    ingredientsBackdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.52)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    ingredientsDialog: {
+      width: '100%',
+      maxWidth: 560,
+      maxHeight: '82%',
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    ingredientsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    ingredientsTitle: {
+      ...typography.headline,
+      color: c.text,
+    },
+    ingredientsBlob: {
+      ...typography.body,
+      color: c.text,
+      lineHeight: 24,
+    },
+    ingredientFlagged: {
+      color: c.danger,
+      fontWeight: '700',
+      textDecorationLine: 'underline',
+    },
+    ingredientWarning: {
+      gap: spacing.xs,
+      marginTop: spacing.lg,
+      paddingTop: spacing.md,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border,
+    },
+    ingredientWarningTitle: {
+      ...typography.label,
+      color: c.danger,
+    },
+    ingredientWarningText: {
+      ...typography.labelSmall,
+      color: c.text,
+    },
+    ingredientNote: {
+      ...typography.labelSmall,
+      color: c.textMuted,
+      lineHeight: 18,
+      marginTop: spacing.sm,
+    },
+    ingredientSource: {
+      ...typography.labelSmall,
+      color: c.accent,
+      textDecorationLine: 'underline',
+      marginTop: spacing.xs,
     },
     emptyCard: {
       minHeight: 140,

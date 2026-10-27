@@ -147,6 +147,7 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(food["serving_size"], "1 1/2 cup (39 g)")
         self.assertEqual(food["serving_quantity"], 39.0)
         self.assertEqual(food["ingredients_text"], "Whole grain oats, corn starch, salt.")
+        self.assertEqual(food["ingredients"], food["ingredients_text"])
         self.assertEqual(food["quantity"], "18 oz/510 g")
         self.assertEqual(food["allergens"], "en:gluten")
         self.assertEqual(food["countries"], "United States,Canada")
@@ -187,6 +188,7 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(empty["product_name"], "Unnamed product (barcode 0000000000017)")
         maple = self.food("0628915000017")
         self.assertEqual(maple["brands"], "Maple Farm")
+        self.assertEqual(maple["ingredients"], maple["ingredients_text"])
         self.assertEqual(maple["trust_and_completion_score"] // 10000, 0)
 
     def test_build_info(self):

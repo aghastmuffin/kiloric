@@ -50,6 +50,7 @@ def merge_group(merge_key: str, records: list[dict]) -> tuple[dict, list[str]]:
     row: dict = {name: None for name in DATA_FIELDS}
     for field in IDENTITY_FIELDS:
         row[field] = _first(identity, field)
+    row["ingredients"] = row.get("ingredients_text")
     for field in BRAND_FIELDS:
         row[field] = _first(brand, field) or _first(brand, "_brands_fallback")
 
