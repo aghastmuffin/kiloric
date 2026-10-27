@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import time
+import os
+import sqlite3
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -62,6 +64,12 @@ def build(options: BuildOptions) -> dict:
     started = time.time()
     files = fetch_inputs(options)
     staging = Staging(options.out.with_name(options.out.name + ".staging"))
+    # Build beside the destination and only publish a database after SQLite
+    # confirms it is structurally sound. Incomplete source fields are NULL;
+    # product_name is populated with a placeholder by the merge layer.
+    build_path = options.out.with_name(options.out.name + ".building")
+    if build_path.exists():
+        build_path.unlink()
     per_source: Counter[str] = Counter()
 
     def stage(label: str, records) -> None:
@@ -82,7 +90,7 @@ def build(options: BuildOptions) -> dict:
         stage("off", iter_off(files["off"], set(options.countries), options.limit))
 
     log(f"[build] condensing {staging.count:,} records")
-    writer = SqliteWriter(options.out)
+    writer = SqliteWriter(build_path)
     merged_groups = 0
     multi_source_groups = 0
     for merge_key, records in staging.groups():
@@ -110,6 +118,20 @@ def build(options: BuildOptions) -> dict:
         **{k: str(v) for k, v in stats.items()},
     }
     writer.finish(info, fts=options.fts)
+    with sqlite3.connect(build_path) as check_db:
+        integrity = check_db.execute("PRAGMA integrity_check").fetchone()[0]
+        missing_products = check_db.execute("SELECT COUNT(*) FROM foods WHERE product_name IS NULL OR trim(product_name) = ''").fetchone()[0]
+        dangling_codes = check_db.execute(
+            "SELECT COUNT(*) FROM food_codes c LEFT JOIN foods f ON f.code = c.code WHERE f.code IS NULL"
+        ).fetchone()[0]
+    if integrity != "ok" or missing_products or dangling_codes:
+        build_path.unlink(missing_ok=True)
+        raise RuntimeError(
+            f"Invalid output database: integrity={integrity}, "
+            f"empty_product_names={missing_products}, dangling_codes={dangling_codes}"
+        )
+    options.out.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(build_path, options.out)
     log(f"[build] wrote {writer.count:,} foods to {options.out}")
 
     if options.sql_out:

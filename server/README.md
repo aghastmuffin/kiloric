@@ -49,3 +49,19 @@ sudo systemctl enable --now kiloric-server
 | PATCH | `/v1/me` | Update profile |
 | DELETE | `/v1/me` | Delete account + all data |
 | CRUD | `/v1/meals`, `/v1/water`, `/v1/food-entries`, `/v1/tasks`, `/v1/workouts`, `/v1/workout-sets`, `/v1/weight-logs`, `/v1/saved-meals`, `/v1/meal-plan-entries`, `/v1/prep-sessions`, `/v1/grocery-items` | Full CRUD |
+
+## Food contribution review
+
+Contributors submit photos through `POST /v1/files` and manual or photo-backed
+entries through `POST /v1/food-contributions`. Review submissions are not
+available through a contributor list endpoint. The private `/review` portal
+uses a bcrypt password hash and the case-sensitive username `Admin`; it shows
+each user's macro suggestions separately from the admin-reviewed values and
+allows an admin to save reviewed values. Set a strong `JWT_SECRET` before
+deploying because it signs the short-lived review session cookie.
+
+Food catalog lookups in the app use the supplied Oracle ORDS `code` and
+`friendly-food` endpoints. ORDS write URLs for food logs were not included in
+the integration details; the current food log writer therefore remains on the
+existing persistence transport until those ORDS resource paths and payload
+contracts are available.

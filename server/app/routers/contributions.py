@@ -1,7 +1,6 @@
 """Authenticated contribution metadata and private, bounded photo uploads."""
 import json
-from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File, Query
-from fastapi.responses import Response
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -15,13 +14,7 @@ MAX_ACCOUNT = 200_000_000
 
 def upload_metadata(row):
     return {"$id": row.id, "name": row.name, "mimeType": row.content_type,
-            "sizeOriginal": len(row.content), "downloadPath": f"/v1/files/{row.id}", "$createdAt": row.created_at.isoformat()}
-
-
-def contribution_document(row):
-    return {**json.loads(row.payload_json), "$id": row.id, "owner": row.owner_id,
-            "status": "pending", "$createdAt": row.created_at.isoformat(),
-            "$updatedAt": row.created_at.isoformat()}
+            "sizeOriginal": len(row.content), "$createdAt": row.created_at.isoformat()}
 
 
 @router.post("/files", status_code=201)
@@ -45,14 +38,6 @@ async def upload_photo(file: UploadFile = File(...), db: Session = Depends(get_d
     return upload_metadata(row)
 
 
-@router.get("/files/{file_id}")
-def download_photo(file_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    row = db.get(ContributionUpload, file_id)
-    if not row or row.owner_id != user.id:
-        raise HTTPException(404, "Not found.")
-    return Response(row.content, media_type=row.content_type, headers={"Cache-Control": "private, no-store", "Content-Disposition": "attachment", "X-Content-Type-Options": "nosniff"})
-
-
 @router.delete("/files/{file_id}", status_code=204)
 def delete_photo(file_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     row = db.get(ContributionUpload, file_id)
@@ -70,38 +55,16 @@ def create_contribution(body: dict = Body(...), db: Session = Depends(get_db), u
     if not isinstance(extra, list) or len(extra) > 20:
         raise HTTPException(422, "Invalid photo references.")
     ids = [value for value in ids + extra if value]
-    if not ids or any(not isinstance(value, str) for value in ids):
-        raise HTTPException(422, "Add at least one photo before sending.")
+    if any(not isinstance(value, str) for value in ids):
+        raise HTTPException(422, "Invalid photo references.")
     for file_id in set(ids):
         file = db.get(ContributionUpload, file_id)
         if not file or file.owner_id != user.id:
             raise HTTPException(422, "Photo not found in your account.")
-    payload = {key: value for key, value in body.items() if not key.startswith("$") and key not in ("owner", "status")}
+    payload = {
+        key: value for key, value in body.items()
+        if not key.startswith("$") and key not in ("owner", "status", "admin_review")
+    }
     row = FoodContribution(owner_id=user.id, payload_json=json.dumps(payload))
     db.add(row); db.commit(); db.refresh(row)
-    return contribution_document(row)
-
-
-@router.get("/food-contributions")
-def list_contributions(queries: str = Query("[]", max_length=20000), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    limit, offset = 100, 0
-    try:
-        clauses = json.loads(queries)
-        if not isinstance(clauses, list) or len(clauses) > 100:
-            raise ValueError()
-        for clause in clauses:
-            clause = json.loads(clause) if isinstance(clause, str) else clause
-            if clause["method"] == "limit": limit = max(1, min(5000, int(clause["values"][0])))
-            elif clause["method"] == "offset": offset = max(0, int(clause["values"][0]))
-    except (ValueError, KeyError, TypeError, IndexError):
-        raise HTTPException(422, "Invalid query.")
-    q = db.query(FoodContribution).filter(FoodContribution.owner_id == user.id)
-    return {"total": q.count(), "documents": [contribution_document(row) for row in q.order_by(FoodContribution.created_at.desc(), FoodContribution.id).offset(offset).limit(limit).all()]}
-
-
-@router.delete("/food-contributions/{record_id}", status_code=204)
-def delete_contribution(record_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    row = db.get(FoodContribution, record_id)
-    if not row or row.owner_id != user.id:
-        raise HTTPException(404, "Not found.")
-    db.delete(row); db.commit()
+    return {"$id": row.id, "status": "received"}

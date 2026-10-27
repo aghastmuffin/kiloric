@@ -15,7 +15,7 @@ export const API_BACKEND_LABELS: Record<ApiBackendChoice, string> = {
 
 const LEGACY_BACKEND_URL = 'https://kiloric.kiloric.co'
 const ORDS_BACKEND_URL =
-  'https://gba34651847beaf-caloriecount.adb.ca-montreal-1.oraclecloudapps.com/ords/admin/v1'
+  'https://gba34651847beaf-kiloric.adb.ca-montreal-1.oraclecloudapps.com/ords/admin/v1'
 
 let cachedBackend: ApiBackendChoice | null = null
 
