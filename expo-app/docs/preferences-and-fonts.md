@@ -46,24 +46,25 @@ const styles = useThemedStyles((c) => StyleSheet.create({
 ## Font preference
 
 **Storage:** `@kiloric/app_font_choice`  
-**Values:** `'default'` (system) | `'custom'` (Redaction)  
+**Values:** `'default'` (Editorial mix) | `'custom'` (Serif) | `'mono'` (Mono)  
 **Module:** `src/lib/fontPreferences.ts`  
 **Context:** `FontPreferencesProvider` (root `_layout.tsx`)
 
-### Custom font asset
+### Typography Stack
 
-- File: `assets/fonts/redaction.otf`
-- Family name: `Redaction` (`FONT_FAMILY` in `fonts.ts`)
-- Loaded with `expo-font` / `useFonts` before app renders
+- **UI & Body:** Inter Tight (`InterTight`, `InterTightLight`, `InterTightMedium`, `InterTightSemiBold`, `InterTightBold`, `InterTightExtraBold`)
+- **Display & Headings:** Instrument Serif (`InstrumentSerif`)
+- **Monospace & Overlines:** JetBrains Mono (`JetBrainsMono`, `JetBrainsMonoMedium`)
+- Loaded via `@expo-google-fonts/*` in `src/lib/fonts.ts` and initialized with `useFonts` in root `_layout.tsx`.
 
-### How custom font applies globally
+### How fonts apply globally
 
-1. **`FontPreferencesProvider`** sets `activeFontFamily` when choice is `custom` and font loaded.
-2. **`applyAppFont`** updates module state in `appFont.ts`.
-3. **Babel alias** (`babel.config.js`) redirects `react-native` → `src/lib/react-native-with-fonts.tsx`.
-4. That shim wraps **`Text`** and **`TextInput`** to merge `fontFamily` into styles.
+1. **`FontPreferencesProvider`** sets `activeFontFamily` based on typography preference (`default`, `custom`, or `mono`).
+2. **`setActiveFontFamily`** updates module state in `appFont.ts`.
+3. **Metro resolver** (`metro.config.js`) maps `react-native` → `src/lib/react-native-with-fonts.tsx`.
+4. That shim wraps **`Text`** and **`TextInput`** to resolve the correct standardized font variant (e.g. mapping `fontWeight: '600'` to `InterTightSemiBold` and `'700'` to `InterTightBold`).
 5. Root layout also passes `activeFontFamily` to Expo Router `ThemeProvider` fonts and stack header styles.
-6. Provider uses `<Fragment key={fontRenderKey}>` to remount navigation when font changes.
+6. Provider uses `<Fragment key={fontRenderKey}>` to remount navigation when font choice changes.
 
 ### Picker UI
 

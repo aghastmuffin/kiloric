@@ -22,6 +22,20 @@ export const textFont = { fontFamily: FONT_FAMILY } as const
 export const headlineFont = { fontFamily: HEADLINE_FONT_FAMILY } as const
 export const monoFont = { fontFamily: MONO_FONT_FAMILY } as const
 
+export const fonts = {
+  light: 'InterTightLight',
+  regular: 'InterTight',
+  medium: 'InterTightMedium',
+  semibold: 'InterTightSemiBold',
+  bold: 'InterTightBold',
+  heavy: 'InterTightExtraBold',
+} as const
+
+export const monoFonts = {
+  regular: 'JetBrainsMono',
+  medium: 'JetBrainsMonoMedium',
+} as const
+
 export const fontAssets = {
   InterTight: InterTight_400Regular,
   InterTightLight: InterTight_300Light,

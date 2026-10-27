@@ -1,6 +1,7 @@
 import {
-    FONT_FAMILY,
-    HEADLINE_FONT_FAMILY,
+  FONT_FAMILY,
+  HEADLINE_FONT_FAMILY,
+  MONO_FONT_FAMILY,
 } from '@/lib/fonts';
 
 export const typography = {
@@ -19,7 +20,7 @@ export const typography = {
     letterSpacing: -0.55,
   },
   headline: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: 'InterTightSemiBold',
     fontSize: 22,
     lineHeight: 27,
     fontWeight: '600' as const,
@@ -41,21 +42,21 @@ export const typography = {
     lineHeight: 20,
   },
   label: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: 'InterTightSemiBold',
     fontSize: 13,
     lineHeight: 17,
     fontWeight: '600' as const,
     letterSpacing: 0.1,
   },
   labelSmall: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: 'InterTightMedium',
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '500' as const,
     letterSpacing: 0.15,
   },
   labelTiny: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: 'InterTightMedium',
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '500' as const,
@@ -69,11 +70,18 @@ export const typography = {
     letterSpacing: -0.35,
   },
   overline: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: 'InterTightSemiBold',
     fontSize: 11,
     lineHeight: 15,
     fontWeight: '600' as const,
     letterSpacing: 1.15,
     textTransform: 'uppercase' as const,
+  },
+  utilityMono: {
+    fontFamily: MONO_FONT_FAMILY,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '400' as const,
+    letterSpacing: 1.2,
   },
 } as const
