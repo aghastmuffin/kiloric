@@ -24,6 +24,7 @@ python3 -m fooddb build --sql output/foods.sql  # also write a .sql script (defa
 python3 -m fooddb build --sql output/foods_oracle.sql --dialect oracle   # or postgres
 python3 -m fooddb dump --sql output/foods_pg.sql --dialect postgres      # convert an existing build
 python3 -m fooddb download                      # only fetch the source files
+python3 -m fooddb upload-oracle                 # merge the validated file into the existing Oracle catalog
 ```
 
 Useful flags:
@@ -57,6 +58,33 @@ cd food-data && python3 -m unittest discover -s tests -t .
 - `foods_fts` — SQLite FTS5 index over `product_name`, `brands`, `categories` (SQLite file only)
 
 The `.sql` script contains `foods`, `food_codes` and `build_info` as `CREATE TABLE` + `INSERT` statements.
+
+### Uploading to the existing Oracle catalog
+
+Build and validate the single SQLite artifact first, then install the optional Oracle driver:
+
+```bash
+pip install '.[oracle]'
+```
+
+Set `ORACLE_ADMIN_PASSWORD` and `ORACLE_DSN` in the process environment. For Autonomous Database, also set
+`OCI_AUTONOMOUS_DATABASE_ID` and authenticate the OCI CLI; the loader downloads a temporary mTLS wallet. An existing
+wallet can be used instead with `ORACLE_WALLET_DIR` and `ORACLE_WALLET_PASSWORD`.
+
+```bash
+python3 -m fooddb upload-oracle --db output/kiloric_foods.sqlite
+```
+
+The loader checks the SQLite integrity and row keys before staging anything. It preserves the existing
+`STANDARDIZED_FOOD_DB` columns, appends `ingredients_text`, `ingredients`, `countries`, `data_sources`, and `source_ids`,
+and merges by food code without replacing populated Oracle fields with pipeline `NULL`s. It stores barcode/source-code
+aliases in `FOOD_CODE_ALIASES` and updates the existing ORDS `GET /v1/code` handler to resolve those aliases while
+keeping exact-code lookups intact. The existing fuzzy handler selects `STANDARDIZED_FOOD_DB.*`, so the appended
+ingredient fields are included automatically. Pipeline staging tables are dropped after validation and merge.
+
+If an upload is interrupted after the food merge, the loader keeps its staging tables and prints their `FPSTG_...`
+name. Resume the alias and ORDS phase with `python3 -m fooddb upload-oracle --resume-stage FPSTG_...` using the same
+Oracle environment variables.
 
 ### `foods` columns
 

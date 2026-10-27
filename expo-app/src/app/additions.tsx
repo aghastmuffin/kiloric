@@ -391,12 +391,11 @@ export default function AdditionsScreen() {
                   <Ionicons name="camera-outline" size={22} color={colors.accent} />
                 </View>
                 <View style={styles.photoNudgeCopy}>
-                  <Text style={styles.photoNudgeTitle}>We need your help!</Text>
+                  <Text style={styles.photoNudgeTitle}>Missing nutrition details</Text>
                   <Text style={styles.photoNudgeBody}>
-                    This product is missing a few useful details. Share a clear label photo and
-                    we&apos;ll use it to complete the nutrition information.
+                    This item is missing label data. Upload a clear photo of the nutrition facts to help complete the catalog entry.
                   </Text>
-                  <Text style={styles.photoNudgeCta}>Help complete this product →</Text>
+                  <Text style={styles.photoNudgeCta}>Add a photo →</Text>
                 </View>
               </Pressable>
             ) : (

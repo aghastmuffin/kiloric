@@ -587,8 +587,8 @@ export default function ConfigScreen() {
           <Text accessibilityRole="header" style={styles.heading}>App & Profile Settings</Text>
           <Text style={styles.lede}>
             {isRequired
-              ? 'Complete your profile setup to personalize your targets and use the app.'
-              : 'Customize your identity, physical stats, nutrition targets, and app preferences.'}
+              ? 'Complete your profile setup to calculate your targets and start tracking.'
+              : 'Update your profile, physical stats, nutrition targets, and app preferences.'}
           </Text>
         </MotionView>
 
@@ -653,7 +653,7 @@ export default function ConfigScreen() {
                   accessibilityLabel="Username"
                   style={styles.input}
                 />
-                <Text style={styles.fieldHint}>Shown only to you — your profile is private.</Text>
+                <Text style={styles.fieldHint}>Shown only to you. Your profile is private.</Text>
               </View>
 
               <View style={styles.divider} />
@@ -761,7 +761,7 @@ export default function ConfigScreen() {
                 <TextInput
                   value={bio}
                   onChangeText={setBio}
-                  placeholder="Tell us a little bit about your wellness journey…"
+                  placeholder="A short note about your goals or background…"
                   placeholderTextColor={colors.textFaint}
                   multiline
                   maxLength={512}
@@ -1165,7 +1165,7 @@ export default function ConfigScreen() {
             </View>
 
             <Text style={styles.fieldHint}>
-              Customize, rename, or toggle visibility for your daily meal slots (e.g. Second breakfast, Evening snack).
+              Rename, reorder, or toggle visibility for daily meal slots (such as Second breakfast or Evening snack).
             </Text>
 
             <View style={styles.card}>

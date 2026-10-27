@@ -146,7 +146,7 @@ export default function OnboardingSuccess() {
             </View>
           </View>
           <Animated.View style={[styles.celebrationRule, ruleStyle]} />
-          <Text style={styles.figureCaption}>A daily framework, shaped around you.</Text>
+          <Text style={styles.figureCaption}>Daily targets calculated for your baseline.</Text>
         </Animated.View>
 
         <Animated.View style={[styles.copy, wide && styles.copyWide, copyStyle]}>
@@ -156,15 +156,14 @@ export default function OnboardingSuccess() {
           </View>
           <Text accessibilityRole="header" style={styles.title}>Your plan is ready.</Text>
           <Text style={styles.subtitle}>
-            Your calorie and macro targets are set. Start with today’s meals and let
-            the pattern build from there.
+            Your calorie and macro targets are saved. Log your first meal today to start tracking.
           </Text>
           <CongressionalNote />
 
           <View style={styles.planLedger}>
             <View style={styles.ledgerRow}>
               <Text style={styles.ledgerLabel}>DAILY ENERGY</Text>
-              <Text style={styles.ledgerValue}>PERSONALIZED</Text>
+              <Text style={styles.ledgerValue}>CALCULATED</Text>
             </View>
             <View style={styles.ledgerRow}>
               <Text style={styles.ledgerLabel}>MACRO BALANCE</Text>

@@ -31,7 +31,7 @@ import {
   type PlanEntry,
 } from '@/lib/data/mealPlan'
 import { loadPrepOverview, loadProfileSummary } from '@/lib/data/overview'
-import { listSavedMeals } from '@/lib/data/savedMeals'
+import { listSavedMeals, type SavedMeal } from '@/lib/data/savedMeals'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import { fonts, usePalette } from '@/lib/theme/palette'
 import { useRouter } from 'expo-router'
@@ -57,12 +57,13 @@ export default function PlanScreen() {
   const day = weekKeys.includes(selectedDay) ? selectedDay : weekKeys[0]
 
   const state = useFocusLoader(async () => {
-    const [summary, entries, prep] = await Promise.all([
+    const [summary, entries, prep, savedMeals] = await Promise.all([
       loadProfileSummary(userId!, user?.name),
       listPlanEntries(userId!, weekKeys[0], weekKeys[6]),
       loadPrepOverview(userId!, weekStart),
+      listSavedMeals(userId!),
     ])
-    return { summary, entries, prep }
+    return { summary, entries, prep, savedMeals }
   }, userId ? `${userId}:${weekKeys[0]}` : null)
 
   const data = state.data
@@ -102,7 +103,7 @@ export default function PlanScreen() {
         setNotice(
           hasOptions
             ? 'Every breakfast, lunch and dinner slot left this week is already planned.'
-            : 'Log, save or plan a breakfast, lunch or dinner first — auto-fill builds your week from meals you already eat.',
+            : 'Log, save, or plan a breakfast, lunch, or dinner first. Auto-fill builds your week from meals you already eat.',
         )
         return
       }
@@ -215,6 +216,53 @@ export default function PlanScreen() {
     </Card>
   )
 
+  const savedMealsCard = data ? (
+    <Card style={styles.savedMealsCard} testID="plan-saved-meals">
+      <View style={styles.dayHeader}>
+        <View style={styles.flex}>
+          <Txt variant="subheading">Saved meals</Txt>
+          <Txt variant="caption" tone="muted">Add a meal preset to {day === todayKey ? 'today' : weekdayName(dayDate)}’s plan.</Txt>
+        </View>
+        <Badge label={`${data.savedMeals.length}`} tone="mint" />
+      </View>
+      {data.savedMeals.length === 0 ? (
+        <View style={styles.savedEmpty}>
+          <Txt variant="caption" tone="muted">Saved meals appear here. Log a meal in Food log and save it to reuse it in your plan.</Txt>
+          <UButton label="Open food log" tone="chip" size="sm" onPress={() => router.push('/(tabs)/logfood')} />
+        </View>
+      ) : data.savedMeals.slice(0, 5).map((meal: SavedMeal) => (
+        <Fragment key={meal.$id}>
+          <Divider />
+          <View style={styles.savedMealRow}>
+            <View style={styles.flex}>
+              <Txt variant="caption" tone="muted">{meal.meal_type}</Txt>
+              <Txt variant="bodyStrong" numberOfLines={1}>{meal.name}</Txt>
+              <Txt variant="caption" tone="muted">{formatKcal(meal.kcal)} kcal · {meal.item_count} item{meal.item_count === 1 ? '' : 's'}</Txt>
+            </View>
+            <UButton
+              label={busy === `saved:${meal.$id}` ? 'Adding…' : 'Add'}
+              tone="mint"
+              size="sm"
+              disabled={busy !== null}
+              onPress={() => void run(`saved:${meal.$id}`, () => addPlanEntry(userId!, {
+                day,
+                meal_type: meal.meal_type,
+                name: meal.name,
+                kcal: meal.kcal,
+                protein: meal.protein,
+                carbs: meal.carbs,
+                fat: meal.fat,
+                prepped: false,
+              }))}
+              testID={`plan-add-saved-${meal.$id}`}
+            />
+          </View>
+        </Fragment>
+      ))}
+      {data.savedMeals.length > 5 ? <Txt variant="caption" tone="muted">Showing 5 of {data.savedMeals.length} saved meals.</Txt> : null}
+    </Card>
+  ) : null
+
   const prep = data ? (
     <PrepCard
       prep={data.prep}
@@ -274,11 +322,15 @@ export default function PlanScreen() {
       ) : wide ? (
         <View style={styles.wideRow}>
           <View style={styles.flex}>{dayCard}</View>
-          <View style={styles.flex}>{prep}</View>
+          <View style={styles.flex}>
+            {savedMealsCard}
+            {prep}
+          </View>
         </View>
       ) : (
         <>
           {dayCard}
+          {savedMealsCard}
           {prep}
         </>
       )}
@@ -295,6 +347,9 @@ const styles = StyleSheet.create({
   dayNumber: { fontFamily: fonts.bold, fontSize: 17 },
   dot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
   dayCard: { gap: 4 },
+  savedMealsCard: { gap: 8 },
+  savedEmpty: { gap: 12, alignItems: 'flex-start' },
+  savedMealRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   entryRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   addButton: { marginTop: 8, alignSelf: 'flex-start' },

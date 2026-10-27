@@ -25,6 +25,7 @@ vi.mock('./recordStore', () => ({
 }))
 
 const {
+  addCheckedGroceryToPrepSession,
   addGroceryItem,
   deleteGroceryItem,
   listGroceryItems,
@@ -85,5 +86,80 @@ describe('grocery items cloud sync and tagging', () => {
     const result = await updateGroceryItem('u1', 'g1', { meal: 'Lunch', day: 'Today' })
     expect(mockUpdate).toHaveBeenCalledWith('u1', 'g1', { meal: 'Lunch', day: 'Today' })
     expect(result.meal).toBe('Lunch')
+  })
+
+  it('automatically adds checked grocery item to existing prep session', async () => {
+    // getPrepSession calls list on prepSessionsStore
+    mockList.mockResolvedValueOnce([
+      {
+        $id: 'prep-1',
+        week_start: '2026-10-26',
+        scheduled_at: '2026-10-27T16:00:00.000Z',
+        duration_min: 90,
+        title: 'Weekly prep',
+        items_json: JSON.stringify([{ name: 'Rice', portions: 4 }]),
+      },
+    ])
+    // savePrepSession calls update
+    mockUpdate.mockResolvedValueOnce({
+      $id: 'prep-1',
+      week_start: '2026-10-26',
+      scheduled_at: '2026-10-27T16:00:00.000Z',
+      duration_min: 90,
+      title: 'Weekly prep',
+      items_json: JSON.stringify([
+        { name: 'Rice', portions: 4 },
+        { name: 'Salmon', portions: 2 },
+      ]),
+    })
+
+    const session = await addCheckedGroceryToPrepSession('u1', {
+      name: 'Salmon',
+      quantity: '2',
+      week_start: '2026-10-26',
+    })
+
+    expect(session).not.toBeNull()
+    expect(mockUpdate).toHaveBeenCalledWith(
+      'u1',
+      'prep-1',
+      expect.objectContaining({
+        title: 'Weekly prep',
+        items_json: JSON.stringify([
+          { name: 'Rice', portions: 4 },
+          { name: 'Salmon', portions: 2 },
+        ]),
+      }),
+    )
+  })
+
+  it('creates prep session if none exists when grocery item is checked', async () => {
+    // getPrepSession returns empty
+    mockList.mockResolvedValueOnce([])
+    // savePrepSession calls create
+    mockCreate.mockResolvedValueOnce({
+      $id: 'prep-new',
+      week_start: '2026-10-26',
+      scheduled_at: '2026-10-27T16:00:00.000Z',
+      duration_min: 60,
+      title: 'Meal prep',
+      items_json: JSON.stringify([{ name: 'Chicken breast', portions: 3 }]),
+    })
+
+    const session = await addCheckedGroceryToPrepSession('u1', {
+      name: 'Chicken breast',
+      quantity: '3',
+      week_start: '2026-10-26',
+    })
+
+    expect(session).not.toBeNull()
+    expect(mockCreate).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        week_start: '2026-10-26',
+        title: 'Meal prep',
+        items_json: JSON.stringify([{ name: 'Chicken breast', portions: 3 }]),
+      }),
+    )
   })
 })

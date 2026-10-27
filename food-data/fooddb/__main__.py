@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .build import ALL_SOURCES, USDA_DATASETS, BuildOptions, build, fetch_inputs
 from .export import DIALECTS, write_sql_dump
+from .oracle_upload import resume_oracle_aliases, upload_oracle
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = ROOT / "output" / "kiloric_foods.sqlite"
@@ -87,6 +88,11 @@ def main(argv: list[str] | None = None) -> int:
     p_dump.add_argument("--sql", type=Path, required=True, help="output .sql path")
     p_dump.add_argument("--dialect", choices=DIALECTS, default="sqlite")
 
+    p_upload = sub.add_parser("upload-oracle", help="merge a validated SQLite build into the existing Oracle food catalog")
+    p_upload.add_argument("--db", type=Path, default=DEFAULT_OUT, help="SQLite build (default: %(default)s)")
+    p_upload.add_argument("--batch-size", type=int, default=5000, help="rows per Oracle batch (default: %(default)s)")
+    p_upload.add_argument("--resume-stage", help="resume alias loading from a retained FPSTG_ stage after a partial upload")
+
     args = parser.parse_args(argv)
     if args.command == "build":
         stats = build(_options(args))
@@ -97,6 +103,15 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "dump":
         count = write_sql_dump(args.db, args.sql, args.dialect)
         print(f"wrote {count:,} foods to {args.sql}")
+    elif args.command == "upload-oracle":
+        if args.batch_size < 1:
+            raise SystemExit("--batch-size must be positive")
+        stats = (
+            resume_oracle_aliases(args.resume_stage, args.batch_size)
+            if args.resume_stage
+            else upload_oracle(args.db, args.batch_size)
+        )
+        print(json.dumps(stats, indent=2))
     return 0
 
 

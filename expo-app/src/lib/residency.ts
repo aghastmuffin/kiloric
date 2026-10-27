@@ -126,13 +126,13 @@ const BARRED_CODES = new Set<string>([...EU_COUNTRY_CODES, ...ADDITIONAL_BARRED_
 const ASIAN_CODES = new Set<string>(ASIAN_COUNTRY_CODES)
 
 export const RESIDENCY_BAR_MESSAGE =
-  'The current implementation of Calcount version 101926 is not complaint with GDPR laws, pursuant to your rights under Regulation (EU) 2016/679. Citizens in Russia or Vietnam are also forbidden to patron this product pursuant to noncompliance with Federal Law No. 242-FZ. Law No. 116/2025/QH15 on Cybersecurity, respectively.'
+  'The current version of kiloric is not compliant with GDPR requirements, pursuant to your rights under Regulation (EU) 2016/679. Access is also restricted in Russia and Vietnam pursuant to Federal Law No. 242-FZ and Law No. 116/2025/QH15 on Cybersecurity.'
 
 export const H_PYLORI_WARNING =
-  'Have you been screened for H. Pylori, our records indicate that you may be at a higher risk for this class 1 carcinogen.'
+  'Have you been screened for H. Pylori? Your background indicates you may have a higher risk for this bacterial infection.'
 
 export const CONGRESSIONAL_CHALLENGE_MESSAGE =
-  "The calcount project is a candidate for the Congressional App Challenge: California's 12th Congressional District, we do not take funds but if you enjoy your project please email support to mailto:admin@taeson.co with messages of how this project impacted you."
+  "kiloric is an entry for the Congressional App Challenge in California's 12th District. We do not accept donations, but if you'd like to share how the app helped you, email mailto:admin@taeson.co."
 
 export const CONGRESSIONAL_MAILTO = 'mailto:admin@taeson.co'
 

@@ -773,13 +773,12 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              A quick setup so kiloric can personalize calories and macros for you.
+              A quick setup so kiloric can calculate your baseline calories and macros.
             </Text>
             <View style={onboardingStyles.infoCard}>
-              <Text style={onboardingStyles.infoCardTitle}>We&apos;ll handle the math</Text>
+              <Text style={onboardingStyles.infoCardTitle}>Automatic calculations</Text>
               <Text style={onboardingStyles.infoCardText}>
-                TDEE, macro targets, and weekly pace are calculated automatically from
-                your body stats and goals.
+                TDEE, macro splits, and weekly pace are calculated from your stats using standard formulas.
               </Text>
             </View>
             <Text style={onboardingStyles.label}>Username</Text>
@@ -832,7 +831,7 @@ export function OnboardingWizard() {
             </Text>
             {prefersImperialDisplay(form.country) ? (
               <Text style={onboardingStyles.hintInline}>
-                We&apos;ll show feet and pounds by default — everything is saved in standard metric.
+                We show feet and pounds by default. Everything is stored in standard metric units.
               </Text>
             ) : null}
             <Text style={onboardingStyles.sectionLabel}>Demographics (optional)</Text>
@@ -875,7 +874,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              These details power your calorie and macro recommendations.
+              Used to calculate your BMR and energy targets.
             </Text>
             <UnitToggle
               value={form.displayUnits}
@@ -925,8 +924,7 @@ export function OnboardingWizard() {
               style={onboardingStyles.input}
             />
             <Text style={onboardingStyles.hintInline}>
-              Only if you know it from a DEXA scan, smart scale or calipers. We&apos;ll use your lean
-              mass (Katch–McArdle) instead of an estimate.
+              Optional. If measured by DEXA, calipers, or smart scale, kiloric uses Katch–McArdle lean mass instead of Mifflin–St Jeor.
             </Text>
           </>
         )
@@ -935,7 +933,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              Tell us how active you are and what you want to achieve.
+              Select your activity level and target pace.
             </Text>
             <Text style={onboardingStyles.sectionLabel}>Activity level</Text>
             {ACTIVITY_OPTIONS.map((option) => (
@@ -987,7 +985,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              Pick an eating style — we&apos;ll tune your macro split to match.
+              Pick an eating style to set your baseline protein, carb, and fat split.
             </Text>
             {DIET_OPTIONS.map((option) => (
               <SelectionCard
@@ -1007,7 +1005,7 @@ export function OnboardingWizard() {
         return (
           <>
             <Text style={onboardingStyles.stepSubtitle}>
-              Here&apos;s your personalized plan. Tweak anything below before you finish.
+              Review your calculated plan. You can adjust any target below before saving.
             </Text>
             <UnitToggle
               value={form.displayUnits}

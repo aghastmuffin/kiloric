@@ -89,8 +89,8 @@ function MaintenanceCard({ data, onApply, applying }: { data: ProgressData; onAp
         </View>
         <Txt variant="caption" tone="muted">
           {needs.length > 0
-            ? `From your profile for now. ${needs.join(' and ')} over two weeks will personalise it from your own logs.`
-            : 'From your profile for now. Keep weighing in across two weeks to personalise it.'}
+            ? `Calculated from your profile. Add ${needs.join(' and ')} over two weeks to calibrate from your logs.`
+            : 'Calculated from your profile. Keep weighing in across two weeks to calibrate from your logs.'}
         </Txt>
       </Card>
     )

@@ -242,8 +242,16 @@ export default function GroceryScreen() {
                 </Txt>
               ) : null}
             </View>
-            {(item.day || item.meal) ? (
+            {(item.day || item.meal || item.checked) ? (
               <View style={styles.tagRow}>
+                {item.checked ? (
+                  <View style={[styles.tagBadge, { backgroundColor: c.peachCard }]}>
+                    <Ionicons name="restaurant-outline" size={11} color={c.peachInk} />
+                    <Txt variant="caption" color={c.peachInk} style={styles.tagText}>
+                      Suggested for meal prep
+                    </Txt>
+                  </View>
+                ) : null}
                 {item.day ? (
                   <View style={[styles.tagBadge, { backgroundColor: c.chip }]}>
                     <Ionicons name="calendar-outline" size={11} color={c.inkMuted} />
@@ -416,6 +424,18 @@ export default function GroceryScreen() {
               </View>
             )
           })}
+        </View>
+
+        <View style={styles.nextDayActionRow}>
+          <Txt variant="caption" color={c.peachInk} style={styles.flex}>
+            Checked items are automatically added to your meal prep suggestions.
+          </Txt>
+          <UButton
+            label="View meal prep"
+            tone="card"
+            size="sm"
+            onPress={() => router.push({ pathname: '/prep-edit', params: { week: weekStart } })}
+          />
         </View>
       </Card>
 
@@ -722,6 +742,13 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 11 },
   nextDayCard: { gap: 12 },
   nextDayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  nextDayActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingTop: 4,
+  },
   mealList: { gap: 8 },
   mealItemBox: { borderRadius: 12, overflow: 'hidden' },
   mealItemHeader: {

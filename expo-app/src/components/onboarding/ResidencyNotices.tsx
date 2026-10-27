@@ -25,11 +25,10 @@ export function HPyloriWarning() {
   const styles = useThemedStyles(makeStyles)
   return (
     <View accessibilityRole="alert" testID="h-pylori-warning" style={styles.alert}>
-      <Text style={styles.alertTitle}>Health warning</Text>
+      <Text style={styles.alertTitle}>Health note</Text>
       <Text style={styles.alertText}>{H_PYLORI_WARNING}</Text>
       <Text style={styles.alertText}>
-        This is not a medical diagnosis. Please consult your doctor for more information. This is provided because a disproportionate number of people in Asia  have H. Pylori, which is a class 1 carcinogen. This likely causes painful stomach ulcers and is responsable for 90% of stomach cancers in the world. This is not a medical diagnosis, and you should consult your doctor for more information. Especially Koreans.
-        This warning is part of the H. Pylori educational campaign.
+        This is an educational notice, not medical advice. H. pylori bacterial infections are common across East Asian populations and are a leading cause of peptic ulcers and gastric cancers. Consult a physician for screening if you experience persistent stomach pain or digestive issues.
       </Text>
     </View>
   )

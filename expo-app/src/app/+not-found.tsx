@@ -8,10 +8,10 @@ export default function NotFoundScreen() {
   const styles = useThemedStyles(makeStyles);
   return (
     <>
-      <Stack.Screen options={{ title: 'You\'ve got us stumped!' }} />
+      <Stack.Screen options={{ title: 'Page Not Found' }} />
       <View style={styles.container}>
         <Link href="/" style={styles.button}>
-          Go back to Home screen!
+          Return to dashboard
         </Link>
       </View>
     </>

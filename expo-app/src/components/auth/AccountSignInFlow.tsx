@@ -154,10 +154,7 @@ export function AccountSignInFlow() {
                         <Text style={styles.eyebrow}>FOOD & NUTRITION</Text>
                         <Text accessibilityRole="header" style={styles.title}>Welcome to kiloric</Text>
                         <Text style={styles.subtitle}>
-                            The free, open source calorie counting app! 
-
-                            Congressional App Candiadate for 2026. District CA12 
-                            With love from Berkeley, California.
+                            Free, private, and open-source calorie tracking. Built for the 2026 Congressional App Challenge in California&apos;s 12th District from Berkeley, California.
                         </Text>
 
                         <Pressable

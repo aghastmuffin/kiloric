@@ -186,12 +186,63 @@ export function addGroceryItem(
   })
 }
 
+export async function addCheckedGroceryToPrepSession(
+  userId: string,
+  item: Pick<GroceryItemFields, 'name' | 'quantity' | 'week_start'>,
+): Promise<PrepSession | null> {
+  const weekStart = item.week_start
+  if (!weekStart) return null
+  const itemName = item.name?.trim()
+  if (!itemName) return null
+
+  const existing = await getPrepSession(userId, weekStart)
+  const portions =
+    item.quantity && !isNaN(Number(item.quantity))
+      ? Math.max(1, Math.round(Number(item.quantity)))
+      : 2
+
+  if (existing) {
+    const currentItems = parsePrepItems(existing)
+    const alreadyPresent = currentItems.some(
+      (i) => i.name.toLowerCase() === itemName.toLowerCase(),
+    )
+    if (alreadyPresent) return existing
+    const newItems = [...currentItems, { name: itemName, portions }]
+    return savePrepSession(userId, existing, {
+      weekStart: existing.week_start,
+      scheduledAt: new Date(existing.scheduled_at),
+      durationMin: existing.duration_min,
+      title: existing.title,
+      items: newItems,
+    })
+  } else {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(16, 0, 0, 0)
+    return savePrepSession(userId, null, {
+      weekStart,
+      scheduledAt: tomorrow,
+      durationMin: 60,
+      title: 'Meal prep',
+      items: [{ name: itemName, portions }],
+    })
+  }
+}
+
 export function updateGroceryItem(userId: string, id: string, patch: Partial<GroceryItemFields>): Promise<GroceryItem> {
   return groceryItemsStore.update(userId, id, patch)
 }
 
-export function setGroceryChecked(userId: string, id: string, checked: boolean): Promise<GroceryItem> {
-  return groceryItemsStore.update(userId, id, { checked })
+export async function setGroceryChecked(userId: string, id: string, checked: boolean): Promise<GroceryItem> {
+  const updated = await groceryItemsStore.update(userId, id, { checked })
+  if (checked && updated?.name && updated?.week_start) {
+    try {
+      await addCheckedGroceryToPrepSession(userId, updated)
+    } catch {
+      // Keep grocery check successful even if prep auto-sync has an issue
+    }
+  }
+  return updated
 }
 
 export function deleteGroceryItem(userId: string, id: string): Promise<void> {

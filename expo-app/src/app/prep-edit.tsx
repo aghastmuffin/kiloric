@@ -1,4 +1,5 @@
 import {
+  Badge,
   Card,
   Chip,
   ErrorNote,
@@ -14,10 +15,11 @@ import {
 import { showApiError } from '@/lib/apiErrors'
 import { useAuth } from '@/lib/AuthContext'
 import { addDays, dayKey, monthRangeLabel, parseDayKey, shortWeekday, startOfWeek, weekDayKeys } from '@/lib/data/dateKeys'
-import { getPrepSession, parsePrepItems, savePrepSession } from '@/lib/data/mealPlan'
+import { getPrepSession, listGroceryItems, parsePrepItems, savePrepSession, type GroceryItem } from '@/lib/data/mealPlan'
 import { useFocusLoader } from '@/lib/data/useLoader'
+import { usePalette } from '@/lib/theme/palette'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 type DraftItem = { key: string; name: string; portions: string }
@@ -44,6 +46,7 @@ function formatTime(date: Date): string {
 export default function PrepEditScreen() {
   const params = useLocalSearchParams<{ week?: string }>()
   const router = useRouter()
+  const c = usePalette()
   const { user } = useAuth()
   const userId = user?.$id ?? null
   const weekStart = params.week && /^\d{4}-\d{2}-\d{2}$/.test(params.week) ? params.week : dayKey(startOfWeek())
@@ -59,18 +62,46 @@ export default function PrepEditScreen() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const state = useFocusLoader(() => getPrepSession(userId!, weekStart), userId ? `${userId}:${weekStart}` : null)
-  const session = state.data ?? null
+  const state = useFocusLoader(async () => {
+    const [session, groceries] = await Promise.all([
+      getPrepSession(userId!, weekStart),
+      listGroceryItems(userId!, weekStart).catch(() => [] as GroceryItem[]),
+    ])
+    return { session, groceries }
+  }, userId ? `${userId}:${weekStart}` : null)
+
+  const session = state.data?.session ?? null
+  const groceries = useMemo(() => state.data?.groceries ?? [], [state.data?.groceries])
+  const checkedGroceries = useMemo(() => groceries.filter((g) => g.checked), [groceries])
+
   const [hydrated, setHydrated] = useState<string | null>(null)
-  if (session && hydrated !== session.$id) {
-    const when = new Date(session.scheduled_at)
-    setHydrated(session.$id)
-    setTitle(session.title)
-    setDay(dayKey(when))
-    setTime(formatTime(when))
-    setDuration(String(session.duration_min))
-    const parsed = parsePrepItems(session)
-    setItems(parsed.length > 0 ? parsed.map((item) => newItem(item.name, String(item.portions))) : [newItem()])
+  if (state.data && hydrated !== (session?.$id ?? 'initialized')) {
+    setHydrated(session?.$id ?? 'initialized')
+    if (session) {
+      const when = new Date(session.scheduled_at)
+      setTitle(session.title)
+      setDay(dayKey(when))
+      setTime(formatTime(when))
+      setDuration(String(session.duration_min))
+      const parsed = parsePrepItems(session)
+      // Merge checked groceries if not already in session items
+      const existingNames = new Set(parsed.map((entry) => entry.name.trim().toLowerCase()))
+      const fromGroceries: DraftItem[] = []
+      for (const g of checkedGroceries) {
+        if (!existingNames.has(g.name.trim().toLowerCase())) {
+          existingNames.add(g.name.trim().toLowerCase())
+          fromGroceries.push(newItem(g.name.trim(), g.quantity && !isNaN(Number(g.quantity)) ? g.quantity : '2'))
+        }
+      }
+      const combined = [...parsed.map((item) => newItem(item.name, String(item.portions))), ...fromGroceries]
+      setItems(combined.length > 0 ? combined : [newItem()])
+    } else if (checkedGroceries.length > 0) {
+      setItems(
+        checkedGroceries.map((g) =>
+          newItem(g.name.trim(), g.quantity && !isNaN(Number(g.quantity)) ? g.quantity : '2'),
+        ),
+      )
+    }
     setFormKey((key) => key + 1)
   }
 
@@ -135,6 +166,51 @@ export default function PrepEditScreen() {
               <Field label="Duration" defaultValue={duration} onChangeText={setDuration} keyboardType="number-pad" suffix="min" testID="prep-duration" />
             </View>
           </Card>
+          {checkedGroceries.length > 0 ? (
+            <Card tone="peach" style={styles.gap}>
+              <View style={styles.suggestedHeader}>
+                <View style={styles.flex}>
+                  <Txt variant="subheading" color={c.peachInk}>
+                    Suggested for next day’s meals
+                  </Txt>
+                  <Txt variant="caption" color={c.peachInk}>
+                    Checked off your grocery list and ready to prep.
+                  </Txt>
+                </View>
+                <Badge label={`${checkedGroceries.length} ready`} tone="card" />
+              </View>
+              <View style={styles.chips}>
+                {checkedGroceries.map((grocery) => {
+                  const isAdded = items.some(
+                    (dish) => dish.name.trim().toLowerCase() === grocery.name.trim().toLowerCase(),
+                  )
+                  return (
+                    <Chip
+                      key={grocery.$id}
+                      label={`${isAdded ? '✓ ' : '+ '}${grocery.name}${grocery.quantity ? ` (${grocery.quantity})` : ''}`}
+                      selected={isAdded}
+                      onPress={() => {
+                        if (isAdded) {
+                          setItems((current) => {
+                            const filtered = current.filter(
+                              (dish) => dish.name.trim().toLowerCase() !== grocery.name.trim().toLowerCase(),
+                            )
+                            return filtered.length > 0 ? filtered : [newItem()]
+                          })
+                        } else {
+                          setItems((current) => {
+                            const cleaned = current.filter((dish) => dish.name.trim().length > 0)
+                            const qty = grocery.quantity && !isNaN(Number(grocery.quantity)) ? grocery.quantity : '2'
+                            return [...cleaned, newItem(grocery.name.trim(), qty)]
+                          })
+                        }
+                      }}
+                    />
+                  )
+                })}
+              </View>
+            </Card>
+          ) : null}
           <Card style={styles.gap}>
             <Txt variant="subheading">What you’re cooking</Txt>
             {items.map((item, index) => (
@@ -182,6 +258,8 @@ const styles = StyleSheet.create({
   gap: { gap: 14 },
   row: { flexDirection: 'row', gap: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  suggestedHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  flex: { flex: 1 },
   itemRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   itemName: { flex: 2 },
   remove: { marginBottom: 5 },

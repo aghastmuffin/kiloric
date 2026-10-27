@@ -28,7 +28,6 @@ import {
   listEntriesForDay,
   listRecentEntries,
   logFood,
-  recentFoods,
   removeFoodEntry,
   updateFoodEntry,
   type FoodEntry,
@@ -36,9 +35,8 @@ import {
   type LogMealType,
 } from '@/lib/data/foodLog'
 import { effectiveMealNames, loadPlanPreferences } from '@/lib/planPreferences'
-import { formatAmount, formatKcal, foodItemFromProduct, scaleMacros, type FoodItem } from '@/lib/data/foodItem'
+import { formatAmount, formatGrams, formatKcal, foodItemFromProduct, scaleMacros, type FoodItem } from '@/lib/data/foodItem'
 import { loadTodayBudget } from '@/lib/data/overview'
-import { stashReviewItem } from '@/lib/data/reviewHandoff'
 import { listSavedMeals, logSavedMeal, saveMealFromEntries, type SavedMeal } from '@/lib/data/savedMeals'
 import { useFocusLoader } from '@/lib/data/useLoader'
 import { loadFavoriteFoods, toggleFavoriteFood, type FavoriteFood } from '@/lib/foodFavorites'
@@ -50,7 +48,7 @@ import { useRouter } from 'expo-router'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 
-type ListTab = 'recent' | 'frequent' | 'favorites' | 'meals' | 'results'
+type ListTab = 'frequent' | 'favorites' | 'meals' | 'results'
 
 type Selection =
   | { kind: 'food'; key: string; item: FoodItem; servings: number; source: FoodEntrySource }
@@ -255,7 +253,7 @@ export default function LogFoodScreen() {
   const { selectedMealType, setSelectedMealType } = useMealTypePreferences()
   const { wide } = useShell()
 
-  const [tab, setTab] = useState<ListTab>('recent')
+  const [tab, setTab] = useState<ListTab>('frequent')
   const [selected, setSelected] = useState<Map<string, Selection>>(new Map())
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -280,6 +278,9 @@ export default function LogFoodScreen() {
   const [mealName, setMealName] = useState('')
   const [savingMeal, setSavingMeal] = useState(false)
   const [savePanelOpen, setSavePanelOpen] = useState(false)
+  const [saveTargetType, setSaveTargetType] = useState<string>(selectedMealType)
+  const [collapsedMealTypes, setCollapsedMealTypes] = useState<Set<string>>(new Set())
+  const [foodDetails, setFoodDetails] = useState<{ item: FoodItem; source: FoodEntrySource; servings: number } | null>(null)
 
   // Editing & deletion state
   const [editingEntry, setEditingEntry] = useState<FoodEntry | null>(null)
@@ -315,13 +316,7 @@ export default function LogFoodScreen() {
     ? selectedMealType
     : (activeMealNames[0] ?? 'Snack')
 
-  const recent = useMemo(() => (data ? recentFoods(data.recent) : []), [data])
   const frequent = useMemo(() => (data ? frequentFoods(data.recent) : []), [data])
-  const loggedForMeal = useMemo(
-    () => (data ? data.todayEntries.filter((entry) => entry.meal_type === mealType) : []),
-    [data, mealType],
-  )
-
   const favoriteBarcodesSet = useMemo(
     () => new Set(favorites.map((f) => f.barcode)),
     [favorites],
@@ -342,11 +337,6 @@ export default function LogFoodScreen() {
     setFavorites(updated)
   }
 
-  function openReview(item: FoodItem, source: FoodEntrySource, servings = 1) {
-    const id = stashReviewItem(item, source, servings)
-    router.push({ pathname: '/review-log', params: { id, meal: mealType } })
-  }
-
   function entryRow(entry: FoodEntry, prefix: string): Row {
     const item = foodItemFromEntry(entry)
     const barcode = entry.barcode ?? entry.name
@@ -358,7 +348,7 @@ export default function LogFoodScreen() {
       barcode,
       item,
       selection: { kind: 'food', key: `${prefix}:${entry.$id}`, item, servings: entry.servings, source: 'recent' },
-      onOpen: () => openReview(item, 'recent', entry.servings),
+      onOpen: () => setFoodDetails({ item, source: 'recent', servings: entry.servings }),
     }
   }
 
@@ -375,7 +365,7 @@ export default function LogFoodScreen() {
           barcode,
           item,
           selection: { kind: 'food', key, item, servings: 1, source: 'search' },
-          onOpen: () => openReview(item, 'search'),
+          onOpen: () => setFoodDetails({ item, source: 'search', servings: 1 }),
         }
       })
     }
@@ -403,7 +393,7 @@ export default function LogFoodScreen() {
           barcode: fav.barcode,
           item,
           selection: { kind: 'food', key, item, servings: 1, source: 'recent' },
-          onOpen: () => openReview(item, 'recent'),
+          onOpen: () => setFoodDetails({ item, source: 'recent', servings: 1 }),
         }
       })
     }
@@ -417,9 +407,9 @@ export default function LogFoodScreen() {
         selection: { kind: 'meal', key: `meal:${meal.$id}`, meal },
       }))
     }
-    return recent.map((entry) => entryRow(entry, 'recent'))
+    return []
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, results, frequent, favorites, recent, data, mealType])
+  }, [tab, results, frequent, favorites, data, mealType])
 
   const selectedKcal = useMemo(() => {
     let total = 0
@@ -487,7 +477,7 @@ export default function LogFoodScreen() {
       setSearching(false)
       setSearchError(null)
       setResults([])
-      if (tab === 'results') setTab('recent')
+      if (tab === 'results') setTab('frequent')
       return
     }
     setTab('results')
@@ -575,17 +565,19 @@ export default function LogFoodScreen() {
     }
   }
 
-  async function saveMeal() {
+  async function saveMeal(targetType: LogMealType) {
     if (!userId) return
+    const entries = data?.todayEntries.filter((entry) => entry.meal_type === targetType) ?? []
     setSavingMeal(true)
     try {
       await withTimeout(
-        saveMealFromEntries(userId, mealName || `My ${mealType.toLowerCase()}`, mealType, loggedForMeal),
+        saveMealFromEntries(userId, mealName || `My ${targetType.toLowerCase()}`, targetType, entries),
         10000,
         'Saving meal timed out. Please check your connection and try again.',
       )
       setMealName('')
       setSavePanelOpen(false)
+      setSaveTargetType(targetType)
       setTab('meals')
       await state.reload()
     } catch (err) {
@@ -594,6 +586,90 @@ export default function LogFoodScreen() {
       setSavingMeal(false)
     }
   }
+
+  const dayEntries = data?.todayEntries ?? []
+  const dayMacros = dayEntries.reduce((total, entry) => {
+    const macros = entryMacros(entry)
+    return { kcal: total.kcal + macros.kcal, protein: total.protein + macros.protein, carbs: total.carbs + macros.carbs, fat: total.fat + macros.fat }
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+  const loggedMealTypes = [...new Set([...activeMealNames, ...dayEntries.map((entry) => entry.meal_type)])]
+  const loggedTodayCard = (
+    <Card testID="logged-today" style={styles.daySummary}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.rowText}>
+          <Txt variant="subheading">Today’s food log</Txt>
+          <Txt variant="caption" tone="muted">{dayEntries.length} item{dayEntries.length === 1 ? '' : 's'}</Txt>
+        </View>
+        <Txt variant="metric">{formatKcal(dayMacros.kcal)} kcal</Txt>
+      </View>
+      {dayEntries.length > 0 ? (
+        <View style={styles.dayMacroSummary}>
+          <Txt variant="caption" tone="muted">Protein {formatGrams(dayMacros.protein)} g</Txt>
+          <Txt variant="caption" tone="muted">Carbs {formatGrams(dayMacros.carbs)} g</Txt>
+          <Txt variant="caption" tone="muted">Fat {formatGrams(dayMacros.fat)} g</Txt>
+        </View>
+      ) : <Txt variant="caption" tone="muted">Foods you log today will appear here, grouped by meal.</Txt>}
+      {loggedMealTypes.map((type) => {
+        const entries = dayEntries.filter((entry) => entry.meal_type === type)
+        if (entries.length === 0) return null
+        const macros = entries.reduce((total, entry) => {
+          const value = entryMacros(entry)
+          return { kcal: total.kcal + value.kcal, protein: total.protein + value.protein, carbs: total.carbs + value.carbs, fat: total.fat + value.fat }
+        }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+        const expanded = !collapsedMealTypes.has(type)
+        return (
+          <View key={type} style={[styles.mealGroup, { borderTopColor: c.line }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              accessibilityLabel={`${type}, ${entries.length} foods, ${formatKcal(macros.kcal)} calories`}
+              onPress={() => setCollapsedMealTypes((current) => {
+                const next = new Set(current)
+                if (next.has(type)) next.delete(type)
+                else next.add(type)
+                return next
+              })}
+              style={styles.mealDropdown}
+            >
+              <View style={styles.rowText}>
+                <Txt variant="bodyStrong">{type}</Txt>
+                <Txt variant="caption" tone="muted">{entries.length} food{entries.length === 1 ? '' : 's'}</Txt>
+              </View>
+              <Txt variant="bodyStrong">{formatKcal(macros.kcal)} kcal</Txt>
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={c.inkMuted} />
+            </Pressable>
+            {expanded ? (
+              <View style={styles.mealGroupBody}>
+                {entries.map((entry) => {
+                  const value = entryMacros(entry)
+                  return (
+                    <View key={entry.$id} style={styles.loggedRow}>
+                      <Pressable accessibilityRole="button" accessibilityHint="Edit servings, meal or time" onPress={() => setEditingEntry(entry)} style={styles.rowText}>
+                        <Txt variant="bodyStrong" numberOfLines={1}>{entry.name}</Txt>
+                        <Txt variant="caption" tone="muted">{entry.servings} serving{entry.servings === 1 ? '' : 's'} · {formatKcal(value.kcal)} kcal</Txt>
+                      </Pressable>
+                      <IconButton icon="trash-outline" tone="chip" size={36} accessibilityLabel={`Remove ${entry.name}`} onPress={() => setConfirmDeleteEntry(entry)} />
+                    </View>
+                  )
+                })}
+                {savePanelOpen && saveTargetType === type ? (
+                  <View style={styles.savePanel}>
+                    <Field label="Reusable meal name" placeholder={`My ${type.toLowerCase()}`} onChangeText={setMealName} maxLength={128} testID="saved-meal-name" />
+                    <View style={styles.saveActions}>
+                      <UButton label="Cancel" tone="chip" size="sm" onPress={() => setSavePanelOpen(false)} />
+                      <UButton label={savingMeal ? 'Saving…' : 'Save meal'} size="sm" disabled={savingMeal} onPress={() => void saveMeal(type as LogMealType)} testID="save-meal" />
+                    </View>
+                  </View>
+                ) : (
+                  <UButton label={`Save ${type.toLowerCase()} as reusable`} tone="mint" size="sm" onPress={() => { setSaveTargetType(type as LogMealType); setSavePanelOpen(true) }} style={styles.saveButton} />
+                )}
+              </View>
+            ) : null}
+          </View>
+        )
+      })}
+    </Card>
+  )
 
   const remaining = data?.budget.remaining
   const overline = remaining != null ? `Today · ${formatKcal(Math.abs(remaining))} kcal ${remaining < 0 ? 'over' : 'left'}` : 'Today'
@@ -612,10 +688,12 @@ export default function LogFoodScreen() {
     ) : null
 
   const emptyCopy: Record<ListTab, { title: string; body: string }> = {
-    recent: { title: 'Nothing logged yet', body: 'Search or scan a food to log your first item.' },
     frequent: { title: 'No frequent items yet', body: 'Foods you log more than once show up here.' },
     favorites: { title: 'No favorite foods yet', body: 'Tap the star icon on any food to save it as a favorite.' },
-    meals: { title: 'No saved meals', body: 'Log a few foods, then save them together as a meal below.' },
+    meals: {
+      title: 'No reusable meals saved',
+      body: 'Save a logged meal from Today’s food log above, and it will appear here for quick reuse.',
+    },
     results: {
       title: searchError ?? (query.trim() ? `No results for “${query.trim()}”` : 'Search for a food'),
       body: query.trim() ? 'Try another name or scan the barcode, or contribute it below.' : 'Try a brand, a dish, or a barcode number.',
@@ -639,6 +717,7 @@ export default function LogFoodScreen() {
         onChange={(value) => void setSelectedMealType(value)}
         testID="meal-segment"
       />
+      {loggedTodayCard}
       <View style={styles.searchRow}>
         <SearchField
           placeholder="Search foods, brands, meals"
@@ -657,10 +736,9 @@ export default function LogFoodScreen() {
         />
       </View>
       <View style={styles.chips}>
-        <Chip label="Recent" selected={tab === 'recent'} onPress={() => setTab('recent')} />
         <Chip label="Frequent" selected={tab === 'frequent'} onPress={() => setTab('frequent')} />
         <Chip label="Favorites" selected={tab === 'favorites'} onPress={() => setTab('favorites')} />
-        <Chip label="My meals" selected={tab === 'meals'} onPress={() => setTab('meals')} />
+        <Chip label="Saved meals" selected={tab === 'meals'} onPress={() => setTab('meals')} />
         {results.length > 0 || searchError || searching ? (
           <Chip label="Results" selected={tab === 'results'} onPress={() => setTab('results')} />
         ) : null}
@@ -747,73 +825,6 @@ export default function LogFoodScreen() {
         <Ionicons name="chevron-forward" size={20} color={c.mintInk} />
       </Pressable>
 
-      <Card testID="logged-today">
-        <View style={styles.sectionHeader}>
-          <Txt variant="subheading">{mealType} today</Txt>
-          <Txt variant="caption" tone="muted">
-            {formatKcal(loggedForMeal.reduce((sum, entry) => sum + entry.kcal, 0))} kcal
-          </Txt>
-        </View>
-        {loggedForMeal.length === 0 ? (
-          <Txt variant="caption" tone="muted">
-            Nothing logged to {mealType.toLowerCase()} yet.
-          </Txt>
-        ) : (
-          loggedForMeal.map((entry) => {
-            const macros = entryMacros(entry)
-            return (
-              <View key={entry.$id} style={styles.loggedRow}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityHint="Tap to edit servings, meal type or time"
-                  onPress={() => setEditingEntry(entry)}
-                  style={styles.rowText}
-                >
-                  <Txt variant="bodyStrong" numberOfLines={1}>
-                    {entry.name}
-                  </Txt>
-                  <Txt variant="caption" tone="muted">
-                    {entry.servings} serving{entry.servings === 1 ? '' : 's'} · {formatKcal(macros.kcal)} kcal · P {Math.round(macros.protein)} · C {Math.round(macros.carbs)} · F {Math.round(macros.fat)}
-                  </Txt>
-                </Pressable>
-                <IconButton
-                  icon="trash-outline"
-                  tone="chip"
-                  size={36}
-                  accessibilityLabel={`Remove ${entry.name}`}
-                  onPress={() => setConfirmDeleteEntry(entry)}
-                />
-              </View>
-            )
-          })
-        )}
-        {loggedForMeal.length > 0 ? (
-          savePanelOpen ? (
-            <View style={styles.savePanel}>
-              <Field
-                label="Meal name"
-                placeholder={`My ${mealType.toLowerCase()}`}
-                onChangeText={setMealName}
-                maxLength={128}
-                testID="saved-meal-name"
-              />
-              <View style={styles.saveActions}>
-                <UButton label="Cancel" tone="chip" size="sm" onPress={() => setSavePanelOpen(false)} />
-                <UButton label={savingMeal ? 'Saving…' : 'Save meal'} size="sm" disabled={savingMeal} onPress={saveMeal} testID="save-meal" />
-              </View>
-            </View>
-          ) : (
-            <UButton
-              label={`Save ${mealType.toLowerCase()} as a reusable meal`}
-              tone="mint"
-              size="sm"
-              onPress={() => setSavePanelOpen(true)}
-              style={styles.saveButton}
-            />
-          )
-        ) : null}
-      </Card>
-
       {undoSnack ? (
         <View style={[styles.snackBanner, { backgroundColor: c.ink }]}>
           <Txt variant="body" color={c.card}>
@@ -822,6 +833,64 @@ export default function LogFoodScreen() {
           <UButton label="Undo" tone="mint" size="sm" onPress={() => void handleUndoDelete()} />
         </View>
       ) : null}
+
+      <Modal visible={!!foodDetails} transparent animationType="slide" onRequestClose={() => setFoodDetails(null)}>
+        <View style={editorStyles.backdrop}>
+          <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Close food details" onPress={() => setFoodDetails(null)} />
+          <View style={[editorStyles.card, { backgroundColor: c.card, borderColor: c.line }]}>
+            {foodDetails ? (
+              <>
+                <View style={editorStyles.header}>
+                  <View style={editorStyles.flex}>
+                    <Txt variant="title" numberOfLines={2}>{foodDetails.item.name}</Txt>
+                    <Txt variant="caption" tone="muted">{[foodDetails.item.brand, foodDetails.item.servingLabel].filter(Boolean).join(' · ')}</Txt>
+                  </View>
+                  <IconButton icon="close" accessibilityLabel="Close food details" onPress={() => setFoodDetails(null)} />
+                </View>
+                <View style={styles.detailMacros}>
+                  <Txt variant="bodyStrong">{formatKcal(foodDetails.item.perServing.kcal)} kcal</Txt>
+                  <Txt variant="caption" tone="muted">Protein {formatGrams(foodDetails.item.perServing.protein)} g</Txt>
+                  <Txt variant="caption" tone="muted">Carbs {formatGrams(foodDetails.item.perServing.carbs)} g</Txt>
+                  <Txt variant="caption" tone="muted">Fat {formatGrams(foodDetails.item.perServing.fat)} g</Txt>
+                </View>
+                <View style={styles.detailIngredients}>
+                  <Txt variant="bodyStrong">Ingredients</Txt>
+                  <Txt variant="body" tone="muted">{foodDetails.item.ingredients || 'Ingredient information is not available for this food.'}</Txt>
+                </View>
+                <UButton
+                  label={adding ? 'Adding…' : `Add to ${mealType}`}
+                  trailing={`${formatKcal(scaleMacros(foodDetails.item.perServing, foodDetails.servings).kcal)} kcal`}
+                  fullWidth
+                  disabled={adding || !userId}
+                  onPress={async () => {
+                    if (!userId || !foodDetails) return
+                    setAdding(true)
+                    try {
+                      await logFood(userId, { item: foodDetails.item, servings: foodDetails.servings, mealType, source: foodDetails.source })
+                      setFoodDetails(null)
+                      await state.reload()
+                    } catch (err) {
+                      showApiError(err, 'server')
+                    } finally {
+                      setAdding(false)
+                    }
+                  }}
+                />
+                <UButton
+                  label="Something wrong? Submit updated package info"
+                  tone="chip"
+                  size="sm"
+                  onPress={() => {
+                    const item = foodDetails.item
+                    setFoodDetails(null)
+                    router.push({ pathname: '/contribute-food', params: { ...(item.barcode ? { code: item.barcode } : {}), query: item.name, product_name: item.name, ...(item.brand ? { brands: item.brand } : {}) } })
+                  }}
+                />
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
 
       <EntryEditorModal
         visible={!!editingEntry}
@@ -860,6 +929,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
   rowText: { flex: 1, gap: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  daySummary: { gap: 10 },
+  dayMacroSummary: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  mealGroup: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 4 },
+  mealDropdown: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  mealGroupBody: { paddingLeft: 8, paddingBottom: 8 },
   loggedRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   savePanel: { gap: 10, marginTop: 10 },
   saveActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
@@ -875,4 +949,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginTop: 12,
   },
+  detailMacros: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 8 },
+  detailIngredients: { gap: 6, maxHeight: 180 },
 })

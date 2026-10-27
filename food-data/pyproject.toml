@@ -9,6 +9,9 @@ description = "Builds kiloric's food database from USDA FoodData Central, the Ca
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+oracle = ["oracledb>=2.5,<4"]
+
 [project.scripts]
 kiloric-fooddb = "fooddb.__main__:main"
 
