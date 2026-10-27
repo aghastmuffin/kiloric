@@ -804,7 +804,7 @@ export default function LogFoodScreen() {
             </View>
           ) : (
             <UButton
-              label={`Save ${mealType.toLowerCase()} as a meal`}
+              label={`Save ${mealType.toLowerCase()} as a reusable meal`}
               tone="mint"
               size="sm"
               onPress={() => setSavePanelOpen(true)}
