@@ -137,7 +137,7 @@ function Sidebar() {
     <View style={[styles.sidebar, { backgroundColor: c.card, borderRightColor: c.line }]}>
       <View style={styles.brand}>
         <View style={[styles.logo, { backgroundColor: c.primary }]}>
-          <Text style={[styles.logoText, { color: c.onPrimary }]}>C</Text>
+          <Text style={[styles.logoText, { color: c.onPrimary }]}>K</Text>
         </View>
         <Text style={[styles.brandText, { color: c.ink }]}>kiloric</Text>
       </View>
