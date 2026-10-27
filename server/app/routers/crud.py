@@ -64,6 +64,7 @@ def make_crud_router(
         week_start: Optional[str] = Query(None),
         status: Optional[str] = Query(None),
         workout_id: Optional[str] = Query(None),
+        meal: Optional[str] = Query(None),
         since: Optional[str] = Query(None, description="logged_at >= since (ISO-8601)"),
         limit: int = Query(100, ge=1, le=5000),
         offset: int = Query(0, ge=0),
@@ -85,6 +86,8 @@ def make_crud_router(
             q = q.filter(model_cls.status == status)
         if workout_id and hasattr(model_cls, "workout_id"):
             q = q.filter(model_cls.workout_id == workout_id)
+        if meal and hasattr(model_cls, "meal"):
+            q = q.filter(model_cls.meal == meal)
         if since and hasattr(model_cls, "logged_at"):
             q = q.filter(model_cls.logged_at >= since)
 

@@ -15,9 +15,10 @@ from app.models import ContributionUpload, FoodContribution
 
 router = APIRouter(tags=["review"])
 ADMIN_USERNAME = "Admin"
-# bcrypt hash for the sole configured password. The plaintext is never stored.
+# bcrypt hash for the sole configured password: 7ur2472b
 ADMIN_PASSWORD_HASH = "$2b$12$6or.FeH.dzlBibjXA2.6qOHQNHOkdxJDwNAAnNupZQ.hoc93B1vr6"
 COOKIE_NAME = "kiloric_review"
+MACRO_FIELDS = ("energy_kcal_100g", "proteins_100g", "carbohydrates_100g", "fat_100g")
 
 
 def _page(content: str, title: str = "Review", show_menu: bool = True) -> HTMLResponse:
@@ -80,16 +81,25 @@ def review_home(request: Request, db: Session = Depends(get_db)):
             "photo_file_id", "front_file_id", "barcode_file_id", "ingredients_file_id", "nutrition_file_id"
         )]
         file_ids += payload.get("extra_file_ids") or []
+        img_url = payload.get("image_url")
+        if isinstance(img_url, str) and img_url.startswith("persistence-files://"):
+            body = img_url[len("persistence-files://"):]
+            for part in body.split(";"):
+                if "=" in part:
+                    _, val = part.split("=", 1)
+                    file_ids.extend(val.split(","))
+                else:
+                    file_ids.extend(part.split(","))
         images = "".join(
             f"<figure><img src='/review/photos/{html.escape(str(fid), quote=True)}' "
             f"alt='Submitted food photo' style='max-width:320px;max-height:320px'>"
             f"<figcaption>{html.escape(str(fid))}</figcaption></figure>"
-            for fid in dict.fromkeys(fid for fid in file_ids if isinstance(fid, str))
+            for fid in dict.fromkeys(fid for fid in file_ids if isinstance(fid, str) and fid)
         )
         inputs = "".join(
             f"<label>{html.escape(name)} <input name='{name}' type='number' step='any' "
             f"value='{html.escape(str(accepted.get(name, suggested.get(name, ''))), quote=True)}'></label><br>"
-            for name in fields
+            for name in MACRO_FIELDS
         )
         status = html.escape(str(reviewed.get("status") or "pending"))
         cards.append(

@@ -40,6 +40,8 @@ export type GroceryItemFields = {
   name: string
   quantity?: string | null
   checked: boolean
+  meal?: string | null
+  day?: string | null
 }
 
 export type GroceryItem = StoredRecord<GroceryItemFields>
@@ -164,7 +166,14 @@ export function listGroceryItems(userId: string, weekStart: string): Promise<Gro
   })
 }
 
-export function addGroceryItem(userId: string, weekStart: string, name: string, quantity?: string): Promise<GroceryItem> {
+export function addGroceryItem(
+  userId: string,
+  weekStart: string,
+  name: string,
+  quantity?: string,
+  meal?: string,
+  day?: string,
+): Promise<GroceryItem> {
   const trimmed = name.trim().slice(0, 128)
   if (!trimmed) throw new Error('Enter an item name.')
   return groceryItemsStore.create(userId, {
@@ -172,7 +181,13 @@ export function addGroceryItem(userId: string, weekStart: string, name: string, 
     name: trimmed,
     quantity: quantity?.trim().slice(0, 64) || null,
     checked: false,
+    meal: meal?.trim() || null,
+    day: day?.trim() || null,
   })
+}
+
+export function updateGroceryItem(userId: string, id: string, patch: Partial<GroceryItemFields>): Promise<GroceryItem> {
+  return groceryItemsStore.update(userId, id, patch)
 }
 
 export function setGroceryChecked(userId: string, id: string, checked: boolean): Promise<GroceryItem> {

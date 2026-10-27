@@ -37,6 +37,18 @@ from app.schemas import (
 
 # ── create tables (dev convenience; production uses alembic) ──────────────────
 Base.metadata.create_all(bind=engine)
+with engine.connect() as _conn:
+    from sqlalchemy import text
+    try:
+        _conn.execute(text("ALTER TABLE grocery_items ADD COLUMN meal VARCHAR(64)"))
+        _conn.commit()
+    except Exception:
+        pass
+    try:
+        _conn.execute(text("ALTER TABLE grocery_items ADD COLUMN day VARCHAR(32)"))
+        _conn.commit()
+    except Exception:
+        pass
 
 # ── app ───────────────────────────────────────────────────────────────────────
 app = FastAPI(

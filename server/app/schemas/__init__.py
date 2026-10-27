@@ -338,6 +338,8 @@ class GroceryItemCreate(BaseModel):
     name: str = Field(max_length=256)
     quantity: Optional[str] = Field(None, max_length=128)
     checked: bool = False
+    meal: Optional[str] = Field(None, max_length=64)
+    day: Optional[str] = Field(None, max_length=32)
 
 
 class GroceryItemPatch(BaseModel):
@@ -345,6 +347,8 @@ class GroceryItemPatch(BaseModel):
     name: Optional[str] = None
     quantity: Optional[str] = None
     checked: Optional[bool] = None
+    meal: Optional[str] = None
+    day: Optional[str] = None
 
 
 # ── Workouts ──────────────────────────────────────────────────────────────────

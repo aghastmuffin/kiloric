@@ -275,6 +275,8 @@ class GroceryItem(Base):
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     quantity: Mapped[str | None] = mapped_column(String(128), nullable=True)
     checked: Mapped[bool] = mapped_column(Boolean, default=False)
+    meal: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    day: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
