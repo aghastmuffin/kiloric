@@ -1,1070 +1,996 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>kiloric — Know Your Calories</title>
-<meta name="description" content="kiloric is a fast, private calorie tracker. Log meals in seconds, see your macros clearly, and keep your health data out of the hands of ad brokers." />
-<link rel="icon" type="image/x-icon" href="/favicon.ico" />
-<link rel="icon" type="image/png" href="/favicon.png" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>kiloric — A little progress, every day.</title>
+  <meta name="description" content="A calorie tracker that makes logging food effortless. Set a goal, log a meal, move on with your day.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231a2f22'/%3E%3Cpath d='M20 12h8v22l16-22h10L36 36l18 16H42L28 38v14h-8z' fill='%237fae8f'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;450;500;550;600;650;700;750;800&display=swap">
+  <style>
+    :root {
+      --bg: #f4f0e8;
+      --bg-soft: #ece9dd;
+      --dark: #1a2f22;
+      --dark-2: #14251a;
+      --ink: #1a1512;
+      --muted: #7c756c;
+      --sage: #7fae8f;
+      --sage-soft: #d5e3d3;
+      --lavender: #c6b8d8;
+      --blue: #b9d2e8;
+      --yellow: #e9d96e;
+      --cream: #f8f4ec;
+      --radius: 20px;
+      --serif: 'DM Serif Display', Georgia, serif;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    /* ── NAV ── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(244,240,232,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(26,21,18,0.06);
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 20px; font-weight: 750; letter-spacing: -0.5px;
+    }
+    .logo svg { width: 28px; height: 28px; }
+    .nav-links {
+      display: flex; gap: 28px;
+      font-size: 14px; font-weight: 450;
+    }
+    .nav-links a { opacity: 0.7; transition: opacity 0.15s; }
+    .nav-links a:hover { opacity: 1; }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--dark); color: var(--cream);
+      padding: 9px 20px; border-radius: 100px;
+      font-size: 14px; font-weight: 550;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .nav-cta:hover { background: var(--dark-2); transform: translateY(-1px); }
+    .nav-toggle { display: none; }
 
-<style>
-/* ───────────────────────────── tokens ───────────────────────────── */
-:root {
-  --bg:        #faf8f5;
-  --bg-2:      #f2eee4;
-  --surface:   #fffdf8;
-  --ink:       #0f2e16;
-  --forest:    #064013;
-  --sage:      #4a6741;
-  --lime:      #e9ff96;
-  --beige:     #c1aba1;
-  --dark:      #1a1512;
-  --muted:     #4f5b4b;
-  --line:      rgba(15, 46, 22, .14);
-  --carb:      #d9a441;
-  --fat:       #d55930;
-  --protein:   #2e7d4f;
-  --serif:     'Instrument Serif', Georgia, serif;
-  --sans:      'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
-  --mono:      'JetBrains Mono', ui-monospace, monospace;
-  --ease:      cubic-bezier(.22, 1, .36, 1);
-}
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      padding: 80px 32px 64px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 550;
+      color: var(--muted);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards;
+    }
+    .hero-tag svg { width: 14px; height: 14px; }
+    .hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(48px, 7vw, 88px);
+      font-weight: 400;
+      line-height: 1.06;
+      letter-spacing: -0.02em;
+      max-width: 780px;
+      margin: 0 auto 24px;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.1s ease forwards;
+    }
+    .hero h1 em { font-style: italic; }
+    .hero-sub {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 460px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.2s ease forwards;
+    }
+    .hero-ctas {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.3s ease forwards;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--dark); color: var(--cream);
+      padding: 14px 28px; border-radius: 100px;
+      font-size: 15px; font-weight: 550;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .btn-primary:hover { background: var(--dark-2); transform: translateY(-2px); }
+    .btn-primary svg { width: 16px; height: 16px; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1.5px solid rgba(26,21,18,0.15);
+      padding: 14px 28px; border-radius: 100px;
+      font-size: 15px; font-weight: 550;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .btn-secondary:hover { border-color: rgba(26,21,18,0.35); background: rgba(255,255,255,0.5); }
+    .install-note {
+      max-width: 52ch; margin: 24px auto 0;
+      color: rgba(26,21,18,0.68);
+      font-size: 13px; line-height: 1.6;
+    }
+    .install-note strong { color: var(--dark); font-weight: 650; }
 
-/* ───────────────────────────── base ───────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-}
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--ink);
-  font-size: 16px;
-  line-height: 1.6;
-  overflow-x: clip;
-  -webkit-font-smoothing: antialiased;
-}
-a { color: inherit; text-decoration: none; }
-ul { list-style: none; }
-button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-::selection { background: var(--lime); color: var(--dark); }
-:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 2px; }
+    /* decorative gradient blobs */
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 700px; height: 700px;
+      top: -200px; left: 50%; transform: translateX(-50%);
+      background: radial-gradient(circle, rgba(127,174,143,0.18) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
 
-.wrap { max-width: 1240px; margin: 0 auto; padding: 0 28px; }
-@media (max-width: 640px) { .wrap { padding: 0 20px; } }
+    /* ── APP MOCKUP ── */
+    .mockup-wrap {
+      padding: 0 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.5s ease forwards;
+    }
+    .mockup {
+      background: var(--cream);
+      border-radius: var(--radius);
+      border: 1px solid rgba(26,21,18,0.08);
+      overflow: hidden;
+      box-shadow: 0 8px 60px rgba(26,21,18,0.07), 0 1px 3px rgba(26,21,18,0.04);
+    }
+    .mockup-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(26,21,18,0.06);
+    }
+    .mockup-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(26,21,18,0.12);
+    }
+    .mockup-url {
+      margin-left: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(26,21,18,0.04);
+      padding: 4px 14px;
+      border-radius: 6px;
+      flex: 1;
+      max-width: 280px;
+      text-align: center;
+    }
+    .mockup-body {
+      display: flex;
+      min-height: 440px;
+    }
+    .mockup-sidebar {
+      width: 200px;
+      border-right: 1px solid rgba(26,21,18,0.06);
+      padding: 24px 16px;
+      display: flex; flex-direction: column; gap: 4px;
+      flex-shrink: 0;
+    }
+    .mockup-sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .mockup-sidebar-item.active {
+      background: var(--sage-soft);
+      color: var(--dark);
+      font-weight: 600;
+    }
+    .mockup-sidebar-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .mockup-main {
+      flex: 1;
+      padding: 28px 32px;
+    }
+    .mockup-greeting {
+      font-family: var(--serif);
+      font-size: 26px;
+      margin-bottom: 4px;
+    }
+    .mockup-date {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+    .mockup-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .mockup-stat {
+      background: var(--bg);
+      border: 1px solid rgba(26,21,18,0.06);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .mockup-stat-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .mockup-stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .mockup-stat-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .mockup-stat.cal { background: var(--sage-soft); border-color: transparent; }
+    .mockup-stat.cal .mockup-stat-value { color: var(--dark); }
+    .mockup-meals-title {
+      font-size: 14px; font-weight: 600;
+      margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .mockup-meals-title a {
+      font-size: 12px; font-weight: 500; color: var(--sage);
+    }
+    .mockup-meal {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(26,21,18,0.05);
+    }
+    .mockup-meal:last-child { border-bottom: none; }
+    .mockup-meal-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .mockup-meal-info { flex: 1; }
+    .mockup-meal-name { font-size: 14px; font-weight: 550; }
+    .mockup-meal-detail { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .mockup-meal-cal { font-size: 14px; font-weight: 600; color: var(--dark); }
 
-/* ─────────── reveal (JS-gated: visible by default) ─────────── */
-.reveal-on .reveal { opacity: 0; transform: translateY(26px); }
-.reveal-on .reveal.in { opacity: 1; transform: none; transition: opacity .8s var(--ease), transform .8s var(--ease); }
+    /* ── MARQUEE ── */
+    .marquee-section {
+      padding: 48px 0;
+      overflow: hidden;
+    }
+    .marquee-track {
+      display: flex; gap: 16px;
+      animation: marquee 30s linear infinite;
+      width: max-content;
+    }
+    .marquee-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 550;
+      white-space: nowrap;
+    }
+    .marquee-pill svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .marquee-pill.sage { background: var(--sage-soft); color: var(--dark); }
+    .marquee-pill.lavender { background: var(--lavender); color: #3d2b52; }
+    .marquee-pill.blue { background: var(--blue); color: #1a3a5c; }
+    .marquee-pill.yellow { background: var(--yellow); color: #4a3d00; }
+    .marquee-pill.cream { background: var(--cream); color: var(--ink); border: 1px solid rgba(26,21,18,0.08); }
 
-/* ───────────────────────────── nav ───────────────────────────── */
-.nav {
-  position: fixed; inset: 0 0 auto 0; z-index: 50;
-  transition: background .25s ease, border-color .25s ease;
-  border-bottom: 1px solid transparent;
-}
-.nav.scrolled {
-  background: rgba(250, 248, 245, .88);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border-bottom-color: var(--line);
-}
-.nav-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-.brand { display: flex; align-items: baseline; gap: 7px; font-family: var(--serif); font-size: 25px; color: var(--forest); }
-.brand i { width: 9px; height: 9px; border-radius: 50%; background: var(--fat); display: inline-block; transform: translateY(-1px); }
-.nav-links { display: flex; align-items: center; gap: 34px; }
-.nav-links a:not(.btn) { font-size: 14px; font-weight: 500; color: var(--muted); position: relative; transition: color .2s; }
-.nav-links a:not(.btn)::after {
-  content: ''; position: absolute; left: 0; bottom: -4px; height: 1.5px; width: 100%;
-  background: var(--forest); transform: scaleX(0); transform-origin: left; transition: transform .25s var(--ease);
-}
-.nav-links a:not(.btn):hover { color: var(--ink); }
-.nav-links a:not(.btn):hover::after { transform: scaleX(1); }
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font-weight: 600; font-size: 15px; line-height: 1;
-  padding: 15px 28px; border-radius: 999px;
-  transition: transform .2s var(--ease), background .2s, color .2s, border-color .2s;
-}
-.btn:active { transform: scale(.97); }
-.btn-solid { background: var(--forest); color: var(--bg); }
-.btn-solid:hover { background: var(--sage); transform: translateY(-2px); }
-.btn-outline { border: 1.5px solid var(--line); color: var(--ink); }
-.btn-outline:hover { border-color: var(--forest); transform: translateY(-2px); }
-.nav-cta { padding: 11px 22px; font-size: 14px; }
+    /* ── FEATURES ── */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 32px;
+    }
+    .section-label {
+      font-size: 13px;
+      font-weight: 550;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label svg { width: 14px; height: 14px; }
+    .section-title {
+      font-family: var(--serif);
+      font-size: clamp(32px, 4.5vw, 52px);
+      font-weight: 400;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      margin-bottom: 16px;
+    }
+    .section-title em { font-style: italic; }
+    .section-sub {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.65;
+      margin-bottom: 48px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .feature-card {
+      border-radius: var(--radius);
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card.large { grid-row: span 2; }
+    .feature-card.sage { background: var(--sage-soft); }
+    .feature-card.lavender { background: var(--lavender); }
+    .feature-card.blue { background: var(--blue); }
+    .feature-card.cream { background: var(--cream); border: 1px solid rgba(26,21,18,0.08); }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    .feature-card.sage .feature-icon { background: rgba(26,47,34,0.1); }
+    .feature-card.lavender .feature-icon { background: rgba(61,43,82,0.1); }
+    .feature-card.blue .feature-icon { background: rgba(26,58,92,0.1); }
+    .feature-card.cream .feature-icon { background: rgba(26,21,18,0.06); }
+    .feature-card h3 {
+      font-size: 20px;
+      font-weight: 650;
+      letter-spacing: -0.3px;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 14px;
+      line-height: 1.65;
+      opacity: 0.7;
+      max-width: 320px;
+    }
 
-.menu-btn { display: none; width: 44px; height: 44px; align-items: center; justify-content: center; }
-.menu-btn svg { width: 24px; height: 24px; stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: round; }
+    /* mini widget inside feature card */
+    .feature-widget {
+      margin-top: 24px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 14px;
+      padding: 20px;
+      backdrop-filter: blur(8px);
+    }
+    .ring-row {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .ring-svg { width: 72px; height: 72px; flex-shrink: 0; }
+    .ring-center-text {
+      font-size: 16px; font-weight: 700;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+    .ring-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .ring-info p { font-size: 12px; opacity: 0.6; margin: 0; }
 
-.mobile-menu {
-  position: fixed; inset: 0; z-index: 60; background: var(--forest); color: var(--bg);
-  display: flex; flex-direction: column; justify-content: center; padding: 32px;
-  opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s .3s;
-}
-.mobile-menu.open { opacity: 1; visibility: visible; transition: opacity .3s ease; }
-.mobile-menu a.mm-link {
-  font-family: var(--serif); font-size: clamp(38px, 10vw, 56px); line-height: 1.25;
-  border-bottom: 1px solid rgba(250,248,245,.18); padding: 10px 0; display: flex; justify-content: space-between; align-items: center;
-}
-.mobile-menu a.mm-link span { font-family: var(--mono); font-size: 12px; opacity: .55; }
-.mm-close { position: absolute; top: 14px; right: 20px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
-.mm-close svg { width: 26px; height: 26px; stroke: var(--bg); stroke-width: 2; fill: none; stroke-linecap: round; }
-@media (max-width: 760px) {
-  .nav-links { display: none; }
-  .menu-btn { display: flex; }
-}
+    /* bar chart widget */
+    .bar-chart {
+      display: flex; align-items: flex-end; gap: 8px;
+      height: 80px;
+      margin-top: 24px;
+      padding: 16px 20px 0;
+      background: rgba(255,255,255,0.4);
+      border-radius: 14px;
+    }
+    .bar {
+      flex: 1;
+      border-radius: 6px 6px 0 0;
+      min-width: 12px;
+      position: relative;
+    }
+    .bar-label {
+      position: absolute;
+      bottom: -18px;
+      left: 50%; transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.5;
+    }
 
-/* ───────────────────────────── hero ───────────────────────────── */
-.hero {
-  min-height: 100dvh;
-  display: flex; align-items: center;
-  padding: 140px 0 90px;
-  position: relative;
-  background:
-    radial-gradient(ellipse 55% 42% at 82% 18%, rgba(74, 103, 65, .10), transparent 70%),
-    var(--bg);
-}
-.hero-grid-cols {
-  display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: 56px; align-items: center;
-}
-@media (max-width: 980px) { .hero-grid-cols { grid-template-columns: 1fr; gap: 64px; } }
+    /* search widget */
+    .search-widget {
+      margin-top: 24px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .search-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .search-bar svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .search-result {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0;
+      font-size: 13px;
+    }
+    .search-result + .search-result { border-top: 1px solid rgba(26,21,18,0.05); }
+    .search-result-name { flex: 1; font-weight: 500; }
+    .search-result-cal { font-weight: 600; opacity: 0.6; }
+    .search-result-add {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--dark); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 600;
+      flex-shrink: 0;
+    }
 
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 9px;
-  font-family: var(--mono); font-size: 11px; font-weight: 500;
-  letter-spacing: .22em; text-transform: uppercase; color: var(--forest);
-  border: 1px solid rgba(6, 64, 19, .3); border-radius: 999px; padding: 7px 16px;
-}
-.eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--forest); }
+    /* streak widget */
+    .streak-widget {
+      margin-top: 24px;
+      display: flex; gap: 8px;
+    }
+    .streak-day {
+      flex: 1;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .streak-day.filled { background: var(--dark); color: var(--cream); }
+    .streak-day.empty { background: rgba(26,21,18,0.06); color: var(--muted); }
 
-.hero-title {
-  font-family: var(--serif); font-weight: 400;
-  font-size: clamp(52px, 7.4vw, 104px);
-  line-height: .98; letter-spacing: -.015em;
-  color: var(--ink);
-  margin: 30px 0 26px;
-}
-.hero-title em { font-style: italic; color: var(--sage); }
-.hero-sub { font-size: 18px; line-height: 1.7; color: var(--muted); max-width: 47ch; margin-bottom: 38px; }
-.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
-.hero-meta {
-  margin-top: 52px; padding-top: 22px; border-top: 1px solid var(--line);
-  display: flex; gap: 28px; flex-wrap: wrap;
-  font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; color: var(--muted);
-}
-.hero-meta b { color: var(--ink); font-weight: 600; }
+    /* ── HOW IT WORKS ── */
+    .how-section {
+      background: var(--dark);
+      color: var(--cream);
+      padding: 80px 32px;
+    }
+    .how-inner { max-width: 1200px; margin: 0 auto; }
+    .how-section .section-label { color: var(--sage); }
+    .how-section .section-title { color: var(--cream); }
+    .how-section .section-sub { color: rgba(248,244,236,0.5); }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .step-card {
+      background: rgba(248,244,236,0.06);
+      border: 1px solid rgba(248,244,236,0.08);
+      border-radius: var(--radius);
+      padding: 32px;
+    }
+    .step-number {
+      font-family: var(--serif);
+      font-size: 40px;
+      color: var(--sage);
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+    .step-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .step-card p {
+      font-size: 14px;
+      line-height: 1.65;
+      color: rgba(248,244,236,0.55);
+    }
 
-/* hero dashboard mock */
-.dash-wrap { position: relative; }
-.dash {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 26px;
-  padding: 26px 24px 22px;
-  box-shadow: 0 30px 70px -30px rgba(15, 46, 22, .28), 0 4px 14px rgba(15, 46, 22, .06);
-  max-width: 400px; margin-left: auto;
-}
-@media (max-width: 980px) { .dash { margin: 0 auto; } }
-.dash-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.dash-hello { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.dash-date { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 2px; }
-.dash-avatar {
-  width: 38px; height: 38px; border-radius: 50%; background: var(--bg-2);
-  display: flex; align-items: center; justify-content: center;
-}
-.dash-avatar svg { width: 19px; height: 19px; fill: var(--sage); }
+    /* ── QUOTES / SOCIAL PROOF ── */
+    .quotes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .quote-card {
+      background: var(--cream);
+      border: 1px solid rgba(26,21,18,0.08);
+      border-radius: var(--radius);
+      padding: 28px;
+    }
+    .quote-text {
+      font-size: 15px;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .quote-author {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .quote-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 600;
+      flex-shrink: 0;
+    }
+    .quote-name { font-size: 14px; font-weight: 550; }
+    .quote-role { font-size: 12px; color: var(--muted); }
 
-.dash-ring-row { display: flex; align-items: center; gap: 22px; margin-bottom: 22px; }
-.ring { position: relative; width: 128px; height: 128px; flex-shrink: 0; }
-.ring svg { transform: rotate(-90deg); }
-.ring .ring-track { stroke: var(--bg-2); }
-.ring .ring-fill { stroke: var(--forest); stroke-linecap: round; transition: stroke-dashoffset 1.4s var(--ease); }
-.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ring-num { font-family: var(--serif); font-size: 32px; line-height: 1; color: var(--ink); }
-.ring-lbl { font-family: var(--mono); font-size: 8.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
-.ring-side { flex: 1; }
-.ring-side .rs-goal { font-size: 13px; color: var(--muted); line-height: 1.5; }
-.ring-side .rs-goal b { color: var(--ink); }
+    /* ── OPEN SOURCE BANNER ── */
+    .oss-banner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 32px 80px;
+    }
+    .oss-inner {
+      background: var(--sage-soft);
+      border-radius: var(--radius);
+      padding: 48px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .oss-icon {
+      width: 64px; height: 64px;
+      background: var(--dark);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .oss-icon svg { width: 28px; height: 28px; }
+    .oss-text h3 {
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+    .oss-text p {
+      font-size: 15px;
+      opacity: 0.7;
+      line-height: 1.6;
+      max-width: 440px;
+    }
+    .oss-link {
+      margin-left: auto;
+      flex-shrink: 0;
+    }
 
-.macro { margin-bottom: 12px; }
-.macro-head { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
-.macro-head .m-name { font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 7px; }
-.macro-head .m-name::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--mc); }
-.macro-head .m-val { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.macro-bar { height: 5px; border-radius: 3px; background: var(--bg-2); overflow: hidden; }
-.macro-fill { height: 100%; width: 0; border-radius: 3px; background: var(--mc); transition: width 1.2s var(--ease); }
+    /* ── CTA ── */
+    .cta-section {
+      text-align: center;
+      padding: 80px 32px 100px;
+    }
+    .cta-section h2 {
+      font-family: var(--serif);
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 400;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .cta-section h2 em { font-style: italic; }
+    .cta-section p {
+      font-size: 17px;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
 
-.dash-log { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); }
-.dash-log-title { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-.log-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13.5px; }
-.log-row + .log-row { border-top: 1px solid rgba(15,46,22,.06); }
-.log-row .lr-name { font-weight: 500; }
-.log-row .lr-name small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
-.log-row .lr-kcal { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--forest); }
+    /* ── FOOTER ── */
+    .footer {
+      border-top: 1px solid rgba(26,21,18,0.08);
+      padding: 40px 32px;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { transition: color 0.15s; }
+    .footer-links a:hover { color: var(--ink); }
 
-.dash-chip {
-  position: absolute; top: 38px; left: -6px;
-  background: var(--dark); color: var(--bg);
-  border-radius: 14px; padding: 12px 16px;
-  display: flex; align-items: center; gap: 11px;
-  box-shadow: 0 18px 40px -14px rgba(26, 21, 18, .5);
-}
-@media (max-width: 980px) { .dash-chip { left: 4px; top: -18px; } }
-.dash-chip svg { width: 20px; height: 20px; stroke: var(--lime); fill: none; stroke-width: 1.8; stroke-linecap: round; }
-.dash-chip .dc-t1 { font-size: 12.5px; font-weight: 600; line-height: 1.3; }
-.dash-chip .dc-t2 { font-family: var(--mono); font-size: 10px; opacity: .6; }
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
-/* ──────────────────────── section scaffolding ──────────────────────── */
-.sec { padding: 110px 0; }
-.sec-head { display: grid; grid-template-columns: 200px 1fr; gap: 40px; margin-bottom: 64px; align-items: start; }
-@media (max-width: 820px) { .sec-head { grid-template-columns: 1fr; gap: 16px; margin-bottom: 48px; } }
-.sec-index { font-family: var(--mono); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--sage); padding-top: 12px; }
-.sec-title { font-family: var(--serif); font-weight: 400; font-size: clamp(36px, 4.6vw, 62px); line-height: 1.04; letter-spacing: -.01em; }
-.sec-title em { font-style: italic; color: var(--sage); }
-.sec-lede { font-size: 17px; color: var(--muted); max-width: 52ch; margin-top: 18px; }
-
-/* ─────────────────────────── statement band ─────────────────────────── */
-.statement { background: var(--sage); color: var(--bg); padding: 96px 0; }
-.statement-line {
-  font-family: var(--serif); font-weight: 400;
-  font-size: clamp(30px, 4.2vw, 54px); line-height: 1.18; letter-spacing: -.01em;
-  max-width: 21ch;
-}
-.statement-line em { font-style: italic; color: var(--lime); }
-.stats-row {
-  margin-top: 64px; padding-top: 36px; border-top: 1px solid rgba(250,248,245,.25);
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
-}
-@media (max-width: 820px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
-.stat-num { font-family: var(--serif); font-size: clamp(40px, 4.5vw, 60px); line-height: 1; }
-.stat-num sup { font-size: .45em; }
-.stat-lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; opacity: .72; margin-top: 10px; }
-
-/* ─────────────────────────── how it works ─────────────────────────── */
-.steps { border-top: 1px solid var(--line); }
-.step {
-  display: grid; grid-template-columns: 170px 1fr 1.1fr; gap: 40px; align-items: baseline;
-  padding: 44px 0; border-bottom: 1px solid var(--line);
-  transition: background .25s ease;
-}
-.step:hover { background: rgba(74, 103, 65, .05); }
-@media (max-width: 820px) { .step { grid-template-columns: 64px 1fr; } .step-body { grid-column: 2; } }
-.step-no { font-family: var(--serif); font-size: clamp(48px, 5vw, 76px); line-height: .9; color: var(--beige); transition: color .25s; }
-.step:hover .step-no { color: var(--fat); }
-.step-title { font-family: var(--serif); font-size: clamp(24px, 2.6vw, 34px); font-weight: 400; }
-.step-body { color: var(--muted); font-size: 15.5px; max-width: 46ch; justify-self: end; }
-@media (max-width: 820px) { .step-body { justify-self: start; } }
-
-/* ─────────────────── features: scroll sequence ─────────────────── */
-.seq { position: relative; height: 430vh; background: var(--forest); }
-.seq-sticky {
-  position: sticky; top: 0; height: 100dvh; overflow: hidden;
-  display: flex; align-items: center;
-  color: var(--bg);
-}
-.seq-grid {
-  width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 28px;
-  display: grid; grid-template-columns: minmax(0, 5fr) 74px minmax(0, 5fr); gap: 20px;
-  align-items: center;
-}
-@media (max-width: 900px) {
-  .seq-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 8px; align-content: center; padding: 76px 20px 24px; }
-}
-
-/* rail: progress line + counter */
-.seq-rail { display: flex; flex-direction: column; align-items: center; gap: 18px; height: 46vh; }
-@media (max-width: 900px) { .seq-rail { display: none; } }
-.rail-track { flex: 1; width: 1.5px; background: rgba(250,248,245,.22); position: relative; border-radius: 2px; overflow: hidden; }
-.rail-fill { position: absolute; top: 0; left: 0; width: 100%; height: 0%; background: var(--lime); }
-.rail-num {
-  width: 46px; height: 46px; overflow: hidden; border: 1px solid rgba(250,248,245,.3); border-radius: 50%;
-  font-family: var(--serif); font-size: 20px;
-}
-.rail-num-col { display: flex; flex-direction: column; transition: transform .5s var(--ease); }
-.rail-num-col span { height: 46px; display: flex; align-items: center; justify-content: center; }
-
-/* visual stack */
-.seq-visual { position: relative; height: min(62vh, 520px); }
-@media (max-width: 900px) {
-  .seq-visual { height: 36vh; min-height: 250px; }
-  .seq-panel .panel-card { max-height: 100%; overflow: hidden; }
-  .pc-shield-row { margin-bottom: 8px; }
-  .pc-check { padding: 5px 2px; font-size: 12px; }
-  .pc-search { padding: 8px 12px; margin-bottom: 8px; }
-  .pc-row { padding: 6px 2px; font-size: 12px; }
-  .pc-big-macro { margin-bottom: 10px; }
-  .seq-text { min-height: 0; height: 34vh; }
-  .seq-desc { font-size: 14.5px; }
-}
-.seq-panel {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(.96);
-  transition: opacity .55s var(--ease), transform .55s var(--ease);
-  pointer-events: none;
-}
-.seq-panel.on { opacity: 1; transform: scale(1); }
-.panel-card {
-  width: min(100%, 380px); background: var(--surface); color: var(--ink);
-  border-radius: 22px; padding: 24px 22px;
-  box-shadow: 0 30px 70px -28px rgba(0,0,0,.5);
-}
-@media (max-width: 900px) { .panel-card { padding: 16px 16px; border-radius: 18px; } }
-.pc-title { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
-
-/* panel 1: log search */
-.pc-search {
-  display: flex; align-items: center; gap: 10px;
-  border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 14px; margin-bottom: 12px;
-}
-.pc-search svg { width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 2; }
-.pc-search .pc-typed { font-size: 13.5px; font-weight: 500; }
-.pc-search .pc-caret { width: 1.5px; height: 15px; background: var(--forest); animation: caret 1s steps(2) infinite; }
-@keyframes caret { 50% { opacity: 0; } }
-.pc-scan { margin-left: auto; display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; color: var(--forest); border: 1px solid rgba(6,64,19,.3); border-radius: 999px; padding: 4px 9px; white-space: nowrap; }
-.pc-scan svg { width: 12px; height: 12px; stroke: var(--forest); stroke-width: 2; fill: none; }
-.pc-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 2px; font-size: 13px; }
-.pc-row + .pc-row { border-top: 1px solid rgba(15,46,22,.07); }
-.pc-row .nm { font-weight: 500; }
-.pc-row .nm small { display: block; font-size: 10.5px; color: var(--muted); font-weight: 400; }
-.pc-row .kc { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--forest); }
-.pc-row .add {
-  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line);
-  display: inline-flex; align-items: center; justify-content: center; margin-left: 10px;
-  font-size: 14px; line-height: 1; color: var(--forest);
-}
-
-/* panel 2: macros */
-.pc-big-macro { margin-bottom: 16px; }
-.pc-big-macro .bm-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
-.pc-big-macro .bm-head b { font-weight: 600; }
-.pc-big-macro .bm-head span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.pc-bar { height: 34px; border-radius: 9px; background: var(--bg-2); overflow: hidden; position: relative; }
-.pc-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 9px 0 0 9px; }
-@media (max-width: 900px) { .pc-bar { height: 24px; } }
-
-/* panel 3: privacy */
-.pc-shield-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.pc-shield-row svg { width: 44px; height: 50px; flex-shrink: 0; }
-.pc-shield-row .ps-t { font-size: 14px; font-weight: 600; line-height: 1.35; }
-.pc-shield-row .ps-s { font-size: 12px; color: var(--muted); }
-.pc-check { display: flex; align-items: center; gap: 10px; padding: 8px 2px; font-size: 13px; border-top: 1px solid rgba(15,46,22,.07); }
-.pc-check svg { width: 15px; height: 15px; stroke: var(--protein); stroke-width: 2.6; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-
-/* panel 4: progress chart */
-.pc-chart { display: flex; align-items: flex-end; gap: 9px; height: 130px; padding-top: 6px; }
-@media (max-width: 900px) { .pc-chart { height: 84px; } }
-.pc-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; height: 100%; justify-content: flex-end; }
-.pc-col i { width: 100%; border-radius: 5px 5px 2px 2px; background: var(--sage); }
-.pc-col.today i { background: var(--fat); }
-.pc-col.miss i { background: repeating-linear-gradient(-45deg, transparent 0 3px, rgba(74,103,65,.35) 3px 5px); border: 1px dashed rgba(74,103,65,.5); }
-.pc-col span { font-family: var(--mono); font-size: 8.5px; letter-spacing: .06em; color: var(--muted); }
-.pc-legend { display: flex; gap: 16px; margin-top: 14px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; color: var(--muted); }
-.pc-legend b { font-weight: 600; color: var(--ink); }
-
-/* text stack */
-.seq-text { position: relative; min-height: 300px; }
-@media (max-width: 900px) { .seq-text { min-height: 0; } }
-.seq-item {
-  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
-  opacity: 0; transform: translateY(24px);
-  transition: opacity .5s var(--ease), transform .5s var(--ease);
-  pointer-events: none;
-}
-.seq-item.on { opacity: 1; transform: none; }
-.seq-kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--lime); margin-bottom: 16px; }
-.seq-name { font-family: var(--serif); font-size: clamp(30px, 3.6vw, 50px); line-height: 1.05; font-weight: 400; margin-bottom: 18px; }
-.seq-desc { color: rgba(250,248,245,.78); font-size: 16.5px; line-height: 1.7; max-width: 44ch; }
-.seq-count { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: rgba(250,248,245,.5); margin-top: 22px; }
-
-/* ─────────────────────────── award band ─────────────────────────── */
-.award { background: var(--dark); color: var(--bg); padding: 100px 0; position: relative; overflow: hidden; }
-.award-grid { display: grid; grid-template-columns: auto 1fr; gap: 72px; align-items: center; }
-@media (max-width: 820px) { .award-grid { grid-template-columns: 1fr; gap: 44px; } }
-.seal { width: 168px; height: 168px; position: relative; flex-shrink: 0; }
-.seal svg.ring-text { position: absolute; inset: 0; animation: spin 28s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.seal .ring-text text { font-family: var(--mono); font-size: 9.5px; letter-spacing: .3em; fill: rgba(250,248,245,.55); }
-.seal-core {
-  position: absolute; inset: 26px; border: 1px solid rgba(250,248,245,.25); border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-}
-.seal-core svg { width: 44px; height: 44px; stroke: var(--lime); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.award-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--lime); margin-bottom: 18px; }
-.award-title { font-family: var(--serif); font-weight: 400; font-size: clamp(34px, 4.4vw, 58px); line-height: 1.05; margin-bottom: 20px; }
-.award-title em { font-style: italic; }
-.award-body { color: rgba(250,248,245,.75); font-size: 16.5px; line-height: 1.7; max-width: 54ch; }
-.award-tags { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
-.award-tags span {
-  font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
-  border: 1px solid rgba(250,248,245,.25); border-radius: 999px; padding: 7px 15px; color: rgba(250,248,245,.85);
-}
-
-/* ─────────────────────────── privacy ─────────────────────────── */
-.priv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: start; }
-@media (max-width: 900px) { .priv-grid { grid-template-columns: 1fr; gap: 40px; } }
-.priv-list { border-top: 1px solid var(--line); }
-.priv-item { display: flex; gap: 18px; padding: 22px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
-.priv-item svg { width: 20px; height: 20px; stroke: var(--forest); stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; margin-top: 3px; }
-.priv-item b { display: block; font-weight: 600; font-size: 15.5px; margin-bottom: 3px; }
-.priv-item p { color: var(--muted); font-size: 14px; }
-.priv-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 30px; font-weight: 600; font-size: 15px; color: var(--forest); border-bottom: 1.5px solid var(--forest); padding-bottom: 2px; transition: gap .2s var(--ease); }
-.priv-link:hover { gap: 14px; }
-
-/* ─────────────────────────── quotes ─────────────────────────── */
-.quotes { background: var(--bg-2); }
-.quotes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; }
-@media (max-width: 900px) { .quotes-grid { grid-template-columns: 1fr; gap: 40px; } }
-.quote { border-top: 2px solid var(--forest); padding-top: 24px; }
-.quote-text { font-family: var(--serif); font-size: clamp(19px, 1.8vw, 23px); line-height: 1.4; margin-bottom: 22px; }
-.quote-who { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.quote-who b { color: var(--ink); display: block; font-size: 12px; margin-bottom: 2px; }
-
-/* ─────────────────────────── cta ─────────────────────────── */
-.cta { background: var(--lime); color: var(--dark); padding: 110px 0; text-align: center; }
-.cta-title { font-family: var(--serif); font-weight: 400; font-size: clamp(42px, 6vw, 84px); line-height: 1.0; letter-spacing: -.01em; margin-bottom: 20px; }
-.cta-title em { font-style: italic; }
-.cta-sub { font-size: 17px; color: rgba(26,21,18,.72); max-width: 46ch; margin: 0 auto 40px; }
-.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.btn-dark { background: var(--dark); color: var(--bg); }
-.btn-dark:hover { background: var(--forest); transform: translateY(-2px); }
-.btn-dark-outline { border: 1.5px solid rgba(26,21,18,.4); color: var(--dark); }
-.btn-dark-outline:hover { border-color: var(--dark); transform: translateY(-2px); }
-.store-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
-.store-btn {
-  display: inline-flex; align-items: center; gap: 11px;
-  border: 1.5px solid rgba(26,21,18,.35); border-radius: 14px; padding: 11px 20px;
-  transition: transform .2s var(--ease), background .2s, color .2s, border-color .2s;
-  text-align: left;
-}
-.store-btn:hover { background: var(--dark); color: var(--bg); border-color: var(--dark); transform: translateY(-2px); }
-.store-btn svg { width: 22px; height: 22px; fill: currentColor; }
-.store-btn small { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; opacity: .65; }
-.store-btn b { font-size: 15px; font-weight: 600; }
-
-/* ─────────────────────────── footer ─────────────────────────── */
-.site-footer { background: var(--dark); color: rgba(250,248,245,.62); padding: 80px 0 36px; }
-.foot-word {
-  font-family: var(--serif); font-size: clamp(72px, 15vw, 220px); line-height: .9;
-  color: var(--bg); letter-spacing: -.02em; margin-bottom: 56px;
-  display: flex; align-items: baseline; gap: 12px;
-}
-.foot-word i { width: .16em; height: .16em; border-radius: 50%; background: var(--lime); }
-.foot-cols { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; padding: 44px 0; border-top: 1px solid rgba(250,248,245,.12); }
-@media (max-width: 820px) { .foot-cols { grid-template-columns: 1fr 1fr; } }
-.foot-tag { font-size: 14px; max-width: 26ch; line-height: 1.6; }
-.foot-h { font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: rgba(250,248,245,.4); margin-bottom: 16px; }
-.foot-cols a { display: block; font-size: 14px; padding: 5px 0; color: rgba(250,248,245,.62); transition: color .2s; }
-.foot-cols a:hover { color: var(--lime); }
-.foot-base {
-  border-top: 1px solid rgba(250,248,245,.12); padding-top: 24px;
-  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: rgba(250,248,245,.4);
-}
-</style>
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .feature-card.large { grid-row: span 1; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .quotes-grid { grid-template-columns: 1fr; }
+      .oss-inner { flex-direction: column; text-align: center; padding: 32px; }
+      .oss-link { margin-left: 0; }
+      .mockup-sidebar { display: none; }
+      .mockup-stats { grid-template-columns: repeat(2, 1fr); }
+      .mockup-main { padding: 20px; }
+    }
+    @media (max-width: 480px) {
+      .hero { padding: 48px 20px 40px; }
+      .section { padding: 48px 20px; }
+      .how-section { padding: 48px 20px; }
+      .footer-inner { flex-direction: column; gap: 16px; text-align: center; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- ── nav ── -->
-<header class="nav" id="nav">
-  <div class="wrap nav-inner">
-    <a href="/" class="brand" aria-label="kiloric home"><i aria-hidden="true"></i>kiloric</a>
-    <nav class="nav-links" aria-label="Primary">
-      <a href="#how">How it works</a>
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="logo">
+      <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#1a2f22"/><path d="M10 6h4v11l8-11h5l-9 12 9 8h-5l-8-7v7h-4z" fill="#7fae8f"/></svg>
+      kiloric
+    </a>
+    <div class="nav-links">
       <a href="#features">Features</a>
-      <a href="#privacy">Privacy</a>
-      <a href="app/" class="btn btn-solid nav-cta">Open App</a>
-    </nav>
-    <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
-      <svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
-    </button>
+      <a href="#how-it-works">How it works</a>
+      <a href="https://github.com/aghastmuffin/kiloric" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <a href="app/" class="nav-cta">
+      Open App
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
   </div>
-</header>
+</nav>
 
-<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
-  <button class="mm-close" id="menuClose" aria-label="Close menu">
-    <svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg>
-  </button>
-  <nav aria-label="Mobile">
-    <a class="mm-link" href="#how">How it works <span>01</span></a>
-    <a class="mm-link" href="#features">Features <span>02</span></a>
-    <a class="mm-link" href="#privacy">Privacy <span>03</span></a>
-    <a class="mm-link" href="app/">Open App <span>→</span></a>
-  </nav>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="currentColor"/></svg>
+    Free &amp; open source
+  </div>
+  <h1>A little progress,<br><em>every day.</em></h1>
+  <p class="hero-sub">A calorie tracker that makes logging food effortless. Set a goal, log a meal, move on with your day.</p>
+  <div class="hero-ctas">
+    <a href="app/" class="btn-primary">
+      Start Tracking
+      <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a href="https://github.com/aghastmuffin/kiloric" class="btn-secondary" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+  <p class="install-note">On mobile, open the app and use your browser’s <strong>Add to Home Screen</strong> option for one-tap access.</p>
+</section>
+
+<!-- APP MOCKUP -->
+<div class="mockup-wrap">
+  <div class="mockup">
+    <div class="mockup-bar">
+      <div class="mockup-dot"></div>
+      <div class="mockup-dot"></div>
+      <div class="mockup-dot"></div>
+      <div class="mockup-url">kiloric.app/today</div>
+    </div>
+    <div class="mockup-body">
+      <div class="mockup-sidebar">
+        <div class="mockup-sidebar-item active">
+          <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+          Today
+        </div>
+        <div class="mockup-sidebar-item">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          Log Food
+        </div>
+        <div class="mockup-sidebar-item">
+          <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12" stroke="currentColor" stroke-width="1.3"/></svg>
+          Plan
+        </div>
+        <div class="mockup-sidebar-item">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M2 12l4-4 3 3 5-6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Progress
+        </div>
+        <div class="mockup-sidebar-item">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M2 14c0-3 3-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          Account
+        </div>
+      </div>
+      <div class="mockup-main">
+        <div class="mockup-greeting">Good morning</div>
+        <div class="mockup-date">Tuesday, March 10</div>
+        <div class="mockup-stats">
+          <div class="mockup-stat cal">
+            <div class="mockup-stat-label">Calories</div>
+            <div class="mockup-stat-value">1,240</div>
+            <div class="mockup-stat-sub">of 2,000 kcal</div>
+          </div>
+          <div class="mockup-stat">
+            <div class="mockup-stat-label">Protein</div>
+            <div class="mockup-stat-value">82g</div>
+            <div class="mockup-stat-sub">of 140g</div>
+          </div>
+          <div class="mockup-stat">
+            <div class="mockup-stat-label">Carbs</div>
+            <div class="mockup-stat-value">145g</div>
+            <div class="mockup-stat-sub">of 220g</div>
+          </div>
+          <div class="mockup-stat">
+            <div class="mockup-stat-label">Fat</div>
+            <div class="mockup-stat-value">42g</div>
+            <div class="mockup-stat-sub">of 65g</div>
+          </div>
+        </div>
+        <div class="mockup-meals-title">
+          Today's meals
+          <a href="app/">View all</a>
+        </div>
+        <div class="mockup-meal">
+          <div class="mockup-meal-icon" style="background:var(--sage-soft);">🍳</div>
+          <div class="mockup-meal-info">
+            <div class="mockup-meal-name">Breakfast</div>
+            <div class="mockup-meal-detail">Eggs, toast, avocado</div>
+          </div>
+          <div class="mockup-meal-cal">420 kcal</div>
+        </div>
+        <div class="mockup-meal">
+          <div class="mockup-meal-icon" style="background:var(--blue);">🥗</div>
+          <div class="mockup-meal-info">
+            <div class="mockup-meal-name">Lunch</div>
+            <div class="mockup-meal-detail">Chicken salad, quinoa</div>
+          </div>
+          <div class="mockup-meal-cal">580 kcal</div>
+        </div>
+        <div class="mockup-meal">
+          <div class="mockup-meal-icon" style="background:var(--yellow);">🍎</div>
+          <div class="mockup-meal-info">
+            <div class="mockup-meal-name">Snack</div>
+            <div class="mockup-meal-detail">Apple, peanut butter</div>
+          </div>
+          <div class="mockup-meal-cal">240 kcal</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- ── hero ── -->
-<section class="hero">
-  <div class="wrap hero-grid-cols">
-    <div>
-      <span class="eyebrow">Free · Private · Open</span>
-      <h1 class="hero-title">Know your<br /><em>calories.</em></h1>
-      <p class="hero-sub">
-        Fast meal logging, honest macro tracking, and zero ad surveillance.
-        kiloric gives you clarity on what you eat — without the paywalls,
-        streak pressure, or noise.
-      </p>
-      <div class="hero-actions">
-        <a href="app/" class="btn btn-solid">Try the App</a>
-        <a href="#how" class="btn btn-outline">See how it works</a>
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <!-- set 1 -->
+    <span class="marquee-pill sage"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Quick Log</span>
+    <span class="marquee-pill lavender"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Meal Plans</span>
+    <span class="marquee-pill blue"><svg viewBox="0 0 16 16" fill="none"><path d="M2 12l4-4 3 3 5-6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Progress</span>
+    <span class="marquee-pill yellow"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="currentColor"/></svg>Streaks</span>
+    <span class="marquee-pill cream"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Recipes</span>
+    <span class="marquee-pill sage"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1.3"/><path d="M6 8l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Goals</span>
+    <span class="marquee-pill lavender"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6a4 4 0 118 0c0 3-4 4-4 4s-4-1-4-4z" stroke="currentColor" stroke-width="1.3"/><path d="M8 10v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Insights</span>
+    <span class="marquee-pill blue"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2a6 6 0 100 12A6 6 0 008 2z" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Reminders</span>
+    <!-- set 2 (duplicate for seamless loop) -->
+    <span class="marquee-pill sage"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Quick Log</span>
+    <span class="marquee-pill lavender"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Meal Plans</span>
+    <span class="marquee-pill blue"><svg viewBox="0 0 16 16" fill="none"><path d="M2 12l4-4 3 3 5-6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Progress</span>
+    <span class="marquee-pill yellow"><svg viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="currentColor"/></svg>Streaks</span>
+    <span class="marquee-pill cream"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Recipes</span>
+    <span class="marquee-pill sage"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1.3"/><path d="M6 8l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Goals</span>
+    <span class="marquee-pill lavender"><svg viewBox="0 0 16 16" fill="none"><path d="M4 6a4 4 0 118 0c0 3-4 4-4 4s-4-1-4-4z" stroke="currentColor" stroke-width="1.3"/><path d="M8 10v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Insights</span>
+    <span class="marquee-pill blue"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2a6 6 0 100 12A6 6 0 008 2z" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Reminders</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="reveal">
+    <div class="section-label">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="currentColor"/></svg>
+      Features
+    </div>
+    <h2 class="section-title">Everything you need.<br><em>Nothing you don't.</em></h2>
+    <p class="section-sub">No clutter, no confusion. Just the tools that help you stay on track.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card sage large reveal">
+      <div class="feature-icon">⚡</div>
+      <h3>Quick logging</h3>
+      <p>Log a meal in seconds. Search your food, pick a portion, done. No endless forms or complicated setup.</p>
+      <div class="feature-widget">
+        <div class="ring-row">
+          <svg class="ring-svg" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(26,47,34,0.1)" stroke-width="6"/>
+            <circle cx="36" cy="36" r="30" fill="none" stroke="#1a2f22" stroke-width="6" stroke-dasharray="188.5" stroke-dashoffset="70" stroke-linecap="round" transform="rotate(-90 36 36)"/>
+            <text x="36" y="36" class="ring-center-text" fill="#1a2f22">62%</text>
+          </svg>
+          <div class="ring-info">
+            <h4>Daily Goal</h4>
+            <p>1,240 / 2,000 kcal</p>
+          </div>
+        </div>
       </div>
-      <div class="hero-meta">
-        <span><b>2M+</b> foods</span>
-        <span><b>0</b> trackers</span>
-        <span><b>$0</b> forever</span>
+      <div class="search-widget">
+        <div class="search-bar">
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          Search foods…
+        </div>
+        <div class="search-result">
+          <span style="font-size:16px;">🍗</span>
+          <span class="search-result-name">Chicken breast</span>
+          <span class="search-result-cal">165 kcal</span>
+          <span class="search-result-add">+</span>
+        </div>
+        <div class="search-result">
+          <span style="font-size:16px;">🥑</span>
+          <span class="search-result-name">Avocado</span>
+          <span class="search-result-cal">240 kcal</span>
+          <span class="search-result-add">+</span>
+        </div>
+        <div class="search-result">
+          <span style="font-size:16px;">🍚</span>
+          <span class="search-result-name">Brown rice</span>
+          <span class="search-result-cal">215 kcal</span>
+          <span class="search-result-add">+</span>
+        </div>
       </div>
     </div>
-
-    <div class="dash-wrap">
-      <div class="dash" aria-hidden="true">
-        <div class="dash-top">
-          <div>
-            <div class="dash-hello">Tuesday</div>
-            <div class="dash-date">Good morning, Alex</div>
-          </div>
-          <div class="dash-avatar">
-            <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-          </div>
-        </div>
-
-        <div class="dash-ring-row">
-          <div class="ring">
-            <svg width="128" height="128" viewBox="0 0 128 128">
-              <circle class="ring-track" cx="64" cy="64" r="54" fill="none" stroke-width="10"/>
-              <circle class="ring-fill" id="ringFill" cx="64" cy="64" r="54" fill="none" stroke-width="10"
-                      stroke-dasharray="339.3" stroke-dashoffset="339.3"/>
-            </svg>
-            <div class="ring-center">
-              <div class="ring-num" id="ringNum">0</div>
-              <div class="ring-lbl">kcal left</div>
-            </div>
-          </div>
-          <div class="ring-side">
-            <p class="rs-goal"><b>998</b> of <b>1,840</b> kcal logged<br />842 remaining today</p>
-          </div>
-        </div>
-
-        <div class="macro" style="--mc: var(--carb)">
-          <div class="macro-head"><span class="m-name">Carbs</span><span class="m-val">148 / 210g</span></div>
-          <div class="macro-bar"><div class="macro-fill" data-w="70%"></div></div>
-        </div>
-        <div class="macro" style="--mc: var(--fat)">
-          <div class="macro-head"><span class="m-name">Fat</span><span class="m-val">42 / 62g</span></div>
-          <div class="macro-bar"><div class="macro-fill" data-w="68%"></div></div>
-        </div>
-        <div class="macro" style="--mc: var(--protein)">
-          <div class="macro-head"><span class="m-name">Protein</span><span class="m-val">91 / 130g</span></div>
-          <div class="macro-bar"><div class="macro-fill" data-w="70%"></div></div>
-        </div>
-
-        <div class="dash-log">
-          <div class="dash-log-title">Today</div>
-          <div class="log-row">
-            <div class="lr-name">Chicken &amp; Rice Bowl<small>1 serving · 340g</small></div>
-            <div class="lr-kcal">520</div>
-          </div>
-          <div class="log-row">
-            <div class="lr-name">Greek Yogurt<small>200g</small></div>
-            <div class="lr-kcal">130</div>
-          </div>
-          <div class="log-row">
-            <div class="lr-name">Espresso<small>double shot</small></div>
-            <div class="lr-kcal">5</div>
-          </div>
-        </div>
+    <div class="feature-card lavender reveal">
+      <div class="feature-icon">📊</div>
+      <h3>Progress tracking</h3>
+      <p>See how far you've come with weekly trends and weight history.</p>
+      <div class="bar-chart">
+        <div class="bar" style="height:40%;background:rgba(61,43,82,0.2);"><span class="bar-label">Mon</span></div>
+        <div class="bar" style="height:65%;background:rgba(61,43,82,0.3);"><span class="bar-label">Tue</span></div>
+        <div class="bar" style="height:50%;background:rgba(61,43,82,0.2);"><span class="bar-label">Wed</span></div>
+        <div class="bar" style="height:80%;background:rgba(61,43,82,0.4);"><span class="bar-label">Thu</span></div>
+        <div class="bar" style="height:70%;background:rgba(61,43,82,0.3);"><span class="bar-label">Fri</span></div>
+        <div class="bar" style="height:90%;background:#3d2b52;"><span class="bar-label">Sat</span></div>
+        <div class="bar" style="height:55%;background:rgba(61,43,82,0.15);"><span class="bar-label">Sun</span></div>
       </div>
-
-      <div class="dash-chip" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M11 8v8M15 8v8"/></svg>
-        <div>
-          <div class="dc-t1">Barcode scanned</div>
-          <div class="dc-t2">logged in 0.8s</div>
-        </div>
+    </div>
+    <div class="feature-card blue reveal">
+      <div class="feature-icon">🔥</div>
+      <h3>Streaks &amp; goals</h3>
+      <p>Build momentum with daily streaks and personalized nutrition targets.</p>
+      <div class="streak-widget">
+        <div class="streak-day filled">M</div>
+        <div class="streak-day filled">T</div>
+        <div class="streak-day filled">W</div>
+        <div class="streak-day filled">T</div>
+        <div class="streak-day filled">F</div>
+        <div class="streak-day empty">S</div>
+        <div class="streak-day empty">S</div>
       </div>
+    </div>
+    <div class="feature-card cream reveal">
+      <div class="feature-icon">📋</div>
+      <h3>Meal plans</h3>
+      <p>Plan your week ahead. Save your favorite meals and reuse them with one tap.</p>
+    </div>
+    <div class="feature-card cream reveal">
+      <div class="feature-icon">🌍</div>
+      <h3>Open source</h3>
+      <p>Fully transparent, community-driven. Self-host it or contribute on GitHub.</p>
     </div>
   </div>
 </section>
 
-<!-- ── statement + stats ── -->
-<section class="statement">
-  <div class="wrap">
-    <p class="statement-line reveal">
-      Most trackers drown you in ads and upsells. kiloric keeps it <em>focused</em> —
-      fast lookup, clear macros, complete privacy.
-    </p>
-    <div class="stats-row">
-      <div class="reveal"><div class="stat-num"><span data-count="2" data-suffix="M+">0</span></div><div class="stat-lbl">Foods in database</div></div>
-      <div class="reveal"><div class="stat-num"><span data-count="100" data-suffix="%">0</span></div><div class="stat-lbl">Private by design</div></div>
-      <div class="reveal"><div class="stat-num"><span data-count="0">0</span></div><div class="stat-lbl">Data sold to brokers</div></div>
-      <div class="reveal"><div class="stat-num">Free</div><div class="stat-lbl">Always, for everyone</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ── how it works ── -->
-<section class="sec" id="how">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="sec-index">01 — How it works</div>
-      <div>
-        <h2 class="sec-title">Simple as <em>counting to three.</em></h2>
-        <p class="sec-lede">Getting started takes under two minutes. No quiz funnels, no upsells, no account gymnastics.</p>
-      </div>
-    </div>
-
-    <div class="steps">
-      <div class="step reveal">
-        <div class="step-no">01</div>
-        <h3 class="step-title">Set your target</h3>
-        <p class="step-body">Enter your baseline metrics. kiloric calculates calorie and macro goals with the standard Mifflin-St Jeor formula — nothing proprietary, nothing hidden.</p>
-      </div>
-      <div class="step reveal">
-        <div class="step-no">02</div>
-        <h3 class="step-title">Log your meals</h3>
-        <p class="step-body">Search the catalog, scan a barcode, or reuse a recent meal. Adjust the portion and save with a tap — servings scale against your targets automatically.</p>
-      </div>
-      <div class="step reveal">
-        <div class="step-no">03</div>
-        <h3 class="step-title">Stay on track</h3>
-        <p class="step-body">Remaining calories and macro balances update live as you move through the day. Missed days are recorded honestly as unlogged — never as fake zero-calorie diets.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── features: pinned scroll sequence ── -->
-<section class="seq" id="features" aria-label="Features">
-  <div class="seq-sticky">
-    <div class="seq-grid">
-
-      <div class="seq-visual" aria-hidden="true">
-        <!-- 1: fast logging -->
-        <div class="seq-panel on" data-panel="0">
-          <div class="panel-card">
-            <div class="pc-title">Log food</div>
-            <div class="pc-search">
-              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-              <span class="pc-typed">chicken rice</span><span class="pc-caret"></span>
-              <span class="pc-scan"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 9v6M12 9v6M16 9v6"/></svg>scan</span>
-            </div>
-            <div class="pc-row"><div class="nm">Chicken &amp; Rice Bowl<small>1 serving · 340g</small></div><span class="kc">520</span><span class="add">+</span></div>
-            <div class="pc-row"><div class="nm">Chicken Burrito<small>1 item · 280g</small></div><span class="kc">610</span><span class="add">+</span></div>
-            <div class="pc-row"><div class="nm">Chicken Salad<small>1 bowl · 220g</small></div><span class="kc">340</span><span class="add">+</span></div>
-          </div>
-        </div>
-
-        <!-- 2: macro breakdown -->
-        <div class="seq-panel" data-panel="1">
-          <div class="panel-card">
-            <div class="pc-title">Today's macros</div>
-            <div class="pc-big-macro">
-              <div class="bm-head"><b>Protein</b><span>91 / 130g</span></div>
-              <div class="pc-bar"><i style="width:70%; background: var(--protein)"></i></div>
-            </div>
-            <div class="pc-big-macro">
-              <div class="bm-head"><b>Carbohydrates</b><span>148 / 210g</span></div>
-              <div class="pc-bar"><i style="width:70%; background: var(--carb)"></i></div>
-            </div>
-            <div class="pc-big-macro">
-              <div class="bm-head"><b>Fat</b><span>42 / 62g</span></div>
-              <div class="pc-bar"><i style="width:68%; background: var(--fat)"></i></div>
-            </div>
-            <div class="pc-legend"><span>kcal <b>998</b></span><span>goal <b>1,840</b></span><span>left <b>842</b></span></div>
-          </div>
-        </div>
-
-        <!-- 3: privacy -->
-        <div class="seq-panel" data-panel="2">
-          <div class="panel-card">
-            <div class="pc-title">Your data</div>
-            <div class="pc-shield-row">
-              <svg viewBox="0 0 44 50" fill="none"><path d="M22 3L5 11v14c0 11 7.5 19.5 17 22 9.5-2.5 17-11 17-22V11L22 3z" stroke="#064013" stroke-width="2.4"/><path d="M15 24l5 5 9-10" stroke="#2e7d4f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <div>
-                <div class="ps-t">Locked to your account</div>
-                <div class="ps-s">Bearer-token sessions, strict isolation</div>
-              </div>
-            </div>
-            <div class="pc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>No ad trackers, no pixels</div>
-            <div class="pc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Export everything, anytime</div>
-            <div class="pc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Delete permanently in one tap</div>
-          </div>
-        </div>
-
-        <!-- 4: progress -->
-        <div class="seq-panel" data-panel="3">
-          <div class="panel-card">
-            <div class="pc-title">Last 7 days</div>
-            <div class="pc-chart">
-              <div class="pc-col"><i style="height:52%"></i><span>M</span></div>
-              <div class="pc-col"><i style="height:74%"></i><span>T</span></div>
-              <div class="pc-col miss"><i style="height:38%"></i><span>W</span></div>
-              <div class="pc-col"><i style="height:66%"></i><span>T</span></div>
-              <div class="pc-col"><i style="height:82%"></i><span>F</span></div>
-              <div class="pc-col"><i style="height:58%"></i><span>S</span></div>
-              <div class="pc-col today"><i style="height:70%"></i><span>S</span></div>
-            </div>
-            <div class="pc-legend"><span>avg <b>1,762</b> kcal</span><span>goal <b>1,840</b></span><span><b>1</b> unlogged</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="seq-rail" aria-hidden="true">
-        <div class="rail-num"><div class="rail-num-col" id="railCol">
-          <span>1</span><span>2</span><span>3</span><span>4</span>
-        </div></div>
-        <div class="rail-track"><div class="rail-fill" id="railFill"></div></div>
-      </div>
-
-      <div class="seq-text">
-        <div class="seq-item on" data-item="0">
-          <div class="seq-kicker">Feature 01</div>
-          <h3 class="seq-name">Log in seconds,<br />not minutes.</h3>
-          <p class="seq-desc">Search two million foods or scan a barcode. Recent meals and saved combinations are one tap away — logging fits between sets at the gym.</p>
-          <div class="seq-count">1 / 4</div>
-        </div>
-        <div class="seq-item" data-item="1">
-          <div class="seq-kicker">Feature 02</div>
-          <h3 class="seq-name">Macros you can<br />read at a glance.</h3>
-          <p class="seq-desc">Protein, carbs, and fat sit next to your calories — no digging through tabs. Bars fill as you log, so you always know where the day stands.</p>
-          <div class="seq-count">2 / 4</div>
-        </div>
-        <div class="seq-item" data-item="2">
-          <div class="seq-kicker">Feature 03</div>
-          <h3 class="seq-name">Private by design,<br />not by promise.</h3>
-          <p class="seq-desc">No tracking pixels, no ad brokers, no data sales. Full CCPA &amp; CPRA rights for every user, with complete export and permanent deletion built in.</p>
-          <div class="seq-count">3 / 4</div>
-        </div>
-        <div class="seq-item" data-item="3">
-          <div class="seq-kicker">Feature 04</div>
-          <h3 class="seq-name">Progress that<br />tells the truth.</h3>
-          <p class="seq-desc">Review 7-day and 30-day patterns. Days you didn't log are marked as unlogged — your history stays honest instead of flattering.</p>
-          <div class="seq-count">4 / 4</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ── award ── -->
-<section class="award">
-  <div class="wrap award-grid">
-    <div class="seal reveal" aria-hidden="true">
-      <svg class="ring-text" viewBox="0 0 168 168">
-        <defs><path id="sealCircle" d="M 84,84 m -66,0 a 66,66 0 1,1 132,0 a 66,66 0 1,1 -132,0"/></defs>
-        <text><textPath href="#sealCircle">CONGRESSIONAL APP CHALLENGE · STUDENT DEVELOPER ·</textPath></text>
-      </svg>
-      <div class="seal-core">
-        <svg viewBox="0 0 24 24"><path d="M3 21h18M4 21V10m4 11V10m4 11V10m4 11V10m4 11V10M2 10L12 3l10 7H2z"/></svg>
-      </div>
-    </div>
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how-it-works">
+  <div class="how-inner">
     <div class="reveal">
-      <div class="award-eyebrow">Student Developer</div>
-      <h2 class="award-title">Built for the <em>Congressional</em><br />App Challenge</h2>
-      <p class="award-body">
-        kiloric started as an entry to the Congressional App Challenge with one goal:
-        a fast, dependable mobile tracker that respects your privacy — no ads, no clutter,
-        no dark patterns. It's free because health tools should be.
-      </p>
-      <div class="award-tags">
-        <span>NATIONAL ENTRY</span>
-        <span>HIGH SCHOOL DIVISION</span>
-        <span>MOBILE APP CATEGORY</span>
+      <div class="section-label">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 1l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="currentColor"/></svg>
+        How it works
+      </div>
+      <h2 class="section-title">Three steps.<br>That's it.</h2>
+      <p class="section-sub">Getting started takes less than a minute.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <div class="step-number">01</div>
+        <h3>Set your goal</h3>
+        <p>Tell us your target — calories, macros, or both. We'll personalize everything around it.</p>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-number">02</div>
+        <h3>Log your meals</h3>
+        <p>Search and add foods in seconds. Save your go-to meals for even faster logging.</p>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-number">03</div>
+        <h3>Track progress</h3>
+        <p>Watch your trends over time. Celebrate streaks. Adjust your goals as you go.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── privacy ── -->
-<section class="sec" id="privacy">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="sec-index">02 — Privacy</div>
-      <div>
-        <h2 class="sec-title">Your data <em>stays yours.</em></h2>
-        <p class="sec-lede">You shouldn't have to trade personal health habits for a simple nutrition log. kiloric stores only what you log — and never sells your profile.</p>
-      </div>
+<!-- OPEN SOURCE -->
+<div class="oss-banner reveal">
+  <div class="oss-inner">
+    <div class="oss-icon">
+      <svg viewBox="0 0 24 24" fill="#7fae8f"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
     </div>
-
-    <div class="priv-grid">
-      <div class="reveal">
-        <div class="priv-list">
-          <div class="priv-item">
-            <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 8.4-8 9-4.8-.6-8-4.5-8-9V6l8-3z"/></svg>
-            <div><b>Zero data sold or shared</b><p>No third-party advertisers, data brokers, or analytics resellers. Ever.</p></div>
-          </div>
-          <div class="priv-item">
-            <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-            <div><b>Strict account isolation</b><p>Health metrics are encrypted in transit and scoped to your account with bearer-token sessions.</p></div>
-          </div>
-          <div class="priv-item">
-            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-            <div><b>Export or delete, instantly</b><p>Download your complete data or erase your account permanently from settings — no tickets, no waiting.</p></div>
-          </div>
-          <div class="priv-item">
-            <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9 4.03 9 9 9z"/></svg>
-            <div><b>CCPA &amp; CPRA for everyone</b><p>Full California-grade privacy rights applied to every user, wherever you live.</p></div>
-          </div>
-        </div>
-        <a class="priv-link" href="privacy/cpra.html">Read the Privacy Portal <span aria-hidden="true">→</span></a>
-      </div>
-
-      <div class="reveal">
-        <div class="panel-card" style="width:100%; max-width: none;">
-          <div class="pc-title">What we never do</div>
-          <div class="pc-check"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#d55930"/></svg>Sell or rent your personal information</div>
-          <div class="pc-check"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#d55930"/></svg>Run behavioral advertising or retargeting</div>
-          <div class="pc-check"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#d55930"/></svg>Hide your data behind support tickets</div>
-          <div class="pc-check"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="#d55930"/></svg>Lock features behind a subscription</div>
-          <div style="margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); font-size: 13px; color: var(--muted);">
-            Questions or data requests: <a href="mailto:data_privacy@kiloric.co" style="color: var(--forest); font-weight: 600;">data_privacy@kiloric.co</a>
-          </div>
-        </div>
-      </div>
+    <div class="oss-text">
+      <h3>Free &amp; open source</h3>
+      <p>No subscriptions, no ads, no tracking. Self-host it, fork it, make it yours.</p>
     </div>
+    <a href="https://github.com/aghastmuffin/kiloric" class="btn-primary oss-link" target="_blank" rel="noopener">
+      Star on GitHub
+      <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
   </div>
+</div>
+
+<!-- CTA -->
+<section class="cta-section reveal">
+  <h2>Ready to start<br><em>your streak?</em></h2>
+  <p>Free forever. No credit card. No excuses.</p>
+  <a href="app/" class="btn-primary">
+    Open Kiloric
+    <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
 </section>
 
-<!-- ── quotes ── -->
-<section class="sec quotes">
-  <div class="wrap">
-    <div class="sec-head reveal">
-      <div class="sec-index">03 — Beta feedback</div>
-      <div><h2 class="sec-title">Tested in <em>real routines.</em></h2></div>
-    </div>
-    <div class="quotes-grid">
-      <blockquote class="quote reveal">
-        <p class="quote-text">"Barcode scanning and meal reuse make logging effortless. It takes five seconds between sets or right after dinner."</p>
-        <footer class="quote-who"><b>Dan R.</b>Beta Tester · Track &amp; Field</footer>
-      </blockquote>
-      <blockquote class="quote reveal">
-        <p class="quote-text">"Every other calorie app feels like a freemium casino with ads and popups. kiloric just gives me my numbers and stays out of the way."</p>
-        <footer class="quote-who"><b>Marcus T.</b>Beta Tester · Strength Training</footer>
-      </blockquote>
-      <blockquote class="quote reveal">
-        <p class="quote-text">"Clean interface, no corporate bloat, and my health stats aren't being peddled to data brokers. Exactly what a tracker should be."</p>
-        <footer class="quote-who"><b>Sarah K.</b>Beta Tester · Student Developer</footer>
-      </blockquote>
-    </div>
-  </div>
-</section>
-
-<!-- ── cta ── -->
-<section class="cta">
-  <div class="wrap reveal">
-    <h2 class="cta-title">Ready to know<br />your <em>calories?</em></h2>
-    <p class="cta-sub">Launch kiloric in your browser right now, or install it on your device. Free, private, and ready when you are.</p>
-    <div class="cta-actions">
-      <a href="app/" class="btn btn-dark">Open the App</a>
-      <a href="#how" class="btn btn-dark-outline">How it works</a>
-    </div>
-    <div class="store-row">
-      <a href="app/" class="store-btn">
-        <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        <span><small>Download on the</small><b>App Store</b></span>
-      </a>
-      <a href="app/" class="store-btn">
-        <svg viewBox="0 0 24 24"><path d="M3.18 23.76c.27.15.57.22.87.22.27 0 .54-.06.79-.19l12.09-6.54-2.73-2.73-10.02 8.24h-.01l-.01.01.01.01.01-.02zM.43 1.67C.17 2.03 0 2.52 0 3.14v17.73c0 .62.17 1.11.43 1.47l.07.07 9.92-9.92v-.23L.5 1.6l-.07.07zM20.34 9.72l-2.6-1.41-3.04 3.04 3.04 3.04 2.61-1.42c.75-.41.75-1.84-.01-2.25zM4.05.45L16.14 6.99l-2.73 2.73L3.18.24C3.43.11 3.72.07 4 .07c.03 0 .05 0 .05.38z"/></svg>
-        <span><small>Get it on</small><b>Google Play</b></span>
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ── footer ── -->
-<footer class="site-footer">
-  <div class="wrap">
-    <div class="foot-word">kiloric<i aria-hidden="true"></i></div>
-    <div class="foot-cols">
-      <div>
-        <div class="foot-h">kiloric</div>
-        <p class="foot-tag">Know your calories. Keep your privacy. Free forever.</p>
-      </div>
-      <div>
-        <div class="foot-h">Product</div>
-        <a href="app/">Web App</a>
-        <a href="#features">Features</a>
-        <a href="#how">How it works</a>
-      </div>
-      <div>
-        <div class="foot-h">Legal</div>
-        <a href="privacy/cpra.html">Privacy Portal</a>
-        <a href="privacy/">Privacy Policy</a>
-        <a href="mailto:data_privacy@kiloric.co">Data Requests</a>
-      </div>
-      <div>
-        <div class="foot-h">Contact</div>
-        <a href="mailto:data_privacy@kiloric.co">data_privacy@kiloric.co</a>
-      </div>
-    </div>
-    <div class="foot-base">
-      <span>© Taeson North America LLC · kiloric</span>
-      <span>MADE FOR THE CONGRESSIONAL APP CHALLENGE</span>
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <span>© 2026 kiloric</span>
+    <div class="footer-links">
+      <a href="https://github.com/aghastmuffin/kiloric" target="_blank" rel="noopener">GitHub</a>
+      <a href="app/">App</a>
     </div>
   </div>
 </footer>
 
 <script>
-(function () {
-  'use strict';
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ── nav scroll state ── */
-  var nav = document.getElementById('nav');
-  var onScrollNav = function () {
-    nav.classList.toggle('scrolled', window.scrollY > 16);
-  };
-  window.addEventListener('scroll', onScrollNav, { passive: true });
-  onScrollNav();
-
-  /* ── mobile menu ── */
-  var menuBtn = document.getElementById('menuBtn');
-  var menu = document.getElementById('mobileMenu');
-  var menuClose = document.getElementById('menuClose');
-
-  function setMenu(open) {
-    menu.classList.toggle('open', open);
-    menu.setAttribute('aria-hidden', String(!open));
-    menuBtn.setAttribute('aria-expanded', String(open));
-    document.body.style.overflow = open ? 'hidden' : '';
-    if (open) menuClose.focus();
-  }
-  menuBtn.addEventListener('click', function () { setMenu(true); });
-  menuClose.addEventListener('click', function () { setMenu(false); });
-  menu.addEventListener('click', function (e) {
-    if (e.target.closest('a')) setMenu(false);
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && menu.classList.contains('open')) {
-      setMenu(false);
-      menuBtn.focus();
-    }
-  });
-
-  /* ── scroll reveals (content visible by default; JS only enhances) ── */
-  if (!reduceMotion && 'IntersectionObserver' in window) {
-    document.documentElement.classList.add('reveal-on');
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (en.isIntersecting) {
-          en.target.classList.add('in');
-          io.unobserve(en.target);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -48px 0px' });
-    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
-  }
-
-  /* ── hero dashboard: ring + bars + count-up ── */
-  var RING_LEN = 339.3; // 2πr, r = 54
-  var ringFill = document.getElementById('ringFill');
-  var ringNum = document.getElementById('ringNum');
-  var heroDone = false;
-
-  function animateHero() {
-    if (heroDone) return;
-    heroDone = true;
-    var pct = 998 / 1840; // consumed
-    if (reduceMotion) {
-      ringFill.style.strokeDashoffset = String(RING_LEN * (1 - pct));
-      ringNum.textContent = '842';
-      document.querySelectorAll('.macro-fill').forEach(function (f) {
-        f.style.width = f.getAttribute('data-w');
-      });
-      return;
-    }
-    requestAnimationFrame(function () {
-      ringFill.style.strokeDashoffset = String(RING_LEN * (1 - pct));
-      document.querySelectorAll('.macro-fill').forEach(function (f) {
-        f.style.width = f.getAttribute('data-w');
-      });
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
     });
-    // count down remaining kcal from goal to 842
-    var start = null, from = 1840, to = 842, dur = 1400;
-    function tick(ts) {
-      if (start === null) start = ts;
-      var t = Math.min(1, (ts - start) / dur);
-      var eased = 1 - Math.pow(1 - t, 3);
-      ringNum.textContent = String(Math.round(from + (to - from) * eased));
-      if (t < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }
-  setTimeout(animateHero, 250);
-
-  /* ── stat count-up ── */
-  var statEls = document.querySelectorAll('[data-count]');
-  function runStat(el) {
-    var target = parseInt(el.getAttribute('data-count'), 10);
-    var suffix = el.getAttribute('data-suffix') || '';
-    if (reduceMotion || target === 0) { el.textContent = target + suffix; return; }
-    var start = null, dur = 1200;
-    function tick(ts) {
-      if (start === null) start = ts;
-      var t = Math.min(1, (ts - start) / dur);
-      var eased = 1 - Math.pow(1 - t, 3);
-      el.textContent = Math.round(target * eased) + suffix;
-      if (t < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }
-  if ('IntersectionObserver' in window) {
-    var statIO = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (en.isIntersecting) { runStat(en.target); statIO.unobserve(en.target); }
-      });
-    }, { threshold: 0.4 });
-    statEls.forEach(function (el) { statIO.observe(el); });
-  } else {
-    statEls.forEach(runStat);
-  }
-
-  /* ── pinned features sequence ── */
-  var seq = document.getElementById('features');
-  var panels = seq.querySelectorAll('.seq-panel');
-  var items = seq.querySelectorAll('.seq-item');
-  var railCol = document.getElementById('railCol');
-  var railFill = document.getElementById('railFill');
-  var current = -1;
-  var ticking = false;
-  var N = 4;
-
-  function setActive(idx) {
-    if (idx === current) return;
-    current = idx;
-    panels.forEach(function (p, i) { p.classList.toggle('on', i === idx); });
-    items.forEach(function (it, i) { it.classList.toggle('on', i === idx); });
-    railCol.style.transform = 'translateY(' + (-idx * 46) + 'px)';
-  }
-
-  function updateSeq() {
-    ticking = false;
-    var rect = seq.getBoundingClientRect();
-    var total = seq.offsetHeight - window.innerHeight;
-    var progress = Math.min(1, Math.max(0, -rect.top / Math.max(1, total)));
-    railFill.style.height = (progress * 100).toFixed(2) + '%';
-    var idx = Math.min(N - 1, Math.floor(progress * N));
-    setActive(idx);
-  }
-
-  function onScrollSeq() {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(updateSeq);
-    }
-  }
-  window.addEventListener('scroll', onScrollSeq, { passive: true });
-  window.addEventListener('resize', onScrollSeq);
-  updateSeq();
-})();
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
+
 </body>
 </html>
