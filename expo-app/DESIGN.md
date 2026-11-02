@@ -1,6 +1,33 @@
 ---
 name: kiloric
 colors:
+  kiloric-light-background: "#FAF8F5"
+  kiloric-light-surface: "#FFFDF8"
+  kiloric-light-surface-alt: "#F2EEE4"
+  kiloric-light-border: "#D9DCD6"
+  kiloric-light-ink: "#0F2E16"
+  kiloric-light-muted-ink: "#4F5B4B"
+  kiloric-light-forest: "#064013"
+  kiloric-light-on-forest: "#FAF8F5"
+  kiloric-light-forest-wash: "rgba(6, 64, 19, 0.08)"
+  kiloric-light-sage: "#4A6741"
+  kiloric-light-success: "#2E7D4F"
+  kiloric-light-warning: "#8A641C"
+  kiloric-light-danger: "#B8461F"
+  kiloric-light-burnt-orange: "#D55930"
+  kiloric-light-lime: "#E9FF96"
+  kiloric-dark-background: "#0F1A12"
+  kiloric-dark-surface: "#17241B"
+  kiloric-dark-surface-alt: "#1F2E23"
+  kiloric-dark-border: "#27382C"
+  kiloric-dark-ink: "#F2F5EF"
+  kiloric-dark-muted-ink: "#A7B4A4"
+  kiloric-dark-sage-glow: "#8FD6B6"
+  kiloric-dark-on-sage: "#0F1A12"
+  kiloric-dark-sage-wash: "rgba(143, 214, 182, 0.14)"
+  kiloric-dark-warning: "#E3B34A"
+  kiloric-dark-danger: "#F0906E"
+  kiloric-dark-burnt-orange: "#EE8A5C"
   paper-light-background: "#F3EFE7"
   paper-light-surface: "#FCFAF5"
   paper-light-surface-alt: "#ECE6DB"
@@ -182,7 +209,9 @@ Warm editorial discipline governs the balance. Data-rich surfaces remain calm th
 
 ## Colors
 
-The Paper palette combines parchment-toned foundations, porcelain working surfaces, carbon ink, and a restrained rust marker. The dark appearance is a purpose-built night notebook, not an inverted light theme.
+**Default theme (`kiloric`).** The shipping default mirrors the kiloric.co landing page: a warm cream field (`#FAF8F5`), porcelain cards (`#FFFDF8`), deep forest-green ink (`#0F2E16`) and actions (`#064013`), sage (`#4A6741`) for structure and progress, and a scarce burnt orange (`#D55930`) reserved for streaks, over-goal moments, and the fat macro. Lime (`#E9FF96`) appears only as a highlight on dark marketing surfaces, never as a working fill. The dark appearance is a forest night (`#0F1A12` field) with a luminous sage accent (`#8FD6B6`) — the landing palette's dark counterpart, not a generic inversion. Macro colors follow the landing dashboard: protein `#2E7D4F`, carbs `#D9A441`, fat `#D55930`.
+
+**Paper theme (opt-in).** The Paper palette combines parchment-toned foundations, porcelain working surfaces, carbon ink, and a restrained rust marker. The dark appearance is a purpose-built night notebook, not an inverted light theme.
 
 ### Primary
 
