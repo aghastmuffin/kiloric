@@ -2,7 +2,6 @@ import { FontPreferencePicker } from '@/components/FontPreferencePicker';
 import { setHasSkippedSignIn } from '@/components/ProfileGate';
 import { ThemePreferencePicker } from '@/components/ThemePreferencePicker';
 import { getAuthErrorMessage, useAuth } from '@/lib/AuthContext';
-import { showApiError } from '@/lib/apiErrors';
 import { isValidEmail, isValidIdentity, isValidPassword } from '@/lib/authValidation';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColors } from '@/lib/theme/tokens';
@@ -66,6 +65,7 @@ export function AccountSignInFlow() {
     }
 
     async function handleSignIn() {
+        if (submitting) return
         if (!isValidPassword(password)) {
             setAuthNotice(null)
             setAuthError('Password must be at least 8 characters.')
@@ -86,7 +86,6 @@ export function AccountSignInFlow() {
         } catch (err) {
             const message = getAuthErrorMessage(err)
             console.error('[auth] sign in failed:', message)
-            showApiError(err, 'server')
             setAuthError(message)
         } finally {
             setSubmitting(false)
@@ -263,6 +262,8 @@ export function AccountSignInFlow() {
                             accessibilityLabel="Email address"
                             autoComplete="email"
                             textContentType="emailAddress"
+                            returnKeyType="next"
+                            onSubmitEditing={goToPassword}
                             style={styles.input}
                         />
                         <Pressable
@@ -305,6 +306,8 @@ export function AccountSignInFlow() {
                             accessibilityLabel="Password"
                             autoComplete="current-password"
                             textContentType="password"
+                            returnKeyType="go"
+                            onSubmitEditing={() => void handleSignIn()}
                             style={styles.input}
                         />
                     </>

@@ -64,6 +64,7 @@ export function Segmented<T extends string>({
             key={option.value}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
+            aria-selected={active}
             style={styles.segmentItem}
           >
             <UButton

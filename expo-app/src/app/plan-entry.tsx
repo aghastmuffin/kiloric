@@ -100,6 +100,11 @@ export default function PlanEntryScreen() {
     return (text: string) => setDraft((current) => ({ ...current, [field]: text }))
   }
 
+  function returnToPlan() {
+    if (router.canGoBack()) router.back()
+    else router.replace('/plan')
+  }
+
   async function save() {
     if (!userId) return
     const kcal = parseDecimal(draft.kcal)
@@ -120,7 +125,7 @@ export default function PlanEntryScreen() {
     try {
       if (existing) await updatePlanEntry(userId, existing.$id, { ...payload, name: payload.name.trim().slice(0, 128), kcal: Math.round(kcal) })
       else await addPlanEntry(userId, payload)
-      router.back()
+      returnToPlan()
     } catch (err) {
       showApiError(err, 'server')
     } finally {
@@ -133,7 +138,7 @@ export default function PlanEntryScreen() {
     setSaving(true)
     try {
       await deletePlanEntry(userId, existing.$id)
-      router.back()
+      returnToPlan()
     } catch (err) {
       showApiError(err, 'server')
     } finally {
@@ -157,7 +162,7 @@ export default function PlanEntryScreen() {
       <ScreenHeader
         overline={longDate(parseDayKey(day))}
         title={existing ? 'Edit planned meal' : 'Plan a meal'}
-        right={<IconButton icon="close" accessibilityLabel="Close" onPress={() => router.back()} />}
+        right={<IconButton icon="close" accessibilityLabel="Close" onPress={returnToPlan} />}
       />
       {state.error ? <ErrorNote message={state.error} onRetry={state.reload} /> : null}
       {params.id && !state.data ? (

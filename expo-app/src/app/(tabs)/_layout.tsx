@@ -39,6 +39,7 @@ function NavButton({ item, variant, isFocused, ...props }: NavButtonProps) {
         {...props}
         accessibilityRole="tab"
         accessibilityState={{ selected: !!isFocused }}
+        aria-selected={!!isFocused}
         style={({ pressed }) => [
           styles.sideItem,
           { backgroundColor: isFocused ? c.mint : pressed ? c.chip : 'transparent' },
@@ -57,6 +58,7 @@ function NavButton({ item, variant, isFocused, ...props }: NavButtonProps) {
       accessibilityRole="tab"
       accessibilityLabel={item.label}
       accessibilityState={{ selected: !!isFocused }}
+      aria-selected={!!isFocused}
       style={styles.barItem}
     >
       <Ionicons name={isFocused ? item.activeIcon : item.icon} size={24} color={color} />
